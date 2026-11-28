@@ -17,6 +17,7 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_relay_gateway.dart';
 import 'package:openvine/services/curated_lists/curated_list_publisher.dart';
 import 'package:openvine/services/curated_lists/curated_list_recovery_journal.dart';
+import 'package:openvine/services/curated_lists/curated_list_relay_snapshot_reader.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -195,6 +196,69 @@ void main() {
         final result = await read;
         expect(result.completedNormally, isFalse);
         expect(relay.hasListener, isFalse);
+      });
+    });
+
+    group('readOwnedListForMutation', () {
+      void answer(Future<CurrentVersionRead> Function() read) => when(
+        () => mockNostr.readCurrentVersion(
+          kind: 30005,
+          pubkey: _ownerPubkey,
+          dTag: 'list-1',
+          timeout: const Duration(seconds: 10),
+        ),
+      ).thenAnswer((_) => read());
+
+      Future<CuratedListRelaySnapshot> readList({Future<void>? cancelled}) =>
+          gateway.readOwnedListForMutation(
+            _ownerPubkey,
+            'list-1',
+            timeout: const Duration(seconds: 10),
+            cancelled: cancelled ?? Completer<void>().future,
+          );
+
+      test('carries the version every relay agreed is current', () async {
+        final current = _event(content: '', pubkey: _ownerPubkey);
+        answer(() async => CurrentVersionFound(current));
+
+        final snapshot = await readList();
+
+        expect(snapshot.completedNormally, isTrue);
+        expect(snapshot.events, [same(current)]);
+      });
+
+      test('is complete and empty when no relay holds the list', () async {
+        answer(() async => const CurrentVersionAbsent());
+
+        final snapshot = await readList();
+
+        expect(snapshot.completedNormally, isTrue);
+        expect(snapshot.events, isEmpty);
+      });
+
+      test('is incomplete when a relay did not answer', () async {
+        answer(() async => const CurrentVersionFailed(noRelay: false));
+
+        final snapshot = await readList();
+
+        expect(snapshot.completedNormally, isFalse);
+        expect(snapshot.events, isEmpty);
+      });
+
+      test('ends as incomplete as soon as it is cancelled', () async {
+        final current = _event(content: '', pubkey: _ownerPubkey);
+        final relays = Completer<CurrentVersionRead>();
+        answer(() => relays.future);
+        final cancel = Completer<void>();
+
+        final read = readList(cancelled: cancel.future);
+        await pumpEventQueue();
+        cancel.complete();
+        final snapshot = await read;
+        relays.complete(CurrentVersionFound(current));
+
+        expect(snapshot.completedNormally, isFalse);
+        expect(snapshot.events, isEmpty);
       });
     });
 

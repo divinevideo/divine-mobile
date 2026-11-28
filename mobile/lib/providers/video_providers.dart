@@ -8,7 +8,7 @@ import 'package:db_client/db_client.dart';
 import 'package:drift/drift.dart' show TableUpdateQuery, UpdateKind;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart'
-    show Notifier, NotifierProvider, Provider;
+    show Notifier, NotifierProvider, Provider, ProviderListenableSelect;
 import 'package:image_picker/image_picker.dart';
 import 'package:likes_repository/likes_repository.dart';
 import 'package:openvine/blocs/gallery_clip_import/gallery_clip_import_cubit.dart';
@@ -63,6 +63,7 @@ import 'package:openvine/services/nsfw_content_filter.dart';
 import 'package:openvine/services/personal_event_cache_service.dart';
 import 'package:openvine/services/published_event_local_echo.dart';
 import 'package:openvine/services/seen_videos_service.dart';
+import 'package:openvine/services/share_recents_store.dart';
 import 'package:openvine/services/subscribed_list_video_cache.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_dm_outbox.dart';
@@ -77,6 +78,7 @@ import 'package:openvine/services/video_sharing_service.dart';
 import 'package:openvine/services/video_source_visibility_policy.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
 import 'package:openvine/services/view_event_publisher.dart';
+import 'package:openvine/utils/video_update_stream.dart';
 import 'package:reposts_repository/reposts_repository.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -307,8 +309,9 @@ VideoEventPublisher videoEventPublisher(Ref ref) {
   final profileRepository = ref.watch(profileRepositoryProvider);
   final profileStatsDao = ref.watch(databaseProvider).profileStatsDao;
   final savedSoundsService = ref.watch(savedSoundsServiceProvider);
+  final videosRepository = ref.watch(videosRepositoryProvider);
   final consentResolver = AudioReuseConsentResolver(
-    videosRepository: ref.watch(videosRepositoryProvider),
+    videosRepository: videosRepository,
   );
 
   // REST-first publish: POST the signed event to {eventPublishBaseUrl}/api/events with
@@ -351,6 +354,10 @@ VideoEventPublisher videoEventPublisher(Ref ref) {
     publishedEventLocalEcho: PublishedEventLocalEcho(
       (event) => ref.read(videoLocalStorageProvider).saveEventsBatch([event]),
     ),
+    // The watch above already rebuilds this provider with the repository, so
+    // hand over that instance. Reading `ref` here would throw for a publish
+    // still in flight on the instance that rebuild replaced.
+    videosRepositoryGetter: () => videosRepository,
   );
 }
 
@@ -451,6 +458,31 @@ SubscribedListVideoCache? subscribedListVideoCache(Ref ref) {
   return cache;
 }
 
+final shareRecentsStoreProvider = Provider<ShareRecentsStore>((ref) {
+  return ShareRecentsStore(
+    ref.watch(sharedPreferencesProvider),
+    loadProfiles: (keys) async =>
+        await ref
+            .read(profileReadRepositoryProvider)
+            ?.getCachedProfiles(pubkeys: keys) ??
+        [],
+  );
+});
+
+final shareRecentsWarmProvider = Provider<void>((ref) {
+  final owner = ref.watch(nostrSessionProvider.select((state) => state.pubkey));
+  if (owner == null ||
+      owner.isEmpty ||
+      ref.watch(profileReadRepositoryProvider) == null) {
+    return;
+  }
+  runProviderDetached(
+    ref.watch(shareRecentsStoreProvider).warm(owner),
+    'warm local share recents',
+    logName: 'ShareRecentsStore',
+  );
+});
+
 /// Video sharing service
 ///
 /// Returns `null` until an identity is known, because it is built from
@@ -475,7 +507,7 @@ VideoSharingService? videoSharingService(Ref ref) {
 
   return VideoSharingService(
     authService: authService,
-    profileRepository: profileRepository,
+    recentsStore: ref.watch(shareRecentsStoreProvider),
     dmRepository: dmRepository,
     shortLinkClient: ref.watch(shortLinkClientProvider),
   );
@@ -842,15 +874,19 @@ VideoEventResolver videoEventResolver(Ref ref) {
 /// Service that orchestrates the video-metadata-edit republish flow.
 @riverpod
 VideoMetadataUpdateService videoMetadataUpdateService(Ref ref) {
+  final nostrClient = ref.watch(nostrServiceProvider);
   return VideoMetadataUpdateService(
     authService: ref.watch(authServiceProvider),
     blossomService: ref.watch(blossomUploadServiceProvider),
     relayPublisher: SignedEventRelayPublisher(
-      nostrClient: ref.watch(nostrServiceProvider),
+      nostrClient: nostrClient,
       trustedRelayUrl: ref.watch(currentEnvironmentProvider).relayUrl,
     ),
     personalEventCache: ref.watch(personalEventCacheServiceProvider),
     videoEventService: ref.watch(videoEventServiceProvider),
+    readLatestRevision: ref
+        .watch(videosRepositoryProvider)
+        .fetchLatestVideoRevision,
     collaboratorInviteService: CollaboratorInviteService(
       dmRepository: ref.watch(dmRepositoryProvider),
       l10n: currentAppL10n(ref.read(sharedPreferencesProvider)),
@@ -877,6 +913,7 @@ Future<BrokenVideoTracker> brokenVideoTracker(Ref ref) async {
   ref.watch(currentAuthStateProvider);
   final ownerPubkey = ref.watch(authServiceProvider).currentPublicKeyHex;
   final tracker = BrokenVideoTracker(ownerPubkey: ownerPubkey);
+  ref.onDispose(tracker.dispose);
   await tracker.initialize();
   return tracker;
 }
@@ -924,6 +961,7 @@ Future<DeadMediaFeedGuard> deadMediaFeedGuard(Ref ref) async {
 @Riverpod(keepAlive: true)
 FeedUnavailabilityGate feedUnavailabilityGate(Ref ref) {
   final gate = FeedUnavailabilityGate();
+  ref.onDispose(gate.dispose);
   ref.listen(videoEventServiceProvider, (_, next) {
     gate.attachVideoEventService(next);
   }, fireImmediately: true);
@@ -1014,6 +1052,7 @@ VideosRepository videosRepository(Ref ref) {
     blockFilter: createBlockedAuthorFilter(ref),
     deletedFilter: videoEventService.isVideoEventKnownDeleted,
     removedVideoIds: videoEventService.removedVideoIds,
+    replacedVideos: videoUpdatesOf(videoEventService),
     contentFilter: (video) =>
         nsfwFilter(video) ||
         VideoSourceVisibilityPolicy.isHiddenBySourcePreferences(
@@ -1031,7 +1070,12 @@ VideosRepository videosRepository(Ref ref) {
           authService.currentPublicKeyHex ?? nostrClient.publicKey,
     ),
     funnelcakeApiClient: funnelcakeClient,
-    classicRecommendationsEnabled: ref.watch(adaptiveClassicsEnabledProvider),
+    // The build switch is fixed for the process; the account gate is read per
+    // request so resolving protected-minor status never rebuilds this
+    // repository (and resets its feeds) after cold start.
+    classicRecommendationsEnabled: adaptiveClassicsEnabled,
+    classicRecommendationsAllowed: () =>
+        ref.mounted && ref.read(adaptiveClassicsEnabledProvider),
     // These run per read, after this provider may have rebuilt. A replaced
     // repository's Ref can no longer read providers, so it reports no viewer
     // and a context that never matches: its reads end as superseded.

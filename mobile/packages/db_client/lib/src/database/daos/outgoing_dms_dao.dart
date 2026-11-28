@@ -5,6 +5,7 @@
 import 'dart:convert';
 
 import 'package:db_client/db_client.dart';
+import 'package:db_client/src/database/daos/outgoing_wrap_status_parser.dart';
 import 'package:drift/drift.dart';
 import 'package:meta/meta.dart';
 
@@ -22,6 +23,13 @@ String? _rumorIdFromJson(String rumorEventJson) {
   }
   return null;
 }
+
+/// A retryable outbox failure caused by this device having no relay route.
+///
+/// [DirectMessagesDao.watchDeliveryState] reads a failed recipient wrap that
+/// stores exactly this text as still queued, so changing it turns every
+/// stored offline failure into a failed delivery.
+const outgoingDmOfflineError = 'Message not sent: device offline';
 
 /// Status of one of the two NIP-17 gift-wrap publishes for an outgoing DM.
 ///
@@ -107,6 +115,8 @@ class OutgoingDm {
     this.sendBatchId,
     this.environment,
     this.unconfirmedRecipientWrapJson,
+    this.skipNip04Fallback = false,
+    this.isVideoShare = false,
   }) : rumorId = _rumorIdFromJson(rumorEventJson) ?? id;
 
   /// Opaque durable queue-row handle.
@@ -156,6 +166,15 @@ class OutgoingDm {
   /// hearing its `OK`; see `OutgoingDms.unconfirmedRecipientWrapJson`.
   final String? unconfirmedRecipientWrapJson;
 
+  /// Suppresses the legacy kind-4 copy on every attempt, including a replay
+  /// after restart.
+  final bool skipNip04Fallback;
+
+  /// Whether the share sheet queued this send. Every attempt, including a
+  /// replay after restart, rechecks that the share sheet would still offer
+  /// the recipient.
+  final bool isVideoShare;
+
   /// The kind-14/15 wire rumor id, stable across retries and recipients.
   ///
   /// Legacy and malformed fixtures fall back to [id]. Production rows always
@@ -198,6 +217,8 @@ class OutgoingDm {
     String? sendBatchId,
     String? environment,
     String? unconfirmedRecipientWrapJson,
+    bool? skipNip04Fallback,
+    bool? isVideoShare,
   }) => OutgoingDm(
     id: id ?? this.id,
     conversationId: conversationId ?? this.conversationId,
@@ -220,6 +241,8 @@ class OutgoingDm {
     ownerPubkey: ownerPubkey ?? this.ownerPubkey,
     sendBatchId: sendBatchId ?? this.sendBatchId,
     environment: environment ?? this.environment,
+    skipNip04Fallback: skipNip04Fallback ?? this.skipNip04Fallback,
+    isVideoShare: isVideoShare ?? this.isVideoShare,
     unconfirmedRecipientWrapJson:
         unconfirmedRecipientWrapJson ?? this.unconfirmedRecipientWrapJson,
   );
@@ -254,6 +277,8 @@ class OutgoingDm {
           ownerPubkey == other.ownerPubkey &&
           sendBatchId == other.sendBatchId &&
           environment == other.environment &&
+          skipNip04Fallback == other.skipNip04Fallback &&
+          isVideoShare == other.isVideoShare &&
           unconfirmedRecipientWrapJson == other.unconfirmedRecipientWrapJson;
 
   @override
@@ -278,6 +303,8 @@ class OutgoingDm {
     ownerPubkey,
     sendBatchId,
     environment,
+    skipNip04Fallback,
+    isVideoShare,
     unconfirmedRecipientWrapJson,
   ]);
 
@@ -319,6 +346,8 @@ class OutgoingDmsDao extends DatabaseAccessor<AppDatabase>
       ownerPubkey: dm.ownerPubkey,
       sendBatchId: Value(dm.sendBatchId),
       environment: Value(dm.environment),
+      skipNip04Fallback: Value(dm.skipNip04Fallback),
+      isVideoShare: Value(dm.isVideoShare),
       unconfirmedRecipientWrapJson: Value(dm.unconfirmedRecipientWrapJson),
     );
   }
@@ -333,8 +362,8 @@ class OutgoingDmsDao extends DatabaseAccessor<AppDatabase>
       rumorEventJson: row.rumorEventJson,
       messageKind: row.messageKind,
       replyToId: row.replyToId,
-      recipientWrapStatus: _parseStatus(row.recipientWrapStatus),
-      selfWrapStatus: _parseStatus(row.selfWrapStatus),
+      recipientWrapStatus: parseOutgoingWrapStatus(row.recipientWrapStatus),
+      selfWrapStatus: parseOutgoingWrapStatus(row.selfWrapStatus),
       recipientWrapEventId: row.recipientWrapEventId,
       selfWrapEventId: row.selfWrapEventId,
       retryCount: row.retryCount,
@@ -345,22 +374,10 @@ class OutgoingDmsDao extends DatabaseAccessor<AppDatabase>
       ownerPubkey: row.ownerPubkey,
       sendBatchId: row.sendBatchId,
       environment: row.environment,
+      skipNip04Fallback: row.skipNip04Fallback,
+      isVideoShare: row.isVideoShare,
       unconfirmedRecipientWrapJson: row.unconfirmedRecipientWrapJson,
     );
-  }
-
-  /// Parse a persisted wrap-status string back to [OutgoingWrapStatus].
-  ///
-  /// Throws [UnknownOutgoingWrapStatusException] when [raw] does not
-  /// match any known case. Coercing unknown values to
-  /// [OutgoingWrapStatus.pending] would put corrupt or future-schema
-  /// rows back into the retry service's active set — for a retry queue
-  /// that risks double-delivery, so we fail loudly instead.
-  OutgoingWrapStatus _parseStatus(String raw) {
-    for (final status in OutgoingWrapStatus.values) {
-      if (status.name == raw) return status;
-    }
-    throw UnknownOutgoingWrapStatusException(raw);
   }
 
   // ---------------------------------------------------------------------
@@ -380,6 +397,31 @@ class OutgoingDmsDao extends DatabaseAccessor<AppDatabase>
       outgoingDms,
     ).insert(_modelToCompanion(dm), mode: InsertMode.insertOrIgnore);
   }
+
+  /// Inserts freshly minted intents as one unit. A key collision or an owner
+  /// change (including during the last insert) must undo every write.
+  ///
+  /// Throws:
+  ///
+  /// * [StateError] when [isCurrent] turns false, before or after any insert.
+  /// * `SqliteException` on a key collision, with a stored row or another row
+  ///   in [rows].
+  ///
+  /// Either one rolls back every row.
+  Future<void> enqueueAll(
+    List<OutgoingDm> rows, {
+    required bool Function() isCurrent,
+  }) => transaction(() async {
+    void checkOwner() {
+      if (!isCurrent()) throw StateError('Account changed during enqueue');
+    }
+
+    checkOwner();
+    for (final row in rows) {
+      await into(outgoingDms).insert(_modelToCompanion(row));
+      checkOwner();
+    }
+  });
 
   /// The row [id], unless the sender stopped that delivery.
   ///
@@ -477,26 +519,33 @@ class OutgoingDmsDao extends DatabaseAccessor<AppDatabase>
   /// Update the self-addressed gift-wrap status for [id]. Same per-wrap
   /// error semantics as [markRecipientWrapStatus] — [lastError] writes to
   /// `self_wrap_last_error` only, and a delivery the sender stopped is left
-  /// as it is.
+  /// as it is. A failure cannot overwrite a recorded publish: a group
+  /// sibling can record the shared copy while this row's attempt is in flight.
   Future<bool> markSelfWrapStatus({
     required String id,
     required OutgoingWrapStatus status,
     String? eventId,
     String? lastError,
   }) async {
-    final rows = await (update(outgoingDms)..where((t) => _unstopped(t, id)))
-        .write(
-          OutgoingDmsCompanion(
-            selfWrapStatus: Value(status.name),
-            selfWrapEventId: eventId != null
-                ? Value(eventId)
-                : const Value.absent(),
-            selfWrapLastError: lastError != null
-                ? Value(lastError)
-                : const Value.absent(),
-            lastAttemptAt: Value(DateTime.now()),
-          ),
-        );
+    final rows =
+        await (update(outgoingDms)..where((t) {
+              final liveRow = _unstopped(t, id);
+              if (status != OutgoingWrapStatus.failed) return liveRow;
+              return liveRow &
+                  t.selfWrapStatus.equals(OutgoingWrapStatus.sent.name).not();
+            }))
+            .write(
+              OutgoingDmsCompanion(
+                selfWrapStatus: Value(status.name),
+                selfWrapEventId: eventId != null
+                    ? Value(eventId)
+                    : const Value.absent(),
+                selfWrapLastError: lastError != null
+                    ? Value(lastError)
+                    : const Value.absent(),
+                lastAttemptAt: Value(DateTime.now()),
+              ),
+            );
     return rows > 0;
   }
 

@@ -47,6 +47,7 @@ void main() {
         () => repository.readFreshProfile(
           pubkey: _pubkey,
           requireRawKind0: true,
+          rawKind0RetryDelays: any(named: 'rawKind0RetryDelays'),
         ),
       ).thenAnswer((_) async => (profile: _profile(), conclusive: true));
     });
@@ -54,6 +55,8 @@ void main() {
     void stubSave(Future<UserProfile> Function() answer) {
       when(
         () => repository.saveProfileEvent(
+          useLatestProfileFields: true,
+          shouldPublish: any(named: 'shouldPublish'),
           displayName: any(named: 'displayName'),
           about: any(named: 'about'),
           website: any(named: 'website'),
@@ -70,6 +73,7 @@ void main() {
         () => repository.readFreshProfile(
           pubkey: _pubkey,
           requireRawKind0: true,
+          rawKind0RetryDelays: any(named: 'rawKind0RetryDelays'),
         ),
       ).thenAnswer((_) => answer());
     }
@@ -115,6 +119,7 @@ void main() {
           () => repository.readFreshProfile(
             pubkey: _pubkey,
             requireRawKind0: true,
+            rawKind0RetryDelays: any(named: 'rawKind0RetryDelays'),
           ),
         ).thenAnswer(
           (_) async =>
@@ -134,6 +139,7 @@ void main() {
           () => repository.readFreshProfile(
             pubkey: _pubkey,
             requireRawKind0: true,
+            rawKind0RetryDelays: any(named: 'rawKind0RetryDelays'),
           ),
         ).thenAnswer((_) async => (profile: null, conclusive: true));
 
@@ -226,6 +232,7 @@ void main() {
           () => repository.readFreshProfile(
             pubkey: _pubkey,
             requireRawKind0: true,
+            rawKind0RetryDelays: any(named: 'rawKind0RetryDelays'),
           ),
         ).called(2);
         expect(remixSwitch(tester).value, isFalse);
@@ -242,6 +249,8 @@ void main() {
 
         verify(
           () => repository.saveProfileEvent(
+            useLatestProfileFields: true,
+            shouldPublish: any(named: 'shouldPublish'),
             displayName: 'Creator',
             about: any(named: 'about'),
             website: any(named: 'website'),
@@ -266,7 +275,34 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(remixSwitch(tester).value, isTrue);
-        expect(find.text(l10n.profileSetupPublishFailed), findsOneWidget);
+        expect(find.text(l10n.remixSettingSaveFailed), findsOneWidget);
+      });
+
+      testWidgets('an inconclusive save read reverts and shows setting copy', (
+        tester,
+      ) async {
+        await pumpSetting(tester);
+        stubRead(() async => (profile: null, conclusive: false));
+
+        await tester.tap(find.byType(DivineSwitch));
+        await tester.pumpAndSettle();
+
+        expect(remixSwitch(tester).value, isTrue);
+        expect(find.text(l10n.remixSettingSaveFailed), findsOneWidget);
+        expect(find.text(l10n.profileSetupPublishFailed), findsNothing);
+        verifyNever(
+          () => repository.saveProfileEvent(
+            useLatestProfileFields: true,
+            shouldPublish: any(named: 'shouldPublish'),
+            displayName: any(named: 'displayName'),
+            about: any(named: 'about'),
+            website: any(named: 'website'),
+            picture: any(named: 'picture'),
+            banner: any(named: 'banner'),
+            allowVideoReuse: any(named: 'allowVideoReuse'),
+            currentProfile: any(named: 'currentProfile'),
+          ),
+        );
       });
 
       testWidgets('an offline save names the network', (tester) async {

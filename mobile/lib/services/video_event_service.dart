@@ -55,6 +55,8 @@ import 'package:openvine/utils/log_tag_sanitizer.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:video_event_cache/video_event_cache.dart';
+import 'package:videos_repository/videos_repository.dart'
+    show isNewerVideoRevision, mergeRepublishedVideo;
 
 export 'package:openvine/services/pagination_state.dart';
 
@@ -204,6 +206,8 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
   // canonical truth, this stream is a side-channel for "act now" hooks.
   final StreamController<String> _removedVideoIdsController =
       StreamController<String>.broadcast();
+  final StreamController<void> _deletionTombstonesChangedController =
+      StreamController<void>.broadcast();
 
   static const int _eventDeletionKind = 5;
 
@@ -1054,16 +1058,20 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
     // Semantics: removal is permanent for the lifetime of this service.
     // Even if subsequent relay queries return the same event id, or another
     // event id for the same addressable video, it will be filtered out.
-    _knownDeletedVideoIds.add(primaryEventId);
-    _knownDeletedVideoIds.addAll(removedVideoIds);
-    if (coordinateKey != null) {
-      // The NIP-09 request the caller just published carries "now", so every
-      // version up to this moment is covered while a later republish is not.
-      _rememberDeletedCoordinate(
-        coordinateKey,
-        DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      );
+    var changed = _knownDeletedVideoIds.add(primaryEventId);
+    for (final id in removedVideoIds) {
+      if (_knownDeletedVideoIds.add(id)) changed = true;
     }
+    // The NIP-09 request the caller just published carries "now", so every
+    // version up to this moment is covered while a later republish is not.
+    if (coordinateKey != null &&
+        _rememberDeletedCoordinate(
+          coordinateKey,
+          DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        )) {
+      changed = true;
+    }
+    if (changed) _notifyDeletionTombstonesChanged();
 
     _purgeEventsFromLocalCache({primaryEventId, ...removedVideoIds});
 
@@ -1122,7 +1130,9 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
     Iterable<String> eventIds = const [],
     Map<String, int> addressableDeletedAt = const {},
   }) {
-    _knownDeletedVideoIds.addAll(eventIds.where((id) => id.isNotEmpty));
+    var changed = eventIds
+        .where((id) => id.isNotEmpty)
+        .fold(false, (c, id) => _knownDeletedVideoIds.add(id) || c);
 
     for (final entry in addressableDeletedAt.entries) {
       final parsed = AId.fromString(entry.key);
@@ -1132,14 +1142,14 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
           parsed.dTag.isEmpty) {
         continue;
       }
-      _rememberDeletedCoordinate(
-        _knownDeletionCoordinateKeyFromParts(
-          pubkey: parsed.pubkey,
-          stableId: parsed.dTag,
-        ),
-        entry.value,
+      final key = _knownDeletionCoordinateKeyFromParts(
+        pubkey: parsed.pubkey,
+        stableId: parsed.dTag,
       );
+      if (_rememberDeletedCoordinate(key, entry.value)) changed = true;
     }
+
+    if (changed) _notifyDeletionTombstonesChanged();
   }
 
   /// Backwards-compatible alias for local delete-history hydration.
@@ -1154,11 +1164,19 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
   }
 
   /// Records a coordinate tombstone, keeping the newest deletion when the
-  /// same coordinate is deleted more than once.
-  void _rememberDeletedCoordinate(String coordinateKey, int deletedAt) {
+  /// same coordinate is deleted more than once. Returns `true` when the stored
+  /// tombstone was inserted or advanced.
+  bool _rememberDeletedCoordinate(String coordinateKey, int deletedAt) {
     final known = _knownDeletedVideoCoordinates[coordinateKey];
-    if (known != null && known >= deletedAt) return;
+    if (known != null && known >= deletedAt) return false;
     _knownDeletedVideoCoordinates[coordinateKey] = deletedAt;
+    return true;
+  }
+
+  void _notifyDeletionTombstonesChanged() {
+    if (!_deletionTombstonesChangedController.isClosed) {
+      _deletionTombstonesChangedController.add(null);
+    }
   }
 
   /// Whether [coordinateKey] was deleted by a request at or after
@@ -1567,6 +1585,10 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
   /// so newcomers only receive future emissions; the canonical source of
   /// truth is still the service state plus [isVideoKnownDeleted].
   Stream<String> get removedVideoIds => _removedVideoIdsController.stream;
+
+  /// Fires when a new deletion tombstone (by id or coordinate) is recorded.
+  Stream<void> get deletionTombstonesChanged =>
+      _deletionTombstonesChangedController.stream;
 
   /// Load cached events from database (cache-first strategy)
   ///
@@ -4517,42 +4539,6 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
     return null;
   }
 
-  /// Merges an incoming [updatedVideo] (parsed from a freshly published Nostr
-  /// event) with the [existingVideo] already held in the service, carrying
-  /// forward fields that are not stored in Nostr event tags and therefore
-  /// cannot survive a round-trip through [VideoEvent.fromNostrEvent].
-  ///
-  /// **Timestamp preservation** — when neither version has a `published_at`
-  /// tag (common for classic Vine imports), the original `createdAt` /
-  /// `timestamp` values are kept so the video retains its chronological
-  /// position in feeds.
-  ///
-  /// **Runtime like-count carry-forward** — [VideoEvent.nostrLikeCount] is
-  /// injected at runtime after a relay batch query; it is never written into
-  /// the Nostr event body.  Without this carry-forward a metadata edit (e.g.
-  /// changing hashtags) drops the displayed count to zero until the next
-  /// batch re-fetch completes.  The relay-fetched count will overwrite this
-  /// carried value once the batch fires, so there is no risk of a stale
-  /// count persisting indefinitely.
-  VideoEvent _mergeUpdatedVideo(
-    VideoEvent existingVideo,
-    VideoEvent updatedVideo,
-  ) {
-    var merged =
-        (existingVideo.publishedAt == null && updatedVideo.publishedAt == null)
-        ? updatedVideo.copyWith(
-            createdAt: existingVideo.createdAt,
-            timestamp: existingVideo.timestamp,
-          )
-        : updatedVideo;
-
-    if (merged.nostrLikeCount == null && existingVideo.nostrLikeCount != null) {
-      merged = merged.copyWith(nostrLikeCount: existingVideo.nostrLikeCount);
-    }
-
-    return merged;
-  }
-
   /// Check if an error is connection-related
   bool _isConnectionError(dynamic error) {
     final errorString = error.toString().toLowerCase();
@@ -5058,8 +5044,6 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
     // Track addressable ID so the batch fetch can also query by 'a' tag.
     // This ensures reactions on any version of a replaced video (e.g. after a
     // metadata edit that changes the event ID) are included in the count.
-    // Preserve the addressable identity alongside the current event ID so the
-    // batch can count reactions across edited versions of the same video.
     final addressableId = videoEvent.addressableId;
     if (addressableId != null) {
       _pendingLikeCountAddressableIds[videoEvent.id] = addressableId;
@@ -5118,17 +5102,17 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
 
       // Apply counts to each video
       var updatedCount = 0;
-      for (final entry in likeCounts.entries) {
-        final videoId = entry.key;
-        final likeCount = entry.value;
-
-        // Skip if count is 0 (no change from default)
-        if (likeCount == 0) continue;
-
+      for (final MapEntry(key: videoId, value: likeCount)
+          in likeCounts.counts.entries) {
         final subscriptionType = batch[videoId];
         if (subscriptionType == null) continue;
 
-        if (_applyLikeCountToVideo(videoId, likeCount, subscriptionType)) {
+        if (_applyLikeCountToVideo(
+          videoId,
+          likeCount,
+          subscriptionType,
+          onlyRaise: likeCounts.incompleteIds.contains(videoId),
+        )) {
           updatedCount++;
         }
       }
@@ -5154,11 +5138,15 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
 
   /// Apply a like count to a video in all relevant lists.
   /// Returns true if the video was found and updated.
+  ///
+  /// With [onlyRaise] the count is a floor some relay did not settle, so it
+  /// may raise the cached count but never lower it (#9223).
   bool _applyLikeCountToVideo(
     String videoId,
     int likeCount,
-    SubscriptionType subscriptionType,
-  ) {
+    SubscriptionType subscriptionType, {
+    bool onlyRaise = false,
+  }) {
     // Find and update the video in the event list
     final eventList = _eventLists[subscriptionType];
     if (eventList == null) return false;
@@ -5167,6 +5155,9 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
     if (index == -1) return false; // Video no longer in list
 
     final videoEvent = eventList[index];
+    if (onlyRaise && likeCount <= (videoEvent.nostrLikeCount ?? 0)) {
+      return false;
+    }
 
     // Direct-replace, not max-merge: unlike the archival originalLikes /
     // originalLoops / originalComments / originalReposts fields (fixed
@@ -5717,6 +5708,10 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
       _removedVideoIdsController.close(),
       'close the removed-video stream during disposal',
     );
+    _runDetached(
+      _deletionTombstonesChangedController.close(),
+      'close the deletion-tombstones-changed stream during disposal',
+    );
     super.dispose();
   }
 
@@ -5821,23 +5816,27 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
     _addVideoToSubscription(videoEvent, SubscriptionType.discovery);
   }
 
-  /// Update a video event (for addressable events with same pubkey/d-tag).
+  /// Update a video event (for addressable events with the same kind/pubkey/d-tag).
   ///
   /// This method replaces an existing video across all data structures:
   /// - `_eventLists` (all subscription types: homeFeed, discovery, etc.)
   /// - `_authorBuckets` (used by profile feeds)
   /// - `_replaceableVideoEvents` tracking map
   ///
-  /// After updating, callers should refresh any StateProviders that hold
-  /// their own copies of video lists (e.g., `exploreTabVideosProvider`).
-  ///
-  /// Providers that watch VideoEventService (via `ref.watch()` or `addListener()`)
-  /// will automatically rebuild when `notifyListeners()` is called, but those
-  /// with cached state (like `profileFeedProvider`, `homeFeedProvider`) need
-  /// explicit `refreshFromService()` calls.
+  /// Feeds with their own lists can listen via [addVideoUpdateListener].
   ///
   void updateVideoEvent(VideoEvent updatedVideo) {
     bool foundAny = false;
+
+    VideoEvent mergeIfNewer(VideoEvent existing, VideoEvent incoming) {
+      // A late publish acknowledgement can arrive after the relay has
+      // delivered a newer revision. Same-ID updates may enrich the cache.
+      if (incoming.id != existing.id &&
+          !isNewerVideoRevision(incoming, existing)) {
+        return existing;
+      }
+      return mergeRepublishedVideo(existing, incoming);
+    }
 
     // Find and replace in all subscription types
     for (final entry in _eventLists.entries) {
@@ -5845,29 +5844,29 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
       final eventList = entry.value;
 
       // Find by stable identifier and pubkey instead of event.id.
-      // For addressable events, (pubkey, d-tag) is the stable identifier.
+      // For addressable events, (kind, pubkey, d-tag) is the stable identifier.
       // Note: Some relays/clients may omit the 'd' tag, in which case we fall
       // back to event.id; using stableId avoids mismatches that cause duplicates.
       final existingIndex = eventList.indexWhere(
         (existing) =>
             existing.stableId == updatedVideo.stableId &&
-            existing.pubkey == updatedVideo.pubkey,
+            existing.pubkey == updatedVideo.pubkey &&
+            existing.referenceKind == updatedVideo.referenceKind,
       );
 
       if (existingIndex != -1) {
+        foundAny = true;
         final existingVideo = eventList[existingIndex];
 
         // Merge updated video: preserve original timestamps and live counts.
-        // See _mergeUpdatedVideo for details.
-        final mergedVideo = _mergeUpdatedVideo(existingVideo, updatedVideo);
+        final mergedVideo = mergeIfNewer(existingVideo, updatedVideo);
+        if (identical(mergedVideo, existingVideo)) continue;
 
         eventList[existingIndex] = mergedVideo;
-        foundAny = true;
 
         // Update replaceable tracking map
-        // Use NIP71VideoKinds.addressableShortVideo since that's what Divine uses
         final replaceKey =
-            '$subscriptionType:${NIP71VideoKinds.addressableShortVideo}:${mergedVideo.pubkey}:${mergedVideo.stableId}';
+            '$subscriptionType:${mergedVideo.referenceKind}:${mergedVideo.pubkey}:${mergedVideo.stableId}';
         // The raw created_at, as _handleReplaceableVideoEvent records it.
         // createdAt holds the published_at every edit re-emits, so an
         // earlier revision would compare as newer.
@@ -5884,18 +5883,19 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
     final replacedInAuthorBucket = _authorBuckets.replaceByStableId(
       updatedVideo.pubkey,
       updatedVideo,
-      merge: _mergeUpdatedVideo,
+      merge: mergeIfNewer,
     );
     foundAny = foundAny || replacedInAuthorBucket;
 
     if (foundAny) {
       notifyListeners();
-      // Notify registered callbacks about the update
-      _notifyVideoUpdated(updatedVideo);
     } else {
       // If not found anywhere, add it to discovery feed
       addVideoEvent(updatedVideo);
     }
+    // Feeds this service does not hold (Home is fed over REST) learn of the
+    // republish from the callbacks too (#11250).
+    _notifyVideoUpdated(updatedVideo);
   }
 
   // NIP-50 Search Methods

@@ -545,9 +545,13 @@ class DraftRenderParametersService {
                 cacheManager: openVineImageCache,
               ),
             );
-          } else if (assetPath != null) {
+          } else if (assetPath != null && isLegacySvgStickerAsset(assetPath)) {
             // Populates flutter_svg's own cache, which SvgPicture.asset reads.
             await SvgAssetLoader(assetPath).loadBytes(null);
+          } else if (assetPath != null) {
+            // The widget the render mounts decodes the asset at full size,
+            // under this same key.
+            await _resolveImage(AssetImage(assetPath));
           }
         } catch (error) {
           Log.warning(

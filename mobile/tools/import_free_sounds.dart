@@ -11,6 +11,7 @@ import 'package:http/http.dart' as http;
 import 'package:nostr_sdk/client_utils/keys.dart';
 import 'package:nostr_sdk/nip19/nip19.dart';
 
+import 'sound_import/app_sounds.dart';
 import 'sound_import/audio_pipeline.dart';
 import 'sound_import/blossom_client.dart';
 import 'sound_import/cc0_packs.dart';
@@ -19,6 +20,7 @@ import 'sound_import/incompetech.dart';
 import 'sound_import/sound_candidate.dart';
 import 'sound_import/sound_event_builder.dart';
 import 'sound_import/sound_publisher.dart';
+import 'sound_import/source_download.dart';
 
 const _usage = '''
 Imports freely licensed sounds into Divine's sound library.
@@ -92,7 +94,7 @@ ArgParser _parser() {
   parser.addCommand('catalog')
     ..addOption(
       'source',
-      allowed: ['all', 'cc0', 'incompetech'],
+      allowed: ['all', 'cc0', 'incompetech', 'app'],
       defaultsTo: 'all',
     )
     ..addMultiOption(
@@ -114,6 +116,12 @@ ArgParser _parser() {
       splitCommas: false,
     )
     ..addOption('interval', defaultsTo: '2', help: 'Seconds between downloads.')
+    ..addOption(
+      'max-duration',
+      help:
+          'Seconds. A longer sound keeps only its start, faded out; the '
+          'credit says so. Use it for tracks over the 16 MiB upload limit.',
+    )
     ..addFlag('dry-run', negatable: false);
   parser.addCommand('events')
     ..addOption('blossom', help: 'The server the files are uploaded to.')
@@ -193,6 +201,15 @@ Future<void> _catalog(Directory work, ArgResults args) async {
       candidates.addAll(limit == null ? music : music.take(limit));
       stdout.writeln('incompetech: ${music.length} candidates');
     }
+    if (source == 'all' || source == 'app') {
+      final manifest = await _getJson(client, appSoundsManifestUrl);
+      final shipped = appSoundCandidates(manifest! as Map<String, dynamic>);
+      candidates.addAll(limit == null ? shipped : shipped.take(limit));
+      stdout.writeln(
+        "app: ${shipped.length} of the app's own sounds at commit "
+        '$appSoundsCommit',
+      );
+    }
   } finally {
     client.close();
   }
@@ -219,10 +236,17 @@ Future<void> _prepare(Directory work, ArgResults args) async {
   final interval = Duration(
     milliseconds: (double.parse(args['interval'] as String) * 1000).round(),
   );
+  final maxDuration = _intOption(args, 'max-duration');
+  if (maxDuration != null && maxDuration <= 0) {
+    throw const _UsageError('--max-duration must be a positive number.');
+  }
   final pending = [
     for (final candidate in catalog)
       if ((only.isEmpty || only.contains(candidate.id)) &&
-          _needsPreparing(state.records[candidate.id]))
+          _needsPreparing(
+            state.records[candidate.id],
+            maxDuration: maxDuration,
+          ))
         candidate,
   ];
   final batch = limit == null ? pending : pending.take(limit).toList();
@@ -244,8 +268,10 @@ Future<void> _prepare(Directory work, ArgResults args) async {
 
   final sources = Directory('${work.path}/src')..createSync(recursive: true);
   final outputs = Directory('${work.path}/out')..createSync(recursive: true);
-  final pipeline = AudioPipeline();
-  final client = http.Client();
+  final pipeline = AudioPipeline(
+    targets: AudioTargets(maxDurationSeconds: maxDuration?.toDouble()),
+  );
+  final downloader = SourceDownloader();
   var lastDownload = DateTime.fromMillisecondsSinceEpoch(0);
   try {
     for (final (index, candidate) in batch.indexed) {
@@ -259,7 +285,11 @@ Future<void> _prepare(Directory work, ArgResults args) async {
           final wait = interval - DateTime.now().difference(lastDownload);
           if (wait > Duration.zero) await Future<void>.delayed(wait);
           lastDownload = DateTime.now();
-          await _download(client, candidate.downloadUrl, sourceFile);
+          await downloader.download(
+            candidate.downloadUrl,
+            sourceFile,
+            userAgent: _userAgent,
+          );
         }
         final sourceSha = await _sha256Of(sourceFile);
         final original = state.preparedFromSource(sourceSha);
@@ -322,13 +352,28 @@ Future<void> _prepare(Directory work, ArgResults args) async {
       state.save();
     }
   } finally {
-    client.close();
+    downloader.close();
   }
   _printSummary(state);
 }
 
-bool _needsPreparing(ImportRecord? record) =>
-    record == null || record.status == ImportStatus.failed;
+/// Whether [record] is prepared again: it never was, it failed, or it is
+/// longer than [maxDuration] and has been neither uploaded nor published.
+///
+/// The last case lets a run with `--max-duration` cut a track that an earlier
+/// run without it left too long to upload. An uploaded or published file is
+/// kept, so the run never orphans a blob or an event. The second of slack
+/// covers the encoder's padding on a track already cut to the limit.
+bool _needsPreparing(ImportRecord? record, {int? maxDuration}) {
+  if (record == null || record.status == ImportStatus.failed) return true;
+  final duration = record.durationSeconds;
+  return maxDuration != null &&
+      record.status == ImportStatus.prepared &&
+      duration != null &&
+      duration > maxDuration + 1 &&
+      record.uploadedTo.isEmpty &&
+      record.publishedEventId == null;
+}
 
 void _events(Directory work, ArgResults args) {
   final blossom = args['blossom'] as String?;
@@ -567,27 +612,6 @@ Future<Object?> _getJson(http.Client client, String url) async {
     throw HttpException('GET $url answered ${response.statusCode}');
   }
   return jsonDecode(utf8.decode(response.bodyBytes));
-}
-
-/// Downloads [url] to [file], retrying a busy server with growing pauses.
-Future<void> _download(http.Client client, String url, File file) async {
-  for (var attempt = 1; ; attempt++) {
-    final response = await client.get(
-      Uri.parse(url),
-      headers: {'User-Agent': _userAgent},
-    );
-    if (response.statusCode == 200) {
-      final partial = File('${file.path}.part')
-        ..writeAsBytesSync(response.bodyBytes);
-      partial.renameSync(file.path);
-      return;
-    }
-    final retryable = response.statusCode == 429 || response.statusCode >= 500;
-    if (!retryable || attempt == 4) {
-      throw HttpException('GET $url answered ${response.statusCode}');
-    }
-    await Future<void>.delayed(Duration(seconds: 5 * attempt * attempt));
-  }
 }
 
 Future<String> _sha256Of(File file) async =>

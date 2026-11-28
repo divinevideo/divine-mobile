@@ -111,9 +111,9 @@ void main() {
       phase: CollabRoomPhase.recording,
       samStatus: CollabRoomMemberStatus.joined,
     );
-    const upload = (
-      url: 'https://media.example/part',
-      metadata: DmFileMetadata(
+    const upload = CollabRoomUpload(
+      fileUrl: 'https://media.example/part',
+      fileMetadata: DmFileMetadata(
         fileType: 'video/mp4',
         encryptionAlgorithm: 'aes-gcm',
         decryptionKey: 'key',

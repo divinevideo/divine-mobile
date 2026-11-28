@@ -1,0 +1,44 @@
+# ABOUTME: CI workflow for the Wear OS remote shutter app.
+# ABOUTME: Runs its unit tests and lint, and builds it, only when the watch app changes.
+
+name: Wear OS Remote CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mobile/android/wear/**"
+      - ".github/workflows/wear_remote.yaml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "mobile/android/wear/**"
+      - ".github/workflows/wear_remote.yaml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # The watch app is a Gradle build of its own, outside the Flutter app's
+  # Android project, so neither Mobile CI nor a package workflow builds it.
+  build:
+    name: Test, lint and build
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: mobile/android/wear
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Setup Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: "8.14.3"
+          cache-provider: basic
+      - name: Unit tests, lint and debug build
+        run: gradle testDebugUnitTest lintDebug assembleDebug

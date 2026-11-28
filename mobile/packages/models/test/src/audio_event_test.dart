@@ -359,6 +359,82 @@ void main() {
       });
     });
 
+    group('isChangedFromOriginal', () {
+      AudioEvent described(String? description) => AudioEvent(
+        id: testHexId,
+        pubkey: testPubkey,
+        createdAt: 1700000000,
+        description: description,
+      );
+
+      test('is true when a line names what was edited', () {
+        expect(
+          described(
+            'Crypto\nCreated by Kevin MacLeod\n'
+            '${AudioEvent.editedLinePrefix}loudness normalized',
+          ).isChangedFromOriginal,
+          isTrue,
+        );
+      });
+
+      test('is true for an excerpt of a longer recording', () {
+        expect(
+          described(
+            'Elevator Music\n  ${AudioEvent.excerptLine}  ',
+          ).isChangedFromOriginal,
+          isTrue,
+        );
+      });
+
+      test('is false when no line says so', () {
+        expect(described(null).isChangedFromOriginal, isFalse);
+        expect(
+          described('Not Edited: just a caption').isChangedFromOriginal,
+          isFalse,
+        );
+      });
+    });
+
+    group('sourceForDisplay', () {
+      AudioEvent credited({String? source, String? creatorName}) => AudioEvent(
+        id: testHexId,
+        pubkey: testPubkey,
+        createdAt: 1700000000,
+        source: source,
+        creatorName: creatorName,
+      );
+
+      test('names the creator in place of a source link', () {
+        expect(
+          credited(
+            source: 'https://incompetech.com/music/royalty-free/',
+            creatorName: 'Kevin MacLeod (incompetech.com)',
+          ).sourceForDisplay,
+          equals('Kevin MacLeod (incompetech.com)'),
+        );
+      });
+
+      test('keeps a source that is not a link', () {
+        expect(
+          credited(
+            source: 'ThePauny via Freesound',
+            creatorName: 'ThePauny',
+          ).sourceForDisplay,
+          equals('ThePauny via Freesound'),
+        );
+      });
+
+      test('keeps a source link when no creator is named', () {
+        expect(
+          credited(
+            source: 'https://example.com/sound',
+            creatorName: ' ',
+          ).sourceForDisplay,
+          equals('https://example.com/sound'),
+        );
+      });
+    });
+
     group('fromBundledSound', () {
       test('creates AudioEvent from VineSound with correct fields', () {
         // Arrange

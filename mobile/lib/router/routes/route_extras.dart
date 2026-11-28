@@ -2,6 +2,7 @@
 // ABOUTME: Used to pass structured data between routes via GoRouter extra
 
 import 'package:models/models.dart';
+import 'package:openvine/screens/feed/dm_reply_context.dart';
 
 /// Safely reads a GoRouter `state.extra` payload as [T].
 ///
@@ -46,4 +47,31 @@ class CuratedListRouteExtra {
   /// Warm discovery data, validated by author and d-tag in the author route.
   /// Supports sharing and metadata before the record is cached locally.
   final CuratedList? list;
+}
+
+/// Optional warm state and privacy origin for the video detail route.
+class VideoDetailRouteExtra {
+  const VideoDetailRouteExtra({
+    this.autoOpenComments = false,
+    this.fallbackVideoIds = const [],
+    this.initialVideo,
+    this.dmReplyContext,
+    this.fromMessage = false,
+    this.focusCommentId,
+  });
+
+  final bool autoOpenComments;
+  final List<String> fallbackVideoIds;
+  final VideoEvent? initialVideo;
+
+  /// The comment the comments sheet [autoOpenComments] opens scrolls to,
+  /// such as the one a tapped reply sticker replies to.
+  final String? focusCommentId;
+
+  /// Present when the reel was opened from a DM thread — drives the in-player
+  /// reply/reaction bar. Null for feed/profile opens.
+  final DmReplyContext? dmReplyContext;
+
+  /// The user opened this clip from a private message.
+  final bool fromMessage;
 }

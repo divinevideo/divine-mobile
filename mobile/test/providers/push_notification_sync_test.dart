@@ -2,7 +2,10 @@
 // ABOUTME: Verifies firebase permission races don't escape the async listener.
 
 import 'dart:async';
+import 'dart:convert';
 
+import 'package:app_update_repository/app_update_repository.dart';
+import 'package:dm_repository/dm_repository.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/services.dart';
@@ -13,11 +16,17 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/models/environment_config.dart';
 import 'package:openvine/models/notification_preferences.dart';
+import 'package:openvine/notifications/routing/dm_message_visibility.dart';
 import 'package:openvine/notifications/services/notification_refresh_coordinator.dart';
+import 'package:openvine/providers/account_preferences_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/app_version_provider.dart';
 import 'package:openvine/providers/environment_provider.dart';
+import 'package:openvine/providers/install_source_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/services/account_preference_store.dart';
 import 'package:openvine/services/auth/nostr_identity.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/notification_preferences_service.dart';
@@ -36,6 +45,14 @@ class _MockPushNotificationService extends Mock
 class _MockNostrClient extends Mock implements NostrClient {}
 
 class _MockNostrSigner extends Mock implements NostrSigner {}
+
+class _MockDmRepository extends Mock implements DmRepository {}
+
+class _MockBoundPreferenceStore extends Mock
+    implements AccountPreferenceStore {}
+
+class _MockMessagePreferences extends Mock
+    implements NotificationPreferencesService {}
 
 class _MockNotificationService extends Mock implements NotificationService {}
 
@@ -448,6 +465,275 @@ void main() {
       },
     );
 
+    group('foreground direct messages', () {
+      const wrap =
+          'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+      late ProviderContainer foreground;
+      late bool restricted;
+      late _MockDmRepository dm;
+      late _MockNotificationService local;
+      late _MockMessagePreferences preferences;
+      late _MockBoundPreferenceStore accountStore;
+      late StreamController<RemoteMessage> pushes;
+      late StreamController<DmWrapLookup> lookups;
+      const optedIn = NotificationPreferences(directMessagesEnabled: true);
+
+      setUp(() {
+        restricted = false;
+        dm = _MockDmRepository();
+        local = _MockNotificationService();
+        preferences = _MockMessagePreferences();
+        accountStore = _MockBoundPreferenceStore();
+        pushes = StreamController<RemoteMessage>.broadcast();
+        lookups = StreamController<DmWrapLookup>.broadcast();
+        addTearDown(pushes.close);
+        addTearDown(lookups.close);
+        when(() => authService.currentPublicKeyHex).thenReturn(pubkeyA);
+        when(() => accountStore.boundPubkey).thenReturn(pubkeyA);
+        when(() => local.hasPermissions).thenReturn(true);
+        when(preferences.loadPreferences).thenAnswer((_) async => optedIn);
+        when(() => dm.watchWrapLookup(ownerPubkey: pubkeyA, giftWrapId: wrap))
+            .thenAnswer((_) => lookups.stream);
+        when(
+          () => local.sendLocal(
+            title: any(named: 'title'),
+            body: any(named: 'body'),
+            payload: any(named: 'payload'),
+          ),
+        ).thenAnswer((_) async {});
+        foreground = buildContainer(
+          nostrSession: _TestNostrSession(
+            const NostrSessionReadiness.identityKnown(pubkey: pubkeyA),
+          ),
+          extraOverrides: [
+            firebaseOnMessageProvider.overrideWithValue(pushes.stream),
+            dmRepositoryProvider.overrideWithValue(dm),
+            notificationServiceProvider.overrideWithValue(local),
+            notificationPreferencesServiceProvider.overrideWithValue(
+              preferences,
+            ),
+            accountPreferenceStoreProvider.overrideWithValue(accountStore),
+            isDmRestrictedProvider.overrideWith((_) => restricted),
+          ],
+        );
+        foreground.read(pushNotificationSyncProvider);
+      });
+
+      Future<void> receive({String receiver = pubkeyA}) async {
+        pushes.add(
+          RemoteMessage(
+            data: {
+              'type': 'directMessage',
+              'receiverPubkey': receiver,
+              'eventId': wrap,
+              'title': 'Untrusted title',
+              'body': 'Untrusted body',
+            },
+          ),
+        );
+        await pumpEventQueue(times: 2);
+      }
+
+      Future<void> verified({bool request = false}) async {
+        lookups.add(
+          DmWrapFound(
+            conversationId: 'room',
+            messageId: 'rumor',
+            participants: {pubkeyB},
+            isRequest: request,
+          ),
+        );
+        await pumpEventQueue(times: 2);
+      }
+
+      void expectSilent() => verifyNever(
+        () => local.sendLocal(
+          title: any(named: 'title'),
+          body: any(named: 'body'),
+          payload: any(named: 'payload'),
+        ),
+      );
+
+      test(
+        'shows localized generic copy only after verified delivery',
+        () async {
+          await receive();
+          expect(lookups.hasListener, isTrue);
+          expectSilent();
+          await verified();
+          final result =
+              verify(
+                    () => local.sendLocal(
+                      title: 'Divine',
+                      body: 'New message',
+                      payload: captureAny(named: 'payload'),
+                    ),
+                  ).captured.single
+                  as String;
+          expect(jsonDecode(result), containsPair('eventId', wrap));
+          expect(result, isNot(contains('Untrusted')));
+        },
+      );
+
+      test(
+        'rejects a foreign receiver and an unbound preference owner',
+        () async {
+          await receive(receiver: pubkeyB);
+          expect(lookups.hasListener, isFalse);
+          when(() => accountStore.boundPubkey).thenReturn(pubkeyB);
+          await receive();
+          expect(lookups.hasListener, isFalse);
+          verifyNever(preferences.loadPreferences);
+          expectSilent();
+        },
+      );
+
+      test(
+        'requires OS permission and explicit opt-in before lookup',
+        () async {
+          when(() => local.hasPermissions).thenReturn(false);
+          await receive();
+          verifyNever(preferences.loadPreferences);
+          expect(lookups.hasListener, isFalse);
+          when(() => local.hasPermissions).thenReturn(true);
+          when(preferences.loadPreferences)
+              .thenAnswer((_) async => const NotificationPreferences());
+          await receive();
+          expect(lookups.hasListener, isFalse);
+          expectSilent();
+        },
+      );
+
+      test('suppresses a verified request', () async {
+        await receive();
+        expect(lookups.hasListener, isTrue);
+        await verified(request: true);
+        expectSilent();
+      });
+
+      test(
+        'switching account while verification waits cancels the alert',
+        () async {
+          await receive();
+          expect(lookups.hasListener, isTrue);
+          when(() => authService.currentPublicKeyHex).thenReturn(pubkeyB);
+          await verified();
+          expectSilent();
+        },
+      );
+
+      test('opting out while verification waits cancels the alert', () async {
+        await receive();
+        expect(lookups.hasListener, isTrue);
+        when(preferences.loadPreferences)
+            .thenAnswer((_) async => const NotificationPreferences());
+        await verified();
+        expectSilent();
+      });
+
+      test('revoking OS permission during the final consent read cancels the alert', () async {
+        final consent = Completer<NotificationPreferences>();
+        await receive();
+        expect(lookups.hasListener, isTrue);
+        when(preferences.loadPreferences).thenAnswer((_) => consent.future);
+        await verified();
+        when(() => local.hasPermissions).thenReturn(false);
+        consent.complete(optedIn);
+        await pumpEventQueue(times: 2);
+        expectSilent();
+      });
+
+      test(
+        'a wrap suppressed during the final consent read cancels the alert',
+        () async {
+          final consent = Completer<NotificationPreferences>();
+          await receive();
+          when(preferences.loadPreferences).thenAnswer((_) => consent.future);
+          await verified();
+          lookups.add(const DmWrapSuppressed());
+          await pumpEventQueue(times: 2);
+          consent.complete(optedIn);
+          await pumpEventQueue(times: 2);
+          expectSilent();
+          expect(lookups.hasListener, isFalse);
+        },
+      );
+
+      test(
+        'disposing the provider stops a pending verification immediately',
+        () async {
+          await receive();
+          expect(lookups.hasListener, isTrue);
+          foreground.invalidate(pushNotificationSyncProvider);
+          expect(lookups.hasListener, isFalse);
+          await verified();
+          expectSilent();
+        },
+      );
+
+      test(
+        'the original ten-second wait bounds an unverified foreground alert',
+        () {
+          fakeAsync((clock) {
+            // Register the FCM listener in the same virtual-time zone as its
+            // lookup deadline.
+            foreground.invalidate(pushNotificationSyncProvider);
+            foreground.read(pushNotificationSyncProvider);
+            pushes.add(
+              const RemoteMessage(
+                data: {
+                  'type': 'directMessage',
+                  'receiverPubkey': pubkeyA,
+                  'eventId': wrap,
+                },
+              ),
+            );
+            clock.flushMicrotasks();
+            expect(lookups.hasListener, isTrue);
+            clock.elapse(const Duration(seconds: 9));
+            lookups.add(const DmWrapPending());
+            clock.flushMicrotasks();
+            expectSilent();
+            clock.elapse(const Duration(seconds: 1));
+            verify(
+              () => local.sendLocal(
+                title: 'Divine',
+                body: 'New message',
+                payload: any(named: 'payload'),
+              ),
+            ).called(1);
+            expect(lookups.hasListener, isFalse);
+          });
+        },
+      );
+
+      test('the same message becoming visible during the final consent read suppresses the alert', () async {
+        final consent = Completer<NotificationPreferences>();
+        await receive();
+        when(preferences.loadPreferences).thenAnswer((_) => consent.future);
+        await verified();
+        bool seesTarget(String owner, String conversation, String message) =>
+            owner == pubkeyA && conversation == 'room' && message == 'rumor';
+        DmMessageVisibility.attach(seesTarget);
+        addTearDown(() => DmMessageVisibility.detach(seesTarget));
+        consent.complete(optedIn);
+        await pumpEventQueue(times: 2);
+        expectSilent();
+      });
+
+      test('a protected-minor designation during the final consent read suppresses the alert', () async {
+        final consent = Completer<NotificationPreferences>();
+        await receive();
+        when(preferences.loadPreferences).thenAnswer((_) => consent.future);
+        await verified();
+        restricted = true;
+        foreground.invalidate(isDmRestrictedProvider);
+        consent.complete(optedIn);
+        await pumpEventQueue(times: 2);
+        expectSilent();
+      });
+    });
+
     test(
       'does not publish stale registration when auth changes mid-flight',
       () async {
@@ -492,6 +778,9 @@ void main() {
         );
         final container = ProviderContainer(
           overrides: [
+            // Match bootstrap metadata required by the real push service.
+            installSourceProvider.overrideWithValue(InstallSource.sideload),
+            appVersionProvider.overrideWithValue('1.2.3'),
             sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             firebaseMessagingProvider.overrideWithValue(messaging),
             authServiceProvider.overrideWithValue(authService),
@@ -531,6 +820,83 @@ void main() {
         );
       },
     );
+
+    test('registers the release metadata of this install', () async {
+      final token = Completer<String?>();
+      final tokenRefreshController = StreamController<String>.broadcast();
+      addTearDown(tokenRefreshController.close);
+      final signer = _MockNostrSigner();
+      final identity = KeycastNostrIdentity(pubkey: pubkeyA, rpcSigner: signer);
+      final event = _FakeEvent();
+      when(
+        () => messaging.getNotificationSettings(),
+      ).thenAnswer((_) async => _settings(AuthorizationStatus.authorized));
+      when(() => messaging.getToken()).thenAnswer((_) => token.future);
+      when(
+        () => messaging.onTokenRefresh,
+      ).thenAnswer((_) => tokenRefreshController.stream);
+      when(
+        () => signer.nip44Encrypt(any(), any()),
+      ).thenAnswer((_) async => 'encrypted-registration');
+      when(
+        () => authService.createAndSignEvent(
+          kind: PushNotificationService.pushRegistrationKind,
+          content: 'encrypted-registration',
+          tags: any(named: 'tags'),
+        ),
+      ).thenAnswer((_) async => event);
+      when(
+        () => nostrClient.publishEventAwaitOk(
+          event,
+          targetRelays: any(named: 'targetRelays'),
+          timeout: any(named: 'timeout'),
+        ),
+      ).thenAnswer(
+        (_) async => _acceptedOutcome(event, pushEnvironment.relayUrl),
+      );
+
+      final nostrSession = _TestNostrSession(
+        const NostrSessionReadiness.signedOut(),
+      );
+      final container = ProviderContainer(
+        overrides: [
+          installSourceProvider.overrideWithValue(InstallSource.playStore),
+          appVersionProvider.overrideWithValue('1.4.0'),
+          sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+          firebaseMessagingProvider.overrideWithValue(messaging),
+          authServiceProvider.overrideWithValue(authService),
+          notificationPreferencesStoreProvider.overrideWithValue(
+            preferenceStore,
+          ),
+          notificationServiceProvider.overrideWithValue(
+            _MockNotificationService(),
+          ),
+          currentEnvironmentProvider.overrideWithValue(pushEnvironment),
+          nostrSessionProvider.overrideWith(() => nostrSession),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.read(pushNotificationSyncProvider);
+
+      await emitReady(nostrSession, pubkeyA);
+      when(() => authService.currentIdentity).thenReturn(identity);
+      token.complete('fcm-token');
+      await pumpEventQueue(times: 4);
+
+      final plaintext =
+          verify(
+                () => signer.nip44Encrypt(any(), captureAny()),
+              ).captured.single
+              as String;
+      expect(
+        jsonDecode(plaintext),
+        allOf(
+          containsPair('platform', 'android'),
+          containsPair('installChannel', 'google_play'),
+          containsPair('appVersion', '1.4.0'),
+        ),
+      );
+    });
 
     test('registers only after Nostr session is ready', () async {
       when(
@@ -1805,6 +2171,9 @@ void main() {
         );
         final container = ProviderContainer(
           overrides: [
+            // Match bootstrap metadata required by the real push service.
+            installSourceProvider.overrideWithValue(InstallSource.sideload),
+            appVersionProvider.overrideWithValue('1.2.3'),
             sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             firebaseMessagingProvider.overrideWithValue(messaging),
             authServiceProvider.overrideWithValue(authService),
@@ -1896,6 +2265,9 @@ void main() {
         );
         final container = ProviderContainer(
           overrides: [
+            // Match bootstrap metadata required by the real push service.
+            installSourceProvider.overrideWithValue(InstallSource.sideload),
+            appVersionProvider.overrideWithValue('1.2.3'),
             sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             firebaseMessagingProvider.overrideWithValue(messaging),
             authServiceProvider.overrideWithValue(authService),
@@ -1998,6 +2370,9 @@ void main() {
         );
         final container = ProviderContainer(
           overrides: [
+            // Match bootstrap metadata required by the real push service.
+            installSourceProvider.overrideWithValue(InstallSource.sideload),
+            appVersionProvider.overrideWithValue('1.2.3'),
             sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             firebaseMessagingProvider.overrideWithValue(messaging),
             authServiceProvider.overrideWithValue(authService),
@@ -2147,6 +2522,9 @@ void main() {
         );
         final container = ProviderContainer(
           overrides: [
+            // Match bootstrap metadata required by the real push service.
+            installSourceProvider.overrideWithValue(InstallSource.sideload),
+            appVersionProvider.overrideWithValue('1.2.3'),
             sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             firebaseMessagingProvider.overrideWithValue(messaging),
             authServiceProvider.overrideWithValue(authService),
@@ -2280,6 +2658,9 @@ void main() {
         );
         final container = ProviderContainer(
           overrides: [
+            // Match bootstrap metadata required by the real push service.
+            installSourceProvider.overrideWithValue(InstallSource.sideload),
+            appVersionProvider.overrideWithValue('1.2.3'),
             sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             firebaseMessagingProvider.overrideWithValue(messaging),
             authServiceProvider.overrideWithValue(authService),

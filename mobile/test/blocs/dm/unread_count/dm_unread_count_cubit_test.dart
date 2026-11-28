@@ -581,6 +581,7 @@ void main() {
                 lastMessageContent: 'from the first member',
                 lastMessageTimestamp: 1699999000,
                 lastMessageSenderPubkey: _alice,
+                lastMessageIsVideoShare: false,
                 hasUnread: hasUnread,
               ),
             },

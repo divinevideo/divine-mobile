@@ -631,6 +631,46 @@ void main() {
         expect(read.conclusive, isFalse);
       });
 
+      for (final recovers in [true, false]) {
+        test(
+          recovers
+              ? 'retries an inconclusive raw read and returns the fresh profile'
+              : 'bounds retries and leaves an exhausted raw read inconclusive',
+          () async {
+            var attempts = 0;
+            when(
+              () => mockNostrClient.queryEventsDetailed(
+                any(),
+                useCache: false,
+                requireAllRelaysSettled: true,
+              ),
+            ).thenAnswer((_) async {
+              attempts++;
+              final found = recovers && attempts == 2;
+              return (
+                events: found ? [mockProfileEvent] : <Event>[],
+                timedOut: !found,
+                noRelays: false,
+              );
+            });
+
+            final read = await profileRepository.readFreshProfile(
+              pubkey: testPubkey,
+              requireRawKind0: true,
+              rawKind0RetryDelays: const [Duration.zero],
+            );
+
+            expect(attempts, 2);
+            expect(read.conclusive, recovers);
+            if (recovers) {
+              expect(read.profile?.displayName, 'Test User');
+            } else {
+              expect(read.profile, isNull);
+            }
+          },
+        );
+      }
+
       test('reports a miss with no relay connected as inconclusive', () async {
         stubRawRelayRead(noRelays: true);
 
@@ -5178,8 +5218,8 @@ void main() {
       );
 
       test(
-        'a relevance search lists a profile only the cache found after the '
-        "server's",
+        'a relevance search without a REST page orders the cache and NIP-50 '
+        'matches by relevance',
         () async {
           when(() => mockFunnelcakeClient.getBulkProfiles(any())).thenAnswer(
             (_) async => const BulkProfilesResponse(profiles: {}),
@@ -5188,33 +5228,13 @@ void main() {
             (_) async => [
               UserProfile(
                 pubkey: pkCachedVine,
-                name: 'lauren',
+                name: 'laurence',
                 createdAt: DateTime.fromMillisecondsSinceEpoch(1700000000000),
                 eventId: 'kind0-$pkCachedVine',
                 rawData: const {},
               ),
             ],
           );
-          stubRestResults([restProfile(pk1Video, 'lauren')]);
-
-          final result = await repoWithFunnelcake
-              .searchUsersProgressive(
-                query: 'lauren',
-                sortBy: profileSearchSortRelevance,
-              )
-              .last;
-
-          expect(result.profiles.map((p) => p.pubkey), [
-            pk1Video,
-            pkCachedVine,
-          ]);
-        },
-      );
-
-      test(
-        'a relevance search lists a profile only NIP-50 found after the '
-        "server's",
-        () async {
           when(() => mockProfileEvent.content).thenReturn(
             jsonEncode({'display_name': 'lauren'}),
           );
@@ -5225,7 +5245,15 @@ void main() {
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((_) async => [mockProfileEvent]);
-          stubRestResults([restProfile(pk1Video, 'laurence')]);
+          when(
+            () => mockFunnelcakeClient.searchProfiles(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              offset: any(named: 'offset'),
+              sortBy: any(named: 'sortBy'),
+              hasVideos: any(named: 'hasVideos'),
+            ),
+          ).thenThrow(Exception('search unavailable'));
 
           final result = await repoWithFunnelcake
               .searchUsersProgressive(
@@ -5234,7 +5262,10 @@ void main() {
               )
               .last;
 
-          expect(result.profiles.map((p) => p.pubkey), [pk1Video, testPubkey]);
+          expect(result.profiles.map((p) => p.pubkey), [
+            testPubkey,
+            pkCachedVine,
+          ]);
         },
       );
 
@@ -5671,19 +5702,6 @@ void main() {
 
       test('progressive search keeps identity matches and drops bio-only '
           'server hits', () async {
-        when(() => mockFunnelcakeClient.getBulkProfiles(any())).thenAnswer(
-          (_) async => const BulkProfilesResponse(profiles: {}),
-        );
-        final cached = UserProfile(
-          pubkey: pkCachedVine,
-          displayName: 'Sam From Contacts',
-          createdAt: DateTime(2026),
-          eventId: 'cached',
-          rawData: const {},
-        );
-        when(
-          () => mockUserProfilesDao.getAllProfiles(),
-        ).thenAnswer((_) async => [cached]);
         stubRestResults([
           ProfileSearchResult(
             pubkey: pk18Videos,
@@ -5704,11 +5722,9 @@ void main() {
             .searchUsersProgressive(query: 'sam', sortBy: 'followers')
             .toList();
 
-        expect(emissions.first.profiles.map((p) => p.pubkey), [pkCachedVine]);
-        expect(emissions.last.profiles.map((p) => p.pubkey), [
-          pk1Video,
-          pkCachedVine,
-        ]);
+        for (final emission in emissions) {
+          expect(emission.profiles.map((p) => p.pubkey), [pk1Video]);
+        }
       });
 
       test(
@@ -5751,46 +5767,6 @@ void main() {
 
         final pubkeys = emissions.last.profiles.map((p) => p.pubkey).toList();
         expect(pubkeys, [pk18Videos, pk4Videos, pk1Video]);
-      });
-
-      test('searchUsersProgressive ranks a cached profile with no REST counts '
-          'after the counted results', () async {
-        when(() => mockFunnelcakeClient.getBulkProfiles(any())).thenAnswer(
-          (_) async => const BulkProfilesResponse(profiles: {}),
-        );
-        final cachedProfile = UserProfile(
-          pubkey: pkCachedVine,
-          displayName: 'Lauren Cached',
-          rawData: const {},
-          createdAt: DateTime.fromMillisecondsSinceEpoch(1700000000000),
-          eventId: 'kind0-$pkCachedVine',
-        );
-        when(
-          () => mockUserProfilesDao.getAllProfiles(),
-        ).thenAnswer((_) async => [cachedProfile]);
-        stubRestResults([
-          ProfileSearchResult(
-            pubkey: pk1Video,
-            displayName: 'Lauren One',
-            createdAt: DateTime.fromMillisecondsSinceEpoch(1700000000000),
-            followerCount: 0,
-            videoCount: 1,
-          ),
-          ProfileSearchResult(
-            pubkey: pk18Videos,
-            displayName: 'Lauren Eighteen',
-            createdAt: DateTime.fromMillisecondsSinceEpoch(1700000000000),
-            followerCount: 0,
-            videoCount: 18,
-          ),
-        ]);
-
-        final emissions = await repoWithFunnelcake
-            .searchUsersProgressive(query: 'lauren', sortBy: 'followers')
-            .toList();
-
-        final pubkeys = emissions.last.profiles.map((p) => p.pubkey).toList();
-        expect(pubkeys, [pk18Videos, pk1Video, pkCachedVine]);
       });
 
       test('searchUsers ranks mixed follower-signal pages without leaving the '
@@ -6777,77 +6753,6 @@ void main() {
           expect(await resultFuture, isEmpty);
         });
 
-        test('yields progressively: local, then API+relay merged', () async {
-          when(() => mockFunnelcakeClient.getBulkProfiles(any())).thenAnswer(
-            (_) async => const BulkProfilesResponse(profiles: {}),
-          );
-          // Arrange - local cache
-          final cachedProfile = UserProfile(
-            pubkey: testPubkey,
-            displayName: 'Test Cached',
-            rawData: const {'display_name': 'Test Cached'},
-            createdAt: DateTime(2026),
-            eventId: testEventId,
-          );
-          when(
-            () => mockUserProfilesDao.getAllProfiles(),
-          ).thenAnswer((_) async => [cachedProfile]);
-
-          // Funnelcake REST
-          when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
-          when(
-            () => mockFunnelcakeClient.searchProfiles(
-              query: 'test',
-              limit: any(named: 'limit'),
-              offset: any(named: 'offset'),
-              sortBy: any(named: 'sortBy'),
-              hasVideos: any(named: 'hasVideos'),
-            ),
-          ).thenAnswer(
-            (_) async => [
-              ProfileSearchResult(
-                pubkey: otherPubkey,
-                displayName: 'Test REST',
-                createdAt: DateTime.fromMillisecondsSinceEpoch(1700000000000),
-              ),
-            ],
-          );
-
-          // NIP-50
-          when(
-            () => mockNostrClient.queryUsers(
-              'test',
-              limit: 200,
-              timeout: any(named: 'timeout'),
-            ),
-          ).thenAnswer((_) async => []);
-
-          final repoWithFunnelcake = ProfileRepository(
-            nostrClient: mockNostrClient,
-            userProfilesDao: mockUserProfilesDao,
-            httpClient: mockHttpClient,
-            funnelcakeApiClient: mockFunnelcakeClient,
-          );
-
-          // Act
-          final emissions = await repoWithFunnelcake
-              .searchUsersProgressive(query: 'test')
-              .toList();
-
-          // Assert
-          expect(emissions.length, greaterThanOrEqualTo(2));
-
-          // First emission: local only
-          expect(emissions.first.profiles, hasLength(1));
-          expect(
-            emissions.first.profiles.first.displayName,
-            equals('Test Cached'),
-          );
-
-          // Last emission: merged results
-          expect(emissions.last.profiles.length, greaterThanOrEqualTo(1));
-        });
-
         test('continues when REST fails and yields WS results', () async {
           when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
           when(
@@ -6889,113 +6794,6 @@ void main() {
             result.sources[SearchSource.funnelcakeApi],
             isA<SearchSourceFailed>(),
           );
-        });
-
-        test('continues when WS fails and yields REST results', () async {
-          when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
-          when(
-            () => mockFunnelcakeClient.searchProfiles(
-              query: 'test',
-              limit: any(named: 'limit'),
-              offset: any(named: 'offset'),
-              sortBy: any(named: 'sortBy'),
-              hasVideos: any(named: 'hasVideos'),
-            ),
-          ).thenAnswer(
-            (_) async => [
-              ProfileSearchResult(
-                pubkey: 'a' * 64,
-                displayName: 'Test REST',
-                createdAt: DateTime.fromMillisecondsSinceEpoch(1700000000000),
-              ),
-            ],
-          );
-
-          when(
-            () => mockUserProfilesDao.getAllProfiles(),
-          ).thenAnswer((_) async => []);
-
-          when(
-            () => mockNostrClient.queryUsers(
-              'test',
-              limit: 200,
-              timeout: any(named: 'timeout'),
-            ),
-          ).thenThrow(StateError('WebSocket error'));
-
-          final repoWithFunnelcake = ProfileRepository(
-            nostrClient: mockNostrClient,
-            userProfilesDao: mockUserProfilesDao,
-            httpClient: mockHttpClient,
-            funnelcakeApiClient: mockFunnelcakeClient,
-          );
-
-          final result = await repoWithFunnelcake
-              .searchUsersProgressive(query: 'test')
-              .last;
-
-          expect(result.profiles, hasLength(1));
-          expect(result.profiles.first.displayName, equals('Test REST'));
-          expect(
-            result.sources[SearchSource.nip50Relay],
-            isA<SearchSourceFailed>(),
-          );
-        });
-
-        test('yields enriched results when WS adds new profiles', () async {
-          when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
-          when(
-            () => mockFunnelcakeClient.searchProfiles(
-              query: 'test',
-              limit: any(named: 'limit'),
-              offset: any(named: 'offset'),
-              sortBy: any(named: 'sortBy'),
-              hasVideos: any(named: 'hasVideos'),
-            ),
-          ).thenAnswer(
-            (_) async => [
-              ProfileSearchResult(
-                pubkey: 'a' * 64,
-                displayName: 'Test REST',
-                createdAt: DateTime.fromMillisecondsSinceEpoch(1700000000000),
-              ),
-            ],
-          );
-
-          final mockWsEvent = MockEvent();
-          when(() => mockWsEvent.kind).thenReturn(0);
-          when(() => mockWsEvent.pubkey).thenReturn('b' * 64);
-          when(() => mockWsEvent.createdAt).thenReturn(1704067200);
-          when(() => mockWsEvent.id).thenReturn('c' * 64);
-          when(
-            () => mockWsEvent.content,
-          ).thenReturn(jsonEncode({'display_name': 'Test WS'}));
-
-          when(
-            () => mockUserProfilesDao.getAllProfiles(),
-          ).thenAnswer((_) async => []);
-
-          when(
-            () => mockNostrClient.queryUsers(
-              'test',
-              limit: 200,
-              timeout: any(named: 'timeout'),
-            ),
-          ).thenAnswer((_) async => [mockWsEvent]);
-
-          final repoWithFunnelcake = ProfileRepository(
-            nostrClient: mockNostrClient,
-            userProfilesDao: mockUserProfilesDao,
-            httpClient: mockHttpClient,
-            funnelcakeApiClient: mockFunnelcakeClient,
-          );
-
-          final result = await repoWithFunnelcake
-              .searchUsersProgressive(query: 'test')
-              .last;
-
-          // Both REST and WS results merged
-          expect(result.profiles, hasLength(2));
         });
 
         test('uses custom profileSearchFilter when no server sort', () async {
@@ -7342,74 +7140,65 @@ void main() {
           ).thenAnswer((_) async => Response('{"names":{}}', 200));
         });
 
-        test('records success on every source when all succeed', () async {
-          final cachedProfile = UserProfile(
-            pubkey: testPubkey,
-            displayName: 'Cached',
-            rawData: const {'display_name': 'Cached'},
-            createdAt: DateTime(2026),
-            eventId: testEventId,
-          );
-          when(
-            () => mockUserProfilesDao.getAllProfiles(),
-          ).thenAnswer((_) async => [cachedProfile]);
-          when(
-            () => mockFunnelcakeClient.searchProfiles(
-              query: 'test',
-              limit: any(named: 'limit'),
-              offset: any(named: 'offset'),
-              sortBy: any(named: 'sortBy'),
-              hasVideos: any(named: 'hasVideos'),
-            ),
-          ).thenAnswer(
-            (_) async => [
-              ProfileSearchResult(
-                pubkey: 'a' * 64,
-                displayName: 'REST User',
-                createdAt: DateTime.fromMillisecondsSinceEpoch(1700000000000),
+        test(
+          'records local and REST success and skips relays when REST answers',
+          () async {
+            when(
+              () => mockUserProfilesDao.getAllProfiles(),
+            ).thenAnswer((_) async => []);
+            when(
+              () => mockFunnelcakeClient.searchProfiles(
+                query: 'test',
+                limit: any(named: 'limit'),
+                offset: any(named: 'offset'),
+                sortBy: any(named: 'sortBy'),
+                hasVideos: any(named: 'hasVideos'),
               ),
-            ],
-          );
+            ).thenAnswer(
+              (_) async => [
+                ProfileSearchResult(
+                  pubkey: 'a' * 64,
+                  displayName: 'REST User',
+                  createdAt: DateTime.fromMillisecondsSinceEpoch(
+                    1700000000000,
+                  ),
+                ),
+              ],
+            );
 
-          final wsEvent = MockEvent();
-          when(() => wsEvent.kind).thenReturn(0);
-          when(() => wsEvent.pubkey).thenReturn('b' * 64);
-          when(() => wsEvent.createdAt).thenReturn(1704067200);
-          when(() => wsEvent.id).thenReturn('c' * 64);
-          when(
-            () => wsEvent.content,
-          ).thenReturn(jsonEncode({'display_name': 'WS User'}));
-          when(
-            () => mockNostrClient.queryUsers(
-              'test',
-              limit: 200,
-              timeout: any(named: 'timeout'),
-            ),
-          ).thenAnswer((_) async => [wsEvent]);
+            final repo = ProfileRepository(
+              nostrClient: mockNostrClient,
+              userProfilesDao: mockUserProfilesDao,
+              httpClient: mockHttpClient,
+              funnelcakeApiClient: mockFunnelcakeClient,
+            );
 
-          final repo = ProfileRepository(
-            nostrClient: mockNostrClient,
-            userProfilesDao: mockUserProfilesDao,
-            httpClient: mockHttpClient,
-            funnelcakeApiClient: mockFunnelcakeClient,
-          );
+            final result = await repo
+                .searchUsersProgressive(query: 'test')
+                .last;
 
-          final result = await repo.searchUsersProgressive(query: 'test').last;
-
-          expect(
-            result.sources[SearchSource.localCache],
-            isA<SearchSourceSuccess>(),
-          );
-          expect(
-            result.sources[SearchSource.funnelcakeApi],
-            isA<SearchSourceSuccess>(),
-          );
-          expect(
-            result.sources[SearchSource.nip50Relay],
-            isA<SearchSourceSuccess>(),
-          );
-          expect(result.isComplete, isTrue);
-        });
+            expect(
+              result.sources[SearchSource.localCache],
+              isA<SearchSourceSuccess>(),
+            );
+            expect(
+              result.sources[SearchSource.funnelcakeApi],
+              isA<SearchSourceSuccess>(),
+            );
+            expect(
+              result.sources[SearchSource.nip50Relay],
+              isA<SearchSourceSkipped>(),
+            );
+            expect(result.isComplete, isTrue);
+            verifyNever(
+              () => mockNostrClient.queryUsers(
+                any(),
+                limit: any(named: 'limit'),
+                timeout: any(named: 'timeout'),
+              ),
+            );
+          },
+        );
 
         test(
           'records SearchSourceFailed(other) when local cache throws',

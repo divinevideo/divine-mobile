@@ -7,10 +7,12 @@ import 'package:analytics/analytics.dart';
 import 'package:clock/clock.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:feed_repository/feed_repository.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/explore_tabs/explore_tabs_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/view_traffic_source.dart';
 import 'package:openvine/providers/analytics_providers.dart';
@@ -129,6 +131,7 @@ class _PopularVideosTabState extends ConsumerState<PopularVideosTab> {
       // entirely from providers this build already read.
       _rendered = (variant: selectedVariant, state: feedState);
       _trackDataState(feedState.videos);
+      _reportExploreLoad(feedState);
     }
 
     // While a variant switch loads, keep painting the page we last rendered,
@@ -139,6 +142,9 @@ class _PopularVideosTabState extends ConsumerState<PopularVideosTab> {
     final Widget content;
     if (feedAsync.hasError && !showsSelectedVariant) {
       _trackErrorState(feedAsync.error);
+      context.read<ExploreTabsCubit?>()?.reportFeedTabFailed(
+        explorePopularTabName,
+      );
       content = RefreshableFeedStateView(
         key: const ValueKey('error'),
         onRefresh: _refreshPopularVideos,
@@ -201,6 +207,21 @@ class _PopularVideosTabState extends ConsumerState<PopularVideosTab> {
     if (videos.isEmpty) {
       _feedTracker.trackEmptyFeed('popular');
     }
+  }
+
+  /// Tells Explore, when it is timing its load on this tab, what the grid
+  /// shows. A failed first page arrives as data carrying the error.
+  void _reportExploreLoad(VideoFeedState feedState) {
+    final exploreTabs = context.read<ExploreTabsCubit?>();
+    if (feedState.videos.isEmpty && feedState.error != null) {
+      exploreTabs?.reportFeedTabFailed(explorePopularTabName);
+      return;
+    }
+    exploreTabs?.reportFeedTabShown(
+      explorePopularTabName,
+      itemCount: feedState.videos.length,
+      hasMore: feedState.hasMoreContent,
+    );
   }
 
   void _trackErrorState(Object? error) {

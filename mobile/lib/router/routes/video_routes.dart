@@ -8,6 +8,7 @@ import 'package:openvine/blocs/video_engagement/video_engagement_bloc.dart';
 import 'package:openvine/features/creation_analytics/creation_analytics_tracker.dart';
 import 'package:openvine/features/creator_highlights/invite_friends_screen.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/observability/editor_ready_trace.dart';
 import 'package:openvine/router/fade_upwards_page.dart';
 import 'package:openvine/router/navigator_keys.dart';
 import 'package:openvine/router/pooled_fullscreen_feed_route.dart';
@@ -189,6 +190,7 @@ class VideoDetailRouteData extends GoRouteData with $VideoDetailRouteData {
       fallbackVideoIds: routeExtra?.fallbackVideoIds ?? const [],
       initialVideo: routeExtra?.initialVideo,
       dmReplyContext: routeExtra?.dmReplyContext,
+      fromMessage: routeExtra?.fromMessage ?? false,
       focusCommentId: routeExtra?.focusCommentId,
     );
   }
@@ -200,9 +202,18 @@ class VideoDetailRouteData extends GoRouteData with $VideoDetailRouteData {
   name: SoundDetailScreen.routeName,
 )
 class SoundDetailRouteData extends GoRouteData with $SoundDetailRouteData {
-  const SoundDetailRouteData({required this.id, this.$extra});
+  const SoundDetailRouteData({
+    required this.id,
+    @TypedQueryParameter(name: SoundDetailScreen.purposeQueryParameter)
+    this.purpose,
+    this.$extra,
+  });
 
   final String id;
+
+  /// [SoundDetailScreen.chooseForVideoPurpose] when the editor's sound picker
+  /// opened the page, so Use Sound picks the sound for the video.
+  final String? purpose;
 
   /// The [AudioEvent], or for an original sound a map with `sound` and
   /// `sourceVideo`; absent after a deep link, when the sound loads by [id].
@@ -222,10 +233,15 @@ class SoundDetailRouteData extends GoRouteData with $SoundDetailRouteData {
       sound = extraAs<AudioEvent>(extra['sound']);
       sourceVideo = extraAs<VideoEvent>(extra['sourceVideo']);
     }
+    final choosesForVideo = purpose == SoundDetailScreen.chooseForVideoPurpose;
     if (sound != null) {
-      return SoundDetailScreen(sound: sound, sourceVideo: sourceVideo);
+      return SoundDetailScreen(
+        sound: sound,
+        sourceVideo: sourceVideo,
+        choosesForVideo: choosesForVideo,
+      );
     }
-    return SoundDetailLoader(soundId: id);
+    return SoundDetailLoader(soundId: id, choosesForVideo: choosesForVideo);
   }
 }
 
@@ -272,7 +288,8 @@ class VideoEditorRouteData extends GoRouteData with $VideoEditorRouteData {
   /// it only sets the `entry` of the `editor_ready` performance trace.
   final String? from;
 
-  /// The in-memory analytics session of a confirmed library reaction, if any.
+  /// The in-memory analytics session of a confirmed library reaction, or the
+  /// [EditorOpenRequest] of the recorder's "Next", if any.
   final Object? $extra;
 
   @override
@@ -281,6 +298,7 @@ class VideoEditorRouteData extends GoRouteData with $VideoEditorRouteData {
         child: VideoEditorScreen(
           fromLibrary: from == VideoEditorScreen.libraryOrigin,
           analyticsSession: extraAs<CreationAnalyticsSession>($extra),
+          openRequest: extraAs<EditorOpenRequest>($extra),
         ),
       );
 }

@@ -4,14 +4,20 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:divine_video_player/divine_video_player.dart';
+import 'package:divine_video_player/src/linux/linux_video_player_backend.dart';
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, debugDefaultTargetPlatformOverride;
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:infinite_video_feed/src/models/feed_first_frame_metric.dart';
+import 'package:infinite_video_feed/src/models/feed_playback_session_metric.dart';
 import 'package:infinite_video_feed/src/models/feed_playback_telemetry.dart';
 import 'package:infinite_video_feed/src/models/video_error_type.dart';
 import 'package:infinite_video_feed/src/models/video_retry_result.dart';
 import 'package:infinite_video_feed/src/services/bunny_playback_selector.dart';
+import 'package:infinite_video_feed/src/services/stale_playback_detector.dart';
 import 'package:infinite_video_feed/src/widgets/infinite_video_feed.dart';
 import 'package:infinite_video_feed/src/widgets/video_item.dart';
 import 'package:media_cache/media_cache.dart';
@@ -192,8 +198,11 @@ VideoEvent _makeVideo(String id, {String? videoUrl}) => VideoEvent(
   videoUrl: videoUrl ?? 'https://example.com/$id.m3u8',
 );
 
-Widget _wrapFeed(InfiniteVideoFeed feed) => Directionality(
-  textDirection: TextDirection.ltr,
+Widget _wrapFeed(
+  InfiniteVideoFeed feed, {
+  TextDirection textDirection = TextDirection.ltr,
+}) => Directionality(
+  textDirection: textDirection,
   child: MediaQuery(data: const MediaQueryData(), child: feed),
 );
 
@@ -576,6 +585,79 @@ void main() {
         await tester.pump();
         await tester.pump();
         expect(harness.clipsHandedToPlayer.map((clip) => clip['uri']), [hls]);
+      } finally {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+        await harness.dispose();
+      }
+    });
+
+    testWidgets('dual-channel transient failure reaches healthy final source', (
+      tester,
+    ) async {
+      const rawPath =
+          '/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+      const hls = '$raw/hls/master.m3u8';
+      const bunnyRaw = 'https://media-bunny.divine.video$rawPath';
+      DivineVideoPlayerController.resetIdCounterForTesting();
+      final harness = _NativePlayerHarness(tester);
+      await harness.install(playerIds: const [0]);
+      final key = GlobalKey<InfiniteVideoFeedState>();
+      try {
+        await tester.pumpWidget(
+          _wrapFeed(
+            InfiniteVideoFeed(
+              key: key,
+              videos: [_makeVideo('current', videoUrl: raw)],
+              cache: cache,
+              urlResolver: (_) => hls,
+              bunnyPlaybackPaths: const {rawPath},
+              prefetchCount: 0,
+              autoRetryMaxAttempts: 0,
+              preloadGracePeriod: Duration.zero,
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+        final opening = Completer<void>();
+        harness.setClipsDelays[0] = opening;
+        harness.setClipsFailures[0] = [
+          PlatformException(code: 'service_unavailable'),
+        ];
+        await harness.sendEvent(0, {
+          'status': 'error',
+          'errorCode': 'parse_error',
+          'errorMessage': 'Synthetic canonical playback failure',
+        });
+        await tester.pump();
+        await tester.pump();
+        await harness.sendEvent(0, {'status': 'buffering'});
+        await harness.sendEvent(0, {
+          'status': 'error',
+          'errorCode': 'service_unavailable',
+          'errorMessage': 'HTTP 503',
+        });
+        await tester.pump();
+        opening.complete();
+        await tester.pump();
+        await tester.pump();
+        await harness.sendEvent(0, {
+          'status': 'playing',
+          'isFirstFrameRendered': true,
+        });
+        await tester.pump();
+
+        expect(harness.clipsHandedToPlayer.map((clip) => clip['uri']), [
+          hls,
+          bunnyRaw,
+          raw,
+        ]);
+        expect(
+          key.currentState!.errorTypeAt(0),
+          isNull,
+          reason: 'healthy canonical attempted once and reported playing',
+        );
       } finally {
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump();
@@ -1127,6 +1209,76 @@ void main() {
   });
 
   group(InfiniteVideoFeed, () {
+    test('reports support for Windows and rejects unsupported targets', () {
+      try {
+        debugDefaultTargetPlatformOverride = TargetPlatform.fuchsia;
+        expect(InfiniteVideoFeed.isSupported, isFalse);
+        debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+        expect(InfiniteVideoFeed.isSupported, isTrue);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+
+    testWidgets('records a frame only after a cancelled output is replaced', (
+      tester,
+    ) async {
+      final originalFactory = DivineVideoPlayerController.linuxBackendFactory;
+      final originalForce = DivineVideoPlayerController.debugForceLinuxBackend;
+      final backend = _DesktopReadinessBackend();
+      DivineVideoPlayerController.debugForceLinuxBackend = true;
+      DivineVideoPlayerController.linuxBackendFactory = () => backend;
+      const videoId =
+          '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+      final metrics = <FeedFirstFrameMetric>[];
+      final subscription = FeedFirstFrameMetrics.events
+          .where((metric) => metric.videoId == videoId)
+          .listen(metrics.add);
+      addTearDown(subscription.cancel);
+      addTearDown(() {
+        DivineVideoPlayerController.linuxBackendFactory = originalFactory;
+        DivineVideoPlayerController.debugForceLinuxBackend = originalForce;
+      });
+      try {
+        await tester.pumpWidget(
+          _wrapFeed(
+            InfiniteVideoFeed(
+              videos: [_makeVideo(videoId)],
+              cache: cache,
+              prefetchCount: 0,
+              preloadGracePeriod: Duration.zero,
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+        expect(backend.played, isTrue);
+        expect(metrics, isEmpty);
+        backend.frame.complete(false);
+        await tester.pump();
+        await tester.pump();
+
+        expect(metrics, isEmpty, reason: 'no output rendered a frame');
+        backend
+          ..frame = Completer<bool>()
+          ..emitState(
+            const DivineVideoPlayerState(status: PlaybackStatus.buffering),
+          );
+        await tester.pump();
+        expect(metrics, isEmpty);
+        backend.frame.complete(true);
+        backend.emitState(
+          const DivineVideoPlayerState(isFirstFrameRendered: true),
+        );
+        await tester.pump();
+        await tester.pump();
+        expect(metrics, hasLength(1));
+      } finally {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      }
+    });
+
     test('isSupported can be evaluated', () {
       expect(InfiniteVideoFeed.isSupported, isA<bool>());
     });
@@ -1270,42 +1422,127 @@ void main() {
         expect(pageView.childrenDelegate, isA<SliverChildBuilderDelegate>());
       });
 
-      testWidgets('calls onNearEnd when near the end of list', (tester) async {
-        var nearEndCalled = false;
-        final key = GlobalKey<InfiniteVideoFeedState>();
-        // Threshold >= list length: the feed is always "near the end".
-        // We verify the callback wiring by calling _onPageChanged indirectly
-        // via the page controller listener without triggering a native
-        // platform-view scroll that requires an initialized controller.
-        final videos = List.generate(3, (i) => _makeVideo('v$i'));
+      testWidgets(
+        'requests more when the opening page contains only one video',
+        (tester) async {
+          var nearEndCalls = 0;
 
-        await tester.pumpWidget(
-          _wrapFeed(
-            InfiniteVideoFeed(
-              key: key,
-              videos: videos,
-              cache: cache,
-              nearEndThreshold: 5,
-              onNearEnd: () => nearEndCalled = true,
-              preloadGracePeriod: Duration.zero,
-              prefetchCount: 0,
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                videos: [_makeVideo('only-video')],
+                cache: cache,
+                onNearEnd: () => nearEndCalls++,
+                prefetchOnMount: true,
+                preloadGracePeriod: Duration.zero,
+                prefetchCount: 0,
+              ),
             ),
-          ),
-        );
+          );
 
-        // Calling onNearEnd happens inside _onPageChanged. We can verify the
-        // widget accepts the callback and the state is correctly set up by
-        // checking that 3 videos with threshold 5 satisfies distance ≤
-        // threshold for index 0: distance = 3 - 0 - 1 = 2 ≤ 5.
-        // Rather than scrolling (which requires initialized native
-        // controllers), we assert the widget accepted nearEndThreshold
-        // correctly by checking that currentIndex is 0 and
-        // videos.length-1 ≤ nearEndThreshold.
-        expect(key.currentState!.currentIndex, equals(0));
-        expect(videos.length - 0 - 1, lessThanOrEqualTo(5));
-        // Direct validation that the widget is set up to fire onNearEnd.
-        expect(nearEndCalled, isFalse); // Not yet (no page change fired).
-      });
+          expect(nearEndCalls, equals(1));
+        },
+      );
+
+      testWidgets(
+        'proactively triggers onNearEnd after list updates that remain near '
+        'end',
+        (tester) async {
+          var nearEndCalls = 0;
+          final key = GlobalKey<InfiniteVideoFeedState>();
+
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                key: key,
+                videos: List.generate(3, (i) => _makeVideo('v$i')),
+                cache: cache,
+                onNearEnd: () => nearEndCalls++,
+                preloadGracePeriod: Duration.zero,
+                prefetchCount: 0,
+              ),
+            ),
+          );
+          expect(nearEndCalls, equals(0));
+
+          // When a short page arrives (6 videos <= default threshold 15),
+          // InfiniteVideoFeed immediately schedules onNearEnd so the next page
+          // starts loading before the viewer reaches the end.
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                key: key,
+                videos: List.generate(6, (i) => _makeVideo('v$i')),
+                cache: cache,
+                onNearEnd: () => nearEndCalls++,
+                preloadGracePeriod: Duration.zero,
+                prefetchCount: 0,
+              ),
+            ),
+          );
+          await tester.pump();
+          expect(nearEndCalls, equals(1));
+
+          // Rebuilding with the same length (e.g. after a failed loadMore)
+          // must not spin-loop onNearEnd.
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                key: key,
+                videos: List.generate(6, (i) => _makeVideo('v$i')),
+                cache: cache,
+                onNearEnd: () => nearEndCalls++,
+                preloadGracePeriod: Duration.zero,
+                prefetchCount: 0,
+              ),
+            ),
+          );
+          await tester.pump();
+          expect(nearEndCalls, equals(1));
+        },
+      );
+
+      testWidgets(
+        'triggers onNearEnd after a full list replacement that remains near '
+        'end',
+        (tester) async {
+          var nearEndCalls = 0;
+          final key = GlobalKey<InfiniteVideoFeedState>();
+
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                key: key,
+                videos: List.generate(3, (i) => _makeVideo('v$i')),
+                cache: cache,
+                onNearEnd: () => nearEndCalls++,
+                preloadGracePeriod: Duration.zero,
+                prefetchCount: 0,
+              ),
+            ),
+          );
+          expect(nearEndCalls, equals(0));
+
+          // A replacement that changes the current video (a refreshed feed or
+          // a source switch) tears down and restarts at the initial index.
+          // A short replacement still leaves the viewer near the end, so the
+          // next page is requested without waiting for a swipe.
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                key: key,
+                videos: List.generate(6, (i) => _makeVideo('w$i')),
+                cache: cache,
+                onNearEnd: () => nearEndCalls++,
+                preloadGracePeriod: Duration.zero,
+                prefetchCount: 0,
+              ),
+            ),
+          );
+          await tester.pump();
+          expect(nearEndCalls, equals(1));
+        },
+      );
 
       testWidgets('calls onActiveVideoChanged on page change', (tester) async {
         final activeChanges = <int>[];
@@ -2342,6 +2579,71 @@ void main() {
         },
       );
 
+      testWidgets('Windows MP4 loads expect native network samples', (
+        tester,
+      ) async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+        DivineVideoPlayerController.resetIdCounterForTesting();
+        final harness = _NativePlayerHarness(tester);
+        await harness.install(
+          playerIds: const <int>[0],
+          firstFrameRenderedOnListen: false,
+        );
+        FeedPlaybackTelemetry.configure(enabled: true);
+        final terminals = <Map<String, Object?>>[];
+        final subscription = FeedPlaybackTelemetry.events.listen(
+          terminals.add,
+        );
+        addTearDown(() async {
+          FeedPlaybackTelemetry.configure(enabled: false);
+          await subscription.cancel();
+        });
+        try {
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                videos: [
+                  _makeVideo(
+                    'windows',
+                    videoUrl: 'https://example.com/windows.mp4',
+                  ),
+                ],
+                cache: cache,
+                prefetchCount: 0,
+                preloadGracePeriod: Duration.zero,
+              ),
+            ),
+          );
+          await tester.pump();
+          final headers =
+              harness.clipsHandedToPlayer.single['httpHeaders'] as Map? ?? {};
+          expect(
+            headers['X-Playback-Load-Id'],
+            matches(
+              RegExp(
+                '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}'
+                r'-[0-9a-f]{12}$',
+              ),
+            ),
+          );
+          await harness.sendEvent(0, const {
+            'status': 'ready',
+            'videoWidth': 1280,
+            'videoHeight': 720,
+            'isFirstFrameRendered': true,
+          });
+          await tester.pump();
+          // No sample arrived, but the Windows player sends them for MP4s,
+          // so the gap is unknown rather than unsupported.
+          expect(terminals.single['network_coverage'], 'unknown');
+        } finally {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+          await harness.dispose();
+          debugDefaultTargetPlatformOverride = null;
+        }
+      });
+
       testWidgets('legacy native binary receives no telemetry headers', (
         tester,
       ) async {
@@ -2613,6 +2915,445 @@ void main() {
           await tester.pump();
           await harness.dispose();
         }
+      });
+
+      group('playback sessions', () {
+        late List<FeedPlaybackSessionMetric> sessions;
+        late _NativePlayerHarness harness;
+
+        Future<void> start(
+          WidgetTester tester, {
+          bool firstFrameRenderedOnListen = false,
+        }) async {
+          sessions = [];
+          final subscription = FeedFirstFrameMetrics.sessions.listen(
+            sessions.add,
+          );
+          addTearDown(subscription.cancel);
+          DivineVideoPlayerController.resetIdCounterForTesting();
+          harness = _NativePlayerHarness(tester);
+          await harness.install(
+            firstFrameRenderedOnListen: firstFrameRenderedOnListen,
+          );
+        }
+
+        Future<void> stop(WidgetTester tester) async {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+          await harness.dispose();
+        }
+
+        testWidgets('reports a video swiped away before its first frame', (
+          tester,
+        ) async {
+          await start(tester);
+          final key = GlobalKey<InfiniteVideoFeedState>();
+          try {
+            await tester.pumpWidget(
+              _wrapFeed(
+                InfiniteVideoFeed(
+                  key: key,
+                  videos: [_makeVideo('first'), _makeVideo('second')],
+                  cache: cache,
+                  prefetchCount: 0,
+                  preloadGracePeriod: Duration.zero,
+                ),
+              ),
+            );
+            await tester.pump();
+            await tester.pump(const Duration(milliseconds: 700));
+
+            key.currentState!.debugActivatePage(1);
+
+            expect(sessions, hasLength(1));
+            expect(sessions.single.index, 0);
+            expect(
+              sessions.single.outcome,
+              FeedPlaybackSessionOutcome.abandoned,
+            );
+            expect(sessions.single.end, FeedPlaybackSessionEnd.swipe);
+            expect(
+              sessions.single.active,
+              greaterThanOrEqualTo(const Duration(milliseconds: 700)),
+            );
+            expect(sessions.single.timeToFirstFrame, isNull);
+          } finally {
+            await stop(tester);
+          }
+        });
+
+        testWidgets('reports a stall after the first frame', (tester) async {
+          await start(tester);
+          try {
+            await tester.pumpWidget(
+              _wrapFeed(
+                InfiniteVideoFeed(
+                  videos: [_makeVideo('stalling')],
+                  cache: cache,
+                  prefetchCount: 0,
+                  preloadGracePeriod: Duration.zero,
+                ),
+              ),
+            );
+            await tester.pump();
+            await harness.sendEvent(0, const <Object?, Object?>{
+              'status': 'playing',
+              'isFirstFrameRendered': true,
+            });
+            await tester.pump(const Duration(milliseconds: 500));
+            await harness.sendEvent(0, const <Object?, Object?>{
+              'status': 'buffering',
+              'isFirstFrameRendered': true,
+            });
+            await tester.pump(const Duration(milliseconds: 300));
+            await harness.sendEvent(0, const <Object?, Object?>{
+              'status': 'playing',
+              'isFirstFrameRendered': true,
+            });
+            await tester.pump(const Duration(milliseconds: 200));
+            expect(sessions, isEmpty, reason: 'the video is still active');
+
+            await tester.pumpWidget(const SizedBox.shrink());
+
+            final session = sessions.single;
+            expect(session.outcome, FeedPlaybackSessionOutcome.played);
+            expect(session.end, FeedPlaybackSessionEnd.closed);
+            expect(session.timeToFirstFrame, isNotNull);
+            expect(session.stallCount, 1);
+            expect(session.stalled, const Duration(milliseconds: 300));
+            expect(session.watched, const Duration(milliseconds: 700));
+          } finally {
+            await stop(tester);
+          }
+        });
+
+        testWidgets('reports a failed video when the feed is hidden', (
+          tester,
+        ) async {
+          await start(tester);
+          harness.setClipsFailures[0] = <Exception>[
+            PlatformException(code: 'service_unavailable'),
+          ];
+          Widget feed({required bool isActive}) => _wrapFeed(
+            InfiniteVideoFeed(
+              videos: [_makeVideo('failing')],
+              cache: cache,
+              isActive: isActive,
+              prefetchCount: 0,
+              autoRetryMaxAttempts: 0,
+              preloadGracePeriod: Duration.zero,
+            ),
+          );
+          try {
+            await tester.pumpWidget(feed(isActive: true));
+            await tester.pump();
+            await tester.pump();
+
+            await tester.pumpWidget(feed(isActive: false));
+
+            expect(sessions.single.outcome, FeedPlaybackSessionOutcome.failed);
+            expect(sessions.single.error, FeedPlaybackError.initialization);
+            expect(sessions.single.end, FeedPlaybackSessionEnd.hidden);
+          } finally {
+            await stop(tester);
+          }
+        });
+
+        testWidgets('skips a held-back video that never showed a frame', (
+          tester,
+        ) async {
+          await start(tester);
+          try {
+            await tester.pumpWidget(
+              _wrapFeed(
+                InfiniteVideoFeed(
+                  videos: [_makeVideo('warned')],
+                  cache: cache,
+                  canAutoPlay: (_) => false,
+                  prefetchCount: 0,
+                  preloadGracePeriod: Duration.zero,
+                ),
+              ),
+            );
+            await tester.pump();
+            await tester.pump();
+
+            await tester.pumpWidget(const SizedBox.shrink());
+
+            expect(sessions, isEmpty);
+          } finally {
+            await stop(tester);
+          }
+        });
+
+        testWidgets('ends the active session when the video list changes', (
+          tester,
+        ) async {
+          await start(tester, firstFrameRenderedOnListen: true);
+          Widget feed(String id) => _wrapFeed(
+            InfiniteVideoFeed(
+              videos: [_makeVideo(id)],
+              cache: cache,
+              prefetchCount: 0,
+              preloadGracePeriod: Duration.zero,
+            ),
+          );
+          try {
+            await tester.pumpWidget(feed('before'));
+            await tester.pump();
+            await tester.pump();
+
+            await tester.pumpWidget(feed('after'));
+
+            expect(sessions.single.outcome, FeedPlaybackSessionOutcome.played);
+            expect(sessions.single.end, FeedPlaybackSessionEnd.replaced);
+          } finally {
+            await stop(tester);
+          }
+        });
+
+        testWidgets(
+          'does not report an abandoned session when returning to a failed '
+          'video',
+          (tester) async {
+            await start(tester);
+            final videos = [_makeVideo('failing')];
+            harness.setClipsFailures[0] = <Exception>[
+              PlatformException(code: 'service_unavailable'),
+            ];
+            Widget feed({required bool isActive}) => _wrapFeed(
+              InfiniteVideoFeed(
+                videos: videos,
+                cache: cache,
+                isActive: isActive,
+                prefetchCount: 0,
+                autoRetryMaxAttempts: 0,
+                preloadGracePeriod: Duration.zero,
+              ),
+            );
+            try {
+              await tester.pumpWidget(feed(isActive: true));
+              await tester.pump();
+              await tester.pump();
+
+              await tester.pumpWidget(feed(isActive: false));
+              expect(sessions, hasLength(1));
+              expect(
+                sessions.single.outcome,
+                FeedPlaybackSessionOutcome.failed,
+              );
+
+              await tester.pumpWidget(feed(isActive: true));
+              await tester.pump();
+              await tester.pumpWidget(const SizedBox.shrink());
+
+              expect(sessions, hasLength(1));
+            } finally {
+              await stop(tester);
+            }
+          },
+        );
+
+        testWidgets(
+          'does not start a new session when returning to a terminal error '
+          'with neighbour release',
+          (tester) async {
+            await start(tester);
+            final videos = [_makeVideo('terminal')];
+            harness.setClipsFailures[0] = <Exception>[
+              PlatformException(
+                code: 'COMPOSITION_ERROR',
+                message: 'No playable video tracks found.',
+              ),
+            ];
+            Widget feed({required bool isActive}) => _wrapFeed(
+              InfiniteVideoFeed(
+                videos: videos,
+                cache: cache,
+                isActive: isActive,
+                releaseNeighboursWhenInactive: true,
+                prefetchCount: 0,
+                autoRetryMaxAttempts: 0,
+                preloadGracePeriod: Duration.zero,
+              ),
+            );
+            try {
+              await tester.pumpWidget(feed(isActive: true));
+              await tester.pump();
+              await tester.pump();
+
+              await tester.pumpWidget(feed(isActive: false));
+              expect(sessions, hasLength(1));
+              expect(
+                sessions.single.outcome,
+                FeedPlaybackSessionOutcome.failed,
+              );
+
+              await tester.pumpWidget(feed(isActive: true));
+              await tester.pump();
+              await tester.pumpWidget(const SizedBox.shrink());
+
+              expect(sessions, hasLength(1));
+            } finally {
+              await stop(tester);
+            }
+          },
+        );
+
+        testWidgets(
+          'reports initialization error for a terminal init failure',
+          (
+            tester,
+          ) async {
+            await start(tester);
+            harness.setClipsFailures[0] = <Exception>[
+              PlatformException(
+                code: 'COMPOSITION_ERROR',
+                message: 'No playable video tracks found.',
+              ),
+            ];
+            try {
+              await tester.pumpWidget(
+                _wrapFeed(
+                  InfiniteVideoFeed(
+                    videos: [_makeVideo('terminal_init')],
+                    cache: cache,
+                    prefetchCount: 0,
+                    autoRetryMaxAttempts: 0,
+                    preloadGracePeriod: Duration.zero,
+                  ),
+                ),
+              );
+              await tester.pump();
+              await tester.pump();
+
+              await tester.pumpWidget(const SizedBox.shrink());
+
+              expect(sessions, hasLength(1));
+              expect(
+                sessions.single.outcome,
+                FeedPlaybackSessionOutcome.failed,
+              );
+              expect(sessions.single.error, FeedPlaybackError.initialization);
+            } finally {
+              await stop(tester);
+            }
+          },
+        );
+
+        testWidgets(
+          'measures a manual retry after returning to a failed video',
+          (tester) async {
+            await start(tester);
+            final key = GlobalKey<InfiniteVideoFeedState>();
+            final videos = [_makeVideo('retry_after_return')];
+            final firstFrames = <FeedFirstFrameMetric>[];
+            final firstFrameSub = FeedFirstFrameMetrics.events.listen(
+              firstFrames.add,
+            );
+            addTearDown(firstFrameSub.cancel);
+            harness.setClipsFailures[0] = <Exception>[
+              PlatformException(code: 'service_unavailable'),
+            ];
+            Widget feed({required bool isActive}) => _wrapFeed(
+              InfiniteVideoFeed(
+                key: key,
+                videos: videos,
+                cache: cache,
+                isActive: isActive,
+                prefetchCount: 0,
+                autoRetryMaxAttempts: 0,
+                preloadGracePeriod: Duration.zero,
+              ),
+            );
+            try {
+              await tester.pumpWidget(feed(isActive: true));
+              await tester.pump();
+              await tester.pump();
+
+              await tester.pumpWidget(feed(isActive: false));
+              expect(sessions, hasLength(1));
+              expect(
+                sessions.single.outcome,
+                FeedPlaybackSessionOutcome.failed,
+              );
+
+              await tester.pumpWidget(feed(isActive: true));
+              await tester.pump();
+
+              await key.currentState!.retryAt(0);
+              await tester.pump();
+              await harness.sendEvent(1, const <Object?, Object?>{
+                'status': 'playing',
+                'isFirstFrameRendered': true,
+              });
+              await tester.pump(const Duration(milliseconds: 250));
+
+              await tester.pumpWidget(const SizedBox.shrink());
+
+              expect(firstFrames, hasLength(1));
+              expect(sessions, hasLength(2));
+              expect(sessions.last.outcome, FeedPlaybackSessionOutcome.played);
+              expect(sessions.last.end, FeedPlaybackSessionEnd.closed);
+              expect(sessions.last.timeToFirstFrame, isNotNull);
+              expect(sessions.last.watched, const Duration(milliseconds: 250));
+            } finally {
+              await stop(tester);
+            }
+          },
+        );
+
+        testWidgets(
+          'preserves original error category on terminal revisit',
+          (tester) async {
+            await start(tester);
+            final key = GlobalKey<InfiniteVideoFeedState>();
+            final videos = [_makeVideo('terminal_revisit'), _makeVideo('next')];
+            harness.setClipsFailures[0] = <Exception>[
+              PlatformException(
+                code: 'COMPOSITION_ERROR',
+                message: 'No playable video tracks found.',
+              ),
+            ];
+            try {
+              await tester.pumpWidget(
+                _wrapFeed(
+                  InfiniteVideoFeed(
+                    key: key,
+                    videos: videos,
+                    cache: cache,
+                    prefetchCount: 0,
+                    autoRetryMaxAttempts: 0,
+                    preloadGracePeriod: Duration.zero,
+                  ),
+                ),
+              );
+              await tester.pump();
+              await tester.pump();
+
+              key.currentState!.debugActivatePage(1);
+              await tester.pump();
+              key.currentState!.debugActivatePage(0);
+              await tester.pump();
+
+              await tester.pumpWidget(const SizedBox.shrink());
+
+              expect(sessions, hasLength(3));
+              expect(sessions.first.outcome, FeedPlaybackSessionOutcome.failed);
+              expect(
+                sessions.first.error,
+                FeedPlaybackError.initialization,
+              );
+              expect(sessions.last.outcome, FeedPlaybackSessionOutcome.failed);
+              expect(
+                sessions.last.error,
+                FeedPlaybackError.initialization,
+              );
+            } finally {
+              await stop(tester);
+            }
+          },
+        );
       });
 
       testWidgets('does not autoplay when canAutoPlay returns false', (
@@ -3964,6 +4705,561 @@ void main() {
         // Drain the animation.
         await tester.pumpAndSettle();
         expect(find.byType(InfiniteVideoFeed), findsOneWidget);
+      });
+    });
+
+    group('nextPage and previousPage', () {
+      late GlobalKey<InfiniteVideoFeedState> key;
+
+      Future<void> pumpFeed(WidgetTester tester, {int initialIndex = 0}) async {
+        key = GlobalKey<InfiniteVideoFeedState>();
+        await tester.pumpWidget(
+          _wrapFeed(
+            InfiniteVideoFeed(
+              key: key,
+              videos: List.generate(3, (i) => _makeVideo('v$i')),
+              cache: cache,
+              prefetchCount: 0,
+              initialIndex: initialIndex,
+            ),
+          ),
+        );
+      }
+
+      testWidgets('nextPage moves one video on and previousPage one back', (
+        tester,
+      ) async {
+        await pumpFeed(tester);
+
+        unawaited(key.currentState!.nextPage());
+        await tester.pumpAndSettle();
+        expect(key.currentState!.currentIndex, equals(1));
+
+        unawaited(key.currentState!.previousPage());
+        await tester.pumpAndSettle();
+        expect(key.currentState!.currentIndex, equals(0));
+      });
+
+      testWidgets('stays on the first and the last video', (tester) async {
+        await pumpFeed(tester, initialIndex: 2);
+
+        unawaited(key.currentState!.nextPage());
+        await tester.pumpAndSettle();
+        expect(key.currentState!.currentIndex, equals(2));
+
+        unawaited(key.currentState!.animateToPage(0));
+        await tester.pumpAndSettle();
+        unawaited(key.currentState!.previousPage());
+        await tester.pumpAndSettle();
+        expect(key.currentState!.currentIndex, equals(0));
+      });
+
+      testWidgets('a second nextPage during the animation moves on from its '
+          'target', (tester) async {
+        await pumpFeed(tester);
+
+        unawaited(key.currentState!.nextPage());
+        await tester.pump(const Duration(milliseconds: 60));
+        expect(
+          key.currentState!.currentIndex,
+          equals(0),
+          reason: 'the first step is still under way',
+        );
+        unawaited(key.currentState!.nextPage());
+        await tester.pumpAndSettle();
+
+        expect(key.currentState!.currentIndex, equals(2));
+      });
+
+      testWidgets('steps from the video on screen after another move', (
+        tester,
+      ) async {
+        await pumpFeed(tester);
+        unawaited(key.currentState!.nextPage());
+        await tester.pumpAndSettle();
+        unawaited(key.currentState!.animateToPage(0));
+        await tester.pumpAndSettle();
+
+        unawaited(key.currentState!.nextPage());
+        await tester.pumpAndSettle();
+
+        expect(key.currentState!.currentIndex, equals(1));
+      });
+
+      testWidgets('a step back during two steps on moves back from their '
+          'target', (tester) async {
+        await pumpFeed(tester);
+
+        unawaited(key.currentState!.nextPage());
+        await tester.pump(const Duration(milliseconds: 60));
+        unawaited(key.currentState!.nextPage());
+        await tester.pump(const Duration(milliseconds: 60));
+        unawaited(key.currentState!.previousPage());
+        await tester.pumpAndSettle();
+
+        expect(key.currentState!.currentIndex, equals(1));
+      });
+    });
+
+    group('pointer scroll', () {
+      late GlobalKey<InfiniteVideoFeedState> key;
+      late bool otherHandlerGotScroll;
+
+      Future<void> pumpFeed(
+        WidgetTester tester, {
+        int initialIndex = 0,
+        Axis scrollDirection = Axis.vertical,
+        ScrollPhysics? scrollPhysics,
+      }) async {
+        key = GlobalKey<InfiniteVideoFeedState>();
+        otherHandlerGotScroll = false;
+        await tester.pumpWidget(
+          _wrapFeed(
+            InfiniteVideoFeed(
+              key: key,
+              videos: List.generate(3, (i) => _makeVideo('v$i')),
+              cache: cache,
+              prefetchCount: 0,
+              initialIndex: initialIndex,
+              scrollDirection: scrollDirection,
+              scrollPhysics: scrollPhysics,
+            ),
+          ),
+        );
+      }
+
+      /// Wraps the feed in a listener that bids for every scroll after the
+      /// feed and its page view, so it only wins a scroll both pass on.
+      Future<void> pumpFeedInsideOtherScrollHandler(
+        WidgetTester tester, {
+        int initialIndex = 0,
+        GlobalKey<InfiniteVideoFeedState>? feedKey,
+        int videoCount = 3,
+        ScrollPhysics? scrollPhysics,
+        Axis scrollDirection = Axis.vertical,
+        TextDirection textDirection = TextDirection.ltr,
+        VoidCallback? onForwardBoundary,
+        void Function(PointerSignalEvent)? onPointerSignal,
+      }) async {
+        key = feedKey ?? GlobalKey<InfiniteVideoFeedState>();
+        otherHandlerGotScroll = false;
+        await tester.pumpWidget(
+          Listener(
+            onPointerSignal: (event) {
+              onPointerSignal?.call(event);
+              GestureBinding.instance.pointerSignalResolver.register(
+                event,
+                (_) => otherHandlerGotScroll = true,
+              );
+            },
+            child: _wrapFeed(
+              InfiniteVideoFeed(
+                key: key,
+                videos: List.generate(videoCount, (i) => _makeVideo('v$i')),
+                cache: cache,
+                prefetchCount: 0,
+                initialIndex: initialIndex,
+                scrollPhysics: scrollPhysics,
+                scrollDirection: scrollDirection,
+                onForwardBoundary: onForwardBoundary,
+              ),
+              textDirection: textDirection,
+            ),
+          ),
+        );
+      }
+
+      Future<void> scroll(
+        WidgetTester tester,
+        Offset delta, {
+        int atMs = 0,
+        PointerDeviceKind kind = PointerDeviceKind.mouse,
+      }) async {
+        final pointer = TestPointer(1, kind)
+          ..hover(tester.getCenter(find.byType(PageView)));
+        await tester.sendEventToBinding(
+          pointer.scroll(delta, timeStamp: Duration(milliseconds: atMs)),
+        );
+      }
+
+      double page(WidgetTester tester) =>
+          tester.widget<PageView>(find.byType(PageView)).controller!.page!;
+
+      testWidgets('one wheel notch down moves exactly one video', (
+        tester,
+      ) async {
+        await pumpFeed(tester);
+
+        // A slow notch in a browser on macOS reports only about 4 pixels.
+        await scroll(tester, const Offset(0, 4));
+        await tester.pumpAndSettle();
+
+        expect(key.currentState!.currentIndex, equals(1));
+        expect(page(tester), equals(1));
+      });
+
+      testWidgets('one wheel notch up moves exactly one video back', (
+        tester,
+      ) async {
+        await pumpFeed(tester, initialIndex: 2);
+
+        await scroll(tester, const Offset(0, -40));
+        await tester.pumpAndSettle();
+
+        expect(key.currentState!.currentIndex, equals(1));
+      });
+
+      testWidgets('a small trackpad scroll leaves the page where it is', (
+        tester,
+      ) async {
+        await pumpFeed(tester);
+
+        await scroll(
+          tester,
+          const Offset(0, 10),
+          kind: PointerDeviceKind.trackpad,
+        );
+        await tester.pump();
+
+        expect(
+          page(tester),
+          equals(0),
+          reason: 'the page view did not scroll the delta by itself',
+        );
+        await tester.pumpAndSettle();
+        expect(key.currentState!.currentIndex, equals(0));
+      });
+
+      testWidgets('the rest of a trackpad swipe and its momentum move no '
+          'second video', (tester) async {
+        await pumpFeed(tester);
+
+        // A swipe reported as wheel events every frame for most of a second,
+        // longer than the page animation it starts.
+        for (var i = 0; i < 40; i++) {
+          await scroll(
+            tester,
+            const Offset(0, 12),
+            atMs: i * 16,
+            kind: PointerDeviceKind.trackpad,
+          );
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+        await tester.pumpAndSettle();
+
+        expect(key.currentState!.currentIndex, equals(1));
+      });
+
+      testWidgets('a notch after a pause moves the next video', (
+        tester,
+      ) async {
+        await pumpFeed(tester);
+
+        await scroll(tester, const Offset(0, 40));
+        await tester.pumpAndSettle();
+        await scroll(tester, const Offset(0, 40), atMs: 1000);
+        await tester.pumpAndSettle();
+
+        expect(key.currentState!.currentIndex, equals(2));
+      });
+
+      testWidgets('a notch during a page animation is ignored', (
+        tester,
+      ) async {
+        await pumpFeed(tester);
+
+        unawaited(key.currentState!.nextPage());
+        await tester.pump(const Duration(milliseconds: 60));
+        await scroll(tester, const Offset(0, 40));
+        await tester.pumpAndSettle();
+
+        expect(key.currentState!.currentIndex, equals(1));
+      });
+
+      testWidgets('a sideways-dominant scroll reaches tuning without moving '
+          'the page', (tester) async {
+        Offset? observedDelta;
+        await pumpFeedInsideOtherScrollHandler(
+          tester,
+          onPointerSignal: (event) {
+            if (event is PointerScrollEvent) observedDelta = event.scrollDelta;
+          },
+        );
+
+        const delta = Offset(150, 120);
+        bool? allowedPlatformDefault;
+        await tester.sendEventToBinding(
+          PointerScrollEvent(
+            position: tester.getCenter(find.byType(PageView)),
+            scrollDelta: delta,
+            onRespond: ({required allowPlatformDefault}) =>
+                allowedPlatformDefault = allowPlatformDefault,
+          ),
+        );
+
+        expect(observedDelta, equals(delta));
+        expect(otherHandlerGotScroll, isFalse);
+        expect(allowedPlatformDefault, isTrue);
+        expect(page(tester), equals(0));
+        await tester.pumpAndSettle();
+        expect(key.currentState!.currentIndex, equals(0));
+      });
+
+      testWidgets('a mixed-axis trackpad burst advances only one page', (
+        tester,
+      ) async {
+        await pumpFeed(tester);
+
+        for (var i = 0; i <= 40; i++) {
+          await scroll(
+            tester,
+            i < 4 || i == 40 ? const Offset(0, 12) : const Offset(150, 120),
+            atMs: i * 16,
+            kind: PointerDeviceKind.trackpad,
+          );
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+        await tester.pumpAndSettle();
+
+        expect(key.currentState!.currentIndex, equals(1));
+        expect(page(tester), equals(1));
+      });
+
+      testWidgets('pure sideways packets keep a trackpad burst together', (
+        tester,
+      ) async {
+        await pumpFeed(tester);
+
+        for (var i = 0; i <= 40; i++) {
+          await scroll(
+            tester,
+            i < 4 || i == 40 ? const Offset(0, 40) : const Offset(150, 0),
+            atMs: i * 16,
+            kind: PointerDeviceKind.trackpad,
+          );
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+        await tester.pumpAndSettle();
+
+        expect(key.currentState!.currentIndex, equals(1));
+      });
+
+      testWidgets('a horizontal feed pages with sideways scrolls', (
+        tester,
+      ) async {
+        await pumpFeed(tester, scrollDirection: Axis.horizontal);
+
+        await scroll(tester, const Offset(40, 0));
+        await tester.pumpAndSettle();
+
+        expect(key.currentState!.currentIndex, equals(1));
+      });
+
+      testWidgets('a horizontal wheel moves forward in RTL', (tester) async {
+        await pumpFeedInsideOtherScrollHandler(
+          tester,
+          scrollDirection: Axis.horizontal,
+          textDirection: TextDirection.rtl,
+        );
+
+        await scroll(tester, const Offset(-40, 0));
+        await tester.pumpAndSettle();
+
+        expect(key.currentState!.currentIndex, equals(1));
+        expect(page(tester), equals(1));
+        expect(otherHandlerGotScroll, isFalse);
+      });
+
+      testWidgets('a horizontal wheel at the RTL forward boundary is left to '
+          'others', (tester) async {
+        await pumpFeedInsideOtherScrollHandler(
+          tester,
+          initialIndex: 2,
+          scrollDirection: Axis.horizontal,
+          textDirection: TextDirection.rtl,
+        );
+
+        await scroll(tester, const Offset(-40, 0));
+        await tester.pumpAndSettle();
+
+        expect(otherHandlerGotScroll, isTrue);
+        expect(key.currentState!.currentIndex, equals(2));
+      });
+
+      testWidgets('a scroll up on the first video is left to others', (
+        tester,
+      ) async {
+        await pumpFeedInsideOtherScrollHandler(tester);
+
+        await scroll(tester, const Offset(0, -40));
+        await tester.pumpAndSettle();
+
+        expect(otherHandlerGotScroll, isTrue);
+        expect(key.currentState!.currentIndex, equals(0));
+      });
+
+      testWidgets('a sideways-dominant scroll out of the feed is left to '
+          'others', (tester) async {
+        await pumpFeedInsideOtherScrollHandler(tester);
+
+        await scroll(tester, const Offset(150, -120));
+
+        expect(otherHandlerGotScroll, isTrue);
+        expect(page(tester), equals(0));
+      });
+
+      testWidgets('a rejected horizontal scroll respects RTL boundaries', (
+        tester,
+      ) async {
+        await pumpFeedInsideOtherScrollHandler(
+          tester,
+          scrollDirection: Axis.horizontal,
+          textDirection: TextDirection.rtl,
+        );
+
+        await scroll(tester, const Offset(120, 150));
+        expect(otherHandlerGotScroll, isTrue);
+        expect(page(tester), equals(0));
+
+        otherHandlerGotScroll = false;
+        await scroll(tester, const Offset(-120, 150));
+        expect(otherHandlerGotScroll, isFalse);
+        expect(page(tester), equals(0));
+      });
+
+      testWidgets('a scroll down on the last video is left to others', (
+        tester,
+      ) async {
+        await pumpFeedInsideOtherScrollHandler(tester, initialIndex: 2);
+
+        await scroll(tester, const Offset(0, 40));
+        await tester.pumpAndSettle();
+
+        expect(otherHandlerGotScroll, isTrue);
+        expect(key.currentState!.currentIndex, equals(2));
+      });
+
+      testWidgets('a forward boundary scroll can request the next page', (
+        tester,
+      ) async {
+        var requests = 0;
+        await pumpFeedInsideOtherScrollHandler(
+          tester,
+          initialIndex: 2,
+          onForwardBoundary: () => requests++,
+        );
+
+        await scroll(tester, const Offset(0, 40));
+        await tester.pumpAndSettle();
+
+        expect(requests, equals(1));
+        expect(otherHandlerGotScroll, isFalse);
+        expect(key.currentState!.currentIndex, equals(2));
+      });
+
+      testWidgets('momentum that reached the end cannot page again when '
+          'videos arrive during the same gesture', (tester) async {
+        await pumpFeedInsideOtherScrollHandler(tester, initialIndex: 1);
+
+        Future<void> scrollTrackpad(int atMs) => scroll(
+          tester,
+          const Offset(0, 40),
+          atMs: atMs,
+          kind: PointerDeviceKind.trackpad,
+        );
+
+        // The burst reaches the last loaded video, then continues while the
+        // feed has no forward boundary handler because it is loading.
+        for (var atMs = 0; atMs <= 800; atMs += 100) {
+          await scrollTrackpad(atMs);
+          await tester.pump(const Duration(milliseconds: 100));
+        }
+        expect(key.currentState!.currentIndex, 2);
+        expect(otherHandlerGotScroll, isTrue);
+
+        await pumpFeedInsideOtherScrollHandler(
+          tester,
+          initialIndex: 1,
+          feedKey: key,
+          videoCount: 4,
+        );
+        await scrollTrackpad(900);
+        await tester.pumpAndSettle();
+        expect(key.currentState!.currentIndex, 2);
+
+        await scrollTrackpad(1100);
+        await tester.pumpAndSettle();
+        expect(key.currentState!.currentIndex, 3);
+      });
+
+      testWidgets('a scroll the feed takes is not passed on', (tester) async {
+        await pumpFeedInsideOtherScrollHandler(tester);
+
+        await scroll(tester, const Offset(0, 40));
+        await tester.pumpAndSettle();
+
+        expect(otherHandlerGotScroll, isFalse);
+        expect(key.currentState!.currentIndex, equals(1));
+      });
+
+      testWidgets('scrolling stays off when the physics forbid it', (
+        tester,
+      ) async {
+        await pumpFeedInsideOtherScrollHandler(
+          tester,
+          scrollPhysics: const NeverScrollableScrollPhysics(),
+        );
+
+        await scroll(tester, const Offset(0, 40));
+        await tester.pumpAndSettle();
+
+        expect(key.currentState!.currentIndex, equals(0));
+        expect(otherHandlerGotScroll, isTrue);
+      });
+
+      testWidgets('tells the platform it took the scroll', (tester) async {
+        await pumpFeed(tester);
+        bool? allowedPlatformDefault;
+
+        await tester.sendEventToBinding(
+          PointerScrollEvent(
+            position: tester.getCenter(find.byType(PageView)),
+            scrollDelta: const Offset(0, 40),
+            onRespond: ({required allowPlatformDefault}) =>
+                allowedPlatformDefault = allowPlatformDefault,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(allowedPlatformDefault, isFalse);
+      });
+
+      testWidgets('a wheel turned with Shift held is left alone', (
+        tester,
+      ) async {
+        await pumpFeed(tester);
+
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+        await scroll(tester, const Offset(90, 40));
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+
+        expect(page(tester), equals(0));
+        await tester.pumpAndSettle();
+        expect(key.currentState!.currentIndex, equals(0));
+      });
+
+      testWidgets('ignores a trackpad touch that stops momentum', (
+        tester,
+      ) async {
+        await pumpFeed(tester);
+
+        final pointer = TestPointer(1, PointerDeviceKind.trackpad)
+          ..hover(tester.getCenter(find.byType(PageView)));
+        await tester.sendEventToBinding(pointer.scrollInertiaCancel());
+        await tester.pumpAndSettle();
+
+        expect(key.currentState!.currentIndex, equals(0));
+        expect(tester.takeException(), isNull);
       });
     });
 
@@ -5699,6 +6995,197 @@ void main() {
       });
     });
 
+    group('errors during source recovery', () {
+      testWidgets(
+        'exhausts processing retries when each play reports processing',
+        (
+          tester,
+        ) async {
+          DivineVideoPlayerController.resetIdCounterForTesting();
+          final harness = _NativePlayerHarness(tester);
+          await harness.install(playerIds: const [0]);
+          final key = GlobalKey<InfiniteVideoFeedState>();
+          Completer<void>? playing;
+          const processing = <Object?, Object?>{
+            'status': 'error',
+            'errorCode': 'media_processing',
+            'errorMessage': 'HTTP 202',
+          };
+          try {
+            await tester.pumpWidget(
+              _wrapFeed(
+                InfiniteVideoFeed(
+                  key: key,
+                  videos: [_makeVideo('persistent_processing')],
+                  cache: cache,
+                  prefetchCount: 0,
+                  preloadGracePeriod: Duration.zero,
+                  errorBuilder: (_, _, _, error) =>
+                      Text('VIDEO_ERROR:${error.name}'),
+                ),
+              ),
+            );
+            await tester.pump();
+            await tester.pump();
+            await harness.sendEvent(0, processing);
+            await tester.pump();
+            for (final seconds in [1, 2, 3, 5, 8]) {
+              playing = Completer<void>();
+              harness.callDelays['player_0:play'] = playing;
+              await tester.pump(Duration(seconds: seconds));
+              await tester.pump();
+              await harness.sendEvent(0, const <Object?, Object?>{
+                'status': 'buffering',
+              });
+              await harness.sendEvent(0, processing);
+              await tester.pump();
+              playing.complete();
+              await tester.pump();
+              await tester.pump();
+            }
+
+            expect(key.currentState!.errorTypeAt(0), VideoErrorType.generic);
+            expect(find.text('VIDEO_ERROR:generic'), findsOneWidget);
+            expect(harness.countCalls('play'), 6);
+          } finally {
+            if (playing != null && !playing.isCompleted) playing.complete();
+            await tester.pumpWidget(const SizedBox.shrink());
+            await tester.pump(const Duration(seconds: 9));
+            await tester.pump();
+            await harness.dispose();
+          }
+        },
+      );
+
+      for (final processing in [false, true]) {
+        final recovery = processing ? 'processing' : 'fallback';
+        for (final repeated in [false, true]) {
+          testWidgets(
+            'shows auth failure during $recovery play '
+            'with repeat notification $repeated',
+            (tester) async {
+              DivineVideoPlayerController.resetIdCounterForTesting();
+              final harness = _NativePlayerHarness(tester);
+              await harness.install(playerIds: const [0]);
+              final key = GlobalKey<InfiniteVideoFeedState>();
+              final playing = Completer<void>();
+              const url =
+                  'https://media.divine.video/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/720p.mp4';
+              try {
+                await tester.pumpWidget(
+                  _wrapFeed(
+                    InfiniteVideoFeed(
+                      key: key,
+                      videos: [_makeVideo('recovery', videoUrl: url)],
+                      cache: cache,
+                      prefetchCount: 0,
+                      preloadGracePeriod: Duration.zero,
+                      errorBuilder: (_, _, _, error) =>
+                          Text('VIDEO_ERROR:${error.name}'),
+                    ),
+                  ),
+                );
+                await tester.pump();
+                await tester.pump();
+                expect(harness.countCalls('play'), 1);
+                harness.callDelays['player_0:play'] = playing;
+                await harness.sendEvent(0, <Object?, Object?>{
+                  'status': 'error',
+                  'errorCode': processing ? 'media_processing' : 'parse_error',
+                  'errorMessage': processing
+                      ? 'HTTP 202'
+                      : 'Synthetic parse failure',
+                });
+                if (processing) {
+                  await tester.pump(const Duration(milliseconds: 1100));
+                }
+                await tester.pump();
+                expect(harness.countCalls('play'), 2);
+                await harness.sendEvent(0, const <Object?, Object?>{
+                  'status': 'buffering',
+                });
+                const failure = <Object?, Object?>{
+                  'status': 'error',
+                  'errorCode': 'auth_required',
+                  'errorMessage': 'HTTP 401',
+                };
+                await harness.sendEvent(0, failure);
+                await tester.pump();
+                expect(key.currentState!.errorTypeAt(0), isNull);
+                playing.complete();
+                await tester.pump();
+                if (repeated) {
+                  await harness.sendEvent(0, failure);
+                  await tester.pump();
+                }
+                await tester.pump();
+
+                expect(
+                  key.currentState!.errorTypeAt(0),
+                  VideoErrorType.ageRestricted,
+                );
+                expect(find.text('VIDEO_ERROR:ageRestricted'), findsOneWidget);
+                expect(harness.countCalls('setClips'), 2);
+              } finally {
+                if (!playing.isCompleted) playing.complete();
+                await tester.pumpWidget(const SizedBox.shrink());
+                await tester.pump();
+                await harness.dispose();
+              }
+            },
+          );
+        }
+      }
+    });
+
+    group('wait for data after playback started', () {
+      for (final (platform, seeks) in [
+        // AVPlayer reported these waits as playing, so the stale detector's
+        // seek recovery covered them; it still does.
+        (TargetPlatform.iOS, 1),
+        (TargetPlatform.android, 0),
+      ]) {
+        testWidgets('seeks to recover it $seeks time(s) on ${platform.name}', (
+          tester,
+        ) async {
+          debugDefaultTargetPlatformOverride = platform;
+          DivineVideoPlayerController.resetIdCounterForTesting();
+          final harness = _NativePlayerHarness(tester);
+          await harness.install();
+          try {
+            await tester.pumpWidget(
+              _wrapFeed(
+                InfiniteVideoFeed(
+                  videos: [_makeVideo('stalls')],
+                  cache: cache,
+                  prefetchCount: 0,
+                  preloadGracePeriod: Duration.zero,
+                ),
+              ),
+            );
+            await tester.pump();
+            await tester.pump();
+            expect(harness.countCallsForPlayer(0, 'play'), 1);
+            const position = {'positionMs': 1000, 'durationMs': 6000};
+            await harness.sendEvent(0, {'status': 'playing', ...position});
+            await tester.pump(const Duration(milliseconds: 1100));
+            await harness.sendEvent(0, {'status': 'buffering', ...position});
+            // Past the grace and a full stall, short of a second recovery.
+            await tester.pump(
+              StalePlaybackDetector.interval *
+                  (StalePlaybackDetector.heartbeatThreshold + 2),
+            );
+            expect(harness.countCallsForPlayer(0, 'seekTo'), seeks);
+          } finally {
+            await tester.pumpWidget(const SizedBox.shrink());
+            await tester.pump();
+            await harness.dispose();
+            debugDefaultTargetPlatformOverride = null;
+          }
+        });
+      }
+    });
+
     group('runtime processing retry', () {
       testWidgets(
         'does not drive a stale controller after the slot is reinitialized',
@@ -5790,4 +7277,46 @@ void main() {
       );
     });
   });
+}
+
+class _DesktopReadinessBackend extends Fake
+    implements LinuxVideoPlayerBackend, DesktopVideoFrameReadiness {
+  Completer<bool> frame = Completer<bool>();
+  bool played = false;
+  late void Function(DivineVideoPlayerState) emitState;
+
+  @override
+  Future<bool> get firstFrameRendered => frame.future;
+
+  @override
+  Future<void> initialize({
+    required void Function(DivineVideoPlayerState) onStateChanged,
+    required void Function(Object) onError,
+  }) async {
+    emitState = onStateChanged;
+  }
+
+  @override
+  Future<void> setClips(
+    List<VideoClip> clips, {
+    Duration? startPosition,
+  }) async {}
+
+  @override
+  Future<void> setLooping({required bool looping}) async {}
+
+  @override
+  Future<void> setVolume(double volume) async {}
+
+  @override
+  Future<void> play() async => played = true;
+
+  @override
+  Future<void> pause() async {}
+
+  @override
+  Widget buildView() => const SizedBox.shrink();
+
+  @override
+  Future<void> dispose() async {}
 }

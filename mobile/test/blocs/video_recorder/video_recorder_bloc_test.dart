@@ -38,6 +38,7 @@ import 'package:wakelock_plus_platform_interface/wakelock_plus_platform_interfac
 
 import '../../helpers/test_helpers.dart' show TestHelpers;
 import '../../mocks/mock_path_provider_platform.dart';
+import 'helpers/start_observing_recorder.dart';
 
 class _MockCameraService extends Mock implements CameraService {}
 
@@ -294,6 +295,7 @@ void main() {
     ReactionRecordingOwner? reactionRecordingOwner,
     ReadClipManager? readClipManager,
     RecordingStartedCallback? onRecordingStarted,
+    RemoteRecorderStatePublisher? publishRemoteRecorderState,
     CameraServiceFactory? cameraServiceFactory,
     bool liveChromaKeySupported = false,
     ReadVideoEditorState readVideoEditorState = VideoEditorProviderState.new,
@@ -307,9 +309,19 @@ void main() {
       cameraService: cameraServiceFactory == null ? cameraService : null,
       cameraServiceFactory: cameraServiceFactory ?? CameraService.create,
       onRecordingStarted: onRecordingStarted,
+      publishRemoteRecorderState: publishRemoteRecorderState,
       liveChromaKeySupported: liveChromaKeySupported,
     );
   }
+
+  /// The recorder [buildBloc] builds, reporting when a start handler ends.
+  StartObservingRecorder buildStartObservingBloc() => StartObservingRecorder(
+    readClipManager: () => clipManager,
+    readVideoEditor: () => videoEditor,
+    readVideoEditorState: VideoEditorProviderState.new,
+    readSharedPreferences: () => prefs,
+    cameraService: cameraService,
+  );
 
   group(VideoRecorderBloc, () {
     test('initial state has all defaults zeroed', () {
@@ -3842,7 +3854,7 @@ void main() {
         },
       );
 
-      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+      blocTest<StartObservingRecorder, VideoRecorderBlocState>(
         'discards the orphaned file of an aborted in-flight start — the '
         'recording is never surfaced, so its file must not leak on disk',
         setUp: () {
@@ -3863,7 +3875,7 @@ void main() {
             () => cameraService.stopRecording(),
           ).thenAnswer((_) async => aborted);
         },
-        build: buildBloc,
+        build: buildStartObservingBloc,
         act: (bloc) async {
           bloc.add(const VideoRecorderRecordingStartRequested());
           await pumpEventQueue();
@@ -3872,7 +3884,7 @@ void main() {
           // Native start finally reports success after the lock landed — the
           // handler stops it and must delete the orphaned file.
           startGate.complete(true);
-          await pumpEventQueue();
+          await bloc.startDone.future;
         },
         verify: (_) {
           verify(() => cameraService.stopRecording()).called(1);
@@ -3881,7 +3893,7 @@ void main() {
         },
       );
 
-      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+      blocTest<StartObservingRecorder, VideoRecorderBlocState>(
         'aborts a started recording when navigation locks during the '
         'wakelock-enable await — the clip manager timer is never armed and '
         "the just-started session's file is discarded",
@@ -3907,7 +3919,7 @@ void main() {
           wakelockPlusPlatformInstance = _FakeWakelockPlatform();
           orphanFile.parent.deleteSync(recursive: true);
         },
-        build: buildBloc,
+        build: buildStartObservingBloc,
         act: (bloc) async {
           bloc.add(const VideoRecorderRecordingStartRequested());
           await pumpEventQueue();
@@ -3917,7 +3929,7 @@ void main() {
           bloc.add(const VideoRecorderRecordingLockedForNavigation());
           await pumpEventQueue();
           gatedWakelock.enableGate.complete();
-          await pumpEventQueue();
+          await bloc.startDone.future;
         },
         verify: (bloc) {
           expect(bloc.state.recordingState, VideoRecorderState.idle);
@@ -3932,10 +3944,102 @@ void main() {
     });
 
     group('VideoRecorderAppLifecycleChanged', () {
+      for (final mode in [
+        VideoRecorderMode.upload,
+        VideoRecorderMode.together,
+      ]) {
+        test(
+          'does not resume the camera when foregrounded on ${mode.name}',
+          () async {
+            final bloc = buildBloc()
+              ..emit(
+                VideoRecorderBlocState(recorderMode: mode),
+              );
+            addTearDown(bloc.close);
+
+            bloc.add(
+              const VideoRecorderAppLifecycleChanged(AppLifecycleState.resumed),
+            );
+            await pumpEventQueue();
+
+            verifyNever(
+              () => cameraService.handleAppLifecycleState(
+                AppLifecycleState.resumed,
+              ),
+            );
+          },
+        );
+      }
+
       setUp(stubRecorderDefaults);
       const initialized = VideoRecorderBlocState(
         isCameraInitialized: true,
         canRecord: true,
+      );
+
+      test(
+        'keeps the Watch shutter unavailable until the preview resumes '
+        'after foregrounding on Upload',
+        () async {
+          final publications = <RemoteRecorderState?>[];
+          final previewResumed = Completer<void>();
+          when(() => clipManager.durationLimit).thenReturn(
+            const Duration(milliseconds: 6300),
+          );
+          when(() => clipManager.activeRecordingDuration).thenReturn(
+            Duration.zero,
+          );
+          when(
+            () => cameraService.handleAppLifecycleState(
+              AppLifecycleState.resumed,
+            ),
+          ).thenAnswer((_) => previewResumed.future);
+          final bloc = buildBloc(
+            publishRemoteRecorderState: (state) async =>
+                publications.add(state),
+          )..emit(initialized);
+          addTearDown(bloc.close);
+          addTearDown(() {
+            if (!previewResumed.isCompleted) previewResumed.complete();
+          });
+
+          bloc.add(
+            const VideoRecorderRecorderModeSet(VideoRecorderMode.upload),
+          );
+          await pumpEventQueue();
+          bloc
+            ..add(
+              const VideoRecorderAppLifecycleChanged(
+                AppLifecycleState.paused,
+                isTabTransition: true,
+              ),
+            )
+            ..add(
+              const VideoRecorderAppLifecycleChanged(AppLifecycleState.paused),
+            )
+            ..add(
+              const VideoRecorderAppLifecycleChanged(AppLifecycleState.resumed),
+            );
+          await pumpEventQueue();
+          expect(publications, [isNotNull, isNull]);
+
+          bloc.add(
+            const VideoRecorderRecorderModeSet(VideoRecorderMode.capture),
+          );
+          await pumpEventQueue();
+          bloc.add(
+            const VideoRecorderAppLifecycleChanged(
+              AppLifecycleState.resumed,
+              isTabTransition: true,
+            ),
+          );
+          await pumpEventQueue();
+          expect(publications, [isNotNull, isNull]);
+
+          previewResumed.complete();
+          await pumpEventQueue();
+          expect(publications, [isNotNull, isNull, isNotNull]);
+        },
       );
 
       test(
@@ -4548,13 +4652,14 @@ void main() {
 
       group('remote record trigger', () {
         setUp(stubRecorderDefaults);
-        void Function()? trigger;
+        void Function(RemoteRecordTrigger)? trigger;
 
         setUp(() {
           trigger = null;
           when(() => cameraService.setOnRemoteRecordTrigger(any())).thenAnswer(
             (invocation) => trigger =
-                invocation.positionalArguments.first as void Function()?,
+                invocation.positionalArguments.first
+                    as void Function(RemoteRecordTrigger)?,
           );
           when(
             () => cameraService.startRecording(
@@ -4569,7 +4674,7 @@ void main() {
           bloc.add(const VideoRecorderInitializeRequested());
           await pumpEventQueue();
 
-          trigger!();
+          trigger!(RemoteRecordTrigger.volumeUp);
           await pumpEventQueue();
 
           verify(
@@ -4586,7 +4691,7 @@ void main() {
           await pumpEventQueue();
           // The press lands before the pause has turned remote control off.
           bloc.add(const VideoRecorderRemoteRecordPaused());
-          trigger!();
+          trigger!(RemoteRecordTrigger.volumeUp);
           await pumpEventQueue();
 
           verifyNever(
@@ -4610,7 +4715,7 @@ void main() {
             ..add(const VideoRecorderRemoteRecordPaused())
             ..add(const VideoRecorderRemoteRecordResumed());
           await pumpEventQueue();
-          trigger!();
+          trigger!(RemoteRecordTrigger.volumeUp);
           await pumpEventQueue();
 
           expect(bloc.state.isRemoteRecordPaused, isTrue);
@@ -4626,7 +4731,7 @@ void main() {
           bloc.add(const VideoRecorderRemoteRecordResumed());
           await pumpEventQueue();
           expect(bloc.state.isRemoteRecordPaused, isFalse);
-          trigger!();
+          trigger!(RemoteRecordTrigger.volumeUp);
           await pumpEventQueue();
           verify(
             () => cameraService.setRemoteRecordControlEnabled(enabled: true),
@@ -4638,6 +4743,175 @@ void main() {
           ).called(1);
         });
 
+        test('stale Watch Stop never starts a take', () async {
+          final bloc = buildBloc();
+          addTearDown(bloc.close);
+          bloc.add(const VideoRecorderInitializeRequested());
+          await pumpEventQueue();
+
+          trigger!(RemoteRecordTrigger.watchStop);
+          trigger!(RemoteRecordTrigger.watchStop);
+          await pumpEventQueue();
+          verifyNever(
+            () => cameraService.startRecording(
+              maxDuration: any(named: 'maxDuration'),
+            ),
+          );
+
+          trigger!(RemoteRecordTrigger.watchStart);
+          await pumpEventQueue();
+          verify(
+            () => cameraService.startRecording(
+              maxDuration: any(named: 'maxDuration'),
+            ),
+          ).called(1);
+        });
+
+        test(
+          'stale Watch Start leaves a running stop-motion interval alone',
+          () async {
+            final bloc = buildBloc();
+            addTearDown(bloc.close);
+            bloc.add(const VideoRecorderInitializeRequested());
+            await pumpEventQueue();
+            // The loop runs between stills: nothing is in flight and the
+            // recording state is idle, so only the active shutter tells a
+            // Start from a Watch that has not seen the loop yet.
+            bloc.emit(
+              bloc.state.copyWith(
+                recorderMode: VideoRecorderMode.stopMotion,
+                isIntervalCaptureRunning: true,
+              ),
+            );
+
+            trigger!(RemoteRecordTrigger.watchStart);
+            await pumpEventQueue();
+
+            expect(bloc.state.isIntervalCaptureRunning, isTrue);
+          },
+        );
+
+        test(
+          'reenables remote triggers after reinitializing a failed preview',
+          () async {
+            final bloc = buildBloc();
+            addTearDown(bloc.close);
+            bloc.add(const VideoRecorderInitializeRequested());
+            await pumpEventQueue();
+            when(
+              () => cameraService.handleAppLifecycleState(
+                AppLifecycleState.resumed,
+              ),
+            ).thenThrow(StateError('preview could not resume'));
+            bloc.add(
+              const VideoRecorderAppLifecycleChanged(AppLifecycleState.resumed),
+            );
+            await pumpEventQueue();
+            expect(bloc.state.isCameraInitialized, isFalse);
+
+            bloc.add(
+              const VideoRecorderRecorderModeSet(VideoRecorderMode.upload),
+            );
+            await pumpEventQueue();
+            bloc.add(
+              const VideoRecorderAppLifecycleChanged(
+                AppLifecycleState.paused,
+                isTabTransition: true,
+              ),
+            );
+            await pumpEventQueue();
+            bloc.add(
+              const VideoRecorderRecorderModeSet(VideoRecorderMode.capture),
+            );
+            await pumpEventQueue();
+            bloc.add(const VideoRecorderInitializeRequested());
+            await pumpEventQueue();
+            expect(bloc.state.isCameraInitialized, isTrue);
+            trigger!(RemoteRecordTrigger.volumeUp);
+            await pumpEventQueue();
+            verify(
+              () => cameraService.startRecording(
+                maxDuration: any(named: 'maxDuration'),
+              ),
+            ).called(1);
+          },
+        );
+
+        test('is ignored while a sheet pauses remote recording', () async {
+          final bloc = buildBloc();
+          addTearDown(bloc.close);
+          bloc.add(const VideoRecorderInitializeRequested());
+          await pumpEventQueue();
+
+          bloc.add(const VideoRecorderRemoteRecordPaused());
+          await pumpEventQueue();
+          trigger!(RemoteRecordTrigger.volumeUp);
+          await pumpEventQueue();
+
+          verifyNever(
+            () => cameraService.startRecording(
+              maxDuration: any(named: 'maxDuration'),
+            ),
+          );
+
+          bloc.add(const VideoRecorderRemoteRecordResumed());
+          await pumpEventQueue();
+          trigger!(RemoteRecordTrigger.volumeUp);
+          await pumpEventQueue();
+
+          verify(
+            () => cameraService.startRecording(
+              maxDuration: any(named: 'maxDuration'),
+            ),
+          ).called(1);
+        });
+
+        test(
+          'waits for preview resume before accepting a remote tap',
+          () async {
+            final resumed = Completer<void>();
+            when(
+              () => cameraService.handleAppLifecycleState(
+                AppLifecycleState.resumed,
+              ),
+            ).thenAnswer((_) => resumed.future);
+            final bloc = buildBloc();
+            addTearDown(bloc.close);
+            bloc.add(const VideoRecorderInitializeRequested());
+            await pumpEventQueue();
+
+            bloc.add(
+              const VideoRecorderAppLifecycleChanged(AppLifecycleState.paused),
+            );
+            await pumpEventQueue();
+            trigger!(RemoteRecordTrigger.volumeUp);
+            await pumpEventQueue();
+            bloc.add(
+              const VideoRecorderAppLifecycleChanged(AppLifecycleState.resumed),
+            );
+            await pumpEventQueue();
+            trigger!(RemoteRecordTrigger.volumeUp);
+            await pumpEventQueue();
+
+            verifyNever(
+              () => cameraService.startRecording(
+                maxDuration: any(named: 'maxDuration'),
+              ),
+            );
+
+            resumed.complete();
+            await pumpEventQueue();
+            trigger!(RemoteRecordTrigger.volumeUp);
+            await pumpEventQueue();
+
+            verify(
+              () => cameraService.startRecording(
+                maxDuration: any(named: 'maxDuration'),
+              ),
+            ).called(1);
+          },
+        );
+
         test('is ignored on the Upload tab, which shows no preview', () async {
           final bloc = buildBloc();
           addTearDown(bloc.close);
@@ -4648,7 +4922,7 @@ void main() {
           );
           await pumpEventQueue();
 
-          trigger!();
+          trigger!(RemoteRecordTrigger.volumeUp);
           await pumpEventQueue();
 
           verifyNever(

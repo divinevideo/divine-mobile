@@ -86,6 +86,8 @@ class SelectListCubit extends Cubit<SelectListState>
       _openingOwnerPubkey.isNotEmpty &&
       _currentOwnerPubkey() == _openingOwnerPubkey;
 
+  /// The viewer's lists this sheet can add to. A series is left out: its
+  /// episodes are the creator's own videos, and this sheet adds any video.
   static List<CuratedList> _ownedLists(
     CuratedListService service,
     String? owner,
@@ -94,7 +96,9 @@ class SelectListCubit extends Cubit<SelectListState>
       : service
             .pickerListsForOwner(owner)
             .where(
-              (list) => list.pubkey == null || list.pubkey == owner,
+              (list) =>
+                  (list.pubkey == null || list.pubkey == owner) &&
+                  !list.isSeries,
             )
             .toList();
 
@@ -106,6 +110,25 @@ class SelectListCubit extends Cubit<SelectListState>
         _service,
         _openingOwnerPubkey,
       ).any((list) => list.id == listId);
+
+  /// Whether [listId] left the sheet only because it is now a series. The
+  /// sheet does not change a series, but the session is intact, so the other
+  /// picks are still saved.
+  bool _becameSeries(String listId) {
+    final owner = _openingOwnerPubkey;
+    return state.serviceAvailable &&
+        !_service.recoveryNeedsRepair &&
+        isSessionCurrent &&
+        owner != null &&
+        _service
+            .pickerListsForOwner(owner)
+            .any(
+              (list) =>
+                  list.id == listId &&
+                  (list.pubkey == null || list.pubkey == owner) &&
+                  list.isSeries,
+            );
+  }
 
   CuratedList? _ownedList(String listId) => _ownedLists(
     _service,
@@ -332,7 +355,8 @@ class SelectListCubit extends Cubit<SelectListState>
   /// Ends in [SelectListStatus.saved] when every list took the change, so a
   /// visit with no changes closes at once. Otherwise the lists that did take
   /// it are done, and the state ends in [SelectListStatus.failure] or
-  /// [SelectListStatus.failureListFull] with the rest still picked. Stops
+  /// [SelectListStatus.failureListFull] with the rest still picked; a list
+  /// that became a series meanwhile fails too, and leaves the sheet. Stops
   /// before a list waiting on an accepted permission change, ending in
   /// [SelectListStatus.recoveryPendingSync], and clears the sheet with
   /// [SelectListStatus.failure] once the account it opened for is no longer
@@ -345,12 +369,11 @@ class SelectListCubit extends Cubit<SelectListState>
     if (_writesPaused() || !state.canSubmit) return null;
     final epoch = _writeEpoch;
     final service = _service;
-    final toAdd = state.listIdsToAdd;
-    final toRemove = state.listIdsToRemove;
-    if (_permissionRecoveryBlocks({...toAdd, ...toRemove})) {
+    final picks = {...state.listIdsToAdd, ...state.listIdsToRemove};
+    if (_permissionRecoveryBlocks(picks)) {
       return _recoveryRequired();
     }
-    if (toAdd.isEmpty && toRemove.isEmpty) {
+    if (picks.isEmpty) {
       emitIfOpen(state.copyWith(status: SelectListStatus.saved));
       return SelectListStatus.saved;
     }
@@ -367,18 +390,27 @@ class SelectListCubit extends Cubit<SelectListState>
         await _olderVersionsLookup;
         if (!isSessionCurrent) return _sessionFailure();
         if (_writeInterrupted(epoch)) return null;
+        // The picker already removed any newly converted series from its
+        // selections while the lookup was running.
+        final offered = state.lists.map((list) => list.id).toSet();
+        failed = picks.difference(offered).where(_becameSeries).length;
       }
       final adds = state.listIdsToAdd;
       final removes = state.listIdsToRemove;
       for (final listId in adds) {
         if (_writeInterrupted(epoch)) return null;
-        if (!_canMutate(listId)) return _sessionFailure();
+        if (!_canMutate(listId)) {
+          if (!_becameSeries(listId)) return _sessionFailure();
+          failed++;
+          continue;
+        }
         if (_permissionRecoveryBlocks({listId})) return _recoveryRequired();
         final coordinate = _mutationCoordinate(listId);
         if (coordinate == null) return _sessionFailure();
         final added = await service.addVideoToList(
           coordinate,
           _video.reference,
+          allowSeries: false,
         );
         if (!isSessionCurrent) return _sessionFailure();
         if (_writeInterrupted(epoch)) return null;
@@ -395,7 +427,11 @@ class SelectListCubit extends Cubit<SelectListState>
       }
       for (final listId in removes) {
         if (_writeInterrupted(epoch)) return null;
-        if (!_canMutate(listId)) return _sessionFailure();
+        if (!_canMutate(listId)) {
+          if (!_becameSeries(listId)) return _sessionFailure();
+          failed++;
+          continue;
+        }
         if (_permissionRecoveryBlocks({listId})) return _recoveryRequired();
         final list = _ownedList(listId);
         if (list == null) return _sessionFailure();
@@ -409,6 +445,7 @@ class SelectListCubit extends Cubit<SelectListState>
           final dropped = await service.removeVideoFromList(
             list.authorScopedId,
             reference,
+            allowSeries: false,
           );
           removed = removed && dropped;
           if (!isSessionCurrent) return _sessionFailure();

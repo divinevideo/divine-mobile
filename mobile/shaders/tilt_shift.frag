@@ -2,8 +2,9 @@
 // picker.
 //
 // The renderers draw the effect natively, with `TiltShiftVideoEffect` on
-// Android, iOS and macOS. This is the same shader: the top and bottom blur
-// while a band across the middle stays sharp, and the colours lift.
+// Android, iOS and macOS. This is the same shader: the picture blurs on both
+// sides of a sharp band, across the middle unless the settings move it, and
+// the colours lift.
 //
 // Distances are in pixels with y up, from the bottom left, as natively;
 // Flutter counts y down, so it is flipped on the way in. `s` is the shorter
@@ -16,6 +17,16 @@ uniform vec2 uSize;
 
 // How strongly the edges blur and the colours lift, 0 to 1.
 uniform float uIntensity;
+
+// Where the sharp band lies, as a share of the height from the top, or of the
+// width from the left for an upright band.
+uniform float uFocus;
+
+// How wide the sharp band and the blur's ramp are; 1 is the default.
+uniform float uBand;
+
+// 1 for an upright band, 0 for one across.
+uniform float uVertical;
 
 uniform sampler2D uTexture;
 
@@ -30,8 +41,9 @@ void main() {
   vec2 fragCoord = FlutterFragCoord().xy;
   vec2 p = vec2(fragCoord.x, uSize.y - fragCoord.y);
   float s = min(uSize.x, uSize.y);
-  float away = abs(p.y / uSize.y - 0.5);
-  float r = 0.03 * s * uIntensity * smoothstep(0.1, 0.42, away);
+  float along = uVertical > 0.5 ? p.x / uSize.x : 1.0 - p.y / uSize.y;
+  float away = abs(along - uFocus);
+  float r = 0.03 * s * uIntensity * smoothstep(0.1 * uBand, 0.1 * uBand + 0.32, away);
   vec3 color = tap(p);
   if (r > 0.5) {
     float spin = 6.2832 * fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715))));

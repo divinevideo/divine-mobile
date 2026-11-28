@@ -20,6 +20,7 @@ void main() {
       });
 
       expect(status.verifiedMinor, isTrue);
+      expect(status.verifiedMinorReported, isTrue);
       expect(status.verifiedMinorAt, DateTime.utc(2026, 6, 30, 12));
       expect(status.email, 'a@b.com');
       expect(status.emailVerified, isTrue);
@@ -34,7 +35,32 @@ void main() {
       });
 
       expect(status.verifiedMinor, isFalse);
+      expect(status.verifiedMinorReported, isFalse);
       expect(status.verifiedMinorAt, isNull);
+    });
+
+    test('reports an explicit verified_minor false', () {
+      final status = KeycastAccountStatus.fromJson({
+        'email': 'a@b.com',
+        'email_verified': true,
+        'public_key': 'abc',
+        'verified_minor': false,
+      });
+
+      expect(status.verifiedMinor, isFalse);
+      expect(status.verifiedMinorReported, isTrue);
+    });
+
+    test('rejects a verified_minor that is not a boolean', () {
+      expect(
+        () => KeycastAccountStatus.fromJson({
+          'email': 'a@b.com',
+          'email_verified': true,
+          'public_key': 'abc',
+          'verified_minor': 'false',
+        }),
+        throwsA(isA<TypeError>()),
+      );
     });
 
     test('keeps verified_minor true but null timestamp on a bad date', () {

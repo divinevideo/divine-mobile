@@ -8,7 +8,7 @@ import 'package:models/models.dart'
     show AudioEvent, SoundKind, VideoEvent, searchTermsOf;
 import 'package:nostr_sdk/nostr_sdk.dart' show AId;
 import 'package:openvine/config/official_accounts.dart'
-    show kDivineSoundPublisherPubkeys, kSoundLibraryPublisherPubkeys;
+    show kDivineSoundPublisherPubkeys;
 import 'package:openvine/extensions/divine_sound_extensions.dart';
 import 'package:openvine/models/paged_sounds.dart';
 import 'package:openvine/models/sound_cover.dart';
@@ -60,10 +60,6 @@ SoundsRepository soundsRepository(Ref ref) {
     nostrClient: nostrClient,
     funnelcakeApiClient: ref.watch(funnelcakeApiClientProvider),
     divineSoundPublishers: kDivineSoundPublisherPubkeys,
-    // Empty until the library account exists, so it equals the default for
-    // now; wired already so that adding the account's pubkey is enough.
-    // ignore: avoid_redundant_argument_values
-    librarySoundPublishers: kSoundLibraryPublisherPubkeys,
     // The same rule the feed hides blocked and muted accounts by.
     blockFilter: createBlockedAuthorFilter(ref),
   );
@@ -112,9 +108,6 @@ class TrendingSounds extends _$TrendingSounds with _LoadsMoreSounds {
     _fillAScreen();
     _pager = _CursorPager(
       (cursor) => repository.fetchNewestSounds(cursor: cursor),
-      // The imported library would fill the newest pages; it is reached
-      // through search and Popular instead.
-      keep: repository.withoutLibrarySounds,
     );
     return PagedSounds.first(await _pager.next());
   }
@@ -278,8 +271,8 @@ class SoundsOfKind extends _$SoundsOfKind with _LoadsMoreSounds {
           kind: kind,
           cursor: cursor,
         ),
-        SoundListOfKind.popular => repository.fetchPopularSoundsOfKind(
-          kind,
+        SoundListOfKind.popular => repository.fetchPopularSounds(
+          kind: kind,
           cursor: cursor,
         ),
         SoundListOfKind.followed => repository.fetchFollowedSounds(
@@ -288,14 +281,10 @@ class SoundsOfKind extends _$SoundsOfKind with _LoadsMoreSounds {
           cursor: cursor,
         ),
       },
-      // As the lists without a kind: the imported library is reached through
-      // search and Popular, and Divine's own sounds sit beside For you.
+      // As the list without a kind: Divine's own sounds sit beside For you.
       keep: switch (list) {
-        SoundListOfKind.newest => repository.withoutLibrarySounds,
-        SoundListOfKind.popular => null,
-        SoundListOfKind.followed => _withoutLibraryOrDivineSounds(
-          repository,
-        ),
+        SoundListOfKind.newest || SoundListOfKind.popular => null,
+        SoundListOfKind.followed => _withoutDivineSounds,
       },
     );
     return PagedSounds.first(await _pager.next());
@@ -305,17 +294,13 @@ class SoundsOfKind extends _$SoundsOfKind with _LoadsMoreSounds {
   Future<SoundPage> _nextPage() => _pager.next();
 }
 
-/// Narrows a page of For you to the sounds it shows: not the imported
-/// library, which search and Popular reach, nor Divine's own sounds, which
-/// the picker lists beside it from [divineSounds], tied to the ones the app
-/// ships, and would otherwise show twice.
-List<AudioEvent> Function(List<AudioEvent>) _withoutLibraryOrDivineSounds(
-  SoundsRepository repository,
-) =>
-    (sounds) => [
-      for (final sound in repository.withoutLibrarySounds(sounds))
-        if (!sound.isDivine) sound,
-    ];
+/// Narrows a page of For you to the sounds it shows: not Divine's own
+/// sounds, which the picker lists beside it from [divineSounds], tied to the
+/// ones the app ships, and would otherwise show twice.
+List<AudioEvent> _withoutDivineSounds(List<AudioEvent> sounds) => [
+  for (final sound in sounds)
+    if (!sound.isDivine) sound,
+];
 
 /// Walks the pages of a list that follows a cursor, each holding only sounds
 /// the pages before it did not.
@@ -438,7 +423,7 @@ Future<int?> soundUsageCount(Ref ref, String audioEventId) async {
 /// ```
 @riverpod
 class PopularSounds extends _$PopularSounds with _LoadsMoreSounds {
-  late _RankingPager _pager;
+  late _CursorPager _pager;
 
   @override
   Future<PagedSounds> build() async {
@@ -446,38 +431,15 @@ class PopularSounds extends _$PopularSounds with _LoadsMoreSounds {
     final repository = ref.watch(soundsRepositoryProvider);
     _hideAuthorsBlockedLater();
     // Made anew with each build, so a page still loading for the list this
-    // build replaced cannot move the new one's offset.
-    _pager = _RankingPager(repository);
+    // build replaced cannot move the new one's cursor.
+    _pager = _CursorPager(
+      (cursor) => repository.fetchPopularSounds(cursor: cursor),
+    );
     return PagedSounds.first(await _pager.next());
   }
 
   @override
   Future<SoundPage> _nextPage() => _pager.next();
-}
-
-/// Walks the Funnelcake ranking down, a page per [next], each holding only
-/// sounds the pages before it did not.
-class _RankingPager {
-  _RankingPager(this._repository);
-
-  final SoundsRepository _repository;
-  final _seen = <String>{};
-  var _offset = 0;
-
-  Future<SoundPage> next() async {
-    final popular = await _repository.fetchPopularSounds(offset: _offset);
-    _offset += SoundsRepository.popularPageSize;
-    // The ranking moves while it is paged through, so a sound can come
-    // round again on a later page.
-    return (
-      sounds: [
-        for (final sound in popular.sounds)
-          if (_seen.add(sound.id)) sound,
-      ],
-      usageCounts: popular.usageCounts,
-      hasMore: popular.usageCounts.length >= SoundsRepository.popularPageSize,
-    );
-  }
 }
 
 /// Divine's own sounds published on the network, for the picker to show
@@ -515,7 +477,7 @@ class ForYouSounds extends _$ForYouSounds with _LoadsMoreSounds {
     _fillAScreen();
     _pager = _CursorPager(
       (cursor) => repository.fetchFollowedSounds(following, cursor: cursor),
-      keep: _withoutLibraryOrDivineSounds(repository),
+      keep: _withoutDivineSounds,
     );
     if (following.isEmpty) return const PagedSounds(pages: [[]]);
     return PagedSounds.first(await _pager.next());
@@ -773,14 +735,17 @@ _SoundCoverCache _soundCoverCache(Ref ref) {
   ref.watch(currentAuthStateProvider);
   return _SoundCoverCache(
     ref.watch(videosRepositoryProvider),
+    ref.watch(soundsRepositoryProvider),
     viewer: ref.watch(authServiceProvider).currentPublicKeyHex,
   );
 }
 
 class _SoundCoverCache {
-  _SoundCoverCache(this._videos, {required String? viewer}) : _viewer = viewer;
+  _SoundCoverCache(this._videos, this._sounds, {required String? viewer})
+    : _viewer = viewer;
 
   final VideosRepository _videos;
+  final SoundsRepository _sounds;
   final String? _viewer;
   final _covers = <String, SoundCover?>{};
   final _sources = <String, VideoEvent>{};
@@ -793,9 +758,11 @@ class _SoundCoverCache {
   VideoEvent? sourceOf(String reference) => _sources[reference];
 
   /// Covers for [references], keyed like [trendingSoundCovers]. A reference
-  /// looked up before keeps its answer, and the rest are looked up now in
-  /// one batch. When that fails they are left out, unanswered, so their rows
-  /// show no cover and the next lookup asks again.
+  /// looked up before keeps its answer. For the rest, the source videos
+  /// Funnelcake sent along with the sounds are taken as they are, and the
+  /// others are looked up now in one batch. When that fails they are left
+  /// out, unanswered, so their rows show no cover and the next lookup asks
+  /// again.
   ///
   /// A video whose creator lets no one else reuse its sound is marked like a
   /// gone one, so its row is left out rather than refusing a tap.
@@ -807,24 +774,58 @@ class _SoundCoverCache {
     if (unknown.isNotEmpty) {
       // Asked alongside the covers, and about as quick, so rows wait no longer.
       final refusals = _refusedAmong(unknown);
-      try {
-        final (:covers, :sources) = await _sourceVideoCovers(_videos, unknown);
-        _covers.addAll(covers);
-        _sources.addAll(sources);
-      } on Object catch (e) {
-        Log.warning(
-          'Could not look up sound covers: $e',
-          name: 'SoundsProviders',
-          category: LogCategory.api,
-        );
+      final covers = <String, SoundCover?>{};
+      final sources = <String, VideoEvent>{};
+      final notServed = _takeServedSources(unknown, covers, sources);
+      if (notServed.isNotEmpty) {
+        try {
+          final fromRelays = await _sourceVideoCovers(_videos, notServed);
+          covers.addAll(fromRelays.covers);
+          sources.addAll(fromRelays.sources);
+        } on Object catch (e) {
+          Log.warning(
+            'Could not look up sound covers: $e',
+            name: 'SoundsProviders',
+            category: LogCategory.api,
+          );
+        }
       }
+      // Other lists share the cache and must not see covers before the policy
+      // lookup finishes.
       _refused.addAll(await refusals);
+      _covers.addAll(covers);
+      _sources.addAll(sources);
     }
     return {
       for (final reference in references)
         if (_covers.containsKey(reference))
           reference: _refused.contains(reference) ? null : _covers[reference],
     };
+  }
+
+  /// Takes the source videos Funnelcake sent along with the sounds for
+  /// [references], and returns the references it said nothing about.
+  ///
+  /// A video this viewer may not see is gone for them, as when the relays
+  /// return it, and one Funnelcake shows the public none of is gone for
+  /// everyone: neither is looked up on the relays, where it would only come
+  /// back.
+  Set<String> _takeServedSources(
+    Set<String> references,
+    Map<String, SoundCover?> covers,
+    Map<String, VideoEvent> sources,
+  ) {
+    final served = _sounds.sourceVideosFromIndex(references);
+    for (final MapEntry(key: reference, value: event) in served.entries) {
+      final video = event == null
+          ? null
+          : _videos.visibleVideoFromEvent(event, includeFeedShape: false);
+      covers[reference] = video == null
+          ? null
+          : SoundCover.fromSourceVideo(video);
+      if (video != null) sources[reference] = video;
+    }
+    return references.difference(served.keys.toSet());
   }
 
   /// The videos among [references] whose creator lets no one else reuse
@@ -858,10 +859,7 @@ class _SoundCoverCache {
 /// The covers for [references], keyed and marked like [trendingSoundCovers],
 /// and the source videos found for them.
 Future<({Map<String, SoundCover?> covers, Map<String, VideoEvent> sources})>
-_sourceVideoCovers(
-  VideosRepository repository,
-  Set<String> references,
-) async {
+_sourceVideoCovers(VideosRepository repository, Set<String> references) async {
   // The feed's shape preference decides what the feed plays, not where a
   // sound came from, so it does not hide a cover. Every other visibility
   // rule — blocks, deletions, content filters — still applies.

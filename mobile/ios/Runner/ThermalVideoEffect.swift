@@ -11,16 +11,19 @@ import pro_video_editor
 /// cold. A thermal camera's picture is soft, so the warmth is averaged over
 /// five taps first, then stretched and run through an ironbow palette.
 ///
-/// Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1: how
-/// far the picture turns into the thermal view).
+/// Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how far
+/// the picture turns into the thermal view), `sensitivity` (0–1: how warm a
+/// spot must be to glow; 0.5 by default, higher glows sooner).
 final class ThermalVideoEffect: ShaderVideoEffect {
   /// The id the Dart `CustomVideoEffect` names.
   static let id = "divine.thermal"
 
   private let intensity: Double
+  private let sensitivity: Double
 
   init(params: [String: Any]) {
     intensity = Self.readIntensity(params)
+    sensitivity = Self.readNumber(params, "sensitivity", fallback: 0.5, in: 0...1)
     super.init(function: Self.function, source: Self.source)
   }
 
@@ -33,7 +36,7 @@ final class ThermalVideoEffect: ShaderVideoEffect {
   }
 
   override func values(effectTimeUs: Int64) -> [Double]? {
-    intensity > 0 ? [intensity] : nil
+    intensity > 0 ? [intensity] + [sensitivity] : nil
   }
 
   static let function = "divineThermal"
@@ -62,16 +65,19 @@ final class ThermalVideoEffect: ShaderVideoEffect {
     ) {
       if (gid.x >= target.get_width() || gid.y >= target.get_height()) return;
       Frame f = frameOf(u);
-      float intensity = u[3].x;
+      float2 uSize = f.size;
+      float uIntensity = u[3].x;
+      float uSensitivity = u[3].y;
       float2 p = pixelOf(u, gid, target.get_height());
-      float s = min(f.size.x, f.size.y);
+      float s = min(uSize.x, uSize.y);
       float e = max(1.0, s / 270.0);
       float3 color = tap(frame, f, p);
       float heat = (2.0 * warmth(color) + warmth(tap(frame, f, p + float2(e, 0.0))) +
         warmth(tap(frame, f, p - float2(e, 0.0))) + warmth(tap(frame, f, p + float2(0.0, e))) +
         warmth(tap(frame, f, p - float2(0.0, e)))) / 6.0;
-      float3 thermal = ironbow(smoothstep(0.1, 0.75, heat));
-      target.write(float4(mix(color, thermal, intensity), 1.0), gid);
+      float shift = 0.6 * (uSensitivity - 0.5);
+      float3 thermal = ironbow(smoothstep(0.1 - shift, 0.75 - shift, heat));
+      target.write(float4(mix(color, thermal, uIntensity), 1.0), gid);
     }
     """
 }

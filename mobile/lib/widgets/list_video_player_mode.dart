@@ -1,12 +1,15 @@
 // ABOUTME: Fullscreen playback mode for a video tapped in a list's grid.
 // ABOUTME: Shared by the video-list and people-list screens.
 
+import 'dart:async';
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:feed_repository/feed_repository.dart';
-import 'package:flutter/widgets.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/models/view_traffic_source.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
+import 'package:rxdart/rxdart.dart';
 
 /// Fullscreen playback of [videos] from [activeIndex], embedded as a list
 /// screen's "video mode".
@@ -19,7 +22,7 @@ import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 ///
 /// [unavailableMessage] takes the player's place when [activeIndex] no
 /// longer names a video, as after the list shrank under it.
-class ListVideoPlayerMode extends StatelessWidget {
+class ListVideoPlayerMode extends StatefulWidget {
   const ListVideoPlayerMode({
     required this.videos,
     required this.activeIndex,
@@ -27,6 +30,7 @@ class ListVideoPlayerMode extends StatelessWidget {
     required this.onExit,
     required this.unavailableMessage,
     this.trafficSource = ViewTrafficSource.unknown,
+    this.followListUpdates = false,
     super.key,
   });
 
@@ -37,16 +41,87 @@ class ListVideoPlayerMode extends StatelessWidget {
   final String unavailableMessage;
   final ViewTrafficSource trafficSource;
 
+  /// Feeds newly resolved videos into the existing playback session.
+  final bool followListUpdates;
+
+  @override
+  State<ListVideoPlayerMode> createState() => _ListVideoPlayerModeState();
+}
+
+class _ListVideoPlayerModeState extends State<ListVideoPlayerMode> {
+  late final int _initialIndex;
+  late final String _initialVideoId;
+  BehaviorSubject<List<VideoEvent>>? _videoUpdates;
+  FeedRepository? _liveRepository;
+
+  bool get _hasSelectedVideo =>
+      widget.activeIndex >= 0 && widget.activeIndex < widget.videos.length;
+
+  @override
+  void initState() {
+    super.initState();
+    _startLivePlayback();
+  }
+
+  void _startLivePlayback() {
+    if (!widget.followListUpdates || !_hasSelectedVideo) return;
+    _initialIndex = widget.activeIndex;
+    _initialVideoId = widget.videos[_initialIndex].id;
+    final updates = BehaviorSubject.seeded(widget.videos);
+    _videoUpdates = updates;
+    _liveRepository = StreamFeedRepository(videos: updates.stream);
+  }
+
+  @override
+  void didUpdateWidget(covariant ListVideoPlayerMode oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final updates = _videoUpdates;
+    if (updates == null) {
+      _startLivePlayback();
+    } else if (!identical(oldWidget.videos, widget.videos)) {
+      updates.add(widget.videos);
+    }
+  }
+
+  @override
+  void dispose() {
+    unawaited(_videoUpdates?.close());
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (videos.isEmpty || activeIndex >= videos.length) {
-      return Center(
+    final liveRepository = _liveRepository;
+    final Widget content;
+    if (liveRepository == null && !_hasSelectedVideo) {
+      final message = Center(
         child: Text(
-          unavailableMessage,
+          widget.unavailableMessage,
           style: VineTheme.bodyMediumFont(
             color: context.vineColors.secondaryText,
           ),
         ),
+      );
+      if (!widget.followListUpdates) return message;
+      content = Scaffold(
+        appBar: DiVineAppBar(
+          title: widget.listName,
+          showBackButton: true,
+          onBackPressed: widget.onExit,
+        ),
+        body: message,
+      );
+    } else {
+      content = PooledFullscreenVideoFeedScreen(
+        source: VideoListViewSource(widget.videos),
+        feedRepository: liveRepository ?? StaticFeedRepository(),
+        initialIndex: liveRepository == null
+            ? widget.activeIndex
+            : _initialIndex,
+        initialVideoId: liveRepository == null ? null : _initialVideoId,
+        contextTitle: widget.listName,
+        trafficSource: widget.trafficSource,
+        onBack: widget.onExit,
       );
     }
 
@@ -54,16 +129,9 @@ class ListVideoPlayerMode extends StatelessWidget {
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
-        onExit();
+        widget.onExit();
       },
-      child: PooledFullscreenVideoFeedScreen(
-        source: VideoListViewSource(videos),
-        feedRepository: StaticFeedRepository(),
-        initialIndex: activeIndex,
-        contextTitle: listName,
-        trafficSource: trafficSource,
-        onBack: onExit,
-      ),
+      child: content,
     );
   }
 }

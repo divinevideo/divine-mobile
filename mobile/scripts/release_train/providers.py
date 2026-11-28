@@ -29,7 +29,7 @@ class ProviderError(RuntimeError):
 
 
 class BeforeStoreMutationError(ProviderError):
-    """Preparation failed before any store write was attempted."""
+    """Preparation failed before any submission or publication write was attempted."""
 
 
 class DeferredReview(ProviderError):
@@ -384,7 +384,21 @@ class Play:
 
         notes = validate_localizations(notes, limit=500, required=PLAY_LOCALES)
         edit = self.edit()
-        self.track(edit, "production", number, notes=notes)
+        try:
+            self.track(edit, "production", number, notes=notes)
+            self.call("POST", f"/edits/{edit}:validate")
+        except ProviderError as error:
+            # An uncommitted edit cannot send a release for review. Discard it
+            # without letting a cleanup failure hide the original failure.
+            try:
+                self.call("DELETE", f"/edits/{edit}")
+            except ProviderError:
+                pass
+            if isinstance(error, DeferredReview):
+                raise error from None
+            raise BeforeStoreMutationError(
+                f"{error}. Nothing was committed.", diagnostic=error.diagnostic
+            ) from None
         return self.commit(edit)
 
     def upload(self, path, number, digest, *, notes):
@@ -543,13 +557,27 @@ class Apple:
                 {"data": [{"type": "builds", "id": build["id"]}]},
             )
 
-    def submit_store(self, build, versions, acknowledged, *, notes, reviews=None):
+    def submit_store(self, build, versions, acknowledged, *, notes, reviews=None, platform="ios"):
         from release_train.release_notes import validate_localizations
+
+        logical_platform = "macos" if platform in {"macos", "MAC_OS"} else "ios"
+        asc_platform = "MAC_OS" if logical_platform == "macos" else "IOS"
+        has_released = any(
+            v["state"] in {"READY_FOR_SALE", "READY_FOR_DISTRIBUTION"}
+            for v in versions
+        )
+        # Apple rejects `whatsNew` (HTTP 409) on the very first App Store
+        # version of a new platform (e.g. initial macOS 1.0 submission).
+        send_whats_new = logical_platform == "ios" or has_released
 
         # These checks only read provider state. Failure cannot imply an
         # ambiguous submission; writes start below, outside this classification.
         try:
-            if build.get("version") == "1.0.30" and str(build.get("number")) == "916":
+            if (
+                logical_platform == "ios"
+                and build.get("version") == "1.0.30"
+                and str(build.get("number")) == "916"
+            ):
                 raise ProviderError("iOS 1.0.30+916 is prohibited from App Store submission")
             notes = validate_localizations(notes, limit=4000)
             editable = [
@@ -569,7 +597,7 @@ class Apple:
                         "INVALID_BINARY",
                         "DEVELOPER_REJECTED",
                     }
-                    and version_ack_key(v) in acknowledged
+                    and version_ack_key(v, logical_platform) in acknowledged
                 )
             ]
             if len(editable) > 1:
@@ -581,7 +609,9 @@ class Apple:
                 r for r in reviews if r["attributes"]["state"] == "UNRESOLVED_ISSUES"
             ]
             if len(unresolved) > 1 or any(
-                not unresolved_review_is_acknowledged(r, versions, acknowledged)
+                not unresolved_review_is_acknowledged(
+                    r, versions, acknowledged, logical_platform
+                )
                 for r in unresolved
             ):
                 raise ProviderError(
@@ -655,7 +685,7 @@ class Apple:
                 "/appStoreVersions",
                 self.resource(
                     "appStoreVersions",
-                    attributes=attrs | {"platform": "IOS"},
+                    attributes=attrs | {"platform": asc_platform},
                     relationships={"app": self.relationship("apps", APP_ID)},
                 ),
             )
@@ -690,14 +720,17 @@ class Apple:
                     {"phasedReleaseState": "INACTIVE"},
                 ),
             )
-        for loc in localizations:
-            self.call(
-                "PATCH",
-                "/appStoreVersionLocalizations/" + loc["id"],
-                self.resource(
-                    "appStoreVersionLocalizations", loc["id"], {"whatsNew": by_language[loc["attributes"]["locale"]]}
-                ),
-            )
+        if send_whats_new:
+            for loc in localizations:
+                self.call(
+                    "PATCH",
+                    "/appStoreVersionLocalizations/" + loc["id"],
+                    self.resource(
+                        "appStoreVersionLocalizations",
+                        loc["id"],
+                        {"whatsNew": by_language[loc["attributes"]["locale"]]},
+                    ),
+                )
         if existing_review:
             review = existing_review["id"]
             items = existing_review.get("items", [])
@@ -707,7 +740,7 @@ class Apple:
                 "/reviewSubmissions",
                 self.resource(
                     "reviewSubmissions",
-                    attributes={"platform": "IOS"},
+                    attributes={"platform": asc_platform},
                     relationships={"app": self.relationship("apps", APP_ID)},
                 ),
             )

@@ -627,7 +627,11 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
       // Keycast signer before building the identity so we get a
       // KeycastNostrIdentity instead of a LocalNostrIdentity.
       if (session != null && session.hasRpcAccess) {
-        _setKeycastSigner(_newKeycastSigner(session));
+        final boundSession =
+            (session.userPubkey == null || session.userPubkey!.isEmpty)
+            ? session.copyWith(userPubkey: localKey!.publicKeyHex)
+            : session;
+        _setKeycastSigner(_newKeycastSigner(boundSession));
       }
 
       await _setupUserSession(
@@ -3013,13 +3017,21 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
         throw Exception('Could not retrieve public key from server');
       }
 
+      final boundSession = session.userPubkey == publicKeyHex
+          ? session
+          : session.copyWith(userPubkey: publicKeyHex);
+      if (session.hasRpcAccess && _keycastSigner?.owner != publicKeyHex) {
+        // Bind the live signer to the verified account so policy refusals
+        // always carry its owner; close the temporary unbound client.
+        _setKeycastSigner(_newKeycastSigner(boundSession));
+      }
+
       // Commit the exact bound input after older native writes have drained.
       // A caller's earlier save may have preceded an outgoing rollback.
       ensureAttempt();
       final mutation = await _mutateAccountNative<void>(
         publicKeyHex,
         (ensureCurrent) async {
-          final boundSession = session.copyWith(userPubkey: publicKeyHex);
           await _signerStore.saveKeycastSession(
             boundSession,
             ensureCurrent: ensureCurrent,
@@ -3244,25 +3256,40 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
   ///   behind by another account would otherwise authorize a call made on this
   ///   account's behalf.
   ///
-  /// Returns null when there is no OAuth client, no signed-in account, no
-  /// session after a refresh, or the session is not bound to the signed-in
-  /// account. Each caller maps that to its own re-authentication outcome.
+  /// [forAccount] names the account the caller is acting for. When it is no
+  /// longer the signed-in account, no token is returned, so work started for
+  /// one account cannot spend the next account's session.
+  ///
+  /// Returns null when there is no OAuth client, no signed-in account, the
+  /// signed-in account is not [forAccount], no session after a refresh, or the
+  /// session is not bound to the signed-in account. Each caller maps that to
+  /// its own re-authentication outcome.
   ///
   /// Throws [OAuthNetworkException] when the refresh cannot reach Keycast.
-  Future<String?> activeAccountKeycastToken() async {
+  Future<String?> activeAccountKeycastToken({String? forAccount}) async {
     final client = _oauthClient;
     if (client == null) return null;
 
     final ownerPubkey = currentPublicKeyHex;
-    if (ownerPubkey == null) return null;
+    if (ownerPubkey == null ||
+        (forAccount != null && forAccount != ownerPubkey)) {
+      return null;
+    }
 
     // getSession() answers null for an expired session, so this refreshes on
     // exactly the same condition getSessionOrRefresh() would.
     var session = await client.getSession();
-    session ??= await _oauthCoordinator.refreshSession(
-      expectedOwnerPubkey: ownerPubkey,
-    );
-    if (session == null) return null;
+    if (session == null && currentPublicKeyHex == ownerPubkey) {
+      // The refresh token lives in the same global slot, and a refresh
+      // stamps the expected owner onto whatever it mints, so the stored
+      // session's owner has to be checked before the refresh, not after.
+      session = await _oauthCoordinator.refreshSession(
+        expectedOwnerPubkey: ownerPubkey,
+        storedSessionReader: () => KeycastSession.load(_flutterSecureStorage),
+        caller: 'activeAccountKeycastToken',
+      );
+    }
+    if (session == null || currentPublicKeyHex != ownerPubkey) return null;
 
     // Strict equality also rejects a session that never carried an owner:
     // it cannot be attributed to this account, and a token whose account we

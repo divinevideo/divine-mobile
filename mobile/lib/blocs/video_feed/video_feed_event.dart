@@ -283,14 +283,39 @@ final class VideoFeedVideoRemoved extends VideoFeedEvent {
   List<Object?> get props => [videoId, removalGeneration];
 }
 
-/// Independent Classics queue changed after request-only feedback.
-final class VideoFeedClassicsSessionChanged extends VideoFeedEvent {
-  const VideoFeedClassicsSessionChanged(this.snapshot);
+/// A video its owner republished from this device, announced on
+/// [VideosRepository.replacedVideos], to show in place of an older revision
+/// the feed holds (#11250).
+final class VideoFeedVideoReplaced extends VideoFeedEvent {
+  const VideoFeedVideoReplaced(this.video);
 
-  final ClassicFeedSessionState snapshot;
+  /// The republished revision.
+  final VideoEvent video;
 
   @override
-  List<Object?> get props => [snapshot];
+  List<Object?> get props => [video];
+}
+
+/// A video whose media was confirmed unavailable. Home drops it only while the
+/// viewer has not reached it: removing the current or an earlier video would
+/// restart the one being watched, and later reads leave it out anyway.
+final class VideoFeedVideoUnavailable extends VideoFeedEvent {
+  const VideoFeedVideoUnavailable(this.videoId);
+
+  final String videoId;
+
+  @override
+  List<Object?> get props => [videoId];
+}
+
+/// Independent Classics queue changed after request-only feedback.
+final class _VideoFeedClassicsSessionChanged extends VideoFeedEvent {
+  const _VideoFeedClassicsSessionChanged(this.session);
+
+  final ClassicFeedSession session;
+
+  @override
+  List<Object?> get props => [session];
 }
 
 /// Whether Home is visible, independent of transient player overlays.
@@ -301,4 +326,14 @@ final class VideoFeedVisibilityChanged extends VideoFeedEvent {
 
   @override
   List<Object?> get props => [visible];
+}
+
+/// Adaptive Classics account gate opened or closed for this Home feed.
+final class _VideoFeedAdaptiveClassicsChanged extends VideoFeedEvent {
+  const _VideoFeedAdaptiveClassicsChanged(this.enabled);
+
+  final bool enabled;
+
+  @override
+  List<Object?> get props => [enabled];
 }

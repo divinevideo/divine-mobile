@@ -85,6 +85,29 @@ void main() {
     }
   });
 
+  group('enqueueAll', () {
+    test('duplicate rumor ids roll back the entire share', () async {
+      final row = makeDm(id: 'same-rumor');
+      await expectLater(
+        dao.enqueueAll([row, row], isCurrent: () => true),
+        throwsA(isA<SqliteException>()),
+      );
+      expect(await dao.getAllForOwner(ownerA), isEmpty);
+    });
+
+    test('an account change during insertion rolls back every row', () async {
+      var checks = 0;
+      await expectLater(
+        dao.enqueueAll(
+          [makeDm(id: 'first'), makeDm(id: 'second')],
+          isCurrent: () => ++checks <= 2,
+        ),
+        throwsStateError,
+      );
+      expect(await dao.getAllForOwner(ownerA), isEmpty);
+    });
+  });
+
   group('OutgoingDm value equality', () {
     test('rumorId reads the wire id independently of the queue handle', () {
       final row = makeDm(id: 'queue-handle', rumorId: 'wire-rumor');
@@ -572,6 +595,80 @@ void main() {
         );
         expect(ok, isFalse);
       });
+
+      // A group sibling can record the batch's one own copy on this row
+      // while this row's own attempt is still on the wire (#10016).
+      test('a failed self-wrap does not overwrite a recorded one', () async {
+        await dao.enqueue(makeDm(id: 'aaaa'));
+        expect(
+          await dao.markSelfWrapStatus(
+            id: 'aaaa',
+            status: OutgoingWrapStatus.sent,
+            eventId: 'self-evt-id',
+          ),
+          isTrue,
+        );
+
+        final ok = await dao.markSelfWrapStatus(
+          id: 'aaaa',
+          status: OutgoingWrapStatus.failed,
+          lastError: 'self-wrap relay rejected',
+        );
+
+        expect(ok, isFalse);
+        final fetched = await dao.getById('aaaa');
+        expect(fetched!.selfWrapStatus, OutgoingWrapStatus.sent);
+        expect(fetched.selfWrapEventId, equals('self-evt-id'));
+        expect(fetched.selfWrapLastError, isNull);
+      });
+
+      for (final (from, to) in [
+        (OutgoingWrapStatus.pending, OutgoingWrapStatus.sent),
+        (OutgoingWrapStatus.failed, OutgoingWrapStatus.sent),
+        (OutgoingWrapStatus.pending, OutgoingWrapStatus.failed),
+        (OutgoingWrapStatus.failed, OutgoingWrapStatus.failed),
+      ]) {
+        test('a ${to.name} self-wrap applies over ${from.name}', () async {
+          await dao.enqueue(makeDm(id: 'aaaa', selfStatus: from));
+
+          final ok = await dao.markSelfWrapStatus(
+            id: 'aaaa',
+            status: to,
+            lastError: 'self-wrap attempt',
+          );
+
+          expect(ok, isTrue);
+          final fetched = await dao.getById('aaaa');
+          expect(fetched!.selfWrapStatus, to);
+          expect(fetched.selfWrapLastError, equals('self-wrap attempt'));
+        });
+      }
+
+      test(
+        'a recorded self-wrap does not reopen a cancelled delivery',
+        () async {
+          await dao.enqueue(
+            makeDm(
+              id: 'aaaa',
+              recipientStatus: OutgoingWrapStatus.failed,
+              selfStatus: OutgoingWrapStatus.failed,
+            ),
+          );
+          expect(await dao.markRecipientCancelled('aaaa'), isTrue);
+
+          final ok = await dao.markSelfWrapStatus(
+            id: 'aaaa',
+            status: OutgoingWrapStatus.sent,
+            eventId: 'self-evt-id',
+          );
+
+          expect(ok, isFalse);
+          final fetched = await dao.getById('aaaa');
+          expect(fetched!.recipientWrapStatus, OutgoingWrapStatus.cancelled);
+          expect(fetched.selfWrapStatus, OutgoingWrapStatus.cancelled);
+          expect(fetched.selfWrapEventId, isNull);
+        },
+      );
     });
 
     group('recordUnconfirmedRecipientWrap (#8441)', () {
@@ -1391,7 +1488,7 @@ void main() {
       // to `pending` because that would silently re-activate a row a
       // newer client (or a corrupt write) already moved to a terminal
       // state — for a retry queue, that risks double-delivery. See the
-      // doc on `_parseStatus` and the table-column doc on
+      // doc on `parseOutgoingWrapStatus` and the table-column doc on
       // `recipient_wrap_status`.
       test(
         'getById throws UnknownOutgoingWrapStatusException when a row '

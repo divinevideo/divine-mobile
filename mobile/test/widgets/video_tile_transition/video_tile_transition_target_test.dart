@@ -1,5 +1,6 @@
 import 'dart:ui' as ui;
 
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/widgets/video_tile_transition/video_tile_transition_target.dart';
@@ -138,6 +139,66 @@ void main() {
     });
 
     group('landingOf', () {
+      testWidgets('waits for a newly grafted transform ancestor layout', (
+        tester,
+      ) async {
+        final target = SizedBox(
+          key: GlobalKey(),
+          width: 200,
+          height: 200,
+          child: const VideoTileTransitionTarget(
+            videoId: 'video1',
+            aspectRatio: null,
+            coversViewport: true,
+            child: SizedBox.expand(),
+          ),
+        );
+        Widget tree(List<Widget> children) => VideoTileTransitionScope(
+          targets: targets,
+          phase: phase,
+          flight: flight,
+          child: Directionality(
+            textDirection: TextDirection.ltr,
+            child: Stack(key: pageKey, children: children),
+          ),
+        );
+        await tester.pumpWidget(tree([target]));
+        final page = pageKey.currentContext!.findRenderObject()! as RenderBox;
+        expect(mediaRect('video1', page), const Rect.fromLTWH(0, 0, 200, 200));
+        final translationKey = GlobalKey();
+        Rect? duringBuild;
+        var readDuringBuild = false;
+        await tester.pumpWidget(
+          tree([
+            FractionalTranslation(
+              key: translationKey,
+              translation: const Offset(0, 0.5),
+              child: target,
+            ),
+            Builder(
+              builder: (_) {
+                final ancestor =
+                    translationKey.currentContext!.findRenderObject()!
+                        as RenderFractionalTranslation;
+                expect(ancestor.hasSize, isFalse);
+                expect(page.hasSize, isTrue);
+                duringBuild = mediaRect('video1', page);
+                readDuringBuild = true;
+                return const SizedBox.shrink();
+              },
+            ),
+          ]),
+        );
+
+        expect(tester.takeException(), isNull);
+        expect(readDuringBuild, isTrue);
+        expect(duringBuild, isNull);
+        expect(
+          mediaRect('video1', page),
+          const Rect.fromLTWH(0, 100, 200, 200),
+        );
+      });
+
       testWidgets('letterboxes a square video in the middle of the page', (
         tester,
       ) async {

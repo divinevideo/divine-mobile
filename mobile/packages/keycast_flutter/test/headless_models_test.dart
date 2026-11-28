@@ -6,6 +6,44 @@ import 'package:keycast_flutter/src/oauth/headless_models.dart';
 
 void main() {
   group('HeadlessRegisterResult', () {
+    group('instant access', () {
+      test('keeps the authorization code from an instant sign-up', () {
+        final result = HeadlessRegisterResult.fromJson({
+          'success': true,
+          'pubkey': 'test_pubkey',
+          'verification_required': false,
+          'code': 'auth_code_123',
+        });
+
+        expect(result.isInstantAccess, isTrue);
+        expect(result.code, equals('auth_code_123'));
+      });
+
+      test('ignores a code when confirmation is still required', () {
+        final result = HeadlessRegisterResult.fromJson({
+          'success': true,
+          'pubkey': 'test_pubkey',
+          'verification_required': true,
+          'device_code': 'device_123',
+          'code': 'unexpected',
+        });
+
+        expect(result.isInstantAccess, isFalse);
+        expect(result.code, isNull);
+      });
+
+      test('never treats an error body code as an authorization code', () {
+        final result = HeadlessRegisterResult.fromJson({
+          'success': false,
+          'verification_required': false,
+          'code': 'EMAIL_ALREADY_EXISTS',
+        });
+
+        expect(result.isInstantAccess, isFalse);
+        expect(result.code, isNull);
+      });
+    });
+
     group('constructor', () {
       test('creates instance with required fields', () {
         final result = HeadlessRegisterResult(
@@ -155,6 +193,28 @@ void main() {
         expect(result.code, 'auth_code');
         expect(result.pubkey, 'user_pubkey');
         expect(result.state, 'state_123');
+      });
+    });
+
+    group('emailVerified', () {
+      test('reads email_verified from a success response', () {
+        final result = HeadlessLoginResult.fromJson({
+          'success': true,
+          'code': 'auth_code_xyz',
+          'pubkey': 'user_pk',
+          'email_verified': false,
+        });
+
+        expect(result.emailVerified, isFalse);
+      });
+
+      test('is null when the server does not report it', () {
+        final result = HeadlessLoginResult.fromJson({
+          'success': true,
+          'code': 'auth_code_xyz',
+        });
+
+        expect(result.emailVerified, isNull);
       });
     });
 

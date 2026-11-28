@@ -55,21 +55,26 @@ class DivineListThumbnail extends StatelessWidget {
   /// resolved: fan slots that could still fill shimmer instead of sitting
   /// as flat placeholders. Slots beyond the list's video count never fill
   /// and stay flat either way.
+  ///
+  /// [videoCount] is for a [curatedList] that does not hold its video
+  /// references, such as a search index summary; it defaults to the
+  /// references the list holds.
   DivineListThumbnail.videos({
     required CuratedList curatedList,
     required this.onTap,
     this.thumbnailsPending = false,
+    int? videoCount,
     super.key,
   }) : name = curatedList.name,
        description = curatedList.description,
        isPrivate = !curatedList.isPublic,
-       _count = curatedList.videoEventIds.length,
+       _count = videoCount ?? curatedList.videoEventIds.length,
        _kind = _ListKind.videos,
        _memberPubkeys = const [],
        _resolveDescriptionMentions = true,
        _media = DivineListMedia.videos(
          thumbnailUrls: curatedList.thumbnailUrls,
-         videoCount: curatedList.videoEventIds.length,
+         videoCount: videoCount ?? curatedList.videoEventIds.length,
          pending: thumbnailsPending,
        );
 
@@ -77,22 +82,28 @@ class DivineListThumbnail extends StatelessWidget {
   ///
   /// Public search keeps [showMemberIdentities] false and does not resolve
   /// member identities in its preview.
+  ///
+  /// [memberCount] is for a [userList] that holds a preview of its members,
+  /// such as a search index result; it defaults to the members the list
+  /// holds.
   DivineListThumbnail.people({
     required UserList userList,
     required this.onTap,
     bool showMemberIdentities = true,
+    int? memberCount,
     super.key,
   }) : name = userList.name,
        description = userList.description,
        isPrivate = false,
        thumbnailsPending = false,
-       _count = userList.pubkeys.length,
+       _count = memberCount ?? userList.pubkeys.length,
        _kind = _ListKind.people,
        _memberPubkeys = showMemberIdentities ? userList.pubkeys : const [],
        _resolveDescriptionMentions = showMemberIdentities,
        _media = DivineListMedia.people(
          memberPubkeys: userList.pubkeys,
          showMemberIdentities: showMemberIdentities,
+         memberCount: memberCount,
        );
 
   final String name;
@@ -201,14 +212,16 @@ class DivineListMedia extends StatelessWidget {
   /// The collage of up to three member avatars.
   ///
   /// Set [showMemberIdentities] false for public previews that keep identities
-  /// unresolved while preserving the actual member count.
+  /// unresolved while preserving the actual member count. [memberCount] is
+  /// for [memberPubkeys] that preview only some members.
   const DivineListMedia.people({
     required List<String> memberPubkeys,
     bool showMemberIdentities = true,
+    int? memberCount,
     this.showCount = true,
     super.key,
   }) : _thumbnailUrls = const [],
-       _count = memberPubkeys.length,
+       _count = memberCount ?? memberPubkeys.length,
        _pending = false,
        _memberPubkeys = showMemberIdentities ? memberPubkeys : const [],
        _kind = _ListKind.people;
@@ -841,18 +854,38 @@ class _PlainLinkText extends StatelessWidget {
 /// a narrow band. Only the leaves the silhouettes mark are bones; the seams
 /// and outlines between them keep painting so the structure shows.
 class ListSkeletonizer extends StatelessWidget {
-  const ListSkeletonizer({required this.child, this.enabled = true, super.key});
+  const ListSkeletonizer({
+    required this.child,
+    this.enabled = true,
+    this.switchDuration,
+    super.key,
+  });
 
   final Widget child;
 
   /// Whether the bones paint; `false` shows [child] as it is.
   final bool enabled;
 
+  /// How long the bones and the loaded content cross-fade when [enabled]
+  /// changes; null switches at once, and so does reduced motion.
+  ///
+  /// The cross-fade runs only when this same instance flips [enabled], so a
+  /// caller that wants it keeps one skeletonizer around both states.
+  final Duration? switchDuration;
+
   @override
   Widget build(BuildContext context) {
+    final switchDuration = this.switchDuration;
     return Skeletonizer(
       enabled: enabled,
       ignoreContainers: true,
+      enableSwitchAnimation: switchDuration != null,
+      switchAnimationConfig: SwitchAnimationConfig(
+        duration:
+            switchDuration == null || MediaQuery.disableAnimationsOf(context)
+            ? Duration.zero
+            : switchDuration,
+      ),
       effect: vineSkeletonEffectOf(
         context,
         baseColor: context.vineColors.containerLow,
@@ -863,6 +896,18 @@ class ListSkeletonizer extends StatelessWidget {
       child: child,
     );
   }
+}
+
+/// The video fan of [DivineListMedia.videos] as bones, for a card that puts
+/// its own footer under the same fan.
+///
+/// Paints as bones under an enclosing [ListSkeletonizer].
+class DivineListFanSkeleton extends StatelessWidget {
+  const DivineListFanSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) =>
+      _FanFrame(slotBuilder: (_) => const _FanSlotBone());
 }
 
 /// The card's silhouette while its list is still on its way.
@@ -902,9 +947,7 @@ class DivineListThumbnailSkeleton extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         switch (_kind) {
-          _ListKind.videos => _FanFrame(
-            slotBuilder: (_) => const _FanSlotBone(),
-          ),
+          _ListKind.videos => const DivineListFanSkeleton(),
           _ListKind.people => _CollageFrame(
             tileBuilder: (slot, seams) => _TileBone(slot: slot, seams: seams),
           ),

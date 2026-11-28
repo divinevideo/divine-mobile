@@ -229,12 +229,12 @@ class _DiscoveredPeopleListLoader extends ConsumerWidget {
 class _MemberVideoPlayback extends ConsumerWidget {
   const _MemberVideoPlayback({
     required this.userList,
-    required this.activeIndex,
+    required this.videoKey,
     required this.onExit,
   });
 
   final UserList userList;
-  final int activeIndex;
+  final String videoKey;
   final VoidCallback onExit;
 
   @override
@@ -243,13 +243,18 @@ class _MemberVideoPlayback extends ConsumerWidget {
     return ref
         .watch(userListMemberVideosProvider(userList.pubkeys))
         .when(
-          data: (videos) => ListVideoPlayerMode(
-            videos: videos,
-            activeIndex: activeIndex,
-            listName: userList.name,
-            onExit: onExit,
-            unavailableMessage: l10n.peopleListsVideoNotAvailable,
-          ),
+          data: (videos) {
+            final index = videos.indexWhere(
+              (video) => video.feedDedupKey == videoKey,
+            );
+            return ListVideoPlayerMode(
+              videos: videos,
+              activeIndex: index == -1 ? videos.length : index,
+              listName: userList.name,
+              onExit: onExit,
+              unavailableMessage: l10n.peopleListsVideoNotAvailable,
+            );
+          },
           loading: () => const Center(
             child: DivineCircularProgressIndicator(color: VineTheme.vineGreen),
           ),
@@ -411,7 +416,7 @@ class _UserListPeopleView extends ConsumerStatefulWidget {
 }
 
 class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView> {
-  int? _activeVideoIndex;
+  String? _activeVideoKey;
 
   void _openMembers(UserList userList) {
     runDetached(
@@ -593,7 +598,8 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView> {
     // Fullscreen playback draws its own chrome over the whole screen.
     final PreferredSizeWidget? appBar;
     final Widget body;
-    if (_activeVideoIndex == null) {
+    final activeVideoKey = _activeVideoKey;
+    if (activeVideoKey == null) {
       appBar = DiVineAppBar(
         // The list title lives in the hero header below; the empty widget
         // satisfies the bar's title-or-titleWidget contract without drawing
@@ -625,14 +631,17 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView> {
         userList: userList,
         ownerPubkey: widget.ownerPubkey,
         actions: headerButtons,
-        onVideoTap: (index) => setState(() => _activeVideoIndex = index),
+        onVideoTap: (video) => setState(() {
+          // A relay update can insert a video before playback builds.
+          _activeVideoKey = video.feedDedupKey;
+        }),
       );
     } else {
       appBar = null;
       body = _MemberVideoPlayback(
         userList: userList,
-        activeIndex: _activeVideoIndex!,
-        onExit: () => setState(() => _activeVideoIndex = null),
+        videoKey: activeVideoKey,
+        onExit: () => setState(() => _activeVideoKey = null),
       );
     }
     return BlocProvider<PeopleListMembersCubit>(
@@ -678,7 +687,7 @@ class _MemberVideos extends ConsumerWidget {
 
   /// Buttons for the last row of the hero header, right above the grid.
   final List<Widget> actions;
-  final ValueChanged<int> onVideoTap;
+  final ValueChanged<VideoEvent> onVideoTap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -706,11 +715,12 @@ class _MemberVideos extends ConsumerWidget {
           ),
         ],
         onVideoTap: (videoList, index, _) {
+          final video = videoList[index];
           Log.info(
-            'Tapped video in user list: ${videoList[index].id}',
+            'Tapped video in user list: ${video.id}',
             category: LogCategory.ui,
           );
-          onVideoTap(index);
+          onVideoTap(video);
         },
         onRefresh: () async {
           ref.invalidate(provider);

@@ -44,6 +44,7 @@ import 'package:openvine/widgets/video_feed_item/collaborator_avatar_row.dart';
 import 'package:openvine/widgets/video_feed_item/content_warning_helpers.dart';
 import 'package:openvine/widgets/video_feed_item/list_attribution_chip.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_expanded_sheet.dart';
+import 'package:openvine/widgets/video_feed_item/series_chip.dart';
 import 'package:openvine/widgets/video_feed_item/video_follow_button.dart';
 import 'package:openvine/widgets/video_reply_parent_link.dart';
 import 'package:openvine/widgets/video_tile_transition/video_tile_transition_target.dart';
@@ -505,6 +506,11 @@ class VideoOverlayActions extends ConsumerWidget {
                   ),
                   const SizedBox(height: 8),
                 ],
+                // The series this video is an episode of, if any.
+                if (video != null &&
+                    !isPreviewMode &&
+                    video.seriesCoordinate != null)
+                  SeriesChip(video: video),
                 // Author avatar and info row
                 Consumer(
                   builder: (context, ref, _) {

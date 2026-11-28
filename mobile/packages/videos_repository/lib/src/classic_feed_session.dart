@@ -11,6 +11,7 @@ import 'package:rxdart/rxdart.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:videos_repository/src/home_feed_result.dart';
 import 'package:videos_repository/src/recommendation_session_seed.dart';
+import 'package:videos_repository/src/video_merge_helpers.dart';
 
 /// Most recent outcomes a request carries as context.
 const _maxRecentInteractions = 20;
@@ -76,11 +77,13 @@ class ClassicFeedSession {
     Stream<void>? privacyChanges,
     Stream<String>? removedVideoIds,
     List<VideoEvent> Function(List<VideoEvent>)? filter,
+    bool Function(String videoId)? isUnavailable,
     List<String> preferredLanguages = const [],
     String? viewerCountry,
   }) : _loadPage = loadPage,
        _canPersonalize = canPersonalize ?? _allowed,
        _filter = filter,
+       _isUnavailable = isUnavailable,
        _preferredLanguages = preferredLanguages,
        _viewerCountry = viewerCountry,
        _updates = BehaviorSubject.seeded(
@@ -107,6 +110,7 @@ class ClassicFeedSession {
   final ClassicRecommendationsLoader _loadPage;
   final bool Function() _canPersonalize;
   final List<VideoEvent> Function(List<VideoEvent>)? _filter;
+  final bool Function(String videoId)? _isUnavailable;
   final List<String> _preferredLanguages;
   final String? _viewerCountry;
   final BehaviorSubject<ClassicFeedSessionState> _updates;
@@ -126,7 +130,14 @@ class ClassicFeedSession {
   bool _active = true;
   bool _refreshRequested = false;
   bool _retryOnResume = false;
+  bool _revoked = false;
   bool _disposed = false;
+
+  /// Whether [revokePersonalization] ended personalization for this session.
+  ///
+  /// A loader reads this to keep the remaining pages on the archive even if
+  /// the account becomes eligible again while the session is open.
+  bool get personalizationRevoked => _revoked;
 
   /// Latest queue, available synchronously for a selected tile.
   ClassicFeedSessionState get state => _updates.value;
@@ -160,7 +171,7 @@ class ClassicFeedSession {
   /// Never throws: a failed read is logged and resolves to an empty page.
   Future<HomeFeedResult> loadInitial({bool refresh = false}) async {
     if (_disposed) return const HomeFeedResult(videos: [], hasMore: false);
-    reapplyFilters();
+    reapplyFilters(keepUnavailablePrefix: false);
     setActive(active: true);
     if (refresh) {
       _started = true;
@@ -217,7 +228,7 @@ class ClassicFeedSession {
   void recordInteraction(ClassicFeedInteraction interaction) {
     if (_disposed ||
         !_active ||
-        !_canPersonalize() ||
+        !_personalizationAllowed ||
         !state.videos.any((video) => video.id == interaction.videoId)) {
       return;
     }
@@ -242,9 +253,42 @@ class ClassicFeedSession {
   /// Reapplies live content/block preferences while preserving active identity.
   ///
   /// [keep] applies only to the current queue, so a reversible sweep does not
-  /// permanently exclude a video from a later read.
-  void reapplyFilters({bool Function(VideoEvent video)? keep}) {
+  /// permanently exclude a video from a later read. [keepUnavailablePrefix]
+  /// keeps confirmed-unavailable videos through the current slot during live
+  /// updates, so the player does not restart. An initial load or resume
+  /// filters the entire queue.
+  void reapplyFilters({
+    bool Function(VideoEvent video)? keep,
+    bool keepUnavailablePrefix = true,
+  }) {
     if (_disposed || state.videos.isEmpty) return;
+    _applyQueueFilters(
+      state.videos,
+      keep: keep,
+      keepUnavailablePrefix: keepUnavailablePrefix,
+    );
+  }
+
+  /// Updates an existing slot when its owner republishes a newer revision.
+  void replaceVideoRevision(VideoEvent republished) {
+    final address = republished.addressableId;
+    if (_disposed || address == null) return;
+    final index = state.videos.indexWhere(
+      (video) =>
+          video.addressableId == address &&
+          isNewerVideoRevision(republished, video),
+    );
+    if (index == -1) return;
+    final videos = [...state.videos];
+    videos[index] = mergeRepublishedVideo(videos[index], republished);
+    _applyQueueFilters(videos, keepUnavailablePrefix: true);
+  }
+
+  void _applyQueueFilters(
+    List<VideoEvent> candidates, {
+    required bool keepUnavailablePrefix,
+    bool Function(VideoEvent video)? keep,
+  }) {
     final previous = state.videos;
     final currentKey = previous[state.currentIndex].feedDedupKey;
     final reachedKeys = previous
@@ -252,7 +296,8 @@ class ClassicFeedSession {
         .map((v) => v.feedDedupKey)
         .toSet();
     final videos = _filterVideos(
-      previous,
+      candidates,
+      keepUnavailablePrefix: keepUnavailablePrefix,
     ).where((video) => keep?.call(video) ?? true).toList();
     final current = videos.indexWhere((v) => v.feedDedupKey == currentKey);
     _furthestIndex = max(
@@ -274,7 +319,7 @@ class ClassicFeedSession {
 
   /// Rotates the request context at account or consent boundaries.
   void resetContext() {
-    if (_disposed) return;
+    if (_disposed || _revoked) return;
     _generation++;
     _adaptiveAvailable = true;
     _seed = generateRecommendationSessionSeed();
@@ -283,6 +328,37 @@ class ClassicFeedSession {
     _emit(clearCursor: true, hasMore: true);
     if (_started && _active) _requestAdaptation();
   }
+
+  /// Ends personalization when the account stops being eligible for it.
+  ///
+  /// The videos the viewer has reached stay, so whatever is playing keeps
+  /// playing if it still passes the content filters. Ranked videos not yet
+  /// reached are dropped, along with the in-flight read, the recent context
+  /// and the adaptive cursor. Later feedback and navigation no longer adapt the
+  /// queue, and the next page is read without personal context, so the loader
+  /// can serve it from the archive. Irreversible for this session.
+  void revokePersonalization() {
+    if (_disposed || _revoked) return;
+    _revoked = true;
+    _generation++;
+    _adaptiveAvailable = false;
+    _refreshRequested = false;
+    _retryOnResume = false;
+    _interactions.clear();
+    _recentIds.clear();
+    if (state.videos.isNotEmpty) {
+      _applyQueueFilters(
+        state.videos.take(_furthestIndex + 1).toList(),
+        keepUnavailablePrefix: true,
+      );
+    }
+    _emit(clearCursor: true, hasMore: true);
+    // Started directly rather than through [loadMore], so the read is pending
+    // before this returns. A superseded read still in flight discards itself.
+    if (_started && _active) unawaited(_start());
+  }
+
+  bool get _personalizationAllowed => !_revoked && _canPersonalize();
 
   void _reach(String id) {
     _recentIds
@@ -312,7 +388,7 @@ class ClassicFeedSession {
     bool replaceAll = false,
   }) {
     final generation = _generation;
-    final allowed = _canPersonalize();
+    final allowed = _personalizationAllowed;
     final videos = state.videos;
     final anchor = videos.isEmpty ? null : videos[state.currentIndex].id;
     final request = ClassicRecommendationsRequest(
@@ -353,7 +429,7 @@ class ClassicFeedSession {
       if (_disposed || !_active || generation != _generation) {
         return _result(const []);
       }
-      _adaptiveAvailable = result.recommendationPageCount > 0;
+      _adaptiveAvailable = !_revoked && result.recommendationPageCount > 0;
       reapplyFilters();
       final existing = state.videos;
       final protectedCount = replaceAll
@@ -367,7 +443,10 @@ class ClassicFeedSession {
         for (final video in [...preserved, ...result.videos])
           if (keys.add(video.feedDedupKey)) video,
       ];
-      final filtered = _filterVideos(merged);
+      final filtered = _filterVideos(
+        merged,
+        keepUnavailablePrefix: !replaceAll,
+      );
       final currentId = replaceAll || existing.isEmpty
           ? null
           : existing[state.currentIndex].feedDedupKey;
@@ -409,10 +488,26 @@ class ClassicFeedSession {
     }
   }
 
-  List<VideoEvent> _filterVideos(List<VideoEvent> videos) =>
-      (_filter?.call(videos) ?? videos)
-          .where((video) => !_removedIds.contains(video.id))
-          .toList();
+  List<VideoEvent> _filterVideos(
+    List<VideoEvent> videos, {
+    required bool keepUnavailablePrefix,
+  }) {
+    final isUnavailable = _isUnavailable;
+    final retainedIds = keepUnavailablePrefix && isUnavailable != null
+        ? state.videos
+              .take(state.currentIndex + 1)
+              .map((video) => video.id)
+              .toSet()
+        : const <String>{};
+    return (_filter?.call(videos) ?? videos)
+        .where(
+          (video) =>
+              !_removedIds.contains(video.id) &&
+              (retainedIds.contains(video.id) ||
+                  isUnavailable?.call(video.id) != true),
+        )
+        .toList();
+  }
 
   HomeFeedResult _result(List<VideoEvent> videos) => HomeFeedResult(
     videos: videos,

@@ -223,8 +223,8 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate {
     private var proxying = false
     private var proxied: [Int: AVAssetResourceLoadingRequest] = [:]
     private var proxiedTasks: [Int: URLSessionDataTask] = [:]
-    private let proxyHTTPFailureLock = NSLock()
-    private var proxyHTTPFailure: (status: Int, error: NSError)?
+    private let httpFailureLock = NSLock()
+    private var httpFailure: (status: Int, error: NSError)?
 
     /// A loader for [remoteURL], or nil for a URL it cannot serve.
     init?(remoteURL: URL, headers: [String: String], onPlaybackNetwork: @escaping ([String: Any]) -> Void = { _ in }) {
@@ -253,11 +253,11 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate {
         asset.resourceLoader.setDelegate(self, queue: queue)
     }
 
-    /// AVFoundation may strip the response metadata when a resource request
-    /// fails with badServerResponse. Restore it from this asset's proxy.
-    func preservedProxyHTTPFailure(for error: NSError) -> NSError? {
-        guard !keepsDownload, !Task.isCancelled,
-              let failure = proxyHTTPFailureLock.withLock({ proxyHTTPFailure }),
+    /// AVFoundation may strip the HTTP status from resource-loader errors.
+    /// Recover it from this asset's own download or range request.
+    func preservedHTTPFailure(for error: NSError) -> NSError? {
+        guard !Task.isCancelled,
+              let failure = httpFailureLock.withLock({ httpFailure }),
               playbackErrorCanUseProxyHTTPStatus(failure.status, in: error)
         else {
             return nil
@@ -270,7 +270,7 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate {
     func cancel() {
         queue.async { [self] in
             cancelled = true
-            proxyHTTPFailureLock.withLock { proxyHTTPFailure = nil }
+            httpFailureLock.withLock { httpFailure = nil }
             if let downloadTask = download {
                 download = nil
                 cancelTask(downloadTask)
@@ -376,24 +376,7 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate {
                 (!keepsDownload && http.statusCode == 202) || !(200..<300).contains(http.statusCode)
             {
                 proxied[dataTask.taskIdentifier] = nil
-                let responseError = NSError(
-                    domain: NSURLErrorDomain,
-                    code: NSURLErrorBadServerResponse,
-                    userInfo: [
-                        NSLocalizedDescriptionKey: "HTTP \(http.statusCode)",
-                        "NSURLErrorFailingURLResponseErrorKey": http
-                    ]
-                )
-                if !keepsDownload {
-                    proxyHTTPFailureLock.withLock {
-                        if let previous = proxyHTTPFailure,
-                           playbackHTTPStatusPriority(previous.status) >= playbackHTTPStatusPriority(http.statusCode) {
-                            return
-                        }
-                        proxyHTTPFailure = (http.statusCode, responseError)
-                    }
-                }
-                request.finishLoading(with: responseError)
+                request.finishLoading(with: recordHTTPFailure(http))
                 completionHandler(.cancel)
                 return
             }
@@ -406,14 +389,7 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate {
             return
         }
         if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
-            failure = NSError(
-                domain: NSURLErrorDomain,
-                code: NSURLErrorBadServerResponse,
-                userInfo: [
-                    NSLocalizedDescriptionKey: "HTTP \(http.statusCode)",
-                    "NSURLErrorFailingURLResponseErrorKey": http
-                ]
-            )
+            failure = recordHTTPFailure(http)
             completionHandler(.cancel)
             serve()
             return
@@ -430,6 +406,26 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate {
         contentLength = length
         completionHandler(.allow)
         serve()
+    }
+
+    private func recordHTTPFailure(_ response: HTTPURLResponse) -> NSError {
+        let status = response.statusCode
+        let error = NSError(
+            domain: NSURLErrorDomain,
+            code: NSURLErrorBadServerResponse,
+            userInfo: [
+                NSLocalizedDescriptionKey: "HTTP \(status)",
+                "NSURLErrorFailingURLResponseErrorKey": response
+            ]
+        )
+        httpFailureLock.withLock {
+            if let previous = httpFailure,
+               playbackHTTPStatusPriority(previous.status) >= playbackHTTPStatusPriority(status) {
+                return
+            }
+            httpFailure = (status, error)
+        }
+        return error
     }
 
     private func onDidReceive(dataTask: URLSessionDataTask, chunk: Data) {

@@ -78,6 +78,8 @@ import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:poll_repository/poll_repository.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:rxdart/rxdart.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:video_responses_repository/video_responses_repository.dart';
 
@@ -432,11 +434,14 @@ final videoDeletionVersionProvider =
 class VideoDeletionVersion extends Notifier<int> {
   @override
   int build() {
-    final subscription = ref
-        .watch(videoEventServiceProvider)
-        .removedVideoIds
-        .listen((_) => state++);
-    ref.onDispose(subscription.cancel);
+    final service = ref.watch(videoEventServiceProvider);
+    final removedSubscription = service.removedVideoIds.listen((_) => state++);
+    final tombstoneSubscription = service.deletionTombstonesChanged.listen(
+      (_) => state++,
+    );
+    ref
+      ..onDispose(removedSubscription.cancel)
+      ..onDispose(tombstoneSubscription.cancel);
     return 0;
   }
 }
@@ -1129,6 +1134,19 @@ FeedTuningRepository feedTuningRepository(Ref ref) {
   );
 }
 
+List<String> _cachedFollowingPubkeysForAccount(
+  SharedPreferences prefs,
+  String owner,
+) {
+  final cached = prefs.getString(FollowingCacheRecord.storageKey(owner));
+  if (cached == null) return const [];
+  try {
+    return FollowingCacheRecord.decode(cached).pubkeys;
+  } on Object {
+    return const [];
+  }
+}
+
 @Riverpod(keepAlive: true)
 DmRepository dmRepository(Ref ref) {
   final nostrService = ref.watch(nostrServiceProvider);
@@ -1145,14 +1163,42 @@ DmRepository dmRepository(Ref ref) {
   // sampled per rumor, so a flag flip applies without rebuilding this
   // repository.
   final featureFlagService = ref.read(featureFlagServiceProvider);
+  // keepAlive and built only from SharedPreferences, so this instance
+  // outlives every DM repository and a replay never reads a disposed Ref.
+  final blocklist = ref.watch(contentBlocklistRepositoryProvider);
 
   final repository = DmRepository(
     nostrClient: nostrService,
+    isShareRecipientHidden: blocklist.shouldFilterFromFeeds,
     directMessagesDao: db.directMessagesDao,
     conversationsDao: db.conversationsDao,
     outgoingDmsDao: db.outgoingDmsDao,
     pendingGiftWrapsDao: db.pendingGiftWrapsDao,
     processedGiftWrapsDao: db.processedGiftWrapsDao,
+    watchWrapAudience: (owner) {
+      final blocks = ref.read(contentBlocklistRepositoryProvider);
+      final follows = ref.read(followRepositoryProvider);
+      if (!follows.isInitialized) {
+        unawaited(follows.initialize());
+      }
+      final initialFollowing =
+          follows.isInitialized || follows.followingPubkeys.isNotEmpty
+          ? follows.followingPubkeys
+          : _cachedFollowingPubkeysForAccount(prefs, owner);
+      return Rx.combineLatest2(
+        blocks.stateStream.startWith(blocks.currentState),
+        follows.followingStream.startWith(initialFollowing),
+        (_, following) {
+          final hidden = blocks.dmHiddenPubkeysForAccount(owner);
+          if (hidden == null || nostrService.publicKey != owner) return null;
+          return (
+            hidden: hidden.map((key) => key.toLowerCase()).toSet(),
+            followed: following.map((key) => key.toLowerCase()).toSet(),
+            supportPubkey: kModerationPubkeyHex,
+          );
+        },
+      );
+    },
     removedConversationsDao: db.removedConversationsDao,
     removedMessageIdsDao: db.removedMessageIdsDao,
     syncState: DmSyncState(prefs),

@@ -1,11 +1,53 @@
-// ABOUTME: Tests the importer's loudness parsing and gain rule; the ffmpeg runs
-// ABOUTME: themselves are checked by hand with the tool, not in CI.
+// ABOUTME: Tests the importer's loudness parsing, gain rule and silence check;
+// ABOUTME: real ffmpeg runs are checked by hand with the tool, not in CI.
+
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../tools/sound_import/audio_pipeline.dart';
+import '../../../tools/sound_import/sound_candidate.dart';
 
 const _targets = AudioTargets();
+
+/// Answers the pipeline's ffprobe and ffmpeg calls with the numbers ffmpeg
+/// gives for one recording, without running either tool.
+ProcessRunner _fakeTools({
+  required String inputDuration,
+  required String trimmedDuration,
+  required String truePeak,
+  List<List<String>>? ffmpegCalls,
+}) {
+  return (executable, arguments) async {
+    if (executable == 'ffmpeg') ffmpegCalls?.add(arguments);
+    if (executable == 'ffprobe') {
+      if (arguments.contains('stream=channels')) {
+        return ProcessResult(0, 0, '1', '');
+      }
+      final isInput = arguments.last == 'input.wav';
+      return ProcessResult(0, 0, isInput ? inputDuration : trimmedDuration, '');
+    }
+    if (arguments.contains('null')) {
+      final loudness = '{"input_i" : "-inf", "input_tp" : "$truePeak"}';
+      return ProcessResult(0, 0, '', loudness);
+    }
+    return ProcessResult(0, 0, '', '');
+  };
+}
+
+Future<PrepareOutcome> _prepare(
+  ProcessRunner run, {
+  AudioTargets targets = _targets,
+}) {
+  return AudioPipeline(targets: targets, run: run).prepare(
+    input: File('input.wav'),
+    output: File('output.m4a'),
+    kind: SoundKind.sfx,
+    title: 'Click',
+    artist: 'Artist',
+    comment: 'Credit',
+  );
+}
 
 void main() {
   group('normalizationGain', () {
@@ -83,6 +125,129 @@ void main() {
 
     test('returns null without a measurement', () {
       expect(parseLoudnorm('Error opening input file'), isNull);
+    });
+  });
+
+  group('AudioPipeline.prepare', () {
+    test('keeps a loud click shorter than the kept edge silence', () async {
+      // A 21 ms click from a CC0 arcade pack, as ffmpeg measures it.
+      final outcome = await _prepare(
+        _fakeTools(
+          inputDuration: '0.021293',
+          trimmedDuration: '0.021338',
+          truePeak: '-1.11',
+        ),
+      );
+
+      expect(
+        outcome,
+        isA<PreparedAudio>().having(
+          (prepared) => prepared.durationSeconds,
+          'durationSeconds',
+          closeTo(0.0213, 0.0001),
+        ),
+      );
+    });
+
+    test('rejects a file with nothing above the silence threshold', () async {
+      // Trimming a silent second leaves a single sample.
+      final outcome = await _prepare(
+        _fakeTools(
+          inputDuration: '1.000000',
+          trimmedDuration: '0.000023',
+          truePeak: '-inf',
+        ),
+      );
+
+      expect(
+        outcome,
+        isA<RejectedAudio>().having(
+          (rejected) => rejected.reason,
+          'reason',
+          'silent',
+        ),
+      );
+    });
+
+    group('with a maximum duration', () {
+      const fiveMinutes = AudioTargets(maxDurationSeconds: 300);
+
+      test('keeps only the start of a longer sound, faded out, and says '
+          'so', () async {
+        // A 59-minute ambient track from incompetech, as ffmpeg measures it.
+        final calls = <List<String>>[];
+        final outcome = await _prepare(
+          _fakeTools(
+            inputDuration: '3520.656000',
+            trimmedDuration: '3520.410000',
+            truePeak: '-3.20',
+            ffmpegCalls: calls,
+          ),
+          targets: fiveMinutes,
+        );
+
+        expect(
+          calls.expand((arguments) => arguments),
+          contains('atrim=end=300.0,afade=t=out:st=297.0:d=3.0'),
+        );
+        expect(
+          outcome,
+          isA<PreparedAudio>().having(
+            (prepared) => prepared.changes,
+            'changes',
+            contains('cut to the first 5 minutes with a fade-out'),
+          ),
+        );
+      });
+
+      test('measures and encodes the cut, not the whole track', () async {
+        final calls = <List<String>>[];
+        await _prepare(
+          _fakeTools(
+            inputDuration: '3520.656000',
+            trimmedDuration: '3520.410000',
+            truePeak: '-3.20',
+            ffmpegCalls: calls,
+          ),
+          targets: fiveMinutes,
+        );
+
+        String inputOf(List<String> arguments) =>
+            arguments[arguments.indexOf('-i') + 1];
+        final excerpt = calls.singleWhere(
+          (arguments) => arguments.any((value) => value.startsWith('atrim=')),
+        );
+        final measure = calls.singleWhere((args) => args.contains('null'));
+        final encode = calls.singleWhere((args) => args.contains('aac'));
+        expect(inputOf(measure), equals(excerpt.last));
+        expect(inputOf(encode), equals(excerpt.last));
+      });
+
+      test('keeps a shorter sound whole', () async {
+        final calls = <List<String>>[];
+        final outcome = await _prepare(
+          _fakeTools(
+            inputDuration: '151.200000',
+            trimmedDuration: '151.000000',
+            truePeak: '-3.20',
+            ffmpegCalls: calls,
+          ),
+          targets: fiveMinutes,
+        );
+
+        expect(
+          calls.expand((arguments) => arguments),
+          isNot(contains(startsWith('atrim='))),
+        );
+        expect(
+          outcome,
+          isA<PreparedAudio>().having(
+            (prepared) => prepared.changes,
+            'changes',
+            isNot(contains(startsWith('cut to'))),
+          ),
+        );
+      });
     });
   });
 }

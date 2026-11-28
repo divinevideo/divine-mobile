@@ -46,8 +46,9 @@ class VideoEditorEffectsState extends Equatable {
     this.selectedType,
     this.intensity = VideoEditorEffectsCubit.defaultIntensity,
     this.leftIntensities = const {},
-    this.dropsSettings = const DropsEffectSettings(),
+    this.settingValues = const {},
     this.onBeat = false,
+    this.isSettingsOpen = false,
     this.startedPlayback = false,
     this.beatInput,
     this.beats = const [],
@@ -78,12 +79,18 @@ class VideoEditorEffectsState extends Equatable {
   /// under `null`, whose strength it sets.
   final Map<IntroOutroLook?, double> leftIntensities;
 
-  /// How the drops look when [selectedType] is [EditorEffectType.drops].
-  final DropsEffectSettings dropsSettings;
+  /// The settings of the picked effect the user set, by param name; every
+  /// other one stays at its default (see [selectedSettings] and
+  /// [effectSettingsOf]).
+  final EffectSettingValues settingValues;
 
   /// Whether the picked effect fires on the beat; only applies when
   /// [selectedType] [EditorEffectType.supportsOnBeat].
   final bool onBeat;
+
+  /// Whether the settings of the picked effect show in place of the effects
+  /// picker.
+  final bool isSettingsOpen;
 
   /// Whether opening the editor started the video, which closing it should
   /// then pause again.
@@ -105,6 +112,24 @@ class VideoEditorEffectsState extends Equatable {
   /// Whether the picked effect fires on the beat.
   bool get selectionOnBeat =>
       onBeat && selectedType != null && selectedType!.supportsOnBeat;
+
+  /// Every setting of the picked effect, the user's or its default; empty
+  /// when nothing is picked.
+  EffectSettingValues get selectedSettings {
+    final type = selectedType;
+    return type == null ? const {} : settingsFor(type);
+  }
+
+  /// Whether the picked effect has settings beyond its intensity: it can fire
+  /// on the beat, or [effectSettingsOf] lists some.
+  bool get hasSettings {
+    final type = selectedType;
+    return type != null &&
+        (type.supportsOnBeat || effectSettingsOf(type).isNotEmpty);
+  }
+
+  /// Whether the settings of the picked effect show; see [isSettingsOpen].
+  bool get showsSettings => isSettingsOpen && hasSettings;
 
   /// The effect the open editor would commit, or `null` for none.
   ///
@@ -157,9 +182,13 @@ class VideoEditorEffectsState extends Equatable {
     return leadIn.isNegative ? Duration.zero : leadIn;
   }
 
-  /// The settings a picked effect of [type] stores next to its intensity.
-  Map<String, Object> settingsFor(EditorEffectType type) =>
-      type == EditorEffectType.drops ? dropsSettings.toParams() : const {};
+  /// The settings a picked effect of [type] stores next to its intensity:
+  /// the user's for the picked type, and otherwise the defaults.
+  EffectSettingValues settingsFor(EditorEffectType type) =>
+      effectSettingValuesOf(
+        type,
+        type == selectedType ? settingValues : const {},
+      );
 
   /// Whether any effect, committed or picked, fires on the beat, so the beats
   /// are needed.
@@ -233,8 +262,9 @@ class VideoEditorEffectsState extends Equatable {
     bool clearSelectedType = false,
     double? intensity,
     Map<IntroOutroLook?, double>? leftIntensities,
-    DropsEffectSettings? dropsSettings,
+    EffectSettingValues? settingValues,
     bool? onBeat,
+    bool? isSettingsOpen,
     bool? startedPlayback,
     VideoEditorBeatInput? beatInput,
     List<Duration>? beats,
@@ -250,8 +280,9 @@ class VideoEditorEffectsState extends Equatable {
           : (selectedType ?? this.selectedType),
       intensity: intensity ?? this.intensity,
       leftIntensities: leftIntensities ?? this.leftIntensities,
-      dropsSettings: dropsSettings ?? this.dropsSettings,
+      settingValues: settingValues ?? this.settingValues,
       onBeat: onBeat ?? this.onBeat,
+      isSettingsOpen: isSettingsOpen ?? this.isSettingsOpen,
       startedPlayback: startedPlayback ?? this.startedPlayback,
       beatInput: beatInput ?? this.beatInput,
       beats: beats ?? this.beats,
@@ -268,8 +299,9 @@ class VideoEditorEffectsState extends Equatable {
     selectedType,
     intensity,
     leftIntensities,
-    dropsSettings,
+    settingValues,
     onBeat,
+    isSettingsOpen,
     startedPlayback,
     beatInput,
     beats,

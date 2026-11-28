@@ -7,14 +7,22 @@ import 'dart:convert';
 import 'package:creator_sync/creator_sync.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart' show UserProfile;
 import 'package:notification_repository/notification_repository.dart';
+import 'package:openvine/blocs/email_confirmation/email_confirmation_cubit.dart';
+import 'package:openvine/features/confirmation/confirmation_access_providers.dart';
 import 'package:openvine/features/hashtag_follows/data/shared_preferences_hashtag_subscription_store.dart';
 import 'package:openvine/models/authentication_source.dart';
 import 'package:openvine/models/known_account.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
+import 'package:openvine/repositories/email_confirmation_repository.dart';
 import 'package:openvine/services/account_label_service.dart';
 import 'package:openvine/services/account_preference_store.dart';
+import 'package:openvine/services/account_state_write_barrier.dart';
 import 'package:openvine/services/audio_sharing_preference_service.dart';
 import 'package:openvine/services/auth/account_storage_exception.dart';
 import 'package:openvine/services/auth/pending_account_cleanup.dart';
@@ -29,15 +37,51 @@ import 'package:openvine/services/minor_account_review_status_store.dart';
 import 'package:openvine/services/moderation_label_service.dart';
 import 'package:openvine/services/saved_sounds_service.dart';
 import 'package:openvine/services/seen_videos_service.dart';
+import 'package:openvine/services/share_recents_store.dart';
 import 'package:openvine/services/sound_library_service.dart';
 import 'package:openvine/services/stats_visibility_preferences.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/services/video_provenance_filter_service.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 import 'package:unified_logger/unified_logger.dart';
 
+import '../helpers/test_pubkeys.dart';
+
 class _MockSyncIndexClient extends Mock implements SyncIndexClient {}
+
+class _HeldEmailCacheWrite extends InMemorySharedPreferencesStore {
+  _HeldEmailCacheWrite(this.key) : super.withData({});
+
+  final String key;
+  final dispatched = Completer<void>();
+  final release = Completer<void>();
+
+  @override
+  Future<bool> setValue(String type, String key, Object value) async {
+    if (this.key == key) {
+      dispatched.complete();
+      await release.future;
+    }
+    return super.setValue(type, key, value);
+  }
+}
+
+/// The repository that writes the per-account email confirmation cache. It
+/// never reaches Keycast in these tests: only its preference cache is used.
+EmailConfirmationRepository _emailConfirmations(SharedPreferences prefs) =>
+    EmailConfirmationRepository(
+      oauthClient: KeycastOAuth(
+        config: const OAuthConfig(
+          serverUrl: 'https://login.divine.video',
+          clientId: 'c',
+          redirectUri: 'divine://cb',
+        ),
+      ),
+      readAccessToken: (_) async => null,
+      preferences: prefs,
+    );
 
 const _restrictedReviewStatus = MinorAccountReviewStatus(
   restrictionStatus: AccountRestrictionStatus.restrictedMinorReview,
@@ -73,12 +117,10 @@ void main() {
     });
 
     group('unbound account projections', () {
-      const choices = <String, Object>{
+      final choices = <String, Object>{
         'content_filter/spoiler': 'hide',
         'notifications/likesEnabled': false,
-        'trusted_labeler/'
-                '1111111111111111111111111111111111111111111111111111111111111111':
-            true,
+        'trusted_labeler/${testPubkeyFromSeed(209)}': true,
       };
 
       for (final entry in choices.entries) {
@@ -104,7 +146,7 @@ void main() {
           await prefs.setBool('analytics_enabled', false);
           await prefs.setString(
             AccountPreferenceStore.projectionOwnerStorageKey,
-            '1' * 64,
+            testPubkeyFromSeed(208),
           );
 
           await service.clearUserSpecificData(isIdentityChange: true);
@@ -115,7 +157,7 @@ void main() {
           expect(prefs.getBool('analytics_enabled'), isFalse);
           expect(
             prefs.getString(AccountPreferenceStore.projectionOwnerStorageKey),
-            '1' * 64,
+            testPubkeyFromSeed(208),
           );
           expect(
             UserDataCleanupService.hasRetainedUserSpecificDataAfterReset(prefs),
@@ -462,6 +504,240 @@ void main() {
         });
       });
 
+      // The cache holds the account's email address, so it must not outlive
+      // the account on this device.
+      group('email confirmation cache', () {
+        const otherPubkey =
+            'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+
+        late EmailConfirmationRepository confirmations;
+
+        setUp(() async {
+          confirmations = _emailConfirmations(prefs);
+          await confirmations.remember(
+            verificationPubkey,
+            const EmailConfirmation.unconfirmed('leaving@example.com'),
+          );
+          await confirmations.remember(
+            otherPubkey,
+            const EmailConfirmation.unconfirmed('staying@example.com'),
+          );
+        });
+
+        test('destructive sign-out forgets only that account', () async {
+          await service.clearUserSpecificData(
+            deleteUserData: true,
+            userPubkey: verificationPubkey,
+          );
+
+          expect(
+            confirmations.remembered(verificationPubkey),
+            equals(const EmailConfirmation.unknown()),
+          );
+          expect(
+            confirmations.remembered(otherPubkey),
+            equals(const EmailConfirmation.unconfirmed('staying@example.com')),
+          );
+        });
+
+        test('removing the account from the device forgets it', () async {
+          await service.clearUserSpecificData(
+            userPubkey: verificationPubkey,
+            forgetAccount: true,
+          );
+
+          expect(
+            confirmations.remembered(verificationPubkey),
+            equals(const EmailConfirmation.unknown()),
+          );
+          expect(
+            confirmations.remembered(otherPubkey),
+            equals(const EmailConfirmation.unconfirmed('staying@example.com')),
+          );
+        });
+
+        test('logs the cleared cache without its account key', () async {
+          final logs = LogCaptureService();
+          await logs.clearAllLogs();
+
+          await service.clearUserSpecificData(
+            userPubkey: verificationPubkey,
+            forgetAccount: true,
+          );
+
+          final messages = logs.getRecentLogs().map((entry) => entry.message);
+          expect(
+            messages,
+            contains(contains(EmailConfirmationRepository.storagePrefix)),
+          );
+          expect(
+            messages,
+            isNot(
+              contains(
+                contains(
+                  EmailConfirmationRepository.storageKey(verificationPubkey),
+                ),
+              ),
+            ),
+          );
+        });
+
+        test('account switch keeps it', () async {
+          await service.clearUserSpecificData(
+            isIdentityChange: true,
+            userPubkey: verificationPubkey,
+          );
+
+          expect(
+            confirmations.remembered(verificationPubkey),
+            equals(const EmailConfirmation.unconfirmed('leaving@example.com')),
+          );
+        });
+
+        for (final (label, cleanup)
+            in <(String, Future<int> Function(UserDataCleanupService))>[
+              (
+                'forgetting the current account',
+                (service) => service.clearUserSpecificData(
+                  userPubkey: verificationPubkey,
+                  forgetAccount: true,
+                ),
+              ),
+              (
+                'deleting an account separately',
+                (service) => service.deleteAccountData(
+                  verificationPubkey,
+                  userNpub: NostrKeyUtils.encodePubKey(verificationPubkey),
+                  preserveActiveSession: true,
+                ),
+              ),
+            ]) {
+          test('$label drops a status reply still in flight', () async {
+            final accountWrites = AccountStateWriteBarrier();
+            final cleanupService = UserDataCleanupService(
+              prefs,
+              onAccountStateWritesStop: accountWrites.stop,
+            );
+            final requested = Completer<void>();
+            final reply = Completer<http.Response>();
+            final repository = EmailConfirmationRepository(
+              oauthClient: KeycastOAuth(
+                config: const OAuthConfig(
+                  serverUrl: 'https://login.divine.video',
+                  clientId: 'c',
+                  redirectUri: 'divine://cb',
+                ),
+                httpClient: MockClient((request) {
+                  requested.complete();
+                  return reply.future;
+                }),
+              ),
+              readAccessToken: (_) async => 'test-token',
+              preferences: prefs,
+              accountWrites: accountWrites,
+            );
+            final cubit = EmailConfirmationCubit(
+              repository: repository,
+              accountWrites: accountWrites,
+            );
+            addTearDown(cubit.close);
+
+            final loading = cubit.loadFor(verificationPubkey);
+            await requested.future;
+            await cleanup(cleanupService);
+            expect(
+              repository.remembered(verificationPubkey),
+              const EmailConfirmation.unknown(),
+            );
+
+            reply.complete(
+              http.Response(
+                jsonEncode({
+                  'email': 'leaving@example.com',
+                  'email_verified': false,
+                  'public_key': verificationPubkey,
+                  'verified_minor': false,
+                }),
+                200,
+              ),
+            );
+            await loading;
+            await prefs.reload();
+
+            expect(cubit.state.email, isNull);
+            expect(
+              prefs.containsKey(
+                EmailConfirmationRepository.storageKey(verificationPubkey),
+              ),
+              isFalse,
+            );
+            expect(
+              repository.remembered(otherPubkey),
+              const EmailConfirmation.unconfirmed('staying@example.com'),
+            );
+          });
+        }
+
+        test('forgets a cache write already dispatched to disk', () async {
+          final key = EmailConfirmationRepository.storageKey(
+            verificationPubkey,
+          );
+          final originalPlatform = SharedPreferencesStorePlatform.instance;
+          final platform = _HeldEmailCacheWrite('flutter.$key');
+          SharedPreferences.setMockInitialValues({});
+          SharedPreferencesStorePlatform.instance = platform;
+          addTearDown(() {
+            if (!platform.release.isCompleted) platform.release.complete();
+            SharedPreferences.setMockInitialValues({});
+            SharedPreferencesStorePlatform.instance = originalPlatform;
+          });
+          final preferences = await SharedPreferences.getInstance();
+          final accountWrites = AccountStateWriteBarrier();
+          final cleanupReachedBarrier = Completer<void>();
+          final cleanupService = UserDataCleanupService(
+            preferences,
+            onAccountStateWritesStop: (owner) {
+              cleanupReachedBarrier.complete();
+              return accountWrites.stop(owner);
+            },
+          );
+          final repository = EmailConfirmationRepository(
+            oauthClient: KeycastOAuth(
+              config: const OAuthConfig(
+                serverUrl: 'https://login.divine.video',
+                clientId: 'c',
+                redirectUri: 'divine://cb',
+              ),
+            ),
+            readAccessToken: (_) async => null,
+            preferences: preferences,
+            accountWrites: accountWrites,
+          );
+
+          final write = repository.remember(
+            verificationPubkey,
+            const EmailConfirmation.unconfirmed('leaving@example.com'),
+          );
+          await platform.dispatched.future;
+          var erased = false;
+          final cleanup = cleanupService
+              .clearUserSpecificData(
+                userPubkey: verificationPubkey,
+                forgetAccount: true,
+              )
+              .then((_) => erased = true);
+          await cleanupReachedBarrier.future;
+          await pumpEventQueue();
+          expect(erased, isFalse);
+
+          platform.release.complete();
+          await write;
+          await cleanup;
+          await preferences.reload();
+          expect(preferences.containsKey(key), isFalse);
+        });
+      });
+
       test('clears all user-specific keys from SharedPreferences', () async {
         // Set up some user-specific data
         await prefs.setString('curated_lists', '[]');
@@ -600,6 +876,19 @@ void main() {
       });
 
       test(
+        'keeps the simulated Confirmation requirement across an identity '
+        'change',
+        () async {
+          // A developer setting about the verifier, the same for every account.
+          await prefs.setBool(confirmationRequirementSimulatedKey, true);
+
+          await service.clearUserSpecificData(isIdentityChange: true);
+
+          expect(prefs.getBool(confirmationRequirementSimulatedKey), isTrue);
+        },
+      );
+
+      test(
         'clears the outgoing account stats projection on an identity change',
         () async {
           await prefs.setBool(
@@ -683,8 +972,7 @@ void main() {
       test(
         'clears the saved-sounds bucket on destructive account delete',
         () async {
-          const pubkey =
-              'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
+          final pubkey = testPubkeyFromSeed(207);
           final bucketKey = SavedSoundsService.accountStorageKey(pubkey);
           await prefs.setString(bucketKey, '[{"id":"sound1"}]');
 
@@ -698,8 +986,7 @@ void main() {
       );
 
       test('keeps the saved-sounds bucket on a plain account switch', () async {
-        const pubkey =
-            'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
+        final pubkey = testPubkeyFromSeed(207);
         final bucketKey = SavedSoundsService.accountStorageKey(pubkey);
         await prefs.setString(bucketKey, '[{"id":"sound1"}]');
 
@@ -714,8 +1001,7 @@ void main() {
 
       test('clears the creator-sync cursor alongside the saved-sounds bucket '
           'on destructive account delete', () async {
-        const pubkey =
-            'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
+        final pubkey = testPubkeyFromSeed(207);
         final cursorKey = PrefsSyncStateStore.appliedStorageKey(
           SyncItemKind.sound,
           pubkey,
@@ -735,8 +1021,7 @@ void main() {
       });
 
       test('keeps the creator-sync cursor on a plain account switch', () async {
-        const pubkey =
-            'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
+        final pubkey = testPubkeyFromSeed(207);
         final cursorKey = PrefsSyncStateStore.appliedStorageKey(
           SyncItemKind.sound,
           pubkey,
@@ -757,8 +1042,7 @@ void main() {
 
       test('does not let a reconcile after destructive cleanup mistake a '
           'wiped local cache for a mass delete', () async {
-        const pubkey =
-            'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
+        final pubkey = testPubkeyFromSeed(207);
         // This device had already fully synced a 3-sound library before
         // the destructive cleanup below wipes its saved-sounds bucket.
         await PrefsSyncStateStore(prefs, pubkeyHex: pubkey).writeApplied(
@@ -1152,7 +1436,7 @@ void main() {
           '${forget ? 'forgotten' : 'deleted'}',
           () async {
             final deletedPubkey = 'a' * 64;
-            final otherPubkey = 'b' * 64;
+            final otherPubkey = testPubkeyFromSeed(206);
             final deletedKeys = [
               'account_state_divine/preferences/v1_${deletedPubkey}_state',
               'account_state_divine/preferences/v1_$deletedPubkey',
@@ -1248,7 +1532,7 @@ void main() {
 
       test('removes only the deleted account hashtag follows', () async {
         final deletedPubkey = 'a' * 64;
-        final otherPubkey = 'b' * 64;
+        final otherPubkey = testPubkeyFromSeed(206);
         final deletedStore = SharedPreferencesHashtagSubscriptionStore(
           prefs: prefs,
           pubkey: deletedPubkey,
@@ -1278,7 +1562,7 @@ void main() {
         'destructive session cleanup removes only that account follows',
         () async {
           final deletedPubkey = 'a' * 64;
-          final otherPubkey = 'b' * 64;
+          final otherPubkey = testPubkeyFromSeed(206);
           final deletedStore = SharedPreferencesHashtagSubscriptionStore(
             prefs: prefs,
             pubkey: deletedPubkey,
@@ -1302,7 +1586,7 @@ void main() {
         'a queued inactive retry cannot broaden changed cleanup intent',
         () async {
           final removed = 'a' * 64;
-          final active = 'b' * 64;
+          final active = testPubkeyFromSeed(206);
           await prefs.setString('current_user_pubkey_hex', active);
           await prefs.setString('vine_drafts', 'active drafts');
           await PendingAccountCleanup(
@@ -1340,7 +1624,7 @@ void main() {
         'resuming inactive removal preserves the active account scope',
         () async {
           final removed = 'a' * 64;
-          final active = 'b' * 64;
+          final active = testPubkeyFromSeed(206);
           await prefs.setString('current_user_pubkey_hex', active);
           await prefs.setString('vine_drafts', '{"drafts": ["active"]}');
           await service.markOwnerScopedLegacyDataForUser(active);
@@ -1388,7 +1672,7 @@ void main() {
         'deletes owner-scoped data without clearing shared preferences',
         () async {
           final deletedPubkey = 'a' * 64;
-          final otherPubkey = 'b' * 64;
+          final otherPubkey = testPubkeyFromSeed(206);
           final deletedNpub = NostrKeyUtils.encodePubKey(deletedPubkey);
           await prefs.setStringList('global_bookmarks', ['other-bookmark']);
           await prefs.setString('vine_drafts', '{"drafts": []}');
@@ -1452,7 +1736,7 @@ void main() {
 
       test("forgets only that account's minor-account review status", () async {
         final deletedPubkey = 'a' * 64;
-        final otherPubkey = 'b' * 64;
+        final otherPubkey = testPubkeyFromSeed(206);
         final store = MinorAccountReviewStatusStore(prefs: prefs);
         await store.remember(deletedPubkey, _restrictedReviewStatus);
         await store.remember(otherPubkey, _restrictedReviewStatus);
@@ -1467,9 +1751,38 @@ void main() {
         expect(store.lastKnownRestrictedFor(otherPubkey), isTrue);
       });
 
-      test("forgets only that account's Messages section choice", () async {
+      test("forgets only that account's email confirmation cache", () async {
         final deletedPubkey = 'a' * 64;
         final otherPubkey = 'b' * 64;
+        final confirmations = _emailConfirmations(prefs);
+        await confirmations.remember(
+          deletedPubkey,
+          const EmailConfirmation.unconfirmed('deleted@example.com'),
+        );
+        await confirmations.remember(
+          otherPubkey,
+          const EmailConfirmation.unconfirmed('other@example.com'),
+        );
+
+        await service.deleteAccountData(
+          deletedPubkey,
+          userNpub: NostrKeyUtils.encodePubKey(deletedPubkey),
+          preserveActiveSession: true,
+        );
+
+        expect(
+          confirmations.remembered(deletedPubkey),
+          equals(const EmailConfirmation.unknown()),
+        );
+        expect(
+          confirmations.remembered(otherPubkey),
+          equals(const EmailConfirmation.unconfirmed('other@example.com')),
+        );
+      });
+
+      test("forgets only that account's Messages section choice", () async {
+        final deletedPubkey = 'a' * 64;
+        final otherPubkey = testPubkeyFromSeed(206);
         final preference = MessagesPreferenceService(prefs);
         await preference.selectRooms(deletedPubkey, selected: true);
         await preference.selectRooms(otherPubkey, selected: true);
@@ -1486,7 +1799,7 @@ void main() {
 
       test("forgets only that account's video preview blur choice", () async {
         final deletedPubkey = 'a' * 64;
-        final otherPubkey = 'b' * 64;
+        final otherPubkey = testPubkeyFromSeed(206);
         await DmVideoBlurPreferenceService(
           prefs,
           account: deletedPubkey,
@@ -1538,7 +1851,7 @@ void main() {
 
       test('preserves legacy drafts owned by another account', () async {
         final deletedPubkey = 'a' * 64;
-        final otherPubkey = 'b' * 64;
+        final otherPubkey = testPubkeyFromSeed(206);
         final deletedNpub = NostrKeyUtils.encodePubKey(deletedPubkey);
         await prefs.setString('vine_drafts', '{"drafts": []}');
         await service.markOwnerScopedLegacyDataForUser(otherPubkey);
@@ -1581,6 +1894,66 @@ void main() {
         );
         expect(preservedActiveSession, isTrue);
       });
+
+      for (final forget in [false, true]) {
+        test(
+          '${forget ? 'forgetting' : 'deleting'} an account clears its share '
+          "recents and keeps another account's",
+          () async {
+            final removed = testPubkeyFromSeed(201);
+            final kept = testPubkeyFromSeed(202);
+            final recipient = testPubkeyFromSeed(203);
+            final recents = ShareRecentsStore(
+              prefs,
+              loadProfiles: (keys) async => [
+                for (final key in keys)
+                  UserProfile(
+                    pubkey: key,
+                    rawData: const {},
+                    createdAt: DateTime.utc(2026),
+                    eventId: 'e' * 64,
+                    displayName: 'Recipient',
+                  ),
+              ],
+            );
+            final cleanup = UserDataCleanupService(
+              prefs,
+              shareRecents: recents,
+            );
+            await recents.recordQueued(removed, [recipient]);
+            await recents.recordQueued(kept, [recipient]);
+            expect(recents.snapshot(removed).map((u) => u.pubkey), [recipient]);
+            expect(
+              prefs.containsKey(ShareRecentsStore.storageKey(removed)),
+              isTrue,
+            );
+
+            if (forget) {
+              await cleanup.clearUserSpecificData(
+                userPubkey: removed,
+                forgetAccount: true,
+              );
+            } else {
+              await cleanup.deleteAccountData(
+                removed,
+                userNpub: NostrKeyUtils.encodePubKey(removed),
+                preserveActiveSession: true,
+              );
+            }
+
+            expect(
+              prefs.containsKey(ShareRecentsStore.storageKey(removed)),
+              isFalse,
+            );
+            expect(recents.snapshot(removed), isEmpty);
+            expect(
+              prefs.containsKey(ShareRecentsStore.storageKey(kept)),
+              isTrue,
+            );
+            expect(recents.snapshot(kept).map((u) => u.pubkey), [recipient]);
+          },
+        );
+      }
     });
 
     group('userSpecificKeys', () {
@@ -1679,7 +2052,7 @@ void main() {
 
     group('retryUnfinishedSignOutCleanup (#8587)', () {
       final departing = 'a' * 64;
-      final incoming = 'b' * 64;
+      final incoming = testPubkeyFromSeed(206);
       late bool databaseFails;
       late int sharedStoreCleanups;
       late List<String> retriedOwners;
@@ -1861,6 +2234,36 @@ void main() {
               lastUsedAt: DateTime.utc(2026),
             ).toJson(),
         ]),
+      );
+
+      test(
+        'keeps known and active share recents and forgets a removed owner',
+        () async {
+          final unknown = testPubkeyFromSeed(204);
+          final recents = ShareRecentsStore(
+            prefs,
+            loadProfiles: (_) async => [],
+          );
+          final cleanup = UserDataCleanupService(prefs, shareRecents: recents);
+          await rememberAccounts([knownPubkey]);
+          await prefs.setString('current_user_pubkey_hex', activePubkey);
+          for (final owner in [knownPubkey, activePubkey, unknown]) {
+            await recents.recordQueued(owner, [testPubkeyFromSeed(205)]);
+          }
+          await cleanup.sweepRowsOfUnknownAccounts();
+          expect(
+            prefs.containsKey(ShareRecentsStore.storageKey(unknown)),
+            isFalse,
+          );
+          expect(
+            prefs.containsKey(ShareRecentsStore.storageKey(knownPubkey)),
+            isTrue,
+          );
+          expect(
+            prefs.containsKey(ShareRecentsStore.storageKey(activePubkey)),
+            isTrue,
+          );
+        },
       );
 
       test('keeps the known accounts and the active one', () async {

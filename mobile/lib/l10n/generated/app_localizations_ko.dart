@@ -10,6 +10,21 @@ class AppLocalizationsKo extends AppLocalizations {
   AppLocalizationsKo([String locale = 'ko']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return '이 메시지를 열려면 $account 계정으로 전환할까요?';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => '다이렉트 메시지';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      '보낸 사람의 이름과 메시지 내용을 숨기고 알림을 표시합니다.';
+
+  @override
+  String get dmNotificationMessageUnavailable => '이 메시지를 볼 수 없습니다.';
+
+  @override
   String get devOptionsClipRecovery => '클립 복구';
 
   @override
@@ -246,7 +261,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get privacySettingsShareUsageSubtitle =>
-      '사람들이 실제로 무엇을 쓰는지 파악하는 데 도움이 돼요. 끄면 이 기기에서 전송을 기다리던 데이터는 삭제돼요.';
+      '사람들이 실제로 무엇을 쓰는지 파악하는 데 도움이 돼요. 끄면 이 기기에서 전송을 기다리던 데이터는 삭제돼요. 충돌 보고서는 버그를 고칠 수 있도록 계속 전송돼요.';
 
   @override
   String get privacySettingsSaveFailed => '저장하지 못했어요. 사용 데이터는 당분간 꺼진 상태예요.';
@@ -1678,48 +1693,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get shareVideoLabel => '영상 공유';
 
   @override
-  String sharePostSharedWith(String recipientName) {
-    return '$recipientName님과 게시물을 공유했어요';
-  }
-
-  @override
-  String sharePostSharedWithCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count명과 게시물을 공유했어요',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String shareStillTryingToSendTo(String recipientName) {
-    return '$recipientName님에게 계속 보내는 중이에요';
-  }
-
-  @override
-  String shareStillTryingToSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count명에게 계속 보내는 중이에요',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String shareCouldNotSendTo(String recipientName) {
     return '$recipientName님에게 보내지 못했어요';
-  }
-
-  @override
-  String shareCouldNotSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count명에게 보내지 못했어요',
-    );
-    return '$_temp0';
   }
 
   @override
@@ -1754,11 +1729,32 @@ class AppLocalizationsKo extends AppLocalizations {
   String get shareFindPeopleMultiline => '사람\n찾기';
 
   @override
+  String get shareDeliveryFailed => '아직 보내지 못했어요';
+
+  @override
+  String shareDeliveryHeld(String name) {
+    return '$name님에게 연결되면 보낼게요';
+  }
+
+  @override
+  String shareDeliveryForRecipient(String name, String status) {
+    return '$name — $status';
+  }
+
+  @override
   String get shareSent => '보냄';
 
   @override
   String shareSelectedRecipientAnnouncement(String name) {
     return '$name님 선택됨';
+  }
+
+  @override
+  String get shareRecipientSend => '보내기';
+
+  @override
+  String shareRecipientSendTo(String name) {
+    return '$name에게 보내기';
   }
 
   @override
@@ -1972,6 +1968,28 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoStickerAddYoursButton => '나도 참여';
+
+  @override
+  String get videoStickerAddYoursWatchSeries => '시리즈 보기';
+
+  @override
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return '시리즈 보기: $prompt';
+  }
+
+  @override
+  String videoSeriesChipEpisode(String episode, String total) {
+    return '$total화 중 $episode화';
+  }
+
+  @override
+  String videoSeriesChipSemanticLabel(
+    String seriesName,
+    String episode,
+    String total,
+  ) {
+    return '시리즈 $seriesName, $total화 중 $episode화';
+  }
 
   @override
   String videoStickerAddYoursJoined(int count) {
@@ -3248,6 +3266,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get authRecoveryOtherAccountWarning => '여기서 로그인하면 해당 임시저장과 클립이 숨겨져요';
 
   @override
+  String get authWatchClassicsAsGuest => '게스트로 클래식 보기';
+
+  @override
   String get authTermsPrefix => '아래 옵션을 선택하면 만 16세 이상임(또는 ';
 
   @override
@@ -3844,6 +3865,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get remixStartFailed => '리믹스를 시작하지 못했어요. 다시 시도해 주세요.';
 
   @override
+  String get remixSettingSaveFailed => '리믹스 설정을 업데이트하지 못했어요. 다시 시도해 주세요.';
+
+  @override
   String get remixSettingAllowTitle => '다른 사람이 내 영상을 리믹스하도록 허용';
 
   @override
@@ -4230,6 +4254,10 @@ class AppLocalizationsKo extends AppLocalizations {
       '릴레이가 업데이트를 받지 않았어요. 잠시 후 다시 시도해보세요.';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      '이 영상이 다른 기기에서 변경되어 태그나 콜라보레이터가 너무 많아요. 다시 열어서 몇 개를 지워 주세요.';
+
+  @override
   String get videoUpdateErrorGeneric => '이 영상을 업데이트하지 못했어요. 다시 시도해보세요.';
 
   @override
@@ -4318,6 +4346,17 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get soundsNoSoundsFoundDescription => '다른 검색어로 시도해 보세요';
+
+  @override
+  String soundsSearchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '사운드 $count개를 찾았어요',
+      zero: '사운드를 찾을 수 없어요',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get soundsSavedToLibrary => '사운드에 저장됨';
@@ -6028,6 +6067,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get inboxCollabInviteSentStatus => '초대를 보냈어요';
 
   @override
+  String get inboxSharedVideoPreview => '동영상을 공유했어요';
+
+  @override
   String get inboxConversationCollabInvitePreview => '콜라보 초대';
 
   @override
@@ -6817,6 +6859,52 @@ class AppLocalizationsKo extends AppLocalizations {
   String get libraryDraftActionDuplicate => '복제';
 
   @override
+  String get libraryDraftActionConvertToClip => '클립으로 변환';
+
+  @override
+  String get libraryDraftConvertingToClip => '클립으로 변환 중...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar => '임시 저장을 클립으로 변환했어요';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar => '임시 저장을 변환하지 못했어요';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      '이 초안의 텍스트와 스티커를 준비하지 못했어요. 편집기에서 연 다음 다시 시도해주세요.';
+
+  @override
+  String get libraryDraftActionShare => '초안 공유';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return '$name님에게 편집 가능한 초안을 보낼까요?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      '원본 클립과 편집 기록을 공유해요. 상대방은 잘라낸 부분을 볼 수 있고, 자기 사본을 편집하거나 게시하거나 다시 보낼 수 있어요.';
+
+  @override
+  String get libraryDraftShareFailed => '초안을 보내지 못했어요.';
+
+  @override
+  String get libraryDraftShareTooLarge => '초안이 너무 커서 보낼 수 없어요.';
+
+  @override
+  String get dmSharedDraft => '공유된 초안';
+
+  @override
+  String get dmOpenDraft => '가져와서 편집';
+
+  @override
+  String get dmDraftImportFailed => '초안을 가져오지 못했어요.';
+
+  @override
+  String get libraryDraftSent => '초안을 보냈어요';
+
+  @override
   String get libraryDraftActionDelete => '임시 저장 삭제';
 
   @override
@@ -7417,6 +7505,14 @@ class AppLocalizationsKo extends AppLocalizations {
   ) {
     return '$displayName님이 메시지를 보내고 싶어 해요. $messageText을(를) 보냈어요.';
   }
+
+  @override
+  String messageRequestGroupWantsToMessageYou(String messageText) {
+    return '이 그룹이 메시지를 보내고 싶어 해요. $messageText을(를) 보냈어요.';
+  }
+
+  @override
+  String get messageRequestGroupMembersHeading => '이 그룹의 멤버';
 
   @override
   String get deleteAccountAccountChanged =>
@@ -9081,6 +9177,21 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorEffectSpinBlur => '스핀 블러';
 
   @override
+  String get videoEditorEffectShockwave => '충격파';
+
+  @override
+  String get videoEditorEffectSubwoofer => '서브우퍼';
+
+  @override
+  String get videoEditorEffectPlasma => '플라즈마';
+
+  @override
+  String get videoEditorEffectEnergyWave => '에너지 파동';
+
+  @override
+  String get videoEditorEffectSmokeBurst => '연기 폭발';
+
+  @override
   String get videoEditorEffectComic => '만화';
 
   @override
@@ -9276,9 +9387,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorFilterCategoryTints => '틴트';
 
   @override
-  String get videoEditorDropsSettingsTitle => '물방울 조정';
-
-  @override
   String get videoEditorDropsCountLabel => '개수';
 
   @override
@@ -9323,6 +9431,202 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoEditorEffectsOnBeatNoSound => '음악을 추가하거나 클립 소리를 켜 주세요';
+
+  @override
+  String get videoEditorEffectSettingsOpen => '효과 설정';
+
+  @override
+  String videoEditorEffectSettingsTitle(String effect) {
+    return '설정: $effect';
+  }
+
+  @override
+  String videoEditorEffectSeconds(String seconds) {
+    return '$seconds초';
+  }
+
+  @override
+  String get videoEditorEffectHitDuration => '길이';
+
+  @override
+  String get videoEditorEffectHitRepeat => '반복';
+
+  @override
+  String get videoEditorEffectHitOnce => '한 번, 타임라인에서 효과가 시작되는 지점';
+
+  @override
+  String get videoEditorEffectHitInterval => '간격';
+
+  @override
+  String get videoEditorEffectLookTitle => '모양';
+
+  @override
+  String get videoEditorEffectHitHorizontal => '가로 위치';
+
+  @override
+  String get videoEditorEffectHitVertical => '세로 위치';
+
+  @override
+  String get videoEditorEffectHitReach => '범위';
+
+  @override
+  String get videoEditorEffectHitShake => '흔들림';
+
+  @override
+  String get videoEditorEffectHitPunch => '줌 펀치';
+
+  @override
+  String get videoEditorEffectLookReset => '모양 초기화';
+
+  @override
+  String get videoEditorEffectTimingTitle => '타이밍';
+
+  @override
+  String get videoEditorEffectTimingReset => '타이밍 초기화';
+
+  @override
+  String get videoEditorEffectMotionTitle => '움직임';
+
+  @override
+  String get videoEditorEffectMotionReset => '움직임 초기화';
+
+  @override
+  String get videoEditorEffectSettingFocus => '초점';
+
+  @override
+  String get videoEditorEffectSettingWidth => '너비';
+
+  @override
+  String get videoEditorEffectSettingDirection => '방향';
+
+  @override
+  String get videoEditorEffectSettingHorizontal => '가로';
+
+  @override
+  String get videoEditorEffectSettingVertical => '세로';
+
+  @override
+  String get videoEditorEffectSettingClockwise => '시계 방향';
+
+  @override
+  String get videoEditorEffectSettingAnticlockwise => '반시계 방향';
+
+  @override
+  String get videoEditorEffectSettingZoomIn => '확대';
+
+  @override
+  String get videoEditorEffectSettingZoomOut => '축소';
+
+  @override
+  String get videoEditorEffectSettingSpacing => '간격';
+
+  @override
+  String get videoEditorEffectSettingAngle => '각도';
+
+  @override
+  String get videoEditorEffectSettingHue => '색조';
+
+  @override
+  String get videoEditorEffectSettingLength => '길이';
+
+  @override
+  String get videoEditorEffectSettingSensitivity => '감도';
+
+  @override
+  String get videoEditorEffectSettingPosition => '위치';
+
+  @override
+  String get videoEditorEffectSettingWind => '바람';
+
+  @override
+  String get videoEditorEffectSettingDotSize => '점 크기';
+
+  @override
+  String get videoEditorEffectSettingOutline => '윤곽선';
+
+  @override
+  String get videoEditorEffectSettingLevels => '단계';
+
+  @override
+  String get videoEditorEffectSettingPixelSize => '픽셀 크기';
+
+  @override
+  String get videoEditorEffectSettingOffset => '어긋남';
+
+  @override
+  String get videoEditorEffectSettingBrushSize => '붓 크기';
+
+  @override
+  String get videoEditorEffectSettingDensity => '밀도';
+
+  @override
+  String get videoEditorEffectSettingGrain => '입자';
+
+  @override
+  String get videoEditorEffectSettingGrid => '격자';
+
+  @override
+  String get videoEditorEffectSettingLayers => '층';
+
+  @override
+  String get videoEditorEffectSettingShadow => '그림자';
+
+  @override
+  String get videoEditorEffectSettingFirstInk => '첫 번째 잉크';
+
+  @override
+  String get videoEditorEffectSettingSecondInk => '두 번째 잉크';
+
+  @override
+  String get videoEditorEffectSettingColors => '색상';
+
+  @override
+  String get videoEditorEffectSettingOriginalColors => '원본';
+
+  @override
+  String get videoEditorEffectSettingSingleColor => '단색';
+
+  @override
+  String get videoEditorEffectSettingDelay => '지연';
+
+  @override
+  String get videoEditorEffectSettingDown => '아래로';
+
+  @override
+  String get videoEditorEffectSettingUp => '위로';
+
+  @override
+  String get videoEditorEffectSettingRight => '오른쪽으로';
+
+  @override
+  String get videoEditorEffectSettingLeft => '왼쪽으로';
+
+  @override
+  String get videoEditorEffectSettingFrequency => '빈도';
+
+  @override
+  String get videoEditorEffectSettingDistance => '거리';
+
+  @override
+  String get videoEditorEffectSettingScanlines => '주사선';
+
+  @override
+  String get videoEditorEffectSettingGrainSize => '입자 크기';
+
+  @override
+  String get videoEditorEffectSettingSepia => '세피아';
+
+  @override
+  String get videoEditorEffectSettingFlicker => '깜빡임';
+
+  @override
+  String get videoEditorEffectSettingVignette => '비네트';
+
+  @override
+  String get videoEditorEffectSettingTempo => '템포';
+
+  @override
+  String get videoEditorEffectSettingWavelength => '파장';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {
@@ -11082,6 +11386,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorAudioUseSound => '사용';
 
   @override
+  String get videoEditorAudioOpenSoundDetails => '사운드 정보 열기';
+
+  @override
   String get videoEditorAudioFileMissing => '오디오 파일이 기기에 없어요';
 
   @override
@@ -11108,6 +11415,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoEditorAudioCategoryMySounds => '내 사운드';
+
+  @override
+  String get videoEditorAudioCategorySongs => 'Songs';
 
   @override
   String get videoEditorAudioFilterEffects => '효과음';
@@ -11319,6 +11629,34 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get videoEditorSocialStickerRepliesNote =>
       '이 영상에 영상으로 답글을 단 사람을 보여 줘요. 시청자가 탭하면 답글을 볼 수 있어요.';
+
+  @override
+  String get videoEditorSocialStickerAudienceTitle => '답할 수 있는 사람';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => '모두';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => '친구';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => '나만';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      '내가 팔로우하는 사람만 참여할 수 있어요. 다른 사람에게는 누군가 참여하면 스티커가 보여요.';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      '스티커에는 내가 팔로우하는 사람의 영상 답글만 보여요. 다른 사람에게는 그중 누군가 답글을 달면 스티커가 보여요.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      '나만 참여할 수 있어요. 내가 참여하기 전까지 다른 사람에게는 스티커가 보이지 않아요.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      '스티커에는 내 영상 답글만 보여요. 내가 답글을 달기 전까지 다른 사람에게는 스티커가 보이지 않아요.';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>
@@ -13025,6 +13363,29 @@ class AppLocalizationsKo extends AppLocalizations {
   String get devOptionsProtectedMinorClearedToast => '보호 대상 미성년자 재정의를 해제했어요';
 
   @override
+  String get devOptionsConfirmationAccessTitle => 'Divine Confirmation access';
+
+  @override
+  String get devOptionsConfirmationAccessReal => 'Real answer';
+
+  @override
+  String get devOptionsConfirmationAccessHas => 'Has Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessHasNot => 'Doesn\'t have Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessUnknown => 'Couldn\'t check';
+
+  @override
+  String get devOptionsConfirmationRequirementSimulatedTitle =>
+      'Act as if Confirmation is required';
+
+  @override
+  String get devOptionsConfirmationRequirementSimulatedSubtitle =>
+      'Treats signing in as needing Confirmation even when the verifier doesn\'t. Needs the Confirmation Sign-in flag; choose \"Doesn\'t have Confirmation\" above to see the offer. The verifier still approves sign-ins.';
+
+  @override
   String get commentsRecordVideoButtonLabel => '영상 댓글 녹화';
 
   @override
@@ -14019,6 +14380,65 @@ class AppLocalizationsKo extends AppLocalizations {
   String get verifyStatusAccountChanged => 'Account changed';
 
   @override
+  String get verifyStatusNeedsConfirmation => 'Needs Confirmation';
+
+  @override
+  String get verifyConfirmationTitle => 'Divine Confirmation';
+
+  @override
+  String get verifyConfirmationHeroBody =>
+      'Divine Confirmation lets you link your accounts on other platforms by signing in to them.';
+
+  @override
+  String get verifyConfirmationIncludedTitle => 'What\'s included';
+
+  @override
+  String get verifyConfirmationIncludedSignIn => 'Link accounts by signing in';
+
+  @override
+  String get verifyConfirmationComingSoon => 'Coming soon';
+
+  @override
+  String get verifyConfirmationSmallPrint =>
+      'Details will appear here when Divine Confirmation is ready.';
+
+  @override
+  String get verifyConfirmationStoreOnly =>
+      'Divine Confirmation is available in the App Store and Google Play versions of Divine.';
+
+  @override
+  String get verifyConfirmationBuySemantic =>
+      'Divine Confirmation, coming soon, unavailable';
+
+  @override
+  String get verifyConfirmationRestoreSemantic =>
+      'Restore purchases, unavailable';
+
+  @override
+  String get verifyConfirmationCardTitle => 'Link by signing in';
+
+  @override
+  String get verifyConfirmationCardBody =>
+      'One-tap linking is part of Divine Confirmation.';
+
+  @override
+  String get verifyGetConfirmation => 'Get Divine Confirmation';
+
+  @override
+  String get verifyProofAlwaysAvailable => 'Proof posts are always available';
+
+  @override
+  String get verifyConfirmationSheetTitle =>
+      'Linking by signing in needs Divine Confirmation';
+
+  @override
+  String get verifyConfirmationSheetSubtitle =>
+      'You can still link this account with a proof post.';
+
+  @override
+  String get verifyConfirmationSheetUseProof => 'Use a proof post';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return '$platform 계정 $identity 연결 해제';
   }
@@ -14050,7 +14470,26 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String verifyLinkNeedsConfirmationSemanticLabel(String platform) {
+    return 'Link your $platform account. Signing in needs Divine Confirmation';
+  }
+
+  @override
   String get verifyOneTapBadge => '한 번 탭';
+
+  @override
+  String get verifyOneTapWithConfirmationBadge => 'One tap with Confirmation';
+
+  @override
+  String get verifyRenewConfirmation => 'Renew Confirmation';
+
+  @override
+  String verifyRenewConfirmationSemanticLabel(
+    String platform,
+    String identity,
+  ) {
+    return 'Renew Divine Confirmation to restore $platform account $identity';
+  }
 
   @override
   String verifyConnectSignInLifetime(int days) {
@@ -14159,6 +14598,18 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get verifyErrorPublishFailed => '인증은 됐는데 업데이트를 받아준 릴레이가 없어. 다시 시도해.';
+
+  @override
+  String get verifyErrorConfirmationRequired =>
+      'Linking by signing in needs Divine Confirmation. You can still link with a proof post.';
+
+  @override
+  String get verifyErrorConfirmationUnavailable =>
+      'Couldn\'t check Divine Confirmation right now. Try again in a few minutes.';
+
+  @override
+  String get verifyErrorConfirmationPending =>
+      'This can take a minute after buying. Try again shortly.';
 
   @override
   String get verifyErrorOauthUnavailable =>
@@ -14431,7 +14882,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get changeEmailSubtitle =>
-      '새 주소와 계정에 등록된 주소로 확인 링크를 보냅니다. 둘 다 확인하면 이메일이 바뀌어요.';
+      '새 이메일 주소로 링크를 보내 드려요. 계정에 이미 이메일 주소가 등록되어 있으면 그 주소로도 링크를 보내 드려요.';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -14451,18 +14902,18 @@ class AppLocalizationsKo extends AppLocalizations {
   String get changeEmailWrongPassword => '비밀번호가 아니에요.';
 
   @override
-  String get changeEmailSubmit => '확인 링크 보내기';
+  String get changeEmailSubmit => '확인 요청';
 
   @override
-  String get changeEmailSentTitle => '링크 두 통을 보냈어요';
+  String get changeEmailSentTitle => '이메일을 확인해 주세요';
 
   @override
   String changeEmailSentMessage(String email) {
-    return '$email과 계정에 등록된 주소에서 확인해 주세요. 둘 다 끝나면 이메일이 바뀝니다.';
+    return '$email에 도착한 링크를 열어 주세요. 계정에 이미 이메일 주소가 등록되어 있으면 그 주소에 도착한 링크도 열어 주세요.';
   }
 
   @override
-  String get changeEmailSentExpiry => '링크는 24시간 뒤에 만료돼요.';
+  String get changeEmailSentExpiry => '각 링크는 24시간 후에 만료돼요.';
 
   @override
   String get changeEmailSentDone => '알겠어요';
@@ -14741,6 +15192,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get updateAction => '업데이트';
 
   @override
+  String get announcementViewContest => '콘테스트 보기';
+
+  @override
+  String get featuredFeedUnavailable => '이 추천 피드는 더 이상 이용할 수 없어요.';
+
+  @override
   String updateNewIn(String version) {
     return '$version의 새로운 기능:';
   }
@@ -14880,6 +15337,15 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get settingsHelpAboutSubtitle => '지원, 법률 정보 및 앱 세부 정보';
+
+  @override
+  String get settingsDiscordTitle => 'Discord 서버에 참여하기';
+
+  @override
+  String get settingsDiscordSubtitle => 'Divine 팀과 커뮤니티 사람들과 이야기해 보세요';
+
+  @override
+  String get settingsDiscordOpenError => 'Discord를 열 수 없어요';
 
   @override
   String listLoopsCount(int count, String formatted) {
@@ -16109,4 +16575,108 @@ class AppLocalizationsKo extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return '$badgeName의 동영상';
   }
+
+  @override
+  String get menuBarEdit => '편집';
+
+  @override
+  String get menuBarUndo => '실행 취소';
+
+  @override
+  String get menuBarRedo => '실행 복귀';
+
+  @override
+  String get menuBarCut => '오려두기';
+
+  @override
+  String get menuBarCopy => '복사하기';
+
+  @override
+  String get menuBarPaste => '붙여넣기';
+
+  @override
+  String get menuBarSelectAll => '전체 선택';
+
+  @override
+  String get menuBarView => '보기';
+
+  @override
+  String get menuBarVideo => '동영상';
+
+  @override
+  String get menuBarPreviousVideo => '이전 동영상';
+
+  @override
+  String get menuBarNextVideo => '다음 동영상';
+
+  @override
+  String get menuBarPlayPause => '재생/일시 정지';
+
+  @override
+  String get menuBarMute => '음소거';
+
+  @override
+  String get menuBarUnmute => '음소거 해제';
+
+  @override
+  String get menuBarWindow => '윈도우';
+
+  @override
+  String get menuBarHelp => '도움말';
+
+  @override
+  String get emailConfirmationTitle => '이메일 인증하기';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return '$email 주소로 링크를 보냈어요. 링크를 탭하면 메시지가 열리고, 언제든 계정에 다시 들어올 수 있어요.';
+  }
+
+  @override
+  String get emailConfirmationResendButton => '이메일 다시 보내기';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return '가입 완료! $email 주소로 온 메일에서 계정을 인증해주세요.';
+  }
+
+  @override
+  String get emailConfirmationResendSent => '확인을 요청했어요. 받은편지함을 확인해 주세요.';
+
+  @override
+  String get emailConfirmationResendFailed => '보내지 못했어요. 잠시 후 다시 시도해주세요.';
+
+  @override
+  String get emailConfirmationMessagesTitle => '메시지를 보내려면 이메일을 인증해주세요';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return '$email 주소로 보낸 링크를 탭해주세요. 그러면 메시지를 마음껏 쓸 수 있어요.';
+  }
+
+  @override
+  String get emailConfirmationCheckInbox => '받은편지함에서 확인 링크를 찾아보세요.';
+
+  @override
+  String get emailConfirmationDone => '이메일 인증 완료. 이제 메시지를 쓸 수 있어요.';
+
+  @override
+  String get emailConfirmationLinkConfirmed => '이메일 인증 완료.';
+
+  @override
+  String get emailConfirmationAddEmailTitle => '이메일 추가하기';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      '지금은 계정에 이메일이 없어요. 언제든 계정에 다시 들어올 수 있도록 이메일을 추가해주세요.';
+
+  @override
+  String get emailConfirmationAddEmailButton => '이메일 추가';
+
+  @override
+  String get emailConfirmationSendBlocked => '메시지를 보내려면 이메일을 인증해주세요.';
+
+  @override
+  String get emailConfirmationCapReached =>
+      '새 계정의 시간당 한도에 도달했어요. 이메일을 인증하면 한도가 풀려요.';
 }

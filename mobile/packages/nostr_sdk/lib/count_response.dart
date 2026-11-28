@@ -1,5 +1,5 @@
 // ABOUTME: Data model for NIP-45 COUNT responses from relays.
-// ABOUTME: Contains the count value and whether it's approximate.
+// ABOUTME: Carries the count, whether it is approximate and whether it is complete.
 
 /// Response from a NIP-45 COUNT query
 class CountResponse {
@@ -9,21 +9,37 @@ class CountResponse {
   /// Whether this count is approximate (probabilistic)
   final bool approximate;
 
-  const CountResponse({required this.count, this.approximate = false});
+  /// Whether every relay asked for this count settled it.
+  ///
+  /// `false` when at least one relay that could hold matching events timed
+  /// out, refused the COUNT with CLOSED, or could not be sent it, while
+  /// another relay answered. [count] is then the largest answer that did
+  /// arrive, so the true count may be higher. A relay that replied it does
+  /// not know COUNT ([CountCommandUnknownException]) cannot contribute and
+  /// does not make a count incomplete.
+  final bool isComplete;
+
+  const CountResponse({
+    required this.count,
+    required this.isComplete,
+    this.approximate = false,
+  });
 
   @override
   String toString() =>
-      'CountResponse(count: $count, approximate: $approximate)';
+      'CountResponse(count: $count, approximate: $approximate, '
+      'isComplete: $isComplete)';
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is CountResponse &&
           count == other.count &&
-          approximate == other.approximate;
+          approximate == other.approximate &&
+          isComplete == other.isComplete;
 
   @override
-  int get hashCode => Object.hash(count, approximate);
+  int get hashCode => Object.hash(count, approximate, isComplete);
 }
 
 /// Thrown when no relay produced a NIP-45 COUNT answer.
@@ -51,4 +67,17 @@ class CountNotSentException extends CountNotSupportedException {
 
   @override
   String toString() => 'CountNotSentException: $reason';
+}
+
+/// Completes a relay's pending COUNT when the relay answered that it does not
+/// know the COUNT command, as strfry before 1.1 and memlay do.
+///
+/// That relay cannot count at all, so its silence costs a count nothing:
+/// unlike a CLOSED refusal or a timeout, it does not make the count
+/// incomplete.
+class CountCommandUnknownException extends CountNotSupportedException {
+  CountCommandUnknownException(super.reason);
+
+  @override
+  String toString() => 'CountCommandUnknownException: $reason';
 }

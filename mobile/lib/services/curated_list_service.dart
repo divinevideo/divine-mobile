@@ -607,15 +607,18 @@ class CuratedListService extends ChangeNotifier {
     );
   }
 
-  /// Add video to a list
-  Future<bool> addVideoToList(String listId, String videoEventId) {
-    return _serializeListOperation(
-      listId,
-      () => _addVideoToList(listId, videoEventId),
-      allowOfflineDraft: true,
-      cancelled: false,
-    );
-  }
+  /// Adds [videoEventId]; with [allowSeries] false a series is refused.
+  Future<bool> addVideoToList(
+    String listId,
+    String videoEventId, {
+    bool allowSeries = true,
+  }) => _serializeListOperation(
+    listId,
+    () => _addVideoToList(listId, videoEventId),
+    allowOfflineDraft: true,
+    allowSeries: allowSeries,
+    cancelled: false,
+  );
 
   Future<bool> _addVideoToList(String listId, String videoEventId) async {
     try {
@@ -632,7 +635,6 @@ class CuratedListService extends ChangeNotifier {
       final list = _lists[listIndex];
       if (!_canMutateCachedList(list)) return false;
 
-      // Check if video is already in the list
       if (list.videoEventIds.contains(videoEventId)) {
         Log.warning(
           'Video already in list: $videoEventId',
@@ -668,15 +670,18 @@ class CuratedListService extends ChangeNotifier {
     }
   }
 
-  /// Remove video from a list
-  Future<bool> removeVideoFromList(String listId, String videoEventId) {
-    return _serializeListOperation(
-      listId,
-      () => _removeVideoFromList(listId, videoEventId),
-      allowOfflineDraft: true,
-      cancelled: false,
-    );
-  }
+  /// Removes [videoEventId]; with [allowSeries] false a series is refused.
+  Future<bool> removeVideoFromList(
+    String listId,
+    String videoEventId, {
+    bool allowSeries = true,
+  }) => _serializeListOperation(
+    listId,
+    () => _removeVideoFromList(listId, videoEventId),
+    allowOfflineDraft: true,
+    allowSeries: allowSeries,
+    cancelled: false,
+  );
 
   Future<bool> _removeVideoFromList(String listId, String videoEventId) async {
     try {

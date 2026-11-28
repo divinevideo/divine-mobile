@@ -1224,6 +1224,71 @@ void main() {
       );
 
       test(
+        'a late partial enrichment keeps the series already loaded',
+        () async {
+          final authors = ['author1'];
+          final episode = createTestVideo('episode');
+          final neighbor = createTestVideo('neighbor');
+          final nextPage = createTestVideo('next-page');
+          final series = '30005:${episode.pubkey}:our-story';
+          final initialEnrichment = Completer<List<VideoEvent>>();
+          final paginationEnrichment = Completer<List<VideoEvent>>();
+
+          when(() => mockFollowRepository.followingPubkeys).thenReturn(authors);
+          when(
+            () => mockVideosRepository.getHomeFeedVideos(
+              authors: authors,
+              videoRefs: any(named: 'videoRefs'),
+              userPubkey: any(named: 'userPubkey'),
+              limit: any(named: 'limit'),
+              cursor: any(named: 'cursor'),
+            ),
+          ).thenAnswer((invocation) async {
+            if (invocation.namedArguments[#cursor] != null) {
+              return HomeFeedResult(videos: [nextPage], hasMore: false);
+            }
+            return HomeFeedResult(
+              videos: [episode, neighbor],
+              paginationCursor: 'next-page',
+              hasMore: true,
+            );
+          });
+
+          final bloc = VideoFeedBloc(
+            videosRepository: mockVideosRepository,
+            followRepository: mockFollowRepository,
+            curatedListRepository: mockCuratedListRepository,
+            enrichVideos: (videos) => videos.length == 2
+                ? initialEnrichment.future
+                : paginationEnrichment.future,
+          );
+          addTearDown(bloc.close);
+
+          bloc.add(const VideoFeedStarted(mode: FeedMode.following));
+          await pumpEventQueue();
+          bloc.add(const VideoFeedLoadMoreRequested());
+          await pumpEventQueue();
+
+          paginationEnrichment.complete([
+            episode.copyWith(seriesCoordinate: series),
+            neighbor,
+            nextPage,
+          ]);
+          await pumpEventQueue();
+          expect(bloc.state.videos.first.seriesCoordinate, equals(series));
+
+          initialEnrichment.complete([
+            episode,
+            neighbor.copyWith(title: 'Enriched neighbor'),
+          ]);
+          await pumpEventQueue();
+
+          expect(bloc.state.videos[1].title, equals('Enriched neighbor'));
+          expect(bloc.state.videos.first.seriesCoordinate, equals(series));
+        },
+      );
+
+      test(
         'ignores stale background enrichment after switching sources',
         () async {
           final authors = ['author1'];
@@ -1461,6 +1526,43 @@ void main() {
               .having((s) => s.mode, 'mode', FeedMode.forYou)
               .having((s) => s.hasMore, 'hasMore', false),
         ],
+      );
+
+      test(
+        'continues an empty opening For You page when it has a cursor',
+        () async {
+          when(
+            () => mockVideosRepository.getRecommendedVideos(
+              userPubkey: any(named: 'userPubkey'),
+              revalidate: any(named: 'revalidate'),
+            ),
+          ).thenAnswer(
+            (_) async => const HomeFeedResult(
+              videos: [],
+              paginationCursor: 'older',
+              hasMore: true,
+            ),
+          );
+          when(
+            () => mockVideosRepository.getRecommendedVideos(
+              userPubkey: any(named: 'userPubkey'),
+              cursor: 'older',
+              revalidate: any(named: 'revalidate'),
+            ),
+          ).thenAnswer(
+            (_) async => HomeFeedResult(
+              videos: [createTestVideo('older-video')],
+              hasMore: false,
+            ),
+          );
+          final bloc = createBloc();
+          addTearDown(bloc.close);
+          bloc.add(const VideoFeedStarted());
+          await pumpEventQueue();
+
+          expect(bloc.state.videos.map((v) => v.id), ['older-video']);
+          expect(bloc.state.hasMore, isFalse);
+        },
       );
 
       feedBlocTest(
@@ -1755,6 +1857,7 @@ void main() {
               limit: any(named: 'limit'),
               cursor: any(named: 'cursor'),
               skipCache: any(named: 'skipCache'),
+              archiveOnly: true,
             ),
           ).thenAnswer((_) async => HomeFeedResult(videos: videos));
 
@@ -1790,6 +1893,7 @@ void main() {
               limit: any(named: 'limit'),
               cursor: any(named: 'cursor'),
               skipCache: any(named: 'skipCache'),
+              archiveOnly: true,
             ),
           ).called(1);
 
@@ -4106,6 +4210,7 @@ void main() {
               limit: any(named: 'limit'),
               cursor: any(named: 'cursor'),
               skipCache: any(named: 'skipCache'),
+              archiveOnly: true,
             ),
           ).thenAnswer(
             (_) async => HomeFeedResult(
@@ -4139,6 +4244,7 @@ void main() {
               limit: any(named: 'limit'),
               cursor: any(named: 'cursor'),
               skipCache: any(named: 'skipCache'),
+              archiveOnly: true,
             ),
           ).called(1);
           verifyNever(
@@ -4160,6 +4266,7 @@ void main() {
               limit: any(named: 'limit'),
               cursor: any(named: 'cursor'),
               skipCache: any(named: 'skipCache'),
+              archiveOnly: true,
             ),
           ).thenAnswer((invocation) async {
             final cursor =
@@ -4201,6 +4308,7 @@ void main() {
               limit: any(named: 'limit'),
               cursor: 'cursor-2',
               skipCache: any(named: 'skipCache'),
+              archiveOnly: true,
             ),
           ).called(1);
           expect(bloc.state.videos.length, 4);
@@ -4560,6 +4668,66 @@ void main() {
             ),
           );
         },
+      );
+
+      feedBlocTest(
+        'continues For You pagination past a duplicate-only recovery page',
+        setUp: () {
+          when(
+            () => mockVideosRepository.getRecommendedVideos(
+              userPubkey: any(named: 'userPubkey'),
+              cursor: 'fallback-cursor',
+              revalidate: any(named: 'revalidate'),
+            ),
+          ).thenAnswer(
+            (_) async => HomeFeedResult(
+              videos: [createTestVideo('already-queued')],
+              paginationCursor: 'next-recommendations',
+              hasMore: true,
+            ),
+          );
+          when(
+            () => mockVideosRepository.getRecommendedVideos(
+              userPubkey: any(named: 'userPubkey'),
+              cursor: 'next-recommendations',
+              revalidate: any(named: 'revalidate'),
+            ),
+          ).thenAnswer(
+            (_) async => HomeFeedResult(
+              videos: [createTestVideo('discovered')],
+              paginationCursor: 'later-recommendations',
+              hasMore: true,
+            ),
+          );
+        },
+        build: createBloc,
+        seed: () => VideoFeedBlocState(
+          status: VideoFeedStatus.success,
+          videos: [createTestVideo('already-queued')],
+          paginationCursor: 'fallback-cursor',
+        ),
+        act: (bloc) => bloc.add(const VideoFeedLoadMoreRequested()),
+        skip: 1,
+        expect: () => [
+          isA<VideoFeedBlocState>()
+              .having((s) => s.isLoadingMore, 'isLoadingMore', true)
+              .having(
+                (s) => s.paginationCursor,
+                'paginationCursor',
+                'next-recommendations',
+              ),
+          isA<VideoFeedBlocState>()
+              .having((s) => s.isLoadingMore, 'isLoadingMore', false)
+              .having((s) => s.videos.map((v) => v.id), 'video IDs', [
+                'already-queued',
+                'discovered',
+              ])
+              .having(
+                (s) => s.paginationCursor,
+                'paginationCursor',
+                'later-recommendations',
+              ),
+        ],
       );
 
       feedBlocTest(
@@ -5507,6 +5675,7 @@ void main() {
               limit: any(named: 'limit'),
               cursor: any(named: 'cursor'),
               skipCache: any(named: 'skipCache'),
+              archiveOnly: true,
             ),
           );
         },

@@ -8,6 +8,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:audio_session/audio_session.dart' as audio_session;
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:mocktail/mocktail.dart';
@@ -34,12 +35,24 @@ File _cachedFileFor(String url) =>
     File('/cache/${Uri.parse(url).pathSegments.last}');
 
 /// Hands out a local file for every sound URL without touching the network,
-/// or throws [error] when one is given.
+/// or throws [error] when one is given. The URLs in [kept] count as already
+/// downloaded.
 class _FakeRemoteAudioCache extends Fake implements RemoteAudioCache {
-  _FakeRemoteAudioCache({this.error});
+  _FakeRemoteAudioCache({
+    this.error,
+    this.kept = const {},
+    this.downloading = const {},
+  });
 
   final Exception? error;
+  final Set<String> kept;
+
+  /// URLs a prefetch is downloading.
+  final Set<String> downloading;
   final requested = <Uri>[];
+
+  @override
+  bool isDownloading(Uri uri) => downloading.contains(uri.toString());
 
   @override
   Future<File> fileFor(Uri uri) async {
@@ -48,6 +61,23 @@ class _FakeRemoteAudioCache extends Fake implements RemoteAudioCache {
     if (error != null) throw error;
     return _cachedFileFor(uri.toString());
   }
+
+  @override
+  File? cachedFileFor(Uri uri) =>
+      kept.contains(uri.toString()) ? _cachedFileFor(uri.toString()) : null;
+}
+
+/// Records what the service asks of its prefetcher.
+class _RecordingPrefetcher extends Fake implements RemoteAudioPrefetcher {
+  final asked = <({Uri uri, int? sizeBytes})>[];
+  bool disposed = false;
+
+  @override
+  void prefetch(Uri uri, {int? sizeBytes}) =>
+      asked.add((uri: uri, sizeBytes: sizeBytes));
+
+  @override
+  void dispose() => disposed = true;
 }
 
 /// Holds every download until the test finishes it.
@@ -336,6 +366,192 @@ void main() {
       verify(() => mockPlayer.play()).called(1);
     });
 
+    // media3 decodes while paused, so a clip that fits whole into Android's
+    // output buffer reaches it with its end before playback starts, and then
+    // ends in silence.
+    group('a clip that ends inside the output buffer', () {
+      late ProcessingState state;
+
+      setUp(() {
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        addTearDown(() => debugDefaultTargetPlatformOverride = null);
+        state = ProcessingState.ready;
+        when(() => mockPlayer.processingState).thenAnswer((_) => state);
+        when(
+          () => mockPlayer.stop(),
+        ).thenAnswer((_) async => state = ProcessingState.idle);
+        when(() => mockPlayer.play()).thenAnswer((_) async {});
+        when(() => mockPlayer.setFilePath(any())).thenAnswer((_) async {
+          state = ProcessingState.ready;
+          return const Duration(milliseconds: 173);
+        });
+        service = AudioPlaybackService(
+          audioPlayer: mockPlayer,
+          audioSessionWrapper: mockSessionWrapper,
+        );
+      });
+
+      test('is released from the player before it plays', () async {
+        await service.loadAudioFromFile('/sounds/snare.m4a');
+        verifyNever(() => mockPlayer.stop());
+
+        await service.play();
+
+        verifyInOrder([() => mockPlayer.stop(), () => mockPlayer.play()]);
+      });
+
+      // The player counts as not playing while it is released, so a pause,
+      // stop or load in that window has nothing to stop.
+      test('does not play once paused while the player is released', () async {
+        final releasing = Completer<void>();
+        when(() => mockPlayer.stop()).thenAnswer((_) => releasing.future);
+        when(() => mockPlayer.pause()).thenAnswer((_) async {});
+        await service.loadAudioFromFile('/sounds/snare.m4a');
+
+        final playing = service.play();
+        await pumpEventQueue();
+        verify(() => mockPlayer.stop()).called(1);
+        await service.pause();
+        releasing.complete();
+        await playing;
+
+        verifyNever(() => mockPlayer.play());
+      });
+
+      test('does not play once stopped while the player is released', () async {
+        final releasing = Completer<void>();
+        when(() => mockPlayer.stop()).thenAnswer((_) => releasing.future);
+        await service.loadAudioFromFile('/sounds/snare.m4a');
+
+        final playing = service.play();
+        await pumpEventQueue();
+        final stopping = service.stop();
+        releasing.complete();
+        await stopping;
+        await playing;
+
+        verifyNever(() => mockPlayer.play());
+      });
+
+      test(
+        'does not play once disposed while the player is released',
+        () async {
+          final releasing = Completer<void>();
+          when(() => mockPlayer.stop()).thenAnswer((_) => releasing.future);
+          await service.loadAudioFromFile('/sounds/snare.m4a');
+
+          final playing = service.play();
+          await pumpEventQueue();
+          await service.dispose();
+          releasing.complete();
+          await playing;
+
+          verifyNever(() => mockPlayer.play());
+        },
+      );
+
+      test('does not play once another sound loads while the player is '
+          'released', () async {
+        final releasing = Completer<void>();
+        when(() => mockPlayer.stop()).thenAnswer((_) => releasing.future);
+        await service.loadAudioFromFile('/sounds/snare.m4a');
+
+        final playing = service.play();
+        await pumpEventQueue();
+        await service.loadAudioFromFile('/sounds/kick.m4a');
+        releasing.complete();
+        await playing;
+
+        verifyNever(() => mockPlayer.play());
+      });
+
+      test(
+        'plays once when played again while the player is released',
+        () async {
+          final releasing = Completer<void>();
+          when(() => mockPlayer.stop()).thenAnswer((_) => releasing.future);
+          await service.loadAudioFromFile('/sounds/snare.m4a');
+
+          final first = service.play();
+          await pumpEventQueue();
+          final second = service.play();
+          await pumpEventQueue();
+          releasing.complete();
+          await Future.wait([first, second]);
+
+          verify(() => mockPlayer.play()).called(1);
+        },
+      );
+
+      test('plays from a released player without releasing it again', () async {
+        await service.loadAudioFromFile('/sounds/snare.m4a');
+        state = ProcessingState.idle;
+
+        await service.play();
+
+        verifyNever(() => mockPlayer.stop());
+        verify(() => mockPlayer.play()).called(1);
+      });
+
+      test('leaves a longer sound prepared', () async {
+        when(
+          () => mockPlayer.setFilePath(any()),
+        ).thenAnswer((_) async => const Duration(seconds: 1));
+
+        await service.loadAudioFromFile('/sounds/song.m4a');
+        await service.play();
+
+        verifyNever(() => mockPlayer.stop());
+        verify(() => mockPlayer.play()).called(1);
+      });
+
+      test('leaves audio of unknown length prepared', () async {
+        when(() => mockPlayer.setFilePath(any())).thenAnswer((_) async => null);
+
+        await service.loadAudioFromFile('/sounds/live.m4a');
+        await service.play();
+
+        verifyNever(() => mockPlayer.stop());
+        verify(() => mockPlayer.play()).called(1);
+      });
+
+      test('is forgotten once another load fails', () async {
+        await service.loadAudioFromFile('/sounds/snare.m4a');
+        clearInteractions(mockPlayer);
+        when(
+          () => mockPlayer.setFilePath(any()),
+        ).thenThrow(Exception('unreadable'));
+        await expectLater(
+          service.loadAudioFromFile('/sounds/broken.m4a'),
+          throwsException,
+        );
+        state = ProcessingState.ready;
+
+        await service.play();
+
+        verifyNever(() => mockPlayer.stop());
+      });
+
+      test('keeps playing when the player is playing it', () async {
+        when(() => mockPlayer.playing).thenReturn(true);
+
+        await service.loadAudioFromFile('/sounds/snare.m4a');
+        await service.play();
+
+        verifyNever(() => mockPlayer.stop());
+      });
+
+      test('stays prepared on iOS', () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+
+        await service.loadAudioFromFile('/sounds/snare.m4a');
+        await service.play();
+
+        verifyNever(() => mockPlayer.stop());
+        verify(() => mockPlayer.play()).called(1);
+      });
+    });
+
     test('pause pauses playback', () async {
       when(() => mockPlayer.pause()).thenAnswer((_) async {});
 
@@ -471,7 +687,7 @@ void main() {
       verify(() => mockPlayer.setVolume(0.5)).called(1);
     });
 
-    group('setLooping', () {
+    group('setRewindsAtEnd', () {
       late StreamController<Duration> positions;
       late StreamController<ProcessingState> states;
 
@@ -486,8 +702,12 @@ void main() {
         when(
           () => mockPlayer.processingStateStream,
         ).thenAnswer((_) => states.stream);
+        when(
+          () => mockPlayer.processingState,
+        ).thenReturn(ProcessingState.completed);
         when(() => mockPlayer.duration).thenReturn(const Duration(seconds: 4));
         when(() => mockPlayer.playing).thenReturn(true);
+        when(() => mockPlayer.pause()).thenAnswer((_) async {});
         when(() => mockPlayer.seek(any())).thenAnswer((_) async {});
         service = AudioPlaybackService(
           audioPlayer: mockPlayer,
@@ -495,57 +715,82 @@ void main() {
         );
       });
 
-      test('starts the audio over when its position reaches the end', () async {
-        service.setLooping(looping: true);
-
-        positions.add(const Duration(seconds: 2));
-        await pumpEventQueue();
-        verifyNever(() => mockPlayer.seek(any()));
-
-        positions.add(const Duration(seconds: 4));
-        await pumpEventQueue();
-        verify(() => mockPlayer.seek(Duration.zero)).called(1);
-      });
-
-      test('starts the audio over when the player completes', () async {
-        service.setLooping(looping: true);
+      test('pauses and goes back to the start when the audio ends', () async {
+        service.setRewindsAtEnd(rewinds: true);
 
         states.add(ProcessingState.completed);
         await pumpEventQueue();
 
-        verify(() => mockPlayer.seek(Duration.zero)).called(1);
+        verifyInOrder([
+          () => mockPlayer.pause(),
+          () => mockPlayer.seek(Duration.zero),
+        ]);
       });
 
-      test('leaves paused audio at its end', () async {
-        when(() => mockPlayer.playing).thenReturn(false);
-        service.setLooping(looping: true);
+      // just_audio counts the position up from the play request, before the
+      // platform plays anything, so it reaches the duration while a short
+      // sound is still playing.
+      test('keeps playing when the position reaches the duration', () async {
+        when(
+          () => mockPlayer.processingState,
+        ).thenReturn(ProcessingState.ready);
+        service.setRewindsAtEnd(rewinds: true);
 
         positions.add(const Duration(seconds: 4));
         await pumpEventQueue();
 
+        verifyNever(() => mockPlayer.pause());
         verifyNever(() => mockPlayer.seek(any()));
       });
 
-      test('stops starting over once turned off', () async {
+      test('leaves a sound loaded after the end alone', () async {
+        service.setRewindsAtEnd(rewinds: true);
+        when(
+          () => mockPlayer.processingState,
+        ).thenReturn(ProcessingState.loading);
+
+        states.add(ProcessingState.completed);
+        await pumpEventQueue();
+
+        verifyNever(() => mockPlayer.pause());
+        verifyNever(() => mockPlayer.seek(any()));
+      });
+
+      test('stays at the end once turned off', () async {
         service
-          ..setLooping(looping: true)
-          ..setLooping(looping: false);
+          ..setRewindsAtEnd(rewinds: true)
+          ..setRewindsAtEnd(rewinds: false);
 
         states.add(ProcessingState.completed);
         await pumpEventQueue();
 
+        verifyNever(() => mockPlayer.pause());
         verifyNever(() => mockPlayer.seek(any()));
       });
 
-      test('keeps going when starting over fails', () async {
+      test('keeps going when rewinding fails', () async {
         when(() => mockPlayer.seek(any())).thenThrow(Exception('seek failed'));
-        service.setLooping(looping: true);
+        service.setRewindsAtEnd(rewinds: true);
 
         states.add(ProcessingState.completed);
         await pumpEventQueue();
+        states.add(ProcessingState.completed);
+        await pumpEventQueue();
 
-        verify(() => mockPlayer.seek(Duration.zero)).called(1);
+        verify(() => mockPlayer.seek(Duration.zero)).called(2);
       });
+    });
+
+    test('position is the player position', () {
+      when(
+        () => mockPlayer.position,
+      ).thenReturn(const Duration(milliseconds: 1500));
+      service = AudioPlaybackService(
+        audioPlayer: mockPlayer,
+        audioSessionWrapper: mockSessionWrapper,
+      );
+
+      expect(service.position, const Duration(milliseconds: 1500));
     });
 
     test('setVolume clamps volume above 1.0', () async {
@@ -918,10 +1163,16 @@ void main() {
     const soundUrl = 'https://example.com/sound';
     late _MockAudioPlayer mockPlayer;
     late _MockAudioSessionWrapper mockSessionWrapper;
+    late StreamController<PlayerException> playbackErrors;
 
     setUp(() {
       mockPlayer = _MockAudioPlayer();
       mockSessionWrapper = _MockAudioSessionWrapper();
+      playbackErrors = StreamController<PlayerException>.broadcast();
+      addTearDown(playbackErrors.close);
+      when(
+        () => mockPlayer.errorStream,
+      ).thenAnswer((_) => playbackErrors.stream);
       when(() => mockPlayer.dispose()).thenAnswer((_) async {});
       when(
         () => mockSessionWrapper.getDevices(),
@@ -1017,6 +1268,279 @@ void main() {
       await playing;
       verify(() => mockPlayer.play()).called(1);
     });
+
+    test('loadAudio streams a sound not downloaded yet from its URL', () async {
+      when(
+        () => mockPlayer.setAudioSource(any()),
+      ).thenAnswer((_) async => const Duration(seconds: 204));
+      final cache = _FakeRemoteAudioCache();
+      final service = serviceWith(cache);
+
+      final duration = await service.loadAudio(
+        soundUrl,
+        streamUnlessCached: true,
+      );
+
+      final source =
+          verify(() => mockPlayer.setAudioSource(captureAny())).captured.single
+              as UriAudioSource;
+      expect(source.uri, Uri.parse(soundUrl));
+      expect(cache.requested, isEmpty);
+      expect(duration, const Duration(seconds: 204));
+    });
+
+    test(
+      'loadAudio waits for the download a prefetch started, not a stream',
+      () async {
+        when(
+          () => mockPlayer.setAudioSource(any()),
+        ).thenAnswer((_) async => const Duration(seconds: 1));
+        final cache = _FakeRemoteAudioCache(downloading: {soundUrl});
+        final service = serviceWith(cache);
+
+        await service.loadAudio(soundUrl, streamUnlessCached: true);
+
+        final source =
+            verify(
+                  () => mockPlayer.setAudioSource(captureAny()),
+                ).captured.single
+                as UriAudioSource;
+        expect(source.uri, Uri.file(_cachedFileFor(soundUrl).path));
+        expect(cache.requested, [Uri.parse(soundUrl)]);
+      },
+    );
+
+    test(
+      'loadAudio plays a downloaded sound from its file, not its URL',
+      () async {
+        when(
+          () => mockPlayer.setAudioSource(any()),
+        ).thenAnswer((_) async => const Duration(seconds: 2));
+        final cache = _FakeRemoteAudioCache(kept: {soundUrl});
+        final service = serviceWith(cache);
+
+        await service.loadAudio(soundUrl, streamUnlessCached: true);
+
+        final source =
+            verify(
+                  () => mockPlayer.setAudioSource(captureAny()),
+                ).captured.single
+                as UriAudioSource;
+        expect(source.uri, Uri.file(_cachedFileFor(soundUrl).path));
+      },
+    );
+
+    // AVFoundation cannot stream from a server that ignores byte ranges
+    // (-11828), as media.divine.video did once (#4140).
+    test('loadAudio downloads a sound the player could not stream', () async {
+      var attempts = 0;
+      when(() => mockPlayer.setAudioSource(any())).thenAnswer((_) async {
+        if (attempts++ == 0) throw PlayerException(-11828, 'Cannot Open', 0);
+        return const Duration(seconds: 3);
+      });
+      final cache = _FakeRemoteAudioCache();
+      final service = serviceWith(cache);
+
+      final duration = await service.loadAudio(
+        soundUrl,
+        streamUnlessCached: true,
+      );
+
+      final sources = verify(
+        () => mockPlayer.setAudioSource(captureAny()),
+      ).captured.cast<UriAudioSource>();
+      expect(sources.map((source) => source.uri), [
+        Uri.parse(soundUrl),
+        Uri.file(_cachedFileFor(soundUrl).path),
+      ]);
+      expect(cache.requested, [Uri.parse(soundUrl)]);
+      expect(duration, const Duration(seconds: 3));
+    });
+
+    test('loadAudio reports a failed download after a failed stream', () async {
+      when(
+        () => mockPlayer.setAudioSource(any()),
+      ).thenThrow(PlayerException(0, 'Source error', 0));
+      final error = RemoteAudioDownloadException(
+        Uri.parse(soundUrl),
+        statusCode: 404,
+      );
+      final service = serviceWith(_FakeRemoteAudioCache(error: error));
+
+      await expectLater(
+        service.loadAudio(soundUrl, streamUnlessCached: true),
+        throwsA(isA<RemoteAudioDownloadException>()),
+      );
+      verify(() => mockPlayer.setAudioSource(any())).called(1);
+    });
+
+    test('a stream that fails after a later load gives way', () async {
+      final streaming = Completer<Duration?>();
+      when(
+        () => mockPlayer.setAudioSource(any()),
+      ).thenAnswer((_) => streaming.future);
+      when(
+        () => mockPlayer.setFilePath(any()),
+      ).thenAnswer((_) async => const Duration(seconds: 1));
+      final cache = _FakeRemoteAudioCache();
+      final service = serviceWith(cache);
+
+      final first = service.loadAudio(soundUrl, streamUnlessCached: true);
+      await pumpEventQueue();
+      final second = service.loadAudioFromFile('/imported.m4a');
+      streaming.completeError(PlayerException(0, 'Source error', 0));
+
+      await expectLater(first, throwsA(isA<PlayerInterruptedException>()));
+      await second;
+      expect(cache.requested, isEmpty);
+    });
+
+    test('loadAudio streams by URL when downloads are off', () async {
+      when(
+        () => mockPlayer.setAudioSource(any()),
+      ).thenAnswer((_) async => const Duration(seconds: 2));
+      final service = AudioPlaybackService(
+        audioPlayer: mockPlayer,
+        audioSessionWrapper: mockSessionWrapper,
+        downloadRemoteAudio: false,
+      );
+      addTearDown(service.dispose);
+
+      await service.loadAudio(soundUrl, streamUnlessCached: true);
+
+      final source =
+          verify(() => mockPlayer.setAudioSource(captureAny())).captured.single
+              as UriAudioSource;
+      expect(source.uri, Uri.parse(soundUrl));
+    });
+
+    // just_audio reports a stream that breaks off as an event, not as an
+    // error of play, and on iOS never answers the play call afterwards.
+    test('play ends with the error when a stream breaks off', () async {
+      when(
+        () => mockPlayer.setAudioSource(any()),
+      ).thenAnswer((_) async => const Duration(seconds: 204));
+      when(() => mockPlayer.play()).thenAnswer((_) => Completer<void>().future);
+      final service = serviceWith(_FakeRemoteAudioCache());
+      await service.loadAudio(soundUrl, streamUnlessCached: true);
+
+      final playing = service.play();
+      await pumpEventQueue();
+      playbackErrors.add(PlayerException(-1004, 'Connection lost', 0));
+
+      await expectLater(playing, throwsA(isA<PlayerException>()));
+    });
+
+    test('a sound whose stream broke off loads through the download '
+        'next time', () async {
+      when(
+        () => mockPlayer.setAudioSource(any()),
+      ).thenAnswer((_) async => const Duration(seconds: 204));
+      final cache = _FakeRemoteAudioCache();
+      final service = serviceWith(cache);
+      await service.loadAudio(soundUrl, streamUnlessCached: true);
+      playbackErrors.add(PlayerException(-1004, 'Connection lost', 0));
+      await pumpEventQueue();
+
+      await service.loadAudio(soundUrl, streamUnlessCached: true);
+
+      final sources = verify(
+        () => mockPlayer.setAudioSource(captureAny()),
+      ).captured.cast<UriAudioSource>();
+      expect(sources.map((source) => source.uri), [
+        Uri.parse(soundUrl),
+        Uri.file(_cachedFileFor(soundUrl).path),
+      ]);
+      expect(cache.requested, [Uri.parse(soundUrl)]);
+    });
+
+    test('a failure while a downloaded file plays keeps streaming', () async {
+      when(
+        () => mockPlayer.setAudioSource(any()),
+      ).thenAnswer((_) async => const Duration(seconds: 3));
+      when(
+        () => mockPlayer.setFilePath(any()),
+      ).thenAnswer((_) async => const Duration(seconds: 3));
+      final service = serviceWith(_FakeRemoteAudioCache());
+      await service.loadAudio(soundUrl, streamUnlessCached: true);
+      await service.loadAudioFromFile('/imported.m4a');
+      playbackErrors.add(PlayerException(0, 'Source error', 0));
+      await pumpEventQueue();
+
+      await service.loadAudio(soundUrl, streamUnlessCached: true);
+
+      final sources = verify(
+        () => mockPlayer.setAudioSource(captureAny()),
+      ).captured.cast<UriAudioSource>();
+      expect(sources.map((source) => source.uri), [
+        Uri.parse(soundUrl),
+        Uri.parse(soundUrl),
+      ]);
+    });
+
+    test('prefetch ignores a URL it cannot read', () {
+      final prefetcher = _RecordingPrefetcher();
+      final service = AudioPlaybackService(
+        audioPlayer: mockPlayer,
+        audioSessionWrapper: mockSessionWrapper,
+        remoteAudioCache: _FakeRemoteAudioCache(),
+        remoteAudioPrefetcher: prefetcher,
+      );
+      addTearDown(service.dispose);
+
+      service.prefetch('https://example.com:port/sound');
+
+      expect(prefetcher.asked, isEmpty);
+    });
+
+    test('prefetch hands a remote sound and its size to the prefetcher', () {
+      final prefetcher = _RecordingPrefetcher();
+      final service = AudioPlaybackService(
+        audioPlayer: mockPlayer,
+        audioSessionWrapper: mockSessionWrapper,
+        remoteAudioCache: _FakeRemoteAudioCache(),
+        remoteAudioPrefetcher: prefetcher,
+      );
+      addTearDown(service.dispose);
+
+      service.prefetch(soundUrl, sizeBytes: 4523);
+
+      expect(prefetcher.asked, [(uri: Uri.parse(soundUrl), sizeBytes: 4523)]);
+    });
+
+    test('prefetch does nothing when downloads are off', () {
+      final prefetcher = _RecordingPrefetcher();
+      final service = AudioPlaybackService(
+        audioPlayer: mockPlayer,
+        audioSessionWrapper: mockSessionWrapper,
+        remoteAudioPrefetcher: prefetcher,
+        downloadRemoteAudio: false,
+      );
+      addTearDown(service.dispose);
+
+      service.prefetch(soundUrl, sizeBytes: 4523);
+
+      expect(prefetcher.asked, isEmpty);
+    });
+
+    test(
+      'dispose stops the prefetcher, and prefetch then does nothing',
+      () async {
+        final prefetcher = _RecordingPrefetcher();
+        final service = AudioPlaybackService(
+          audioPlayer: mockPlayer,
+          audioSessionWrapper: mockSessionWrapper,
+          remoteAudioCache: _FakeRemoteAudioCache(),
+          remoteAudioPrefetcher: prefetcher,
+        );
+
+        await service.dispose();
+        service.prefetch(soundUrl);
+
+        expect(prefetcher.disposed, isTrue);
+        expect(prefetcher.asked, isEmpty);
+      },
+    );
 
     test('plays a remote URL directly when downloads are off', () async {
       when(

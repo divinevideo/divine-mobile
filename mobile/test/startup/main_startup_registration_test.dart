@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:app_update_repository/app_update_repository.dart';
+import 'package:firebase_performance/firebase_performance.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,12 +12,17 @@ import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/container_swap_host.dart';
 import 'package:openvine/providers/crash_reporting_provider.dart';
 import 'package:openvine/providers/device_scope.dart';
+import 'package:openvine/providers/install_source_provider.dart';
 import 'package:openvine/providers/media_cache_budget_provider.dart';
+import 'package:openvine/providers/service_providers.dart';
+import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/providers/shorebird_availability_provider.dart';
 import 'package:openvine/providers/startup_performance_provider.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:openvine/services/media_cache_budget.dart';
 import 'package:openvine/services/media_cache_budget_service.dart';
+import 'package:openvine/services/performance_monitoring_service.dart';
 import 'package:openvine/services/startup_performance_service.dart';
 import 'package:openvine/startup/app_bootstrap.dart' as bootstrap;
 import 'package:openvine/startup/startup_coordinator_factory.dart' as app;
@@ -36,6 +43,8 @@ class _MockDeviceScope extends Mock implements DeviceScope {}
 
 class _MockMediaCacheBudgetService extends Mock
     implements MediaCacheBudgetService {}
+
+class _MockFirebasePerformance extends Mock implements FirebasePerformance {}
 
 class _FakeUpdater implements ShorebirdUpdater {
   _FakeUpdater({this.status = UpdateStatus.upToDate, this.updateError});
@@ -271,6 +280,46 @@ void main() {
             ?.dependencies,
         isEmpty,
       );
+    });
+
+    test('performance monitoring applies a stored analytics opt-out', () async {
+      // #11398: startup traces begin in this phase, long before
+      // AnalyticsService reads the preference, so the stored opt-out has to
+      // reach the SDK here or a reporting build keeps sending them.
+      SharedPreferences.setMockInitialValues({'analytics_enabled': false});
+      final preferences = await SharedPreferences.getInstance();
+      final performance = _MockFirebasePerformance();
+      when(
+        () => performance.setPerformanceCollectionEnabled(any()),
+      ).thenAnswer((_) async {});
+      final crashReporting = CrashReportingService();
+      final container = ProviderContainer(
+        overrides: [
+          crashReportingServiceProvider.overrideWithValue(crashReporting),
+          startupPerformanceServiceProvider.overrideWithValue(
+            StartupPerformanceService(crashReporting: crashReporting),
+          ),
+          sharedPreferencesProvider.overrideWithValue(preferences),
+          shorebirdAvailableProvider.overrideWithValue(true),
+          installSourceProvider.overrideWithValue(InstallSource.playStore),
+          performanceMonitoringServiceProvider.overrideWithValue(
+            PerformanceMonitoringService(
+              performance: () => performance,
+              releaseBuild: true,
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      final coordinator = app.createStartupCoordinatorForTesting(container);
+
+      await coordinator
+          .serviceRegistrationForTesting('PerformanceMonitoring')!
+          .initialize();
+
+      verify(() => performance.setPerformanceCollectionEnabled(false))
+          .called(1);
+      verifyNever(() => performance.setPerformanceCollectionEnabled(true));
     });
 
     test('runs C2PA debris cleanup as optional deferred startup work', () {

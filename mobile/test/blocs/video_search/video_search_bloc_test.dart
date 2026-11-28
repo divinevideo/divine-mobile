@@ -4,12 +4,17 @@
 
 import 'dart:async';
 
+import 'package:analytics/analytics.dart';
 import 'package:bloc_test/bloc_test.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/video_search/video_search_bloc.dart';
+import 'package:openvine/observability/screen_load_telemetry.dart';
 import 'package:videos_repository/videos_repository.dart';
+
+import '../../helpers/screen_load_recorder.dart';
 
 class _MockVideosRepository extends Mock implements VideosRepository {}
 
@@ -1102,6 +1107,139 @@ void main() {
         ],
         errors: () => [isA<Exception>()],
       );
+    });
+
+    group('load telemetry', () {
+      late ScreenLoadRecorder recorder;
+      late StreamController<List<VideoEvent>> results;
+
+      setUp(() {
+        recorder = ScreenLoadRecorder();
+        results = StreamController<List<VideoEvent>>();
+        when(
+          () => mockVideosRepository.searchVideos(
+            query: any(named: 'query'),
+            limit: any(named: 'limit'),
+            sort: any(named: 'sort'),
+          ),
+        ).thenAnswer((_) => results.stream);
+      });
+
+      VideoSearchBloc createTimedBloc() => VideoSearchBloc(
+        videosRepository: mockVideosRepository,
+        loadTelemetry: recorder.telemetry(
+          AnalyticsSurface.searchResults,
+          entryPoint: ScreenLoadEntryPoint.query,
+        ),
+      );
+
+      /// Runs [body] against a timed bloc under fake time, then closes it.
+      void searching(
+        void Function(VideoSearchBloc bloc, FakeAsync async) body,
+      ) {
+        fakeAsync((async) {
+          final bloc = createTimedBloc();
+          body(bloc, async);
+          unawaited(bloc.close());
+          async.flushMicrotasks();
+        });
+      }
+
+      void typeQuery(VideoSearchBloc bloc, FakeAsync async, String query) {
+        bloc.add(VideoSearchQueryChanged(query));
+        async
+          ..elapse(debounceDuration)
+          ..flushMicrotasks();
+      }
+
+      test('completes when the first results show', () {
+        searching((bloc, async) {
+          typeQuery(bloc, async, 'cats');
+          expect(recorder.loads, isEmpty);
+
+          results.add([createVideo(id: 'v1'), createVideo(id: 'v2')]);
+          async.flushMicrotasks();
+
+          expect(recorder.results, [SurfaceLoadResult.success]);
+          expect(
+            recorder.loads.single,
+            allOf(
+              containsPair(AnalyticsParam.itemCount, 2),
+              containsPair(
+                AnalyticsParam.entryPoint,
+                ScreenLoadEntryPoint.query,
+              ),
+              containsPair(AnalyticsParam.sortMode, 'trending'),
+            ),
+          );
+          expect(
+            recorder.loads.single.values,
+            isNot(contains('cats')),
+            reason: 'the search text never reaches analytics',
+          );
+        });
+      });
+
+      test('waits for the new query while the old results still show', () {
+        searching((bloc, async) {
+          typeQuery(bloc, async, 'cats');
+          results.add([createVideo(id: 'v1')]);
+          async.flushMicrotasks();
+          results = StreamController<List<VideoEvent>>();
+
+          typeQuery(bloc, async, 'dogs');
+          expect(bloc.state.videos, isNotEmpty);
+          expect(recorder.results, [SurfaceLoadResult.success]);
+
+          results.add([createVideo(id: 'v2'), createVideo(id: 'v3')]);
+          async.flushMicrotasks();
+
+          expect(recorder.results, [
+            SurfaceLoadResult.success,
+            SurfaceLoadResult.success,
+          ]);
+          expect(
+            recorder.loads.last,
+            containsPair(AnalyticsParam.itemCount, 2),
+          );
+        });
+      });
+
+      test('reports empty when the search finds nothing', () {
+        searching((bloc, async) {
+          typeQuery(bloc, async, 'cats');
+
+          results.add(const []);
+          unawaited(results.close());
+          async.flushMicrotasks();
+
+          expect(bloc.state.status, VideoSearchStatus.success);
+          expect(recorder.results, [SurfaceLoadResult.empty]);
+        });
+      });
+
+      test('reports failure when the search fails', () {
+        searching((bloc, async) {
+          typeQuery(bloc, async, 'cats');
+
+          results.addError(Exception('offline'));
+          async.flushMicrotasks();
+
+          expect(bloc.state.status, VideoSearchStatus.failure);
+          expect(recorder.results, [SurfaceLoadResult.failure]);
+        });
+      });
+
+      test('reports dismissed when the query is cleared first', () {
+        searching((bloc, async) {
+          typeQuery(bloc, async, 'cats');
+
+          bloc.add(const VideoSearchCleared());
+          async.flushMicrotasks();
+
+          expect(recorder.results, [SurfaceLoadResult.dismissed]);
+        });
+      });
     });
   });
 }

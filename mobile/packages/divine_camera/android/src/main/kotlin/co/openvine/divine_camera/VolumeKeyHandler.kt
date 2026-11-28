@@ -30,6 +30,11 @@ private const val TAG = "VolumeKeyHandler"
  * (#10196), so the session is held only while the activity is in the
  * foreground: [onEnterBackground] releases it and [onBecomeActive] claims
  * it again. iOS scopes its Now Playing session the same way (#6090).
+ *
+ * The session is also left unclaimed while a reachable Wear OS watch has the
+ * Divine remote: Wear OS shows a phone's playing media session as media
+ * controls over the watch app, and their play and pause would start takes the
+ * user did not ask for. iOS does the same for the Apple Watch.
  */
 class VolumeKeyHandler(
     private val context: Context,
@@ -42,6 +47,8 @@ class VolumeKeyHandler(
     private var isEnabled = false
     private var volumeKeysEnabled = true  // Can be toggled independently
     private var mediaSession: MediaSessionCompat? = null
+    private var isAppActive = false
+    private var watchRemoteAvailable = false
     private var originalCallback: Window.Callback? = null
     private var callbackWrapper: KeyInterceptingCallback? = null
 
@@ -76,7 +83,8 @@ class VolumeKeyHandler(
         try {
             DivineCameraLog.d(TAG, "Enabling volume key handler...")
             setupWindowCallback()
-            if (appActive) claimMediaSession()
+            isAppActive = appActive
+            if (appActive && !watchRemoteAvailable) claimMediaSession()
             isEnabled = true
             volumeKeysEnabled = true
             DivineCameraLog.i(TAG, "Volume key handler enabled successfully")
@@ -128,6 +136,7 @@ class VolumeKeyHandler(
      * headset press reaches the app in front instead of recording (#10196).
      */
     fun onEnterBackground() {
+        isAppActive = false
         if (mediaSession == null) return
         releaseMediaSession()
         DivineCameraLog.d(TAG, "MediaSession released - app in background")
@@ -138,11 +147,33 @@ class VolumeKeyHandler(
      * while enabled, with a fresh activation cooldown.
      */
     fun onBecomeActive() {
-        if (!isEnabled || mediaSession != null) return
+        isAppActive = true
+        if (!isEnabled || mediaSession != null || watchRemoteAvailable) return
         try {
             claimMediaSession()
         } catch (e: Exception) {
             DivineCameraLog.e(TAG, "Failed to claim MediaSession: ${e.message}", e)
+        }
+    }
+
+    /**
+     * A reachable Wear OS watch gained or lost the Divine remote. Releases the
+     * media session while it has it, and claims it back afterwards if the
+     * handler is enabled and the activity is in the foreground.
+     */
+    fun setWatchRemoteAvailable(available: Boolean) {
+        if (watchRemoteAvailable == available) return
+        watchRemoteAvailable = available
+        if (available) {
+            if (mediaSession == null) return
+            releaseMediaSession()
+            DivineCameraLog.d(TAG, "MediaSession released - Wear OS remote reachable")
+        } else if (isEnabled && isAppActive && mediaSession == null) {
+            try {
+                claimMediaSession()
+            } catch (e: Exception) {
+                DivineCameraLog.e(TAG, "Failed to claim MediaSession: ${e.message}", e)
+            }
         }
     }
 

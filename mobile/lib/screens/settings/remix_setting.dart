@@ -67,8 +67,9 @@ class RemixSettingView extends StatelessWidget {
         final message = switch (state.saveStatus) {
           RemixSettingsSaveStatus.failedNoRelays =>
             context.l10n.profileSetupNoRelaysConnected,
+          RemixSettingsSaveStatus.failedRead ||
           RemixSettingsSaveStatus.failedPublish =>
-            context.l10n.profileSetupPublishFailed,
+            context.l10n.remixSettingSaveFailed,
           RemixSettingsSaveStatus.idle ||
           RemixSettingsSaveStatus.saving => null,
         };

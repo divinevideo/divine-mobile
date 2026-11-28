@@ -64,6 +64,13 @@ abstract final class CuratedListDraftReconciler {
     }
     // A private draft never inherits a visibility expansion from another copy.
     if (!desired.isPublic && remote.isPublic && !baseline.isPublic) return null;
+    // A change to the videos, order included, staged against an ordinary
+    // list needs a new decision when the authoritative revision is a series.
+    if (!baseline.isSeries &&
+        remote.isSeries &&
+        !_equal.equals(baseline.videoEventIds, desired.videoEventIds)) {
+      return null;
+    }
     final before = _publicationValue(baseline);
     final after = _publicationValue(desired);
     // An unchanged fallback remains implicit when the owner changes the name.

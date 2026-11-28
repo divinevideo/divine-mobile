@@ -143,12 +143,18 @@ abstract final class RoutePaths {
   static String collabRoomPartFor(String roomId) =>
       '$collabRoomBase/$roomId/part';
   static String conversationForId(String id) => '$inbox/conversation/$id';
+
+  /// A curated list at the web's address, `/list/{pubkey}/{listId}`. With
+  /// [play], the list opens playing the video at that position in the list.
   static String curatedListByAuthorFor({
     required String pubkey,
     required String listId,
+    int? play,
   }) {
-    return '$curatedListFeedBase/${Uri.encodeComponent(pubkey)}'
+    final path =
+        '$curatedListFeedBase/${Uri.encodeComponent(pubkey)}'
         '/${Uri.encodeComponent(listId)}';
+    return play == null ? path : '$path?play=$play';
   }
 
   /// A people list at the web's address, `/people-lists/{pubkey}/{listId}`,
@@ -196,6 +202,17 @@ abstract final class RoutePaths {
 
   static String exploreForIndex(int? index) =>
       index == null ? explore : '$explore/$index';
+
+  /// The featured Explore tab bound to the campaign feed [feedId], which shows
+  /// that feed or an unavailable state and never another featured feed.
+  ///
+  /// `featured` is the internal tab name, not a server slug; Explore ignores
+  /// that segment while `campaignFeedId` is set.
+  static String exploreFeaturedCampaign(String feedId) => Uri(
+    path: '$explore/tab/featured',
+    queryParameters: {ExploreQueryParameters.campaignFeedId: feedId},
+  ).toString();
+
   static String followersForPubkey(String pubkey) => '$followersBase/$pubkey';
   static String followingForPubkey(String pubkey) => '$followingBase/$pubkey';
   static String hashtagForTag(String tag) {
@@ -239,6 +256,12 @@ abstract final class RoutePaths {
       '$videoRepliesBase/${Uri.encodeComponent(videoId)}';
   static String videoMetadataEditFor(String videoId) =>
       '$videoMetadataEdit/${Uri.encodeComponent(videoId)}';
+}
+
+/// Query-parameter keys the Explore routes read.
+abstract final class ExploreQueryParameters {
+  /// Featured-feed configuration id a campaign push requires.
+  static const campaignFeedId = 'campaignFeedId';
 }
 
 /// Query-parameter keys the authentication routes read and write.

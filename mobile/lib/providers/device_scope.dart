@@ -18,8 +18,10 @@ import 'package:openvine/providers/db_cipher_key_provider.dart';
 import 'package:openvine/providers/documents_path_provider.dart';
 import 'package:openvine/providers/feed_mode_persistence_provider.dart';
 import 'package:openvine/providers/install_source_provider.dart';
+import 'package:openvine/providers/large_screen_orientation_provider.dart';
 import 'package:openvine/providers/log_message_batcher_provider.dart';
 import 'package:openvine/providers/player_cache_budget_provider.dart';
+import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/shorebird_availability_provider.dart';
 import 'package:openvine/providers/startup_performance_provider.dart';
@@ -27,6 +29,7 @@ import 'package:openvine/services/account_state_write_barrier.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:openvine/services/database_corruption_service.dart';
 import 'package:openvine/services/feed_mode_persistence.dart';
+import 'package:openvine/services/performance_monitoring_service.dart';
 import 'package:openvine/services/startup_performance_service.dart';
 import 'package:openvine/utils/log_message_batcher.dart';
 // Override lives in riverpod's misc barrel; flutter_riverpod does not
@@ -74,10 +77,14 @@ class DeviceScope {
     this.databaseCorruptionService,
     this.installSource = InstallSource.sideload,
     this.shorebirdAvailable = false,
+    this.ignoresOrientationLockOnLargeScreens = false,
     this.playerCacheBudgetBytes = kDefaultCacheMaxSizeBytes,
     this.accountOverrides = const [],
     AccountStateWriteBarrier? accountStateWrites,
-  }) : accountStateWrites = accountStateWrites ?? AccountStateWriteBarrier();
+    PerformanceMonitoringService? performanceMonitoring,
+  }) : accountStateWrites = accountStateWrites ?? AccountStateWriteBarrier(),
+       performanceMonitoring =
+           performanceMonitoring ?? PerformanceMonitoringService();
 
   /// The single open database connection, shared across every container.
   ///
@@ -116,6 +123,12 @@ class DeviceScope {
   /// times the bootstrap itself (#4743).
   final StartupPerformanceService startupPerformance;
 
+  /// Wraps Firebase Performance, a process-wide SDK that startup initializes
+  /// once. A per-container instance would never be initialized, so every
+  /// trace after an account switch would be dropped, and an analytics opt-out
+  /// made there would never reach the SDK flag (#11398).
+  final PerformanceMonitoringService performanceMonitoring;
+
   /// Reports crashes and non-fatals. Device-scoped because Crashlytics owns
   /// one process-wide handler chain; a per-container instance would reinstall
   /// `FlutterError.onError` on every account swap (#4743).
@@ -151,6 +164,10 @@ class DeviceScope {
   /// check constructs; `false` for a plain `flutter build` or `flutter run`.
   final bool shorebirdAvailable;
 
+  /// Whether the platform ignores the app's portrait lock on large displays,
+  /// asked once at startup; see [ignoresOrientationLockOnLargeScreensProvider].
+  final bool ignoresOrientationLockOnLargeScreens;
+
   /// The byte budget the Android player cache was created with at launch;
   /// see [playerCacheBudgetBytesProvider].
   final int playerCacheBudgetBytes;
@@ -177,8 +194,14 @@ class DeviceScope {
     ),
     installSourceProvider.overrideWithValue(installSource),
     shorebirdAvailableProvider.overrideWithValue(shorebirdAvailable),
+    ignoresOrientationLockOnLargeScreensProvider.overrideWithValue(
+      ignoresOrientationLockOnLargeScreens,
+    ),
     playerCacheBudgetBytesProvider.overrideWithValue(playerCacheBudgetBytes),
     startupPerformanceServiceProvider.overrideWithValue(startupPerformance),
+    performanceMonitoringServiceProvider.overrideWithValue(
+      performanceMonitoring,
+    ),
     crashReportingServiceProvider.overrideWithValue(crashReporting),
     logMessageBatcherProvider.overrideWithValue(logMessageBatcher),
     deviceScopeProvider.overrideWithValue(this),

@@ -22,6 +22,7 @@ AudioEvent _createTestAudio({
   String id = 'sound-id',
   String? title,
   String? source,
+  String? creatorName,
   double? duration = 65.0,
 }) {
   return AudioEvent(
@@ -31,6 +32,7 @@ AudioEvent _createTestAudio({
     url: 'https://example.com/$id.mp3',
     title: title,
     source: source,
+    creatorName: creatorName,
     duration: duration,
   );
 }
@@ -60,6 +62,7 @@ void main() {
       required AudioEvent audio,
       VoidCallback? onTogglePlayState,
       VoidCallback? onTapDone,
+      VoidCallback? onShowDetails,
       SoundCover? cover,
       bool isLoading = false,
       Locale? locale,
@@ -75,6 +78,7 @@ void main() {
             audioService: audioService,
             onTogglePlayState: onTogglePlayState ?? () {},
             onTapDone: onTapDone ?? () {},
+            onShowDetails: onShowDetails,
             isLoading: isLoading,
           ),
         ),
@@ -95,6 +99,32 @@ void main() {
         expect(
           find.bySemanticsIdentifier(SemanticIds.audioSelectionDoneButton),
           findsOneWidget,
+        );
+
+        handle.dispose();
+      });
+
+      testWidgets("reads the sound's title and says a tap opens its details", (
+        tester,
+      ) async {
+        final handle = tester.ensureSemantics();
+        await tester.pumpWidget(
+          buildWidget(
+            audio: _createTestAudio(title: 'Track'),
+            onShowDetails: () {},
+          ),
+        );
+        await tester.pump();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(
+          tester.getSemantics(find.text('Track')),
+          isSemantics(
+            label: 'Track\n01:05',
+            hint: l10n.videoEditorAudioOpenSoundDetails,
+            isButton: true,
+            hasTapAction: true,
+          ),
         );
 
         handle.dispose();
@@ -173,6 +203,25 @@ void main() {
         await tester.pump();
 
         expect(find.textContaining('Artist X'), findsOneWidget);
+      });
+
+      testWidgets('names the creator of a library sound, not its source link', (
+        tester,
+      ) async {
+        const source = 'https://example.com/sounds/crypto';
+        await tester.pumpWidget(
+          buildWidget(
+            audio: _createTestAudio(
+              title: 'Crypto',
+              source: source,
+              creatorName: 'Kevin MacLeod',
+            ),
+          ),
+        );
+        await tester.pump();
+
+        expect(find.textContaining('Kevin MacLeod'), findsOneWidget);
+        expect(find.textContaining(source), findsNothing);
       });
     });
 
@@ -275,6 +324,53 @@ void main() {
         expect(done, isTrue);
       });
 
+      testWidgets("opens the sound's details from its cover and its title", (
+        tester,
+      ) async {
+        var opened = 0;
+        await tester.pumpWidget(
+          buildWidget(
+            audio: _createTestAudio(title: 'Track'),
+            onShowDetails: () => opened++,
+          ),
+        );
+        await tester.pump();
+
+        await tester.tap(find.byType(SoundCoverImage));
+        await tester.tap(find.text('Track'));
+        await tester.pump();
+
+        expect(opened, equals(2));
+      });
+
+      testWidgets('offers no details for a sound without a page', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(audio: _createTestAudio(title: 'Track')),
+        );
+        await tester.pump();
+
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is DivineIcon &&
+                widget.icon == DivineIconName.caretRight,
+          ),
+          findsNothing,
+        );
+        expect(
+          tester.getSemantics(find.text('Track')),
+          isNot(
+            isSemantics(
+              hint: lookupAppLocalizations(
+                const Locale('en'),
+              ).videoEditorAudioOpenSoundDetails,
+            ),
+          ),
+        );
+      });
+
       testWidgets('disables Use while audio is loading', (tester) async {
         var done = false;
         await tester.pumpWidget(
@@ -367,7 +463,11 @@ void main() {
         expect(progress(tester), 0.08);
       });
 
-      testWidgets('starts over when the preview loops', (tester) async {
+      // The position is sampled, so playing the preview again can arrive as
+      // a jump back rather than as zero.
+      testWidgets('starts over when the preview plays again from its start', (
+        tester,
+      ) async {
         await tester.pumpWidget(buildWidget(audio: _createTestAudio()));
         await tester.pump();
 

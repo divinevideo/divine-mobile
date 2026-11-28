@@ -1575,24 +1575,23 @@ class FunnelcakeApiClient {
     }
   }
 
-  /// Fetches videos by hashtag, sorted by trending score.
+  /// Fetches a ranked hashtag page with its opaque continuation cursor.
   ///
-  /// [hashtag] is the hashtag to filter by (without `#` prefix).
-  /// [limit] is the maximum number of videos to return (defaults to 50).
-  /// [before] is an optional Unix timestamp cursor for pagination.
-  ///
-  /// Returns a list of [VideoStats] objects sorted by trending score.
+  /// [cursor] is the previous page's `nextCursor`; omit it for the first page.
+  /// A null `nextCursor` means there is no next page. The cursor comes from
+  /// Funnelcake and survives client-side row filtering.
   ///
   /// Throws:
   /// - [FunnelcakeNotConfiguredException] if the API is not configured.
-  /// - [FunnelcakeException] if the hashtag is empty.
-  /// - [FunnelcakeApiException] if the request fails.
+  /// - [FunnelcakeException] if [hashtag] is empty or just `#`.
+  /// - [FunnelcakeApiException] if the server returns a non-200 status.
   /// - [FunnelcakeTimeoutException] if the request times out.
   /// - [FunnelcakeException] for other errors.
-  Future<List<VideoStats>> getVideosByHashtag({
+  Future<({List<VideoStats> videos, String? nextCursor})>
+  getVideosByHashtagPage({
     required String hashtag,
     int limit = 50,
-    int? before,
+    String? cursor,
   }) async {
     if (!isAvailable) {
       throw const FunnelcakeNotConfiguredException();
@@ -1607,27 +1606,29 @@ class FunnelcakeApiClient {
       'tag': normalizedTag,
       'sort': 'trending',
       'limit': limit.toString(),
+      'cursor': ?cursor,
     });
-    if (before != null) {
-      queryParams['before'] = before.toString();
-    }
 
     final uri = Uri.parse(
-      '$_baseUrl/api/videos',
+      '$_baseUrl/api/v2/videos',
     ).replace(queryParameters: queryParams);
 
     try {
       final response = await _get(uri);
 
       if (response.statusCode == 200) {
-        final (:items, hasMore: _, nextCursor: _) = _unwrapListResponse(
+        final (:items, :hasMore, :nextCursor) = _unwrapListResponse(
           jsonDecode(response.body),
         );
 
-        return items
+        final videos = items
             .map((v) => VideoStats.fromJson(v as Map<String, dynamic>))
             .where((v) => v.id.isNotEmpty && v.videoUrl.isNotEmpty)
             .toList();
+        return (
+          videos: videos,
+          nextCursor: hasMore == false ? null : nextCursor,
+        );
       } else {
         throw FunnelcakeApiException(
           message: 'Failed to fetch videos by hashtag',
@@ -2931,61 +2932,126 @@ class FunnelcakeApiClient {
     SoundKind.effect => 'sfx',
   };
 
-  /// Fetches the sounds being adopted right now, the most trending first,
-  /// each with its [SoundStats.usageCount].
+  /// Most lists one [searchLists] page holds, the server's limit.
+  static const maxListSearchLimit = 100;
+
+  /// Searches public NIP-51 lists by [query] against their title and
+  /// description, from the server's list index.
   ///
-  /// Trending weighs recent reuse, so a sound climbs as people start using
-  /// it rather than by its lifetime total.
-  ///
-  /// [limit] is the maximum number of results; the server caps it at 100.
-  /// [offset] skips that many of the ranking, for the pages after the first.
+  /// Every word of [query] must match. Cards come best match first: exact
+  /// titles, then title prefixes, then other title matches, then by loops and
+  /// members. Deleted lists, moderation sets and the empty default video list
+  /// are left out; the index refreshes every 30 minutes, so a list published
+  /// since may be missing. [kind] narrows the search to one list kind; `null`
+  /// searches both. [cursor] is the [ListSearchResponse.nextCursor] of the
+  /// page before.
   ///
   /// Throws:
+  /// - [ArgumentError] if [limit] is not between 1 and [maxListSearchLimit].
   /// - [FunnelcakeNotConfiguredException] if the API is not configured.
+  /// - [FunnelcakeException] if [query] is blank.
   /// - [FunnelcakeApiException] if the request fails.
   /// - [FunnelcakeTimeoutException] if the request times out.
-  /// - [FunnelcakeException] for other errors.
-  Future<List<SoundStats>> getTrendingSounds({
-    int limit = 50,
-    int offset = 0,
+  /// - [FunnelcakeException] for other errors, a malformed answer included.
+  Future<ListSearchResponse> searchLists({
+    required String query,
+    PublicListKind? kind,
+    int limit = 25,
+    String? cursor,
   }) async {
+    if (limit < 1 || limit > maxListSearchLimit) {
+      throw ArgumentError.value(
+        limit,
+        'limit',
+        'Must be between 1 and $maxListSearchLimit',
+      );
+    }
     if (!isAvailable) {
       throw const FunnelcakeNotConfiguredException();
     }
 
-    final uri = Uri.parse('$_baseUrl/api/sounds').replace(
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) {
+      throw const FunnelcakeException('Search query cannot be empty');
+    }
+
+    final uri = Uri.parse('$_baseUrl/api/v2/search/lists').replace(
       queryParameters: {
-        'sort': 'trending',
+        'q': trimmed,
+        if (kind != null) 'kind': kind.value.toString(),
         'limit': limit.toString(),
-        if (offset > 0) 'offset': offset.toString(),
+        if (cursor != null && cursor.isNotEmpty) 'cursor': cursor,
       },
     );
+    return _getListPage(uri, action: 'search lists');
+  }
 
+  /// Public NIP-51 lists of [kind], most recently updated first, from the
+  /// server's list index, for browsing without a search term.
+  ///
+  /// Leaves out what [searchLists] leaves out, plus empty lists and
+  /// direct-message bookkeeping sets; a people list appears only when its
+  /// owner has posted a video. The index refreshes every 30 minutes. [cursor]
+  /// is the [ListSearchResponse.nextCursor] of the page before.
+  ///
+  /// Throws:
+  /// - [ArgumentError] if [limit] is not between 1 and [maxListSearchLimit].
+  /// - [FunnelcakeNotConfiguredException] if the API is not configured.
+  /// - [FunnelcakeApiException] if the request fails.
+  /// - [FunnelcakeTimeoutException] if the request times out.
+  /// - [FunnelcakeException] for other errors, a malformed answer included.
+  Future<ListSearchResponse> discoverLists({
+    required PublicListKind kind,
+    int limit = 25,
+    String? cursor,
+  }) async {
+    if (limit < 1 || limit > maxListSearchLimit) {
+      throw ArgumentError.value(
+        limit,
+        'limit',
+        'Must be between 1 and $maxListSearchLimit',
+      );
+    }
+    if (!isAvailable) {
+      throw const FunnelcakeNotConfiguredException();
+    }
+
+    final uri = Uri.parse('$_baseUrl/api/v2/lists/discover').replace(
+      queryParameters: {
+        'kind': kind.value.toString(),
+        'limit': limit.toString(),
+        if (cursor != null && cursor.isNotEmpty) 'cursor': cursor,
+      },
+    );
+    return _getListPage(uri, action: 'discover lists');
+  }
+
+  /// One page of list cards at [uri]; [action] names the call in errors.
+  Future<ListSearchResponse> _getListPage(
+    Uri uri, {
+    required String action,
+  }) async {
     try {
       final response = await _get(uri);
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as List<dynamic>;
-        return data
-            .whereType<Map<String, dynamic>>()
-            .map(SoundStats.fromJson)
-            .toList();
-      } else {
+      if (response.statusCode != 200) {
         throw FunnelcakeApiException(
-          message: 'Failed to fetch trending sounds',
+          message: 'Failed to $action',
           statusCode: response.statusCode,
           url: uri.toString(),
         );
       }
+
+      final data = jsonDecode(response.body);
+      if (data is! Map<String, dynamic>) {
+        throw FormatException('Malformed answer to $action');
+      }
+      return ListSearchResponse.fromJson(data);
     } on TimeoutException {
       throw FunnelcakeTimeoutException(uri.toString());
     } on FunnelcakeException {
       rethrow;
     } catch (e) {
-      throw FunnelcakeException(
-        'Failed to fetch trending sounds: $e',
-        cause: e,
-      );
+      throw FunnelcakeException('Failed to $action: $e', cause: e);
     }
   }
 
@@ -3256,6 +3322,7 @@ class FunnelcakeApiClient {
     String? category,
     String? cursor,
     String? seed,
+    String? seedVideoId,
     List<String> preferredLanguages = const [],
     String? viewerCountry,
   }) async {
@@ -3279,6 +3346,9 @@ class FunnelcakeApiClient {
     }
     if (seed != null && seed.isNotEmpty) {
       queryParams['seed'] = seed;
+    }
+    if (seedVideoId != null && seedVideoId.isNotEmpty) {
+      queryParams['seed_video_id'] = seedVideoId;
     }
     _addViewerPreferenceQueryParameters(
       queryParams,

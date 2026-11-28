@@ -12,6 +12,7 @@ import 'package:likes_repository/src/blocked_liker_filter.dart';
 import 'package:likes_repository/src/exceptions.dart';
 import 'package:likes_repository/src/likes_local_storage.dart';
 import 'package:likes_repository/src/likes_repository_reportable_sites.dart';
+import 'package:likes_repository/src/models/like_counts.dart';
 import 'package:likes_repository/src/models/like_record.dart';
 import 'package:likes_repository/src/models/likers_page.dart';
 import 'package:likes_repository/src/models/likes_sync_result.dart';
@@ -92,6 +93,14 @@ typedef _VoteSnapshot = ({
 /// (`LikesRepository._provesAbsence`), `_queryChunkedDetailed` only that no
 /// chunk ran out of time or reached no relay.
 typedef _RelayRead = ({List<Event> events, bool isComplete});
+
+/// A count read: its events, whether every relay settled it, and the filter
+/// values a relay answered (#9223).
+typedef _CountRead = ({
+  List<Event> events,
+  bool isComplete,
+  Set<String> answeredValues,
+});
 
 /// One page from Funnelcake after the retraction check. `listedAnyone` says
 /// whether the API listed someone before that check removed anyone.
@@ -1863,9 +1872,12 @@ class LikesRepository {
   /// (#6021). The two denominators are reconciled in divine-funnelcake#626.
   ///
   /// Returns `null` when the COUNT for a non-addressable event gets no
-  /// answer from any relay, or when the read for an addressable one runs out
-  /// of time or reaches no relay (#10846). Nothing is cached then, so the
-  /// next call asks again.
+  /// answer from any relay, or when no relay answers the read for an
+  /// addressable one (#10846), or when a missed retraction could change the
+  /// count. Nothing is cached then, so the next call asks again.
+  ///
+  /// A count that missed a readable relay is returned as a floor. It is not
+  /// cached, so the next call asks again (#9223).
   ///
   /// Note: This counts all likes, not just the current user's.
   Future<int?> getLikeCount(String eventId, {String? addressableId}) async {
@@ -1873,6 +1885,7 @@ class LikesRepository {
     if (cached != null) return cached;
 
     int count;
+    bool isComplete;
 
     if (addressableId != null && addressableId.isNotEmpty) {
       // Resolve the count from a filtered event fetch rather than NIP-45
@@ -1885,20 +1898,25 @@ class LikesRepository {
         addressableIds: {eventId: addressableId},
         waitForEveryRelay: false,
       );
-      if (!resolved.isComplete) return null;
+      if (!resolved.answeredEventIds.contains(eventId)) return null;
       count = resolved.likersByEvent[eventId]?.length ?? 0;
+      isComplete = resolved.isComplete;
     } else {
       // Query relays for the count of Kind 7 reactions on this event.
       final filterByE = Filter(kinds: const [EventKind.reaction], e: [eventId]);
       try {
         final result = await _nostrClient.countEvents([filterByE]);
         count = result.count;
+        isComplete = result.isComplete;
       } on CountUnavailableException {
         return null;
       }
     }
 
-    _writeCachedLikeCount(eventId, count, addressableId: addressableId);
+    // A count some relay did not settle is a floor: show it, then ask again.
+    if (isComplete) {
+      _writeCachedLikeCount(eventId, count, addressableId: addressableId);
+    }
     return count;
   }
 
@@ -1922,19 +1940,19 @@ class LikesRepository {
   /// batch composition, and whichever result lands first is cached for the
   /// session.
   ///
-  /// Returns a map of event ID to like count. Events with zero likes
-  /// are included with a count of 0. When the resolved distinct-liker read
-  /// runs out of time or reaches no relay, the ids it was asked about are
-  /// left out and nothing is cached for them, so the next call asks again
-  /// (#10846). That read does not wait for every relay, so like
-  /// [getLikeCount] it can fall below the true total.
+  /// Returns [LikeCounts] mapping event ID to like count. Events with zero
+  /// likes are included with a count of 0. When no relay answers the read,
+  /// the ids it was asked about are left out and nothing is cached for them,
+  /// so the next call asks again (#10846). When a relay answered but another
+  /// did not settle, the counts are returned as a floor, their ids are listed
+  /// in [LikeCounts.incompleteIds], and they are not cached (#9223).
   ///
   /// Note: This counts all likes, not just the current user's.
-  Future<Map<String, int>> getLikeCounts(
+  Future<LikeCounts> getLikeCounts(
     List<String> eventIds, {
     Map<String, String>? addressableIds,
   }) async {
-    if (eventIds.isEmpty) return {};
+    if (eventIds.isEmpty) return const LikeCounts(counts: {});
 
     // Separate cached vs uncached IDs to skip relay queries for known counts
     final counts = <String, int>{};
@@ -1951,7 +1969,7 @@ class LikesRepository {
       }
     }
 
-    if (uncachedIds.isEmpty) return counts;
+    if (uncachedIds.isEmpty) return LikeCounts(counts: counts);
 
     final uncachedAddressableIds = <String, String>{};
     if (addressableIds != null && addressableIds.isNotEmpty) {
@@ -1969,42 +1987,53 @@ class LikesRepository {
         addressableIds: uncachedAddressableIds,
         waitForEveryRelay: false,
       );
-      if (!resolved.isComplete) return counts;
-      for (final id in uncachedIds) {
+      for (final id in resolved.answeredEventIds) {
         final count = resolved.likersByEvent[id]?.length ?? 0;
         counts[id] = count;
-        _writeCachedLikeCount(
-          id,
-          count,
-          addressableId: uncachedAddressableIds[id],
-        );
+        if (resolved.isComplete) {
+          _writeCachedLikeCount(
+            id,
+            count,
+            addressableId: uncachedAddressableIds[id],
+          );
+        }
       }
-      return counts;
+      return LikeCounts(
+        counts: counts,
+        incompleteIds: resolved.isComplete
+            ? const {}
+            : resolved.answeredEventIds,
+      );
     }
 
     // NIP-45 COUNT with multiple event IDs returns total count, not per-event
     // So we need to fall back to querying events and counting client-side
-    final eventsByE = await _queryReactionsByEventIds(uncachedIds);
-
-    // Count reactions per target event from e-tag query
-    final uncachedIdSet = uncachedIds.toSet();
-    for (final id in uncachedIds) {
+    final read = await _queryChunkedDetailed(
+      uncachedIds,
+      (chunk) => Filter(kinds: const [EventKind.reaction], e: chunk),
+      waitForEveryRelay: false,
+    );
+    // Count only targets whose chunk received an answer, including zeroes.
+    final answeredIds = read.answeredValues;
+    for (final id in answeredIds) {
       counts[id] = 0;
     }
 
-    for (final event in eventsByE) {
+    for (final event in read.events) {
       final targetId = _extractTargetEventId(event);
-      if (targetId != null && uncachedIdSet.contains(targetId)) {
+      if (targetId != null && answeredIds.contains(targetId)) {
         counts[targetId] = (counts[targetId] ?? 0) + 1;
       }
     }
 
-    // Populate cache with fetched counts
-    for (final id in uncachedIds) {
+    // A read some relay did not settle is a floor: return it, cache nothing.
+    if (!read.isComplete) {
+      return LikeCounts(counts: counts, incompleteIds: answeredIds);
+    }
+    for (final id in answeredIds) {
       _writeCachedLikeCount(id, counts[id]!);
     }
-
-    return counts;
+    return LikeCounts(counts: counts);
   }
 
   /// Get vote counts (upvotes and downvotes) for multiple events.
@@ -3255,13 +3284,17 @@ class LikesRepository {
   /// The active likers of each of [eventIds], read from the relays, and
   /// whether the reaction reads finished.
   ///
-  /// With [waitForEveryRelay] a read finishes only once every relay settled;
-  /// without it, a settle window after the first relays answered, so only a
-  /// read that runs out of time or reaches no relay is unfinished.
-  ///
-  /// The deletion read that follows does not affect completeness: a
-  /// retraction it misses leaves someone listed, never anyone missing.
-  Future<({Map<String, List<String>> likersByEvent, bool isComplete})>
+  /// Lists use the settlement rules in [_queryChunkedDetailed] and apply
+  /// whatever retractions arrived. Counts require a settled retraction read
+  /// before reporting a target with candidate reactions: missing a retraction
+  /// could inflate the apparent floor.
+  Future<
+    ({
+      Map<String, List<String>> likersByEvent,
+      bool isComplete,
+      Set<String> answeredEventIds,
+    })
+  >
   _fetchResolvedLikersByEvent(
     List<String> eventIds, {
     required bool waitForEveryRelay,
@@ -3271,6 +3304,7 @@ class LikesRepository {
       return (
         likersByEvent: const <String, List<String>>{},
         isComplete: true,
+        answeredEventIds: const <String>{},
       );
     }
 
@@ -3300,6 +3334,11 @@ class LikesRepository {
       ),
     ]);
     final isComplete = reads.every((read) => read.isComplete);
+    final answeredEventIds = {
+      ...reads[0].answeredValues,
+      for (final coordinate in reads[1].answeredValues)
+        aTagToEventId[coordinate]!,
+    };
 
     final reactionsByTarget = {
       for (final eventId in eventIds) eventId: <String, Event>{},
@@ -3321,10 +3360,36 @@ class LikesRepository {
       return (
         likersByEvent: {for (final eventId in eventIds) eventId: <String>[]},
         isComplete: isComplete,
+        answeredEventIds: answeredEventIds,
       );
     }
 
-    final deletedReactionIds = await _deletedReactionIds(allReactionsById);
+    final reactionIds = allReactionsById.keys.toList();
+    Filter deletionFilter(List<String> chunk) =>
+        Filter(kinds: const [EventKind.eventDeletion], e: chunk);
+
+    final List<Event> deletions;
+    if (waitForEveryRelay) {
+      deletions = await _queryChunked(reactionIds, deletionFilter);
+    } else {
+      final read = await _readCountChunks(
+        reactionIds,
+        deletionFilter,
+        requireAllRelaysSettled: true,
+      );
+      if (!read.isComplete) {
+        return (
+          likersByEvent: const <String, List<String>>{},
+          isComplete: false,
+          answeredEventIds: {
+            for (final id in answeredEventIds)
+              if (reactionsByTarget[id]!.isEmpty) id,
+          },
+        );
+      }
+      deletions = read.events;
+    }
+    final deletedReactionIds = _deletedReactionIds(allReactionsById, deletions);
 
     return (
       likersByEvent: {
@@ -3335,32 +3400,17 @@ class LikesRepository {
           ),
       },
       isComplete: isComplete,
+      answeredEventIds: answeredEventIds,
     );
   }
 
   /// Resolves which of [reactionsById] their own author has since retracted.
   ///
-  /// Scopes the deletion query to the reaction ids already fetched, so an
-  /// `authors:` filter would be redundant (dropped to halve the frame size).
-  /// Chunks the `#e` list so a very high-engagement target can't build a
-  /// single REQ frame over the relay's `max_message_length` — an oversized
-  /// frame errors the socket and the query fails open, counting deletes
-  /// (#5751).
-  ///
-  /// Only honors a Kind 5 whose author matches the reaction's author —
-  /// otherwise anyone could suppress someone else's vote by publishing a
-  /// deletion that references the other user's reaction id.
-  Future<Set<String>> _deletedReactionIds(
+  /// Only honors a Kind 5 whose author matches the reaction's author.
+  Set<String> _deletedReactionIds(
     Map<String, Event> reactionsById,
-  ) async {
-    final reactionIds = reactionsById.keys.toList();
-    if (reactionIds.isEmpty) return const {};
-
-    final deletions = await _queryEventsByEIds(
-      reactionIds,
-      kind: EventKind.eventDeletion,
-    );
-
+    List<Event> deletions,
+  ) {
     final deleted = <String>{};
     for (final deletion in deletions) {
       for (final tag in deletion.tags) {
@@ -3376,29 +3426,12 @@ class LikesRepository {
     return deleted;
   }
 
-  /// Kind 7 reactions targeting any of [eventIds] via `#e`.
-  Future<List<Event>> _queryReactionsByEventIds(List<String> eventIds) {
-    return _queryEventsByEIds(eventIds, kind: EventKind.reaction);
-  }
-
-  /// Events of [kind] targeting any of [eventIds] via `#e`.
-  Future<List<Event>> _queryEventsByEIds(
-    List<String> eventIds, {
-    required int kind,
-  }) {
-    return _queryChunked(eventIds, (chunk) => Filter(kinds: [kind], e: chunk));
-  }
-
   /// Runs [buildFilter] over [values] in chunks capped at [_reqEidChunkSize]
   /// values and [_reqTagValueChunkBytes] bytes, so no single REQ frame can
   /// exceed the relay's message cap.
   ///
-  /// Deduplicates by event id once there is more than one chunk. Each chunk
-  /// is its own `queryEvents` call with its own dedup box, so an event that
-  /// tags targets in two different chunks comes back from both — and
-  /// [getLikeCounts] counts per e-tag occurrence, so a raw concatenation
-  /// would score that reaction twice. A single chunk is already deduped by
-  /// the client.
+  /// Deduplicates by event id across chunks. An event that tags targets in
+  /// two chunks can come back from both reads.
   Future<List<Event>> _queryChunked(
     List<String> values,
     Filter Function(List<String> chunk) buildFilter,
@@ -3416,31 +3449,49 @@ class LikesRepository {
     }.values.toList();
   }
 
-  /// [_queryChunked] that also says whether every chunk's read finished.
+  /// [_queryChunked] that also reports completeness and which chunks received
+  /// an answer.
   ///
   /// With [waitForEveryRelay] every chunk waits for every relay, so a list
   /// read does not pass a short answer off as the whole one (#10846): a slow
   /// relay is not cut off a settle window after a faster one answers, and a
   /// relay's terminal refusal counts as settled once another relay answered.
-  /// Without it a chunk settles a window after the first relays answer.
-  /// Either way the read is complete only when no chunk ran out of time and
-  /// each asked at least one relay. Unlike [_readChunked], a relay that may
-  /// have stopped at its result-size limit still counts as finished.
-  Future<_RelayRead> _queryChunkedDetailed(
+  /// The read is then complete only when no chunk ran out of time and each
+  /// asked at least one relay.
+  ///
+  /// Without it each chunk settles a window after the first relays answer,
+  /// read through `readEvents`. Each chunk must end [QueryEnd.complete]
+  /// and reach every readable network relay. A failed send, early settlement,
+  /// CLOSED refusal, dropped socket, deadline or evidence of truncation
+  /// leaves a floor (#9223).
+  Future<_CountRead> _queryChunkedDetailed(
     List<String> values,
     Filter Function(List<String> chunk) buildFilter, {
     required bool waitForEveryRelay,
   }) async {
-    if (values.isEmpty) return (events: const <Event>[], isComplete: true);
+    if (values.isEmpty) {
+      return (
+        events: const <Event>[],
+        isComplete: true,
+        answeredValues: const <String>{},
+      );
+    }
+
+    if (!waitForEveryRelay) return _readCountChunks(values, buildFilter);
+    final chunks = _chunkStrings(values, _reqEidChunkSize);
 
     final results = await Future.wait([
-      for (final chunk in _chunkStrings(values, _reqEidChunkSize))
+      for (final chunk in chunks)
         _nostrClient.queryEventsDetailed(
           [buildFilter(chunk)],
-          requireAllRelaysSettled: waitForEveryRelay,
-          acceptRelayClosedWhenOthersAnswered: waitForEveryRelay,
+          requireAllRelaysSettled: true,
+          acceptRelayClosedWhenOthersAnswered: true,
         ),
     ]);
+    final answeredValues = {
+      for (var i = 0; i < chunks.length; i++)
+        if (!results[i].timedOut && !results[i].noRelays) ...chunks[i],
+    };
     return (
       events: {
         for (final result in results)
@@ -3449,6 +3500,43 @@ class LikesRepository {
       isComplete: results.every(
         (result) => !result.timedOut && !result.noRelays,
       ),
+      answeredValues: answeredValues,
+    );
+  }
+
+  /// Reads chunked reaction or retraction filters and preserves count coverage.
+  Future<_CountRead> _readCountChunks(
+    List<String> values,
+    Filter Function(List<String> chunk) buildFilter, {
+    bool requireAllRelaysSettled = false,
+  }) async {
+    final chunks = _chunkStrings(values, _reqEidChunkSize);
+    final reads = await Future.wait([
+      for (final chunk in chunks)
+        _nostrClient.readEvents(
+          [buildFilter(chunk)],
+          requireAllRelaysSettled: requireAllRelaysSettled,
+        ),
+    ]);
+    return (
+      // A single read is already deduplicated by the client.
+      events: reads.length == 1
+          ? reads.first.events
+          : {
+              for (final read in reads)
+                for (final event in read.events) event.id: event,
+            }.values.toList(),
+      isComplete: reads.every(
+        (read) =>
+            read.isComplete &&
+            read.answeredNetworkRelayCount > 0 &&
+            read.unsentNetworkRelayCount == 0 &&
+            !read.hasCapEvidence,
+      ),
+      answeredValues: {
+        for (var i = 0; i < chunks.length; i++)
+          if (reads[i].answeredNetworkRelayCount > 0) ...chunks[i],
+      },
     );
   }
 

@@ -78,6 +78,13 @@ class MockDivineCameraPlatform
     return true;
   }
 
+  final remoteRecorderStates = <RemoteRecorderState?>[];
+
+  @override
+  Future<void> updateRemoteRecorderState(RemoteRecorderState? state) async {
+    remoteRecorderStates.add(state);
+  }
+
   @override
   Future<String?> getPlatformVersion() => Future.value('42');
 
@@ -328,6 +335,13 @@ void main() {
       test('setVolumeKeysEnabled throws', () {
         expect(
           () => basePlatform.setVolumeKeysEnabled(enabled: true),
+          throwsUnimplementedError,
+        );
+      });
+
+      test('updateRemoteRecorderState throws', () {
+        expect(
+          () => basePlatform.updateRemoteRecorderState(null),
           throwsUnimplementedError,
         );
       });
@@ -1133,6 +1147,23 @@ void main() {
         expect(DivineCamera.instance.remoteRecordControlEnabled, isFalse);
       });
 
+      test(
+        'updateRemoteRecorderState hands the state to the platform',
+        () async {
+          const state = RemoteRecorderState(
+            recorded: Duration(seconds: 2),
+            budget: Duration(milliseconds: 6300),
+            modeName: 'Capture',
+            isShutterActive: false,
+          );
+
+          await DivineCamera.instance.updateRemoteRecorderState(state);
+          await DivineCamera.instance.updateRemoteRecorderState(null);
+
+          expect(mockPlatform.remoteRecorderStates, equals([state, null]));
+        },
+      );
+
       test('setVolumeKeysEnabled enables volume keys', () async {
         await DivineCamera.instance.initialize();
 
@@ -1556,6 +1587,10 @@ void main() {
         RemoteRecordTrigger.fromNativeString('bluetooth'),
         equals(RemoteRecordTrigger.bluetooth),
       );
+      expect(
+        RemoteRecordTrigger.fromNativeString('watch'),
+        equals(RemoteRecordTrigger.watch),
+      );
     });
 
     test('fromNativeString defaults to volumeUp for unknown values', () {
@@ -1571,8 +1606,21 @@ void main() {
 
     test('all trigger values are distinct', () {
       const triggers = RemoteRecordTrigger.values;
-      expect(triggers.length, equals(3));
-      expect(triggers.toSet().length, equals(3));
+      expect(triggers.length, equals(6));
+      expect(triggers.toSet().length, equals(6));
+    });
+
+    test('round trips explicit Watch shutter actions', () {
+      expect(RemoteRecordTrigger.watchStart.toNativeString(), 'watchStart');
+      expect(RemoteRecordTrigger.watchStop.toNativeString(), 'watchStop');
+      expect(
+        RemoteRecordTrigger.fromNativeString('watchStart'),
+        RemoteRecordTrigger.watchStart,
+      );
+      expect(
+        RemoteRecordTrigger.fromNativeString('watchStop'),
+        RemoteRecordTrigger.watchStop,
+      );
     });
 
     test('toNativeString returns correct string for volumeUp', () {
@@ -1590,6 +1638,10 @@ void main() {
       expect(
         RemoteRecordTrigger.bluetooth.toNativeString(),
         equals('bluetooth'),
+      );
+      expect(
+        RemoteRecordTrigger.watch.toNativeString(),
+        equals('watch'),
       );
     });
   });
@@ -2497,6 +2549,44 @@ void _runMethodChannelTests() {
       expect(capturedCalls.first.arguments, {'enabled': false});
     });
 
+    test('updateRemoteRecorderState sends the recorder state', () async {
+      await methodChannelImpl.updateRemoteRecorderState(
+        RemoteRecorderState(
+          recorded: const Duration(milliseconds: 3900),
+          activeTakeStartedAt: DateTime.fromMillisecondsSinceEpoch(1700),
+          budget: const Duration(milliseconds: 6300),
+          modeName: 'Capture',
+          isShutterActive: true,
+          isShutterEnabled: false,
+          stillShutterCount: 3,
+        ),
+      );
+
+      expect(capturedCalls, hasLength(1));
+      expect(capturedCalls.first.method, 'updateRemoteRecorderState');
+      expect(capturedCalls.first.arguments, {
+        'recordedMs': 3900,
+        'activeTakeStartedAtMs': 1700,
+        'budgetMs': 6300,
+        'modeName': 'Capture',
+        'shutterActive': true,
+        'shutterEnabled': false,
+        'stillShutterCount': 3,
+        'stateId': 1,
+      });
+    });
+
+    test(
+      'updateRemoteRecorderState sends null for a closed recorder',
+      () async {
+        await methodChannelImpl.updateRemoteRecorderState(null);
+
+        expect(capturedCalls, hasLength(1));
+        expect(capturedCalls.first.method, 'updateRemoteRecorderState');
+        expect(capturedCalls.first.arguments, isNull);
+      },
+    );
+
     test('setVolumeKeysEnabled invokes method channel', () async {
       final result = await methodChannelImpl.setVolumeKeysEnabled(
         enabled: true,
@@ -2540,6 +2630,76 @@ void _runMethodChannelTests() {
         );
 
         expect(receivedTrigger, equals(RemoteRecordTrigger.volumeDown));
+      });
+
+      group('a watch press', () {
+        const recorder = RemoteRecorderState(
+          recorded: Duration.zero,
+          budget: Duration(seconds: 6),
+          modeName: 'Capture',
+          isShutterActive: true,
+        );
+
+        Future<void> press(String trigger, int? stateId) {
+          const codec = StandardMethodCodec();
+          return TestDefaultBinaryMessengerBinding
+              .instance
+              .defaultBinaryMessenger
+              .handlePlatformMessage(
+                'divine_camera',
+                codec.encodeMethodCall(
+                  MethodCall('onRemoteRecordTrigger', {
+                    'trigger': trigger,
+                    'stateId': stateId,
+                  }),
+                ),
+                (_) {},
+              );
+        }
+
+        test('made on the state last sent is passed on', () async {
+          final triggers = <RemoteRecordTrigger>[];
+          methodChannelImpl.onRemoteRecordTrigger = triggers.add;
+          await methodChannelImpl.updateRemoteRecorderState(recorder);
+          final stateId =
+              (capturedCalls.single.arguments as Map)['stateId'] as int;
+
+          await press('watchStop', stateId);
+
+          expect(triggers, equals([RemoteRecordTrigger.watchStop]));
+        });
+
+        // Native accepted the press before it heard of the recorder's next
+        // take: a Stop shown for one take must not stop the next.
+        test('made on a state since replaced is dropped', () async {
+          final triggers = <RemoteRecordTrigger>[];
+          methodChannelImpl.onRemoteRecordTrigger = triggers.add;
+          await methodChannelImpl.updateRemoteRecorderState(recorder);
+          final firstTake =
+              (capturedCalls.single.arguments as Map)['stateId'] as int;
+          await methodChannelImpl.updateRemoteRecorderState(
+            const RemoteRecorderState(
+              recorded: Duration(seconds: 2),
+              budget: Duration(seconds: 6),
+              modeName: 'Capture',
+              isShutterActive: true,
+            ),
+          );
+
+          await press('watchStop', firstTake);
+
+          expect(triggers, isEmpty);
+        });
+
+        test('made on a closed recorder is dropped', () async {
+          final triggers = <RemoteRecordTrigger>[];
+          methodChannelImpl.onRemoteRecordTrigger = triggers.add;
+          await methodChannelImpl.updateRemoteRecorderState(null);
+
+          await press('watchStart', null);
+
+          expect(triggers, isEmpty);
+        });
       });
 
       test('handles onRemoteRecordTrigger with null callback', () async {

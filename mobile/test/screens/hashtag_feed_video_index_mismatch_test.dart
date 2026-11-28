@@ -5,8 +5,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart';
 
-/// Reproduces the interleaving algorithm from
-/// HashtagFeedScreen._combineAndSortVideos (the grid's sort order).
+/// A stand-in grid order for the anchor test: trending and classics
+/// interleaved 1:1, deduplicated by id and vine id.
 List<VideoEvent> gridInterleave(
   List<VideoEvent> trending,
   List<VideoEvent> classics,
@@ -64,9 +64,9 @@ VideoEvent _video({
 
 void main() {
   group('Issue #1751: hashtag feed video index mismatch (regression)', () {
-    // The fullscreen feed may now resolve a ViewSource independently from the
-    // grid. The regression guard is that navigation passes the tapped video id,
-    // so the bloc can re-anchor playback after repository filtering/reordering.
+    // The reel starts from the grid's list, but the fullscreen bloc's filters
+    // can drop a video ahead of the tapped one, so navigation passes the tapped
+    // video id and the bloc re-anchors playback on it.
 
     late List<VideoEvent> trending;
     late List<VideoEvent> classics;

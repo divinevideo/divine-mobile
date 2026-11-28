@@ -860,9 +860,15 @@ class RelayManager {
       if (_relayFactory != null) {
         relay = _relayFactory(url);
       } else {
+        // The replacement may inherit unanswered publishes, so preserve the
+        // existing write policy when recreating its socket.
+        final previous = _relayPool.getRelay(url);
         relay = RelayBase(
           url,
-          RelayStatus(url),
+          RelayStatus(
+            url,
+            writeAccess: previous?.relayStatus.writeAccess ?? true,
+          ),
           channelFactory: _config.webSocketChannelFactory,
           diagnosticsSink: _diagnosticsSink,
         );
@@ -873,9 +879,11 @@ class RelayManager {
       // a stale relay object stays in the pool and no events flow through.
       _relayPool.remove(url);
 
-      // Add to pool and connect – autoSubscribe ensures any active
-      // subscriptions are resent to the newly connected relay so that
-      // queries (e.g. follower counts) don't silently miss data.
+      // Add to pool and connect – autoSubscribe resends the live
+      // subscriptions, and the pool hands the new relay the one-shot reads,
+      // COUNTs and awaited publishes the old one was still answering, so its
+      // socket asks for them again instead of leaving them to their callers'
+      // timeouts.
       final success = await _relayPool.add(relay, autoSubscribe: true);
       _log(
         'Connect ${success ? 'succeeded' : 'failed'}',

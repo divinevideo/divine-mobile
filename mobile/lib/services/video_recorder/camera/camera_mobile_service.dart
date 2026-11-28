@@ -166,7 +166,7 @@ class CameraMobileService extends CameraService implements DualCameraCapture {
             name: 'CameraMobileService',
             category: .video,
           );
-          callback();
+          callback(trigger);
         };
         Log.debug(
           '🎮 Remote record trigger callback re-applied after initialize',
@@ -668,10 +668,10 @@ class CameraMobileService extends CameraService implements DualCameraCapture {
   @override
   CameraInitializationError? get initializationError => _initializationError;
 
-  void Function()? _remoteRecordTriggerCallback;
+  void Function(RemoteRecordTrigger)? _remoteRecordTriggerCallback;
 
   @override
-  void setOnRemoteRecordTrigger(void Function()? callback) {
+  void setOnRemoteRecordTrigger(void Function(RemoteRecordTrigger)? callback) {
     _remoteRecordTriggerCallback = callback;
     if (!identical(_cameraOwner, this)) return;
     // Connect to native callback with logging
@@ -682,7 +682,7 @@ class CameraMobileService extends CameraService implements DualCameraCapture {
               name: 'CameraMobileService',
               category: .video,
             );
-            callback();
+            callback(trigger);
           }
         : null;
     Log.debug(

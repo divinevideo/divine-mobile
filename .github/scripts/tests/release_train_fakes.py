@@ -52,9 +52,9 @@ def release_notes_bundle(platform='ios', source='a' * 40):
     return {
         'schema': 1, 'platform': platform, 'source_sha': source,
         'baseline': {'version': '1.0.30', 'sha': 'b' * 40},
-        'locales': ['en-US'] if platform == 'ios' else [],
-        'testflight': [{'language': 'en-US', 'text': 'Try recording a loop.'}] if platform == 'ios' else [],
-        'app_store': [{'language': 'en-US', 'text': 'Videos load more smoothly.'}] if platform == 'ios' else [],
+        'locales': ['en-US'] if platform in {'ios', 'macos'} else [],
+        'testflight': [{'language': 'en-US', 'text': 'Try recording a loop.'}] if platform in {'ios', 'macos'} else [],
+        'app_store': [{'language': 'en-US', 'text': 'Videos load more smoothly.'}] if platform in {'ios', 'macos'} else [],
         'google_play': [{'language': language, 'text': TRANSLATED_SEARCH_NOTES[language]} for language in languages] if platform == 'android' else [],
         'changes': [], 'policy_sha256': 'c' * 64,
     }

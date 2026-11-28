@@ -34,12 +34,17 @@ class ShareSheetRecipientToggled extends ShareSheetEvent {
 
 /// Send video with an optional message to all selected recipients.
 class ShareSheetSendRequested extends ShareSheetEvent {
-  const ShareSheetSendRequested({this.message});
+  const ShareSheetSendRequested({this.message, this.only});
 
+  /// A single contact's row Send: sends to just them, and only while nothing
+  /// is selected and no message is typed.
+  final ShareableUser? only;
+
+  /// The optional note sent with the video; blank is sent as none.
   final String? message;
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [message, only];
 }
 
 /// Copy share link to clipboard.
@@ -50,4 +55,28 @@ class ShareSheetCopyLinkRequested extends ShareSheetEvent {
 /// Share externally via platform share sheet.
 class ShareSheetShareViaRequested extends ShareSheetEvent {
   const ShareSheetShareViaRequested();
+}
+
+/// The local thumbnail lookup that starts with the sheet found a file.
+class ShareSheetThumbnailPrepared extends ShareSheetEvent {
+  const ShareSheetThumbnailPrepared(this.path);
+
+  /// Path of the image-cache file holding the video's thumbnail.
+  final String path;
+
+  @override
+  List<Object?> get props => [path];
+}
+
+/// Local block or mute policy changed while the sheet was visible.
+class ShareSheetEligibilityChanged extends ShareSheetEvent {
+  const ShareSheetEligibilityChanged();
+}
+
+/// The signed-in account changed or its session is being torn down.
+///
+/// Clears every contact and selection and closes the sheet; the bloc then
+/// refuses all further work for the old account.
+class ShareSheetOwnerChanged extends ShareSheetEvent {
+  const ShareSheetOwnerChanged();
 }

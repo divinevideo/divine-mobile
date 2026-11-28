@@ -78,7 +78,7 @@ Then classify each claim and load the lens it names:
 | Claim is about | Read | Cheapest environment that can falsify it |
 |---|---|---|
 | Widget, state, lifecycle, async, cache, performance | `flutter-lens.md` | unit/bloc test → simulator or emulator (debug only) → physical device for hardware, push, background, profile and release |
-| Events, relays, signing, DMs, deletion, identity, NIPs | `nostr-lens.md` | local `nak serve` → local stack → staging → production read-only |
+| Events, relays, signing, DMs, deletion, identity, NIPs | `nostr-lens.md` | local `nak serve` → local stack → staging, if it still answers (`flutter-lens.md` §1) → production read-only |
 | Both (most Divine bugs) | both | the wire first: establish which side is wrong before driving the UI |
 
 ## 2. Static grounding (read-only)

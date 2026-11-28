@@ -463,7 +463,7 @@ class SnapshotChangesTest(unittest.TestCase):
         state = {'last_built_source': {'ios': 'a' * 40, 'android': 'a' * 40}}
         with patch('release_train.runner.subprocess.check_output', return_value='mobile/lib/main.dart\n'):
             snapshot = runtime.snapshot(state, {'ios': 'off', 'android': 'off'})
-        self.assertEqual(snapshot['changes'], {'ios': True, 'android': True})
+        self.assertEqual(snapshot['changes'], {'ios': True, 'macos': True, 'android': True})
 
 
 class StoreAuthorizationRefreshTest(unittest.TestCase):
@@ -893,3 +893,49 @@ class AppleLocalePreflightJournalTest(unittest.TestCase):
                 key = kind + ':ios:917'
                 self.assertEqual(state['holds'], {'ios': key})
                 self.assertEqual(state['operations'][key]['status'], 'ambiguous')
+
+    def test_apple_snapshot_filters_builds_to_ios_platform(self):
+        from urllib.parse import parse_qs, urlparse
+
+        from release_train.providers import Apple
+        from release_train.runner import Runtime
+
+        calls = []
+
+        def http(method, url, headers=None, body=None):
+            calls.append((method, url))
+            if '/betaGroups/public-group/builds' in url:
+                return {'data': []}
+            if '/betaGroups/public-group' in url:
+                return {
+                    'data': {
+                        'attributes': {
+                            'isInternalGroup': False,
+                            'publicLinkEnabled': True,
+                            'publicLink': 'https://testflight.apple.com/join/example',
+                        }
+                    }
+                }
+            if '/builds?' in url:
+                return {'data': [], 'included': []}
+            if '/reviewSubmissions' in url:
+                return {'data': []}
+            if '/appStoreVersions?' in url:
+                return {'data': []}
+            raise AssertionError(f'unexpected Apple API call: {method} {url}')
+
+        runtime = Runtime.__new__(Runtime)
+        runtime.apple = Apple('token', 'public-group', request=http)
+        runtime.ledger = release_train_fakes.MemoryLedgerStore()
+
+        runtime.apple_snapshot()
+
+        builds_urls = [url for _, url in calls if '/builds?' in url]
+        self.assertEqual(len(builds_urls), 1)
+        params = parse_qs(urlparse(builds_urls[0]).query)
+        self.assertEqual(params.get('filter[preReleaseVersion.platform]'), ['IOS'])
+
+        review_urls = [url for _, url in calls if '/reviewSubmissions' in url]
+        self.assertEqual(len(review_urls), 1)
+        review_params = parse_qs(urlparse(review_urls[0]).query)
+        self.assertEqual(review_params.get('filter[platform]'), ['IOS'])

@@ -2,6 +2,7 @@
 // ABOUTME: Revalidates current source linkage before use or metadata replacement.
 import 'package:dm_repository/dm_repository.dart';
 import 'package:models/models.dart';
+import 'package:openvine/utils/sound_reuse_source.dart';
 
 class PublishedVideoSoundClient implements SoundRequestPublisher {
   PublishedVideoSoundClient({
@@ -102,6 +103,9 @@ class PublishedVideoSoundClient implements SoundRequestPublisher {
     _checkAccount();
     final latest = await resolve(source.video.addressableId!);
     _checkPublication(latest);
+    if (!soundReuseSourceUnchanged(source.video, latest.video, audioEventId)) {
+      throw const SoundRequestException('Source video sound metadata changed');
+    }
     if (!await replaceMetadata(latest.video, audioEventId)) {
       throw const SoundRequestException(
         'Video audio metadata publication failed',

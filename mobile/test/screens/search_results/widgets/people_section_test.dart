@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:clock/clock.dart';
 import 'package:divine_ui/divine_ui.dart';
@@ -13,8 +15,10 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/search_results/widgets/people_section.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_empty_state.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_error_state.dart';
+import 'package:openvine/screens/search_results/widgets/search_user_tile.dart';
 import 'package:openvine/screens/search_results/widgets/section_header.dart';
 import 'package:profile_repository/profile_repository.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 import 'package:user_ranking/user_ranking.dart';
 
 import '../../../helpers/test_provider_overrides.dart';
@@ -356,6 +360,109 @@ void main() {
       verify(
         () => mockBloc.add(const UserSearchQueryChanged('retry-test')),
       ).called(1);
+    });
+
+    group('loading', () {
+      testWidgets(
+        'renders demo $SearchUserTile rows inside a $Skeletonizer, '
+        'announcing only the loading label',
+        (tester) async {
+          final semantics = tester.ensureSemantics();
+          when(() => mockBloc.state).thenReturn(
+            const UserSearchState(
+              status: UserSearchStatus.loading,
+              query: 'alice',
+            ),
+          );
+
+          await tester.pumpWidget(buildSubject());
+
+          final skeleton = find.bySubtype<Skeletonizer>();
+          expect(skeleton, findsOneWidget);
+          expect(
+            find.descendant(
+              of: skeleton,
+              matching: find.byType(SearchUserTile),
+            ),
+            findsNWidgets(3),
+          );
+          expect(
+            find.bySemanticsLabel(
+              AppLocalizationsEn().searchPeopleLoadingLabel,
+            ),
+            findsOneWidget,
+          );
+          expect(
+            find.bySemanticsLabel(RegExp('Demo Display Name')),
+            findsNothing,
+          );
+
+          semantics.dispose();
+        },
+      );
+
+      group('when results arrive', () {
+        late StreamController<UserSearchState> states;
+
+        setUp(() {
+          states = StreamController<UserSearchState>();
+          whenListen(
+            mockBloc,
+            states.stream,
+            initialState: const UserSearchState(
+              status: UserSearchStatus.loading,
+              query: 'test',
+            ),
+          );
+        });
+
+        tearDown(() => states.close());
+
+        Future<void> deliverResults(WidgetTester tester) async {
+          states.add(
+            UserSearchState(
+              status: UserSearchStatus.success,
+              query: 'test',
+              results: [testProfile],
+            ),
+          );
+          await tester.pump();
+        }
+
+        testWidgets('cross-fades the skeleton into the loaded rows', (
+          tester,
+        ) async {
+          await tester.pumpWidget(buildSubject());
+          expect(find.byType(SearchUserTile), findsNWidgets(3));
+
+          await deliverResults(tester);
+
+          // Mid-fade: the outgoing skeleton rows and the incoming row.
+          expect(find.byType(SearchUserTile), findsNWidgets(4));
+
+          // Past the 90 ms fade, which starts on the frame after the rebuild.
+          await tester.pump(const Duration(milliseconds: 250));
+
+          expect(find.byType(SearchUserTile), findsOneWidget);
+          expect(find.text('Test User'), findsOneWidget);
+        });
+
+        testWidgets('swaps without a fade when animations are disabled', (
+          tester,
+        ) async {
+          tester.platformDispatcher.accessibilityFeaturesTestValue =
+              const FakeAccessibilityFeatures(disableAnimations: true);
+          addTearDown(
+            tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+          );
+          await tester.pumpWidget(buildSubject());
+
+          await deliverResults(tester);
+          await tester.pump();
+
+          expect(find.byType(SearchUserTile), findsOneWidget);
+        });
+      });
     });
 
     group('loading more indicator', () {

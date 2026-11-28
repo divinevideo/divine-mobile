@@ -25,14 +25,6 @@ void main() {
       expect(displayNames.length, equals(FeatureFlag.values.length));
     });
 
-    test('should include expected flags for OpenVine', () {
-      expect(FeatureFlag.values, contains(FeatureFlag.accountSwitching));
-      expect(FeatureFlag.values, contains(FeatureFlag.enhancedAnalytics));
-      expect(FeatureFlag.values, contains(FeatureFlag.debugTools));
-      expect(FeatureFlag.values, contains(FeatureFlag.integratedApps));
-      expect(FeatureFlag.values, contains(FeatureFlag.videoReplies));
-    });
-
     test('integratedApps flag should have correct metadata', () {
       expect(FeatureFlag.integratedApps.displayName, equals('Integrated Apps'));
       expect(FeatureFlag.integratedApps.description, isNotEmpty);
@@ -111,9 +103,25 @@ void main() {
       expect(FeatureFlag.concordChat.audience, FeatureFlagAudience.internal);
     });
 
+    test('confirmationSignIn is internal and off by default', () {
+      expect(
+        FeatureFlag.confirmationSignIn.audience,
+        FeatureFlagAudience.internal,
+      );
+      expect(
+        const BuildConfiguration().getDefault(FeatureFlag.confirmationSignIn),
+        isFalse,
+      );
+      expect(
+        const BuildConfiguration().getEnvironmentKey(
+          FeatureFlag.confirmationSignIn,
+        ),
+        'FF_CONFIRMATION_SIGN_IN',
+      );
+    });
+
     test('should leave user-facing flags visible to users', () {
       expect(FeatureFlag.blueskyPublishing.audience, FeatureFlagAudience.user);
-      expect(FeatureFlag.videoReplies.audience, FeatureFlagAudience.user);
       // Parents opt in to Greenlight recording from the user-facing list;
       // the toggle must not be developer-mode-only.
       expect(

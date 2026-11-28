@@ -17,6 +17,7 @@ import 'package:openvine/blocs/comments/comments_list/comments_list_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/screens/comments/comments.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 
 import '../../builders/comment_builder.dart';
 
@@ -62,7 +63,6 @@ void main() {
     Widget buildTestWidget({
       required CommentsListState listState,
       bool showClassicVineNotice = false,
-      bool showVideoReplies = true,
       ScrollController? scrollController,
     }) {
       final sc = scrollController ?? ScrollController();
@@ -87,7 +87,6 @@ void main() {
               child: CommentsList(
                 showClassicVineNotice: showClassicVineNotice,
                 scrollController: sc,
-                showVideoReplies: showVideoReplies,
               ),
             ),
           ),
@@ -596,40 +595,45 @@ void main() {
       expect(find.text('Second comment'), findsOneWidget);
     });
 
-    testWidgets('filters video comments when video replies are hidden', (
+    testWidgets('renders video replies alongside text comments', (
       tester,
     ) async {
+      final visibility = VisibilityDetectorController.instance;
+      final originalInterval = visibility.updateInterval;
+      visibility.updateInterval = Duration.zero;
+      addTearDown(() => visibility.updateInterval = originalInterval);
+
       final textComment = CommentBuilder()
           .withId(TestCommentIds.comment1Id)
           .withContent('Text only comment')
           .build();
 
+      const videoUrl = 'https://cdn.example.com/reply.mp4';
       final videoComment = CommentBuilder()
           .withId(TestCommentIds.comment2Id)
-          .withContent('Video comment https://cdn.example.com/reply.mp4')
+          .postedAgo(const Duration(minutes: 1))
           .build()
-          .copyWith(videoUrl: 'https://cdn.example.com/reply.mp4');
+          .copyWith(videoUrl: videoUrl);
 
       final state = CommentsListState(
         rootEventId: testVideoEventId,
         rootAuthorPubkey: testVideoAuthorPubkey,
         status: CommentsStatus.success,
+        sortMode: CommentsSortMode.newest,
         commentsById: {
           textComment.id: textComment,
           videoComment.id: videoComment,
         },
       );
 
-      await tester.pumpWidget(
-        buildTestWidget(listState: state, showVideoReplies: false),
-      );
+      await tester.pumpWidget(buildTestWidget(listState: state));
       await tester.pump();
 
       expect(find.text('Text only comment'), findsOneWidget);
-      expect(
-        find.text('Video comment https://cdn.example.com/reply.mp4'),
-        findsNothing,
-      );
+      final player = find.byType(VideoCommentPlayer);
+      await tester.scrollUntilVisible(player, 200, maxScrolls: 6);
+      expect(player, findsOneWidget);
+      expect(tester.widget<VideoCommentPlayer>(player).videoUrl, videoUrl);
     });
 
     testWidgets('uses provided scroll controller', (tester) async {

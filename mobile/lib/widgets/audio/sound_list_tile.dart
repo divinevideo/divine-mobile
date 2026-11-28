@@ -5,7 +5,9 @@
 import 'dart:math';
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/semantics.dart' show CustomSemanticsAction;
 import 'package:material_ui/material_ui.dart';
+import 'package:models/models.dart' show SoundKind;
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/sound_cover.dart';
 import 'package:openvine/utils/video_editor_utils.dart';
@@ -20,10 +22,14 @@ class SoundListTile extends StatelessWidget {
     required this.title,
     required this.colorSeed,
     required this.onTap,
+    this.onLongPress,
+    this.longPressLabel,
     this.duration,
+    this.showsUnknownDuration = true,
     this.details = const [],
     this.caption,
     this.cover,
+    this.kind,
     this.isCommunitySound = false,
     this.isActive = false,
     this.isPlaying = false,
@@ -39,6 +45,11 @@ class SoundListTile extends StatelessWidget {
   /// unknown, reads as one second.
   final double? duration;
 
+  /// Whether an unknown [duration] still reads as one second. A list whose
+  /// sounds learn their length only once they load passes `false`, and such
+  /// a row then starts with its [details].
+  final bool showsUnknownDuration;
+
   /// Shown after [duration] on the same line, which cuts the last one short
   /// when they do not fit.
   final List<String> details;
@@ -48,6 +59,10 @@ class SoundListTile extends StatelessWidget {
 
   /// Artwork leading the row, or `null` for the colour tile.
   final SoundCover? cover;
+
+  /// Whether the sound is music or an effect, which picks the colour tile's
+  /// icon; `null` when unknown.
+  final SoundKind? kind;
 
   /// Whether someone on Divine published the sound, which a people mark on
   /// the cover says.
@@ -75,8 +90,19 @@ class SoundListTile extends StatelessWidget {
 
   final VoidCallback? onTap;
 
+  /// Runs on a long press of an available row. With [longPressLabel] set, a
+  /// screen reader also offers it as an action, since a long press is hard
+  /// to find without one.
+  final VoidCallback? onLongPress;
+
+  /// What [onLongPress] does, offered to a screen reader as an action of the
+  /// row.
+  final String? longPressLabel;
+
   @override
   Widget build(BuildContext context) {
+    final onLongPress = this.onLongPress;
+    final longPressLabel = this.longPressLabel;
     final unavailableReason = this.unavailableReason;
     final isUnavailable = unavailableReason != null;
     final showsBars = isActive && !isUnavailable;
@@ -84,17 +110,23 @@ class SoundListTile extends StatelessWidget {
     final caption = this.caption;
     final Widget detailsLine = isUnavailable
         ? _UnavailableSubtitle(reason: unavailableReason)
-        : _Details(duration: duration, details: details);
-    return Padding(
+        : _Details(
+            duration: duration,
+            showsUnknownDuration: showsUnknownDuration,
+            details: details,
+          );
+    final tile = Padding(
       padding: const .symmetric(vertical: 4),
       child: ListTile(
         onTap: onTap,
+        onLongPress: onLongPress,
         enabled: !isUnavailable,
         minTileHeight: 48,
         contentPadding: contentPadding,
         isThreeLine: caption != null,
         leading: _Cover(
           cover: cover,
+          kind: kind,
           colorSeed: colorSeed,
           isCommunitySound: isCommunitySound,
         ),
@@ -131,6 +163,15 @@ class SoundListTile extends StatelessWidget {
           ),
         },
       ),
+    );
+    if (onLongPress == null || longPressLabel == null || isUnavailable) {
+      return tile;
+    }
+    return Semantics(
+      customSemanticsActions: {
+        CustomSemanticsAction(label: longPressLabel): onLongPress,
+      },
+      child: tile,
     );
   }
 }
@@ -191,9 +232,14 @@ class SoundListActionTile extends StatelessWidget {
 
 /// The duration, then each detail, on one line.
 class _Details extends StatelessWidget {
-  const _Details({required this.duration, required this.details});
+  const _Details({
+    required this.duration,
+    required this.showsUnknownDuration,
+    required this.details,
+  });
 
   final double? duration;
+  final bool showsUnknownDuration;
   final List<String> details;
 
   @override
@@ -201,17 +247,21 @@ class _Details extends StatelessWidget {
     final style = VineTheme.bodyMediumFont(
       color: context.vineColors.onSurfaceVariant,
     );
+    final showsDuration = duration != null || showsUnknownDuration;
     return Text.rich(
       TextSpan(
         style: style,
         children: [
-          TextSpan(
-            text: Duration(seconds: max((duration ?? 0).toInt(), 1)).toMmSs(),
-            // Tabular, so the durations of a list line up.
-            style: style.copyWith(fontFeatures: const [.tabularFigures()]),
-          ),
-          for (final detail in details) ...[
-            const TextSpan(text: ' ∙ '),
+          if (showsDuration)
+            TextSpan(
+              text: Duration(
+                seconds: max((duration ?? 0).toInt(), 1),
+              ).toMmSs(),
+              // Tabular, so the durations of a list line up.
+              style: style.copyWith(fontFeatures: const [.tabularFigures()]),
+            ),
+          for (final (index, detail) in details.indexed) ...[
+            if (showsDuration || index > 0) const TextSpan(text: ' ∙ '),
             TextSpan(text: detail),
           ],
         ],
@@ -227,11 +277,13 @@ class _Details extends StatelessWidget {
 class _Cover extends StatelessWidget {
   const _Cover({
     required this.cover,
+    required this.kind,
     required this.isCommunitySound,
     required this.colorSeed,
   });
 
   final SoundCover? cover;
+  final SoundKind? kind;
   final bool isCommunitySound;
   final String colorSeed;
 
@@ -241,6 +293,7 @@ class _Cover extends StatelessWidget {
       cover: cover,
       size: _coverSize,
       colorSeed: colorSeed,
+      kind: kind,
     );
     if (!isCommunitySound) return image;
     return Stack(

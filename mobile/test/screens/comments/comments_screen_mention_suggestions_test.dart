@@ -14,8 +14,6 @@ import 'package:openvine/blocs/comments/comment_composer/comment_composer_bloc.d
 import 'package:openvine/blocs/comments/comment_reactions/comment_reactions_bloc.dart';
 import 'package:openvine/blocs/comments/comments_list/comments_list_bloc.dart';
 import 'package:openvine/features/consumption_analytics/consumption_analytics_tracker.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/screens/comments/comments.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:profile_repository/profile_repository.dart';
@@ -97,11 +95,6 @@ void main() {
       await tester.pumpWidget(
         testMaterialApp(
           mockProfileRepository: profiles,
-          additionalOverrides: [
-            isFeatureEnabledProvider(
-              FeatureFlag.videoReplies,
-            ).overrideWithValue(false),
-          ],
           home: Scaffold(
             body: MultiBlocProvider(
               providers: [

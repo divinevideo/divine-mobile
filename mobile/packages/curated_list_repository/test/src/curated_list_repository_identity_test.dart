@@ -328,15 +328,21 @@ void main() {
         when(
           () => client.queryEvents(any(), timeout: any(named: 'timeout')),
         ).thenAnswer((_) async => []);
-        repository.setSubscribedLists([alice, bob]);
+        final funnelcake = _MockFunnelcakeApiClient();
+        when(() => funnelcake.isAvailable).thenReturn(false);
+        final localOnly = CuratedListRepository(
+          nostrClient: client,
+          funnelcakeApiClient: funnelcake,
+        )..setSubscribedLists([alice, bob]);
+        addTearDown(localOnly.dispose);
 
-        final emissions = await repository
+        final emissions = await localOnly
             .searchAllLists('my list', maxThumbnails: 0)
             .toList();
 
         expect(emissions, hasLength(4));
         for (final emission in emissions) {
-          expect(emission.map((list) => list.authorScopedId), [
+          expect(emission.map((result) => result.list.authorScopedId), [
             alice.authorScopedId,
             bob.authorScopedId,
           ]);

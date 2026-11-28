@@ -33,18 +33,16 @@ double profileOuterScrollExtentFor({
 }
 
 /// The least content height a profile tab is given room for: one square tile
-/// of the [ProfileMasonryGrid] plus the bottom safe area.
+/// of a [ProfileMasonryGrid] with [columns] columns plus the bottom safe area.
 ///
 /// An empty, loading or short tab still scrolls far enough to show this much
 /// below the tabs, so its message is never squeezed against the bottom edge.
 double profileTabMinimumContentExtent({
   required double tabWidth,
+  required int columns,
   required double bottomSafeArea,
 }) =>
-    (tabWidth -
-            ProfileMasonryGrid.spacing *
-                (ProfileMasonryGrid.crossAxisCount - 1)) /
-        ProfileMasonryGrid.crossAxisCount +
+    (tabWidth - ProfileMasonryGrid.spacing * (columns - 1)) / columns +
     bottomSafeArea;
 
 /// Physics for the profile's outer scroll position.

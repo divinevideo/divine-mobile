@@ -1,11 +1,13 @@
 // ABOUTME: Explore screen Page — thin route entry that provides
 // ABOUTME: ExploreTabsCubit to the ExploreView body.
 
+import 'package:analytics/analytics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/explore_tabs/explore_tabs_cubit.dart';
 import 'package:openvine/blocs/featured_tabs/featured_tabs_cubit.dart';
+import 'package:openvine/observability/screen_load_telemetry.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/featured_tabs_providers.dart';
 import 'package:openvine/providers/service_providers.dart';
@@ -17,7 +19,12 @@ import 'package:unified_logger/unified_logger.dart';
 /// Explore screen: a thin tabs Page over [ExploreTabsCubit] + [ExploreView].
 class ExploreScreen extends ConsumerWidget {
   /// Creates the explore screen, optionally selecting [initialTabName].
-  const ExploreScreen({super.key, this.initialTabName, this.initialTabSlug});
+  const ExploreScreen({
+    super.key,
+    this.initialTabName,
+    this.initialTabSlug,
+    this.requiredFeaturedFeedId,
+  });
 
   static const _routeTabNames = <String>{
     exploreClassicsTabName,
@@ -78,30 +85,43 @@ class ExploreScreen extends ConsumerWidget {
   /// app, so a featured slug resolves to `null` there by design.
   final String? initialTabSlug;
 
+  /// Featured-feed id a campaign link requires. When set, Explore opens the
+  /// featured tab for exactly this feed, ignoring [initialTabName] and
+  /// [initialTabSlug], and never falls back to another feed.
+  final String? requiredFeaturedFeedId;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final featuredTabsRepository = ref.watch(featuredTabsRepositoryProvider);
     return MultiBlocProvider(
       providers: [
         BlocProvider(
-          // Both providers are stable keepAlive Providers that are never
+          key: ValueKey(requiredFeaturedFeedId),
+          // These providers are stable keepAlive Providers that are never
           // invalidated, so ref.read is safe here (state_management.md §1).
           create: (_) => ExploreTabsCubit(
             screenAnalytics: ref.read(screenAnalyticsServiceProvider),
             topHashtags: ref.read(topHashtagsServiceProvider),
+            reserveFeaturedSlot: requiredFeaturedFeedId != null,
+            loadTelemetry: ScreenLoadTelemetry(
+              tracker: ref.read(surfacePerformanceTrackerProvider),
+              surface: AnalyticsSurface.explore,
+              entryPoint: ScreenLoadEntryPoint.exploreTab,
+            ),
           ),
         ),
         BlocProvider(
-          // Keyed on the repository so an environment swap rebuilds the cubit
-          // against the new host instead of polling a stale one.
+          // Keyed on the repository and the campaign feed, so an environment
+          // swap or a different campaign rebuilds the cubit instead of
+          // polling a stale one.
           // The shell keeps Explore mounted after the first visit; continuing
           // at the clamped cadence lets backend kill switches land off-tab.
-          key: ValueKey(featuredTabsRepository),
+          key: ValueKey((featuredTabsRepository, requiredFeaturedFeedId)),
           create: (_) {
             final cubit = FeaturedTabsCubit(
               repository: featuredTabsRepository,
-              gateAgeRestrictedContent: () =>
-                  ref.read(featuredTabAgeGateProvider),
+              requiredFeaturedFeedId: requiredFeaturedFeedId,
+              audience: () => ref.read(featuredTabAgeGateProvider),
             );
             runDetached(
               cubit.refresh(),
@@ -114,7 +134,10 @@ class ExploreScreen extends ConsumerWidget {
         ),
       ],
       child: ExploreView(
-        initialTabName: initialTabName,
+        key: ValueKey(requiredFeaturedFeedId),
+        initialTabName: requiredFeaturedFeedId == null
+            ? initialTabName
+            : exploreFeaturedTabName,
         initialTabSlug: initialTabSlug,
       ),
     );

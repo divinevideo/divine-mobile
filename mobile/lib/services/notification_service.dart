@@ -48,6 +48,7 @@ class NotificationTapEvent {
     this.eventId,
     this.notificationType,
     this.senderPubkey,
+    this.receiverPubkey,
     this.tapTargetType,
     this.tapTargetValue,
     this.campaignRevisionId,
@@ -73,6 +74,7 @@ class NotificationTapEvent {
   /// Hex pubkey of the actor — used to route follows (and unresolved taps)
   /// to a profile.
   final String? senderPubkey;
+  final String? receiverPubkey;
 
   /// Campaign destination type: `app_route`, `video_address` or
   /// `creator_profile`.
@@ -598,6 +600,7 @@ class NotificationService {
         return null;
       }
       return NotificationTapEvent(
+        receiverPubkey: field(NotificationPayloadKeys.receiverPubkey),
         messageId: field(NotificationPayloadKeys.messageId),
         referencedEventId: referencedEventId,
         referencedAddress: referencedAddress,

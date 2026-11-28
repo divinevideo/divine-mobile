@@ -1,6 +1,7 @@
 // dart format width=80
 import 'package:db_client/src/database/app_database.dart';
 import 'package:db_client/src/database/daos/nostr_events_dao.dart';
+import 'package:db_client/src/database/daos/outgoing_dms_dao.dart';
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:drift_dev/api/migrations_native.dart';
@@ -23,6 +24,15 @@ import 'generated/schema_v19.dart' as v19;
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
   late SchemaVerifier verifier;
+
+  // Validate the historical schema before using today's conversation writer.
+  Future<void> upgradeForCurrentConversationWrites(
+    QueryExecutor connection,
+  ) async {
+    final current = AppDatabase(connection);
+    addTearDown(current.close);
+    await verifier.migrateAndValidate(current, current.schemaVersion);
+  }
 
   setUpAll(() {
     verifier = SchemaVerifier(GeneratedHelper());
@@ -268,6 +278,7 @@ void main() {
         addTearDown(db.close);
 
         await verifier.migrateAndValidate(db, 28);
+        await upgradeForCurrentConversationWrites(schema.newConnection());
         await db.conversationsDao.upsertConversation(
           id: 'upgraded',
           participantPubkeys: '["a","b"]',
@@ -291,6 +302,7 @@ void main() {
         addTearDown(db.close);
 
         await verifier.migrateAndValidate(db, 27);
+        await upgradeForCurrentConversationWrites(schema.newConnection());
         await db.conversationsDao.upsertConversation(
           id: 'upgraded',
           participantPubkeys: '["a","b"]',
@@ -349,8 +361,144 @@ void main() {
       },
     );
 
-    test('current schema version is 36', () {
-      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 36);
+    test('v36 history has no recipient acknowledgment after migration', () async {
+      final schema = await verifier.schemaAt(36);
+      schema.rawDatabase.execute(
+        'INSERT INTO direct_messages (id, conversation_id, sender_pubkey, content, '
+        'created_at, gift_wrap_id, owner_pubkey) VALUES (?,?,?,?,?,?,?)',
+        ['rumor', 'thread', 'owner', 'hello', 1, 'self-wrap', 'owner'],
+      );
+      final db = AppDatabase(schema.newConnection());
+      addTearDown(db.close);
+      await verifier.migrateAndValidate(db, 37);
+      final row = await db.select(db.directMessages).getSingle();
+      expect(row.recipientAcceptedEnvironment, isNull);
+      expect(row.giftWrapId, 'self-wrap');
+    });
+
+    test('v37 queued DMs gain is_video_share as false, keeping every field '
+        'they had', () async {
+      final schema = await verifier.schemaAt(37);
+      final rumorId = 'a' * 64;
+      final owner = 'b' * 64;
+      schema.rawDatabase.execute(
+        'INSERT INTO outgoing_dms (id, conversation_id, recipient_pubkey, '
+        'content, created_at, rumor_event_json, recipient_wrap_status, '
+        'self_wrap_status, retry_count, queued_at, owner_pubkey, environment, '
+        'skip_nip04_fallback) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        [
+          rumorId,
+          'c' * 64,
+          'd' * 64,
+          'queued before the upgrade',
+          1700000000,
+          '{"id":"$rumorId","kind":14}',
+          'failed',
+          'pending',
+          2,
+          1700000000,
+          owner,
+          'staging',
+          1,
+        ],
+      );
+      final db = AppDatabase(schema.newConnection());
+      addTearDown(db.close);
+
+      await verifier.migrateAndValidate(db, 38);
+
+      final row = await db.outgoingDmsDao.getById(rumorId);
+      expect(row, isNotNull);
+      expect(row!.isVideoShare, isFalse);
+      expect(row.skipNip04Fallback, isTrue);
+      expect(row.content, 'queued before the upgrade');
+      expect(row.recipientWrapStatus, OutgoingWrapStatus.failed);
+      expect(row.retryCount, 2);
+      expect(row.environment, 'staging');
+    });
+
+    test('v38 gift wrap ledger rows keep their dedup evidence and gain no '
+        'verified alias', () async {
+      final schema = await verifier.schemaAt(38);
+      final wrapId = 'a' * 64;
+      final owner = 'b' * 64;
+      schema.rawDatabase.execute(
+        'INSERT INTO processed_gift_wraps (gift_wrap_id, processed_at, '
+        'owner_pubkey) VALUES (?,?,?)',
+        [wrapId, 1700000000, owner],
+      );
+      final db = AppDatabase(schema.newConnection());
+      addTearDown(db.close);
+
+      await verifier.migrateAndValidate(db, 39);
+
+      final row = await db.select(db.processedGiftWraps).getSingle();
+      expect(row.giftWrapId, wrapId);
+      expect(row.ownerPubkey, owner);
+      expect(row.processedAt, 1700000000);
+      expect(row.verifiedMessageId, isNull);
+    });
+
+    test('the v32 ledger rebuild leaves verified_message_id out of a v38 '
+        'target', () async {
+      final schema = await verifier.schemaAt(31);
+      final db = AppDatabase(schema.newConnection());
+      addTearDown(db.close);
+
+      await verifier.migrateAndValidate(db, 38);
+    });
+
+    test('v38 with a missing gift wrap ledger still upgrades to v39', () async {
+      final schema = await verifier.schemaAt(38);
+      schema.rawDatabase
+        ..execute('DROP TABLE processed_gift_wraps')
+        ..execute(
+          'INSERT INTO direct_messages (id, conversation_id, sender_pubkey, '
+          'content, created_at, gift_wrap_id, owner_pubkey, '
+          'recipient_accepted_environment) VALUES (?,?,?,?,?,?,?,?)',
+          [
+            'rumor',
+            'thread',
+            'owner',
+            'hello',
+            1,
+            'self-wrap',
+            'owner',
+            'staging',
+          ],
+        );
+      final db = AppDatabase(schema.newConnection());
+      addTearDown(db.close);
+
+      await verifier.migrateAndValidate(db, 39);
+
+      expect(await db.processedGiftWrapsDao.count(), 0);
+      final message = await db.select(db.directMessages).getSingle();
+      expect(message.giftWrapId, 'self-wrap');
+      expect(message.recipientAcceptedEnvironment, 'staging');
+    });
+
+    test('current schema version is 40', () {
+      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 40);
+    });
+
+    test('v40 preserves a legacy preview without asserting a message ID', () async {
+      final schema = await verifier.schemaAt(39);
+      schema.rawDatabase.execute(
+        'INSERT INTO conversations (id, participant_pubkeys, created_at, owner_pubkey, '
+        'last_message_content, last_message_timestamp, last_message_sender_pubkey) '
+        'VALUES (?,?,?,?,?,?,?)',
+        ['room', '[]', 10, 'owner', 'kept preview', 10, 'sender'],
+      );
+      final db = AppDatabase(schema.newConnection());
+      addTearDown(db.close);
+      await verifier.migrateAndValidate(db, 40);
+      final row = await db.conversationsDao.getConversation(
+        'room',
+        ownerPubkey: 'owner',
+      );
+      expect(row?.lastMessageContent, 'kept preview');
+      expect(row?.lastMessageId, isNull);
     });
 
     test('v34 gives a queued DM a place for an unconfirmed recipient wrap, '
@@ -382,7 +530,12 @@ void main() {
 
       await verifier.migrateAndValidate(db, 34);
 
-      final row = await db.outgoingDmsDao.getById(rumorId);
+      // Reopen at the current schema before using the current outbox mapper.
+      await db.close();
+      final current = AppDatabase(schema.newConnection());
+      addTearDown(current.close);
+      await verifier.migrateAndValidate(current, current.schemaVersion);
+      final row = await current.outgoingDmsDao.getById(rumorId);
       expect(row!.content, 'queued before the upgrade');
       expect(row.retryCount, 1);
       expect(row.unconfirmedRecipientWrapJson, isNull);
@@ -820,6 +973,7 @@ void main() {
           [(owner, 200, '["m1"]'), (otherOwner, 300, '["m2","m3"]')],
         );
 
+        await upgradeForCurrentConversationWrites(schema.newConnection());
         await db.conversationsDao.upsertConversation(
           id: openId,
           participantPubkeys: '["$owner","${'b' * 64}"]',
@@ -1035,6 +1189,7 @@ void main() {
               giftWrapId: 'f' * 64,
               ownerPubkey: owner,
             );
+            await upgradeForCurrentConversationWrites(schema.newConnection());
             await db.conversationsDao.upsertConversation(
               id: conversationId,
               participantPubkeys: '["$owner"]',
@@ -1133,7 +1288,12 @@ void main() {
           ),
           'sealed outbox',
         );
-        final retryable = await db.outgoingDmsDao.getRetryableForOwner(
+        // Reopen at the current schema before using the current outbox mapper.
+        await db.close();
+        final current = AppDatabase(schema.newConnection());
+        addTearDown(current.close);
+        await verifier.migrateAndValidate(current, current.schemaVersion);
+        final retryable = await current.outgoingDmsDao.getRetryableForOwner(
           ownerPubkey: 'a' * 64,
           maxRetries: 3,
           environment: 'staging',
@@ -1756,7 +1916,12 @@ void main() {
         final db = AppDatabase(schema.newConnection());
         await verifier.migrateAndValidate(db, 25);
 
-        final retryable = await db.outgoingDmsDao.getRetryableForOwner(
+        // Reopen at the current schema before using the current outbox mapper.
+        await db.close();
+        final current = AppDatabase(schema.newConnection());
+        addTearDown(current.close);
+        await verifier.migrateAndValidate(current, current.schemaVersion);
+        final retryable = await current.outgoingDmsDao.getRetryableForOwner(
           ownerPubkey: ownerPubkey,
           maxRetries: 3,
           environment: 'staging',

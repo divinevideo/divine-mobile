@@ -23,6 +23,14 @@ uniform float uIntensity;
 // How far the picture moves each frame, as a share of its width.
 uniform float uShift;
 
+// How far apart the earlier frames lie, as a share of the default two
+// frames.
+uniform float uLength;
+
+// How bright a part must be to leave a trail: 0.5 is the default, higher
+// leaves trails sooner.
+uniform float uSensitivity;
+
 uniform sampler2D uTexture;
 
 out vec4 fragColor;
@@ -46,13 +54,13 @@ void main() {
   vec2 fragCoord = FlutterFragCoord().xy;
   vec2 p = vec2(fragCoord.x, uSize.y - fragCoord.y);
   float copies = clamp(floor(2.0 + 4.0 * uIntensity + 0.5), 2.0, 6.0);
-  float threshold = 0.7 - 0.25 * uIntensity;
+  float threshold = 0.7 - 0.25 * uIntensity - 0.4 * (uSensitivity - 0.5);
   vec3 color = tap(p);
   for (int k = 0; k < 6; k++) {
     float n = float(k + 1);
     if (n > copies) break;
     float weight = pow(0.7 + 0.25 * uIntensity, n);
-    color = max(color, trail(earlier(p, 2.0 * n), threshold, weight));
+    color = max(color, trail(earlier(p, max(n, floor(2.0 * n * uLength + 0.5))), threshold, weight));
   }
   fragColor = vec4(color, 1.0);
 }

@@ -8,6 +8,9 @@ abstract class RemixSettingsReportableSites {
   /// Unexpected failure while reading the account's kind 0.
   static const String load = 'load';
 
+  /// Unexpected failure while reading the profile before a remix save.
+  static const String readSaveSeed = 'readSaveSeed';
+
   /// Unexpected failure while publishing the account remix setting.
   static const String setAllowVideoReuse = 'setAllowVideoReuse';
 }

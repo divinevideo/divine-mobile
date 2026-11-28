@@ -6,6 +6,7 @@
 
 import 'dart:async';
 
+import 'package:account_state_repository/account_state_repository.dart';
 import 'package:analytics/analytics.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -17,6 +18,7 @@ import 'package:openvine/features/feature_flags/providers/feature_flag_providers
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/notification_preferences.dart';
 import 'package:openvine/notifications/providers/notification_repository_provider.dart';
+import 'package:openvine/providers/account_preferences_provider.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/notification_settings_screen.dart';
@@ -24,6 +26,9 @@ import 'package:openvine/services/notification_preferences_service.dart';
 
 import '../helpers/scroll.dart';
 import '../helpers/test_provider_overrides.dart';
+
+class _MockAccountStateRepository extends Mock
+    implements AccountStateRepository {}
 
 class _MockNotificationRepository extends Mock
     implements NotificationRepository {}
@@ -65,11 +70,13 @@ void main() {
     Widget buildSubject({
       NotificationRepository? repo,
       bool newPostNotifications = true,
+      AccountStateRepository? account,
       NotificationAnalyticsTracker? notificationAnalytics,
     }) {
       return testMaterialApp(
         additionalOverrides: [
           notificationRepositoryProvider.overrideWithValue(repo),
+          accountPreferenceSyncProvider.overrideWithValue(account),
           notificationPreferencesServiceProvider.overrideWithValue(
             mockPrefsService,
           ),
@@ -339,6 +346,39 @@ void main() {
       // The neighbouring rows still render, so this is the flag and not a
       // failed build.
       expect(find.text(l10n.notificationSettingsLikes), findsOneWidget);
+    });
+
+    testWidgets('direct message alerts are off until explicitly enabled', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildSubject(repo: mockRepo, account: _MockAccountStateRepository()),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(NotificationSettingsScreen)),
+      );
+      final dmSwitch = find.descendant(
+        of: find.ancestor(
+          of: find.text(l10n.notificationSettingsDirectMessages),
+          matching: find.byType(Card),
+        ),
+        matching: find.byType(Switch),
+      );
+      await scrollUntilTappable(tester, dmSwitch, 100);
+
+      final widget = tester.widget<Switch>(dmSwitch);
+      expect(widget.value, isFalse);
+      await tester.tap(dmSwitch);
+      await tester.pump();
+
+      verify(
+        () => mockPrefsService.updatePreference(
+          NotificationPreference.directMessagesEnabled,
+          true,
+        ),
+      ).called(1);
     });
 
     testWidgets('campaign updates require an explicit opt-in', (tester) async {

@@ -1,10 +1,10 @@
 // ABOUTME: Masonry sliver shared by the profile video tabs,
 // ABOUTME: mixing vertical 2:3 and square 1:1 tiles like the Explore feeds.
 
-import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:models/models.dart' show VideoEvent;
+import 'package:openvine/ui/adaptive_grid.dart';
 import 'package:openvine/ui/adaptive_layout.dart';
 
 /// Shape of a vertical profile tile.
@@ -90,10 +90,19 @@ class ProfileMasonryGrid extends StatelessWidget {
   /// Gap between tiles on both axes.
   static const double spacing = 4;
 
+  /// The column count of a grid [width] wide in a window of [layout].
+  static int columnsFor(AdaptiveLayout layout, double width) =>
+      layout.gridColumns(compact: crossAxisCount, width: width);
+
   @override
   Widget build(BuildContext context) {
     return SliverMasonryGrid(
-      gridDelegate: _AdaptiveColumns(context.adaptiveLayout),
+      // Counted from the grid's own width, which leaves out a status bar
+      // column.
+      gridDelegate: AdaptiveMasonryColumns(
+        layout: context.adaptiveLayout,
+        compactColumns: crossAxisCount,
+      ),
       mainAxisSpacing: spacing,
       crossAxisSpacing: spacing,
       delegate: SliverChildBuilderDelegate(
@@ -105,29 +114,4 @@ class ProfileMasonryGrid extends StatelessWidget {
       ),
     );
   }
-}
-
-/// [ProfileMasonryGrid.crossAxisCount] columns, or more for a wider grid with
-/// the large-screen layouts (see [AdaptiveLayout.gridColumns]).
-///
-/// Counted during layout from the grid's own width, which leaves out a status
-/// bar column, rather than read from a builder: a sliver builder runs again on
-/// every scroll frame and would rebuild every tile with it.
-class _AdaptiveColumns extends SliverSimpleGridDelegate {
-  const _AdaptiveColumns(this.layout);
-
-  final AdaptiveLayout layout;
-
-  @override
-  int getCrossAxisCount(
-    SliverConstraints constraints,
-    double crossAxisSpacing,
-  ) => layout.gridColumns(
-    compact: ProfileMasonryGrid.crossAxisCount,
-    width: constraints.crossAxisExtent,
-  );
-
-  @override
-  bool shouldRelayout(_AdaptiveColumns oldDelegate) =>
-      oldDelegate.layout.enabled != layout.enabled;
 }

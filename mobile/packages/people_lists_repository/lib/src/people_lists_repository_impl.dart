@@ -31,6 +31,13 @@ const String _logName = 'people_lists_repository.impl';
 /// Read budget for public people-list discovery, search and coordinate reads.
 const kPublicPeopleListsRelayReadTimeout = Duration(seconds: 12);
 
+/// How long a people-list search or discovery waits for FunnelCake's list
+/// index before the relays stand in.
+///
+/// Shorter than the API client's own budget, which also spans its retries, so
+/// a stalled backend falls back within seconds.
+const kPeopleListSearchIndexTimeout = Duration(seconds: 5);
+
 /// How many authors one bulk-profile call answers for.
 const _bulkProfilesPageSize = 100;
 
@@ -609,6 +616,13 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
     required int limit,
     required String? viewerPubkey,
   }) async {
+    final indexed = await _searchListIndex(
+      trimmed,
+      limit: limit,
+      viewerPubkey: viewerPubkey,
+    );
+    if (indexed != null) return indexed;
+
     final lowerQuery = trimmed.toLowerCase();
     final results = await _queryPublicLists(
       limit: limit > 500 ? limit : 500,
@@ -626,11 +640,97 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
     return List.unmodifiable(results.take(limit));
   }
 
+  /// Searches FunnelCake's list index for people lists matching [trimmed].
+  ///
+  /// Returns `null` when the index is unconfigured, fails or takes longer
+  /// than [kPeopleListSearchIndexTimeout], so the relay search stands in.
+  /// Otherwise the lists come in the server's order, filtered as relay search
+  /// results are: no empty, reserved or machinery sets, no blocked owners,
+  /// only authors who have posted on Divine ([_keepDivineAuthors]). Each
+  /// result's list holds the index's preview of at most five members, and
+  /// [PeopleListSearchResult.memberCount] counts them all.
+  Future<List<PeopleListSearchResult>?> _searchListIndex(
+    String trimmed, {
+    required int limit,
+    required String? viewerPubkey,
+  }) async {
+    final api = _funnelcakeApiClient;
+    if (api == null || !api.isAvailable) return null;
+    final ListSearchResponse page;
+    try {
+      page = await api
+          .searchLists(
+            query: trimmed,
+            kind: PublicListKind.people,
+            limit: limit < FunnelcakeApiClient.maxListSearchLimit
+                ? limit
+                : FunnelcakeApiClient.maxListSearchLimit,
+          )
+          .timeout(kPeopleListSearchIndexTimeout);
+    } on Exception catch (error, stackTrace) {
+      Log.warning(
+        'FunnelCake list search for "$trimmed" failed; searching relays',
+        name: _logName,
+        category: LogCategory.api,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return null;
+    }
+
+    final kept = await _keepDivineAuthors(
+      _resultsFromCards(page.cards),
+      keepAuthor: viewerPubkey,
+    );
+    return List.unmodifiable(kept);
+  }
+
+  /// The people lists among [cards] from FunnelCake's list index, in their
+  /// order, filtered as relay results are: no empty, reserved or machinery
+  /// sets, no blocked owners, no repeated coordinates. Each list holds the
+  /// card's preview of at most five members.
+  List<PeopleListSearchResult> _resultsFromCards(
+    Iterable<PublicListCard> cards,
+  ) {
+    final results = <String, PeopleListSearchResult>{};
+    for (final card in cards) {
+      if (card.kind != Nip51PeopleListCodec.kind || card.memberCount <= 0) {
+        continue;
+      }
+      if (_isProtectedListId(card.dTag) ||
+          _additionalExcludedPublicDTags.contains(card.dTag)) {
+        continue;
+      }
+      final blockFilter = _blockFilter;
+      if (blockFilter != null && blockFilter(card.pubkey)) continue;
+      final result = PeopleListSearchResult(
+        ownerPubkey: card.pubkey,
+        list: UserList(
+          id: card.dTag,
+          name: card.title.isNotEmpty ? card.title : card.dTag,
+          description: card.description.isNotEmpty ? card.description : null,
+          pubkeys: card.members,
+          createdAt: card.updatedAt,
+          updatedAt: card.updatedAt,
+        ),
+        memberCount: card.memberCount,
+      );
+      results.putIfAbsent(result.addressableId, () => result);
+    }
+    return results.values.toList();
+  }
+
   @override
   Future<List<PeopleListSearchResult>> discoverPublicLists({
     int limit = 50,
     String? excludeAuthor,
   }) async {
+    final indexed = await _discoverListIndex(
+      limit: limit,
+      excludeAuthor: excludeAuthor,
+    );
+    if (indexed != null) return indexed;
+
     final results = await _queryPublicLists(
       limit: limit,
       logContext: 'for discovery',
@@ -639,6 +739,45 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
     );
     results.sort((a, b) => b.list.updatedAt.compareTo(a.list.updatedAt));
     return List.unmodifiable(results);
+  }
+
+  /// FunnelCake's newest people lists without [excludeAuthor]'s, filtered as
+  /// [_resultsFromCards] filters them, or `null` when the index is
+  /// unconfigured, fails or takes longer than [kPeopleListSearchIndexTimeout].
+  ///
+  /// The index keeps only lists whose owner has posted a video, so the
+  /// [_keepDivineAuthors] round trip is not repeated.
+  Future<List<PeopleListSearchResult>?> _discoverListIndex({
+    required int limit,
+    required String? excludeAuthor,
+  }) async {
+    final api = _funnelcakeApiClient;
+    if (api == null || !api.isAvailable) return null;
+    final ListSearchResponse page;
+    try {
+      page = await api
+          .discoverLists(
+            kind: PublicListKind.people,
+            limit: limit < FunnelcakeApiClient.maxListSearchLimit
+                ? limit
+                : FunnelcakeApiClient.maxListSearchLimit,
+          )
+          .timeout(kPeopleListSearchIndexTimeout);
+    } on Exception catch (error, stackTrace) {
+      Log.warning(
+        'FunnelCake list discovery failed; reading the discovery relays',
+        name: _logName,
+        category: LogCategory.api,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return null;
+    }
+    return List.unmodifiable(
+      _resultsFromCards(
+        page.cards.where((card) => card.pubkey != excludeAuthor),
+      ),
+    );
   }
 
   static int _newestFirst(PeopleListSearchResult a, PeopleListSearchResult b) {

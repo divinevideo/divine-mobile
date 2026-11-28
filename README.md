@@ -118,7 +118,7 @@ Codemagic workflows and their publishing targets:
 
 - iOS build — `shorebird release ios`, uploaded to App Store Connect without automatic review submission; dSYMs uploaded to Firebase Crashlytics.
 - Android build — `flutter build appbundle --release` (and split-per-ABI APKs), published to Google Play.
-- macOS build — packaged as a DMG and published to a GitHub Release.
+- macOS build — signed Mac App Store `.pkg`, uploaded to App Store Connect / TestFlight without automatic review submission.
 - E2E smoke tests — Maestro flows on iOS Simulator and Android emulator.
 
 Additional distribution paths:

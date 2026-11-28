@@ -7,6 +7,7 @@
 library;
 
 import 'dart:async';
+import 'dart:ui' show PointerDeviceKind;
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
@@ -21,6 +22,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:infinite_video_feed/infinite_video_feed.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:media_cache/media_cache.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/fullscreen_feed/fullscreen_feed_bloc.dart';
@@ -36,9 +38,11 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/models/view_traffic_source.dart';
 import 'package:openvine/models/viewer_auth_result.dart';
+import 'package:openvine/observability/screen_frame_trace.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/comments/comments_screen.dart';
 import 'package:openvine/screens/feed/dm_reply_context.dart';
@@ -54,6 +58,7 @@ import 'package:openvine/services/media_auth_interceptor.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/divine_video_metrics_tracker.dart';
 import 'package:openvine/widgets/feed_tuning/feed_tuning_swipe_overlay.dart';
+import 'package:openvine/widgets/screen_frame_trace_scope.dart';
 import 'package:openvine/widgets/video_feed_item/actions/actions.dart';
 import 'package:openvine/widgets/video_feed_item/feed_immersive_chrome.dart';
 import 'package:openvine/widgets/video_feed_item/feed_videos.dart';
@@ -81,6 +86,29 @@ class _KnownViewerSession extends NostrSession {
   NostrSessionReadiness build() =>
       const NostrSessionReadiness.identityKnown(pubkey: _classicsViewer);
 }
+
+class _PrivacyChangingAnalytics extends RecordingConsumptionAnalytics {
+  final changes = StreamController<void>.broadcast();
+
+  @override
+  Stream<void> get privacyChanges => changes.stream;
+}
+
+/// Stands in for the Keycast eligibility answer behind the account gate.
+class _Eligibility extends Notifier<bool> {
+  _Eligibility({required this.initial});
+
+  final bool initial;
+
+  @override
+  bool build() => initial;
+
+  void setEligible(bool value) => state = value;
+}
+
+final _eligibilityProvider = NotifierProvider<_Eligibility, bool>(
+  () => _Eligibility(initial: true),
+);
 
 class MockFullscreenFeedBloc
     extends MockBloc<FullscreenFeedEvent, FullscreenFeedState>
@@ -318,6 +346,7 @@ void main() {
       DmReplyContext? dmReplyContext,
       String? initialVideoKey,
       bool loadMoreOnEndSwipe = false,
+      bool fromMessage = false,
       VoidCallback? onBack,
     }) {
       return MultiBlocProvider(
@@ -337,6 +366,7 @@ void main() {
           dmReplyContext: dmReplyContext,
           initialVideoKey: initialVideoKey,
           loadMoreOnEndSwipe: loadMoreOnEndSwipe,
+          fromMessage: fromMessage,
           onBack: onBack,
         ),
       );
@@ -357,6 +387,7 @@ void main() {
       DmReplyContext? dmReplyContext,
       String? initialVideoKey,
       bool loadMoreOnEndSwipe = false,
+      bool fromMessage = false,
       VoidCallback? onBack,
     }) {
       final effectiveState = state ?? FullscreenFeedState();
@@ -371,6 +402,7 @@ void main() {
         dmReplyContext: dmReplyContext,
         initialVideoKey: initialVideoKey,
         loadMoreOnEndSwipe: loadMoreOnEndSwipe,
+        fromMessage: fromMessage,
         onBack: onBack,
       );
       Widget subject = content;
@@ -499,6 +531,130 @@ void main() {
         },
       );
     }
+
+    for (final useWheel in [false, true]) {
+      final input = useWheel ? 'mouse wheel' : 'Next action';
+      testWidgets('the $input retries an anchor-only discovery feed', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildSubject(
+            state: FullscreenFeedState(
+              status: FullscreenFeedStatus.ready,
+              videos: createTestVideos(count: 1),
+              canLoadMore: true,
+            ),
+            loadMoreOnEndSwipe: true,
+          ),
+        );
+        await tester.pump();
+
+        final feed = find.byType(InfiniteVideoFeed);
+        if (useWheel) {
+          final pointer = TestPointer(1, PointerDeviceKind.mouse)
+            ..hover(tester.getCenter(feed));
+          await tester.sendEventToBinding(pointer.scroll(const Offset(0, 80)));
+        } else {
+          await tester.state<InfiniteVideoFeedState>(feed).nextPage();
+        }
+        await tester.pump();
+
+        verify(() => mockBloc.add(const FullscreenFeedLoadMoreRequested()))
+            .called(1);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      });
+    }
+
+    for (final platform in [TargetPlatform.android, TargetPlatform.iOS]) {
+      testWidgets(
+        'an end swipe on the last hashtag video loads the next page on '
+        '$platform',
+        (tester) async {
+          final videos = createTestVideos(count: 2);
+          var loadMoreCalls = 0;
+          final videoService = createMockVideoEventService();
+          when(() => videoService.shouldHideVideo(any())).thenReturn(false);
+          await tester.pumpWidget(
+            BlocProvider<VideoVolumeCubit>.value(
+              value: videoVolumeCubit,
+              child: testMaterialApp(
+                mockProfileRepository: mockProfileRepository,
+                mockNip05VerificationService: mockNip05VerificationService,
+                additionalOverrides: [
+                  pendingActionServiceProvider.overrideWithValue(null),
+                  videoEventServiceProvider.overrideWithValue(videoService),
+                ],
+                home: Theme(
+                  data: VineTheme.theme.copyWith(platform: platform),
+                  child: PooledFullscreenVideoFeedScreen(
+                    source: const HashtagViewSource('funny'),
+                    // Sources that never complete, like the hashtag cubit's:
+                    // a finished source stream ends the reel's pagination.
+                    feedRepository: StreamFeedRepository(
+                      videos: Stream.multi((source) => source.add(videos)),
+                      hasMore: Stream.multi((source) => source.add(true)),
+                      onLoadMore: () async => loadMoreCalls++,
+                    ),
+                    initialIndex: 1,
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+          final bloc = tester
+              .element(find.byType(FullscreenFeedContent))
+              .read<FullscreenFeedBloc>();
+          expect(bloc.state.currentVideo, videos.last);
+          expect(loadMoreCalls, isZero);
+
+          await tester.drag(
+            find.byType(InfiniteVideoFeed),
+            const Offset(0, -160),
+          );
+          await tester.pump();
+
+          expect(loadMoreCalls, 1);
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+        },
+      );
+    }
+
+    testWidgets('traces its frames as the fullscreen feed', (tester) async {
+      final videoService = createMockVideoEventService();
+      when(() => videoService.shouldHideVideo(any())).thenReturn(false);
+      await tester.pumpWidget(
+        BlocProvider<VideoVolumeCubit>.value(
+          value: videoVolumeCubit,
+          child: testMaterialApp(
+            mockProfileRepository: mockProfileRepository,
+            mockNip05VerificationService: mockNip05VerificationService,
+            additionalOverrides: [
+              pendingActionServiceProvider.overrideWithValue(null),
+              videoEventServiceProvider.overrideWithValue(videoService),
+            ],
+            home: PooledFullscreenVideoFeedScreen(
+              source: SingleVideoViewSource(createTestVideos(count: 1).single),
+              feedRepository: StaticFeedRepository(),
+              initialIndex: 0,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(
+        tester
+            .widget<ScreenFrameTraceScope>(find.byType(ScreenFrameTraceScope))
+            .screen,
+        TracedScreen.fullscreenFeed,
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    });
 
     testWidgets(
       'selected Classics retain Classics attribution after the anchor',
@@ -656,6 +812,258 @@ void main() {
         await tester.pump();
       },
     );
+
+    group('account gate changes on an open Classics route', () {
+      List<Override> gateOverrides({
+        required bool eligible,
+        required VideosRepository repository,
+      }) {
+        final videoService = createMockVideoEventService();
+        when(() => videoService.shouldHideVideo(any())).thenReturn(false);
+        when(() => videoService.filterVideoList(any())).thenAnswer(
+          (call) => call.positionalArguments.first as List<VideoEvent>,
+        );
+        return [
+          _eligibilityProvider.overrideWith(
+            () => _Eligibility(initial: eligible),
+          ),
+          confirmedNotProtectedMinorProvider.overrideWith(
+            (ref) => ref.watch(_eligibilityProvider),
+          ),
+          pendingActionServiceProvider.overrideWithValue(null),
+          videosRepositoryProvider.overrideWithValue(repository),
+          videoEventServiceProvider.overrideWithValue(videoService),
+        ];
+      }
+
+      _MockDiscoveryVideosRepository classicsRepository() {
+        final repository = _MockDiscoveryVideosRepository();
+        when(
+          () => repository.removedVideoIds,
+        ).thenAnswer((_) => const Stream.empty());
+        when(() => repository.applyContentPreferences(any())).thenAnswer(
+          (call) => call.positionalArguments.first as List<VideoEvent>,
+        );
+        return repository;
+      }
+
+      testWidgets(
+        'revocation keeps the reached video and continues from the archive',
+        (tester) async {
+          final nativePlayer = _NativePlayerHarness(tester)..install();
+          addTearDown(nativePlayer.dispose);
+          final videos = createTestVideos();
+          final tapped = videos[0];
+          final reached = videos[1];
+          final ranked = videos[2];
+          final archived = createTestVideoEvent(
+            id: 'a' * 64,
+            pubkey: testPubkey,
+            videoUrl: 'https://example.com/archived.mp4',
+          );
+          final repository = classicsRepository();
+          when(
+            () => repository.getClassicRecommendations(
+              request: any(named: 'request'),
+              userPubkey: any(named: 'userPubkey'),
+              isCurrent: any(named: 'isCurrent'),
+            ),
+          ).thenAnswer(
+            (_) async => HomeFeedResult(
+              videos: [reached, ranked],
+              paginationCursor: 'adaptive',
+              hasMore: true,
+              recommendationPageCount: 1,
+            ),
+          );
+          when(
+            () => repository.getClassicVideos(
+              limit: any(named: 'limit'),
+              cursor: any(named: 'cursor'),
+              skipCache: any(named: 'skipCache'),
+              archiveOnly: any(named: 'archiveOnly'),
+            ),
+          ).thenAnswer(
+            (_) async => HomeFeedResult(videos: [archived], hasMore: false),
+          );
+          // The queue holds a clip after the playing one, which the disk
+          // prefetcher reaches for; keep it off the shared disk cache.
+          final mediaCache = createMockMediaCacheManager();
+          when(
+            () => mediaCache.cacheFileCancellable(
+              any(),
+              key: any(named: 'key'),
+              authHeaders: any(named: 'authHeaders'),
+            ),
+          ).thenAnswer(
+            (_) => CancellableCacheOperation.fromStream(const Stream.empty()),
+          );
+          await tester.pumpWidget(
+            BlocProvider<VideoVolumeCubit>.value(
+              value: videoVolumeCubit,
+              child: testMaterialApp(
+                mockProfileRepository: mockProfileRepository,
+                mockNip05VerificationService: mockNip05VerificationService,
+                mockMediaCacheManager: mediaCache,
+                additionalOverrides: gateOverrides(
+                  eligible: true,
+                  repository: repository,
+                ),
+                home: PooledFullscreenVideoFeedScreen(
+                  source: ClassicVinesViewSource(anchor: tapped),
+                  feedRepository: StaticFeedRepository(),
+                  initialIndex: 0,
+                  trafficSource: ViewTrafficSource.discoveryClassic,
+                ),
+              ),
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+          expect(nativeFeed(tester).videos, [tapped, reached, ranked]);
+          nativeFeed(tester).onActiveVideoChanged?.call(reached, 1);
+          await tester.pump();
+          await tester.pump();
+          final bloc = tester
+              .element(find.byType(FullscreenFeedContent))
+              .read<FullscreenFeedBloc>();
+          clearInteractions(repository);
+
+          ProviderScope.containerOf(
+            tester.element(find.byType(FullscreenFeedContent)),
+          ).read(_eligibilityProvider.notifier).setEligible(false);
+          await tester.pump();
+          await tester.pump();
+          await tester.pump();
+
+          expect(
+            tester
+                .element(find.byType(FullscreenFeedContent))
+                .read<FullscreenFeedBloc>(),
+            same(bloc),
+          );
+          expect(nativeFeed(tester).videos, [tapped, reached, archived]);
+          expect(bloc.state.currentVideo, reached);
+          verify(
+            () => repository.getClassicVideos(
+              limit: any(named: 'limit'),
+              cursor: any(named: 'cursor'),
+              archiveOnly: true,
+            ),
+          ).called(1);
+          verifyNever(
+            () => repository.getClassicRecommendations(
+              request: any(named: 'request'),
+              userPubkey: any(named: 'userPubkey'),
+              isCurrent: any(named: 'isCurrent'),
+            ),
+          );
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+        },
+      );
+
+      testWidgets('an archive route stays on the archive when eligibility '
+          'arrives', (tester) async {
+        final nativePlayer = _NativePlayerHarness(tester)..install();
+        addTearDown(nativePlayer.dispose);
+        final videos = createTestVideos(count: 2);
+        final repository = classicsRepository();
+        final analytics = _PrivacyChangingAnalytics();
+        addTearDown(analytics.changes.close);
+        final archive = videos[1];
+        final ranked = createTestVideoEvent(
+          id: 'a' * 64,
+          pubkey: testPubkey,
+          videoUrl: 'https://example.com/ranked.mp4',
+        );
+        final gridWindow = StreamController<List<VideoEvent>>.broadcast();
+        addTearDown(gridWindow.close);
+        when(
+          () => repository.getClassicVideos(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+            archiveOnly: true,
+          ),
+        ).thenAnswer(
+          (_) async => const HomeFeedResult(videos: [], hasMore: false),
+        );
+        await tester.pumpWidget(
+          BlocProvider<VideoVolumeCubit>.value(
+            value: videoVolumeCubit,
+            child: testMaterialApp(
+              mockProfileRepository: mockProfileRepository,
+              mockNip05VerificationService: mockNip05VerificationService,
+              additionalOverrides: [
+                ...gateOverrides(eligible: false, repository: repository),
+                analyticsServiceProvider.overrideWithValue(analytics),
+              ],
+              home: PooledFullscreenVideoFeedScreen(
+                source: ClassicVinesViewSource(
+                  anchor: videos.first,
+                  archiveSeed: [archive],
+                ),
+                feedRepository: StreamFeedRepository(
+                  videos: gridWindow.stream,
+                  hasMore: Stream.value(false),
+                  onLoadMore: () async {},
+                ),
+                initialIndex: 0,
+                trafficSource: ViewTrafficSource.discoveryClassic,
+              ),
+            ),
+          ),
+        );
+        gridWindow.add(videos);
+        await tester.pump();
+        await tester.pump();
+        expect(nativeFeed(tester).videos, videos);
+        nativeFeed(tester).onActiveVideoChanged?.call(archive, 1);
+        await tester.pump();
+        final bloc = tester
+            .element(find.byType(FullscreenFeedContent))
+            .read<FullscreenFeedBloc>();
+
+        ProviderScope.containerOf(
+          tester.element(find.byType(FullscreenFeedContent)),
+        ).read(_eligibilityProvider.notifier).setEligible(true);
+        gridWindow.add([ranked]);
+        analytics.changes.add(null);
+        await tester.pump();
+        await tester.pump();
+
+        expect(
+          tester
+              .element(find.byType(FullscreenFeedContent))
+              .read<FullscreenFeedBloc>(),
+          same(bloc),
+        );
+        expect(nativeFeed(tester).videos, [videos.first, archive]);
+        expect(bloc.state.currentVideo, archive);
+        expect(
+          tester
+              .widget<FullscreenFeedContent>(find.byType(FullscreenFeedContent))
+              .loadMoreOnEndSwipe,
+          isTrue,
+        );
+        verify(
+          () => repository.getClassicVideos(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+            archiveOnly: true,
+          ),
+        ).called(1);
+        verifyNever(
+          () => repository.getClassicRecommendations(
+            request: any(named: 'request'),
+            userPubkey: any(named: 'userPubkey'),
+            isCurrent: any(named: 'isCurrent'),
+          ),
+        );
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      });
+    });
 
     testWidgets(
       'a single-video route appends For You without replacing its anchor',
@@ -1022,6 +1430,156 @@ void main() {
             videos.first.id: ViewTrafficSource.share,
             videos.last.id: ViewTrafficSource.discoveryForYou,
           },
+        );
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      },
+    );
+
+    testWidgets(
+      'a clip opened from a message stays private while discovery clips '
+      'after it keep reporting',
+      (tester) async {
+        final nativePlayer = _NativePlayerHarness(tester)..install();
+        addTearDown(nativePlayer.dispose);
+        final analytics = _SessionedConsumptionAnalytics();
+        addTearDown(analytics.dispose);
+        final videos = createTestVideos(count: 2);
+        final initial = FullscreenFeedState(
+          status: FullscreenFeedStatus.ready,
+          videos: videos,
+        );
+        await tester.pumpWidget(
+          buildSubject(
+            state: initial,
+            trafficSource: ViewTrafficSource.share,
+            initialVideoKey: videos.first.feedDedupKey,
+            loadMoreOnEndSwipe: true,
+            fromMessage: true,
+            additionalOverrides: [
+              pendingActionServiceProvider.overrideWithValue(null),
+              consumptionAnalyticsTrackerProvider.overrideWithValue(
+                ConsumptionAnalyticsTracker(analytics: () => analytics),
+              ),
+            ],
+          ),
+        );
+        await tester.pump();
+        final trackers = tester.widgetList<DivineVideoMetricsTracker>(
+          find.byType(DivineVideoMetricsTracker, skipOffstage: false),
+        );
+        expect(
+          {
+            for (final tracker in trackers)
+              tracker.video.id: tracker.fromMessage,
+          },
+          {videos.first.id: true, videos.last.id: false},
+        );
+
+        nativeFeed(tester).onActiveVideoChanged?.call(videos.last, 1);
+        final swiped = initial.copyWith(currentIndex: 1);
+        when(() => mockBloc.state).thenReturn(swiped);
+        stateController.add(swiped);
+        await tester.pump();
+        // A new analytics session reseeds the seen set with the discovery
+        // clip, so returning to the message clip would count it again.
+        analytics.sessionId = 'second';
+        nativeFeed(tester).onActiveVideoChanged?.call(videos.first, 0);
+        await tester.pump();
+        expect(
+          analytics.events
+              .where((event) => event.name == 'feed_depth_recorded')
+              .map((event) => event.parameters['feed_type']),
+          ['for_you'],
+        );
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      },
+    );
+
+    testWidgets(
+      'a public open of a shared clip keeps every clip reporting',
+      (tester) async {
+        final nativePlayer = _NativePlayerHarness(tester)..install();
+        addTearDown(nativePlayer.dispose);
+        final videos = createTestVideos(count: 2);
+        await tester.pumpWidget(
+          buildSubject(
+            state: FullscreenFeedState(
+              status: FullscreenFeedStatus.ready,
+              videos: videos,
+            ),
+            trafficSource: ViewTrafficSource.share,
+            initialVideoKey: videos.first.feedDedupKey,
+            loadMoreOnEndSwipe: true,
+            additionalOverrides: [
+              pendingActionServiceProvider.overrideWithValue(null),
+            ],
+          ),
+        );
+        await tester.pump();
+        final trackers = tester.widgetList<DivineVideoMetricsTracker>(
+          find.byType(DivineVideoMetricsTracker, skipOffstage: false),
+        );
+        expect(trackers, hasLength(2));
+        expect(
+          trackers.map((tracker) => tracker.fromMessage),
+          everyElement(isFalse),
+        );
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      },
+    );
+
+    testWidgets(
+      'a paging feed without an opened video keeps its route attribution',
+      (tester) async {
+        final nativePlayer = _NativePlayerHarness(tester)..install();
+        addTearDown(nativePlayer.dispose);
+        final analytics = RecordingConsumptionAnalytics();
+        addTearDown(analytics.dispose);
+        final videos = createTestVideos(count: 2);
+        final initial = FullscreenFeedState(
+          status: FullscreenFeedStatus.ready,
+          videos: videos,
+        );
+        await tester.pumpWidget(
+          buildSubject(
+            state: initial,
+            trafficSource: ViewTrafficSource.search,
+            loadMoreOnEndSwipe: true,
+            additionalOverrides: [
+              pendingActionServiceProvider.overrideWithValue(null),
+              consumptionAnalyticsTrackerProvider.overrideWithValue(
+                ConsumptionAnalyticsTracker(analytics: () => analytics),
+              ),
+            ],
+          ),
+        );
+        await tester.pump();
+
+        nativeFeed(tester).onActiveVideoChanged?.call(videos.last, 1);
+        final swiped = initial.copyWith(currentIndex: 1);
+        when(() => mockBloc.state).thenReturn(swiped);
+        stateController.add(swiped);
+        await tester.pump();
+
+        final trackers = tester.widgetList<DivineVideoMetricsTracker>(
+          find.byType(DivineVideoMetricsTracker, skipOffstage: false),
+        );
+        expect(
+          {
+            for (final tracker in trackers)
+              tracker.video.id: tracker.trafficSource,
+          },
+          {for (final video in videos) video.id: ViewTrafficSource.search},
+        );
+        expect(
+          analytics.events
+              .where((event) => event.name == 'feed_depth_recorded')
+              .single
+              .parameters['feed_type'],
+          'search',
         );
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump();
@@ -1963,7 +2521,7 @@ void main() {
         },
       );
 
-      testWidgets('passes nearEndThreshold of 10 to InfiniteVideoFeed', (
+      testWidgets('passes nearEndThreshold of 15 to InfiniteVideoFeed', (
         tester,
       ) async {
         final videos = createTestVideos();
@@ -1978,7 +2536,7 @@ void main() {
           ),
         );
 
-        expect(nativeFeed(tester).nearEndThreshold, equals(10));
+        expect(nativeFeed(tester).nearEndThreshold, equals(15));
       });
 
       testWidgets(
@@ -2769,6 +3327,10 @@ void main() {
             ).thenAnswer((_) => confirmation.future);
             final tracker = _MockBrokenVideoTracker();
             when(() => tracker.isVideoBroken(any())).thenReturn(false);
+            when(
+              () => tracker.markedVideoIds,
+            ).thenAnswer((_) => const Stream<String>.empty());
+            when(() => tracker.brokenVideoIds).thenReturn(const []);
             when(() => tracker.markVideoBroken(any(), any()))
                 .thenAnswer((_) async {});
             final oldService = createMockVideoEventService();
@@ -2859,6 +3421,10 @@ void main() {
           ).thenAnswer((_) => confirmation.future);
           final tracker = _MockBrokenVideoTracker();
           when(() => tracker.isVideoBroken(any())).thenReturn(false);
+          when(
+            () => tracker.markedVideoIds,
+          ).thenAnswer((_) => const Stream<String>.empty());
+          when(() => tracker.brokenVideoIds).thenReturn(const []);
           final videoEventService = createMockVideoEventService();
           when(
             () => videoEventService.shouldHideVideo(any()),
@@ -2938,4 +3504,12 @@ void main() {
       );
     });
   });
+}
+
+/// Lets a test start a new analytics session mid-feed.
+class _SessionedConsumptionAnalytics extends RecordingConsumptionAnalytics {
+  String sessionId = 'first';
+
+  @override
+  String get productAnalyticsSessionId => sessionId;
 }

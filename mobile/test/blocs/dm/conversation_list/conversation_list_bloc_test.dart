@@ -5,6 +5,7 @@
 
 import 'dart:async';
 
+import 'package:analytics/analytics.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:dm_repository/dm_repository.dart';
@@ -25,6 +26,8 @@ import 'package:openvine/constants/search_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../../helpers/screen_load_recorder.dart';
 
 class _MockDmRepository extends Mock implements DmRepository {}
 
@@ -578,6 +581,7 @@ void main() {
                   lastMessageContent: null,
                   lastMessageTimestamp: null,
                   lastMessageSenderPubkey: null,
+                  lastMessageIsVideoShare: false,
                   hasUnread: false,
                 ),
               },
@@ -735,6 +739,7 @@ void main() {
                   lastMessageContent: 'from the first member',
                   lastMessageTimestamp: visibleMessageAt,
                   lastMessageSenderPubkey: _testPubkey2,
+                  lastMessageIsVideoShare: false,
                   hasUnread: hasUnread,
                 ),
               },
@@ -2658,6 +2663,93 @@ void main() {
           expect(bloc.state.conversations.single.id, equals('c1'));
         },
       );
+    });
+
+    group('load telemetry', () {
+      late ScreenLoadRecorder recorder;
+
+      setUp(() => recorder = ScreenLoadRecorder());
+
+      ConversationListBloc createTimedBloc() => ConversationListBloc(
+        dmRepository: mockDmRepository,
+        followRepository: mockFollowRepository,
+        recomputeDebounce: Duration.zero,
+        loadTelemetry: recorder.telemetry(AnalyticsSurface.inbox),
+      );
+
+      Future<void> open(ConversationListBloc bloc) async {
+        bloc.add(const ConversationListStarted());
+        await pumpEventQueue();
+      }
+
+      test('completes when the conversations show', () async {
+        _stubStreams(
+          mockDmRepository,
+          accepted: [
+            _createConversation(id: _testConversationId1),
+            _createConversation(
+              id: _testConversationId2,
+              participantPubkeys: const [_testPubkey1, _testPubkey3],
+            ),
+          ],
+        );
+        final bloc = createTimedBloc();
+        addTearDown(bloc.close);
+
+        await open(bloc);
+
+        expect(bloc.state.visibleConversations, hasLength(2));
+        expect(recorder.results, [SurfaceLoadResult.success]);
+        expect(
+          recorder.loads.single,
+          containsPair(AnalyticsParam.itemCount, 2),
+        );
+      });
+
+      test('reports empty for an inbox with no conversations', () async {
+        _stubStreams(mockDmRepository);
+        final bloc = createTimedBloc();
+        addTearDown(bloc.close);
+
+        await open(bloc);
+
+        expect(recorder.results, [SurfaceLoadResult.empty]);
+      });
+
+      test('reports failure when the conversations cannot be read', () async {
+        _stubStreams(mockDmRepository);
+        when(
+          () => mockDmRepository.watchAcceptedConversations(
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer((_) => Stream.error(Exception('db failure')));
+        final bloc = createTimedBloc();
+        addTearDown(bloc.close);
+
+        await open(bloc);
+
+        expect(bloc.state.status, ConversationListStatus.error);
+        expect(recorder.results, [SurfaceLoadResult.failure]);
+      });
+
+      test('reports dismissed when closed before the list showed', () async {
+        _stubStreams(mockDmRepository);
+        final accepted = StreamController<List<DmConversation>>();
+        addTearDown(accepted.close);
+        when(
+          () => mockDmRepository.watchAcceptedConversations(
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer((_) => accepted.stream);
+        final bloc = createTimedBloc();
+
+        await open(bloc);
+        expect(bloc.state.status, ConversationListStatus.loading);
+        await bloc.close();
+        await pumpEventQueue();
+
+        expect(recorder.results, [SurfaceLoadResult.dismissed]);
+      });
     });
   });
 

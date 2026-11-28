@@ -9,6 +9,7 @@ import 'dart:math';
 
 import 'package:db_client/db_client.dart';
 import 'package:dm_repository/dm_repository.dart';
+import 'package:drift/native.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -21,6 +22,7 @@ import 'package:nostr_sdk/filter.dart' as nostr_filter;
 import 'package:nostr_sdk/nip44/nip44_v2.dart';
 import 'package:nostr_sdk/nip59/gift_wrap_batch_unwrap.dart';
 import 'package:nostr_sdk/nip59/gift_wrap_util.dart';
+import 'package:nostr_sdk/nostr.dart';
 import 'package:nostr_sdk/relay/publish_outcome.dart';
 import 'package:nostr_sdk/relay/query_result.dart';
 import 'package:nostr_sdk/relay/relay_type.dart';
@@ -208,6 +210,7 @@ class _InMemoryProcessedGiftWrapsDao extends Mock
   Future<void> record({
     required String giftWrapId,
     required String ownerPubkey,
+    DmVerifiedDuplicate? verifiedDuplicate,
   }) async {
     recorded.add(giftWrapId);
     _owners.putIfAbsent(giftWrapId, () => <String>{}).add(ownerPubkey);
@@ -1121,10 +1124,11 @@ void main() {
       Duration readMarkerDebounceDelay = const Duration(seconds: 3),
       String Function()? sendBatchIdGenerator,
       bool Function()? receivesPeerRooms,
+      NIP17MessageService? messageService,
     }) {
       return DmRepository(
         nostrClient: mockNostrClient,
-        messageService: mockMessageService,
+        messageService: messageService ?? mockMessageService,
         directMessagesDao: mockDirectMessagesDao,
         conversationsDao: mockConversationsDao,
         outgoingDmsDao: outgoingDmsDao,
@@ -1188,6 +1192,8 @@ void main() {
           awaitRecipientOk: any(named: 'awaitRecipientOk'),
           selfWrapOnSoftUnconfirmed: any(named: 'selfWrapOnSoftUnconfirmed'),
           onSelfWrapDue: any(named: 'onSelfWrapDue'),
+          recipientWrap: any(named: 'recipientWrap'),
+          publishRefusal: any(named: 'publishRefusal'),
         ),
       ).thenAnswer((inv) async {
         final rumorEvent = inv.namedArguments[#rumorEvent] as Event;
@@ -1195,6 +1201,24 @@ void main() {
         return answer(rumorEvent, recipientPubkey);
       });
     }
+
+    /// The sender's own copy of a group send lands. A group publishes one copy
+    /// for every member after their sends (#10016).
+    void stubOwnCopyPublishes() =>
+        when(
+          () => mockMessageService.publishSelfWrap(
+            rumorEvent: any(named: 'rumorEvent'),
+            targetRelays: any(named: 'targetRelays'),
+            prebuiltSelfWrap: any(named: 'prebuiltSelfWrap'),
+          ),
+        ).thenAnswer((inv) async {
+          final rumor = inv.namedArguments[#rumorEvent] as Event;
+          return NIP17SendResult.success(
+            rumorEventId: rumor.id,
+            messageEventId: rumor.id,
+            recipientPubkey: _validPubkeyA,
+          );
+        });
 
     // -----------------------------------------------------------------
     // Static helpers
@@ -1699,6 +1723,7 @@ void main() {
             participantPubkeys: any(named: 'participantPubkeys'),
             isGroup: any(named: 'isGroup'),
             createdAt: any(named: 'createdAt'),
+            lastMessageId: any(named: 'lastMessageId'),
             lastMessageContent: any(named: 'lastMessageContent'),
             lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
             lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -1762,6 +1787,7 @@ void main() {
             participantPubkeys: any(named: 'participantPubkeys'),
             isGroup: false,
             createdAt: any(named: 'createdAt'),
+            lastMessageId: any(named: 'lastMessageId'),
             lastMessageContent: 'Hello!',
             lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
             lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -1875,6 +1901,7 @@ void main() {
             participantPubkeys: any(named: 'participantPubkeys'),
             isGroup: any(named: 'isGroup'),
             createdAt: any(named: 'createdAt'),
+            lastMessageId: any(named: 'lastMessageId'),
             lastMessageContent: any(named: 'lastMessageContent'),
             lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
             lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -2010,6 +2037,7 @@ void main() {
               participantPubkeys: any(named: 'participantPubkeys'),
               isGroup: any(named: 'isGroup'),
               createdAt: any(named: 'createdAt'),
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: any(named: 'lastMessageContent'),
               lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -2069,6 +2097,7 @@ void main() {
               participantPubkeys: any(named: 'participantPubkeys'),
               isGroup: any(named: 'isGroup'),
               createdAt: any(named: 'createdAt'),
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: any(named: 'lastMessageContent'),
               lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -2400,6 +2429,7 @@ void main() {
             participantPubkeys: any(named: 'participantPubkeys'),
             isGroup: any(named: 'isGroup'),
             createdAt: any(named: 'createdAt'),
+            lastMessageId: any(named: 'lastMessageId'),
             lastMessageContent: any(named: 'lastMessageContent'),
             lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
             lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -2481,6 +2511,7 @@ void main() {
             participantPubkeys: any(named: 'participantPubkeys'),
             isGroup: false,
             createdAt: 1700000000,
+            lastMessageId: any(named: 'lastMessageId'),
             lastMessageContent: 'Hello from B!',
             lastMessageTimestamp: 1700000000,
             lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -4893,6 +4924,7 @@ void main() {
             participantPubkeys: any(named: 'participantPubkeys'),
             isGroup: any(named: 'isGroup'),
             createdAt: any(named: 'createdAt'),
+            lastMessageId: any(named: 'lastMessageId'),
             lastMessageContent: any(named: 'lastMessageContent'),
             lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
             lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -5027,21 +5059,22 @@ void main() {
             'sig': '',
           });
           final mockOutgoingDmsDao = _MockOutgoingDmsDao();
-          when(() => mockOutgoingDmsDao.getById(any())).thenAnswer(
-            (_) async => OutgoingDm(
-              id: _rumorEventId,
-              conversationId: groupConversationId,
-              recipientPubkey: _validPubkeyB,
-              content: 'Hello from B!',
-              createdAt: 1700000000,
-              rumorEventJson: bRumorJson,
-              recipientWrapStatus: OutgoingWrapStatus.failed,
-              selfWrapStatus: OutgoingWrapStatus.failed,
-              queuedAt: DateTime.fromMillisecondsSinceEpoch(0),
-              ownerPubkey: _validPubkeyA,
-              sendBatchId: batchId,
-            ),
+          final groupRow = OutgoingDm(
+            id: '$_rumorEventId:$_validPubkeyB',
+            conversationId: groupConversationId,
+            recipientPubkey: _validPubkeyB,
+            content: 'Hello from B!',
+            createdAt: 1700000000,
+            rumorEventJson: bRumorJson,
+            recipientWrapStatus: OutgoingWrapStatus.failed,
+            selfWrapStatus: OutgoingWrapStatus.failed,
+            queuedAt: DateTime.fromMillisecondsSinceEpoch(0),
+            ownerPubkey: _validPubkeyA,
+            sendBatchId: batchId,
           );
+          when(
+            () => mockOutgoingDmsDao.getById(any()),
+          ).thenAnswer((_) async => groupRow);
           when(
             () => mockOutgoingDmsDao.deleteById(any()),
           ).thenAnswer((_) async => 1);
@@ -5061,6 +5094,27 @@ void main() {
               lastError: any(named: 'lastError'),
             ),
           ).thenAnswer((_) async => true);
+          // The recovered member's copy is its batch's (#10016): no other
+          // member's row records it yet, so this recovery publishes it.
+          when(
+            () => mockOutgoingDmsDao.getForConversation(
+              conversationId: any(named: 'conversationId'),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async => [groupRow]);
+          when(
+            () => mockMessageService.publishSelfWrap(
+              rumorEvent: any(named: 'rumorEvent'),
+              targetRelays: any(named: 'targetRelays'),
+              prebuiltSelfWrap: any(named: 'prebuiltSelfWrap'),
+            ),
+          ).thenAnswer(
+            (_) async => NIP17SendResult.success(
+              rumorEventId: _rumorEventId,
+              messageEventId: _rumorEventId,
+              recipientPubkey: _validPubkeyA,
+            ),
+          );
 
           final controller = StreamController<Event>();
           when(
@@ -5095,7 +5149,7 @@ void main() {
             ),
           );
           final recovered = await repository.recoverFullSend(
-            rumorId: _rumorEventId,
+            rumorId: groupRow.id,
           );
 
           expect(recovered.success, isTrue);
@@ -5756,6 +5810,7 @@ void main() {
               participantPubkeys: any(named: 'participantPubkeys'),
               isGroup: any(named: 'isGroup'),
               createdAt: any(named: 'createdAt'),
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: any(named: 'lastMessageContent'),
               lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -6085,13 +6140,17 @@ void main() {
               participantPubkeys: jsonEncode(roomParticipants),
               isGroup: true,
               createdAt: any(named: 'createdAt'),
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: any(named: 'lastMessageContent'),
               lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
               lastMessageSenderPubkey: any(named: 'lastMessageSenderPubkey'),
               subject: any(named: 'subject'),
               isRead: any(named: 'isRead'),
-              currentUserHasSent: any(named: 'currentUserHasSent'),
+              currentUserHasSent: any(
+                named: 'currentUserHasSent',
+                that: isFalse,
+              ),
               ownerPubkey: any(named: 'ownerPubkey'),
               dmProtocol: any(named: 'dmProtocol'),
             ),
@@ -10619,6 +10678,7 @@ void main() {
               participantPubkeys: any(named: 'participantPubkeys'),
               isGroup: any(named: 'isGroup'),
               createdAt: any(named: 'createdAt'),
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: any(named: 'lastMessageContent'),
               lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -10649,6 +10709,7 @@ void main() {
               participantPubkeys: any(named: 'participantPubkeys'),
               isGroup: any(named: 'isGroup'),
               createdAt: any(named: 'createdAt'),
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: any(named: 'lastMessageContent'),
               lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -14045,6 +14106,7 @@ void main() {
             participantPubkeys: any(named: 'participantPubkeys'),
             isGroup: any(named: 'isGroup'),
             createdAt: any(named: 'createdAt'),
+            lastMessageId: any(named: 'lastMessageId'),
             lastMessageContent: any(named: 'lastMessageContent'),
             lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
             lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -14804,6 +14866,52 @@ void main() {
       );
 
       test(
+        'verified inbound wraps for one rumor resolve the same row',
+        () async {
+          final db = AppDatabase.test(NativeDatabase.memory());
+          addTearDown(db.close);
+          final rumor = rumorFor('shared video', createdAt: 1700000500);
+          final wraps = [
+            for (final time in [1700000000, 1700000001])
+              await _buildGiftWrap(
+                rumor: rumor,
+                senderPrivateKey: senderPriv,
+                recipientPubkey: recipientPub,
+                outerCreatedAt: time,
+              ),
+          ];
+          stubDrainPage(wraps);
+          final repository = DmRepository(
+            nostrClient: mockNostrClient,
+            messageService: mockMessageService,
+            directMessagesDao: db.directMessagesDao,
+            conversationsDao: db.conversationsDao,
+            processedGiftWrapsDao: db.processedGiftWrapsDao,
+            userPubkey: recipientPub,
+            signer: _IsolateLocalSigner(recipientPriv),
+            syncState: drainPending(),
+            watchWrapAudience: (_) => Stream.value((
+              hidden: <String>{},
+              followed: {senderPub},
+              supportPubkey: null,
+            )),
+          );
+          addTearDown(repository.stopListening);
+          await repository.backfillHistoryIfNeeded();
+          for (final wrap in wraps) {
+            final result = await repository
+                .watchWrapLookup(ownerPubkey: recipientPub, giftWrapId: wrap.id)
+                .first;
+            expect(result, isA<DmWrapFound>());
+            expect((result as DmWrapFound).messageId, rumor.id);
+            expect(result.isRequest, isFalse);
+          }
+          expect(await db.select(db.directMessages).get(), hasLength(1));
+          expect(await db.processedGiftWrapsDao.count(), 1);
+        },
+      );
+
+      test(
         'batches a drain page of real gift wraps and persists each message '
         'without a per-event decryptor',
         () async {
@@ -15304,8 +15412,18 @@ void main() {
     // Query methods
     // -----------------------------------------------------------------
 
+    void stubPlainPreview() {
+      when(
+        () => mockConversationsDao.latestPreviewTags(
+          any(),
+          ownerPubkey: any(named: 'ownerPubkey'),
+        ),
+      ).thenAnswer((_) async => {});
+    }
+
     group('watchConversations', () {
       test('maps $ConversationRow to $DmConversation', () async {
+        stubPlainPreview();
         final participants = [_validPubkeyA, _validPubkeyB]..sort();
         final convId = DmRepository.computeConversationId(participants);
 
@@ -15368,6 +15486,7 @@ void main() {
       });
 
       test('returns $DmConversation when conversation exists', () async {
+        stubPlainPreview();
         final participants = [_validPubkeyA, _validPubkeyB]..sort();
         final convId = DmRepository.computeConversationId(participants);
 
@@ -16919,6 +17038,7 @@ void main() {
             participantPubkeys: any(named: 'participantPubkeys'),
             isGroup: any(named: 'isGroup'),
             createdAt: any(named: 'createdAt'),
+            lastMessageId: any(named: 'lastMessageId'),
             lastMessageContent: any(named: 'lastMessageContent'),
             lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
             lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -17030,6 +17150,7 @@ void main() {
               participantPubkeys: any(named: 'participantPubkeys'),
               isGroup: false,
               createdAt: 1699999000,
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: 'Hey there',
               lastMessageTimestamp: 1700000100,
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -17098,6 +17219,7 @@ void main() {
             participantPubkeys: any(named: 'participantPubkeys'),
             isGroup: any(named: 'isGroup'),
             createdAt: any(named: 'createdAt'),
+            lastMessageId: any(named: 'lastMessageId'),
             lastMessageContent: any(named: 'lastMessageContent'),
             lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
             lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -17213,6 +17335,7 @@ void main() {
             participantPubkeys: any(named: 'participantPubkeys'),
             isGroup: false,
             createdAt: 1700000000,
+            lastMessageId: any(named: 'lastMessageId'),
             lastMessageContent: 'Sent a photo',
             lastMessageTimestamp: 1700000000,
             lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -17439,6 +17562,7 @@ void main() {
             content: any(named: 'content'),
             eventKind: any(named: 'eventKind'),
             additionalTags: any(named: 'additionalTags'),
+            createdAt: any(named: 'createdAt'),
             targetRelays: any(named: 'targetRelays'),
             selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
@@ -17465,6 +17589,7 @@ void main() {
             content: any(named: 'content'),
             eventKind: any(named: 'eventKind'),
             additionalTags: any(named: 'additionalTags'),
+            createdAt: any(named: 'createdAt'),
             targetRelays: any(named: 'targetRelays'),
             selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
@@ -17482,6 +17607,7 @@ void main() {
             content: any(named: 'content'),
             eventKind: any(named: 'eventKind'),
             additionalTags: any(named: 'additionalTags'),
+            createdAt: any(named: 'createdAt'),
             targetRelays: any(named: 'targetRelays'),
             selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
@@ -17528,6 +17654,7 @@ void main() {
             participantPubkeys: any(named: 'participantPubkeys'),
             isGroup: any(named: 'isGroup'),
             createdAt: any(named: 'createdAt'),
+            lastMessageId: any(named: 'lastMessageId'),
             lastMessageContent: any(named: 'lastMessageContent'),
             lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
             lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -17563,6 +17690,7 @@ void main() {
             content: 'https://blossom.example.com/file.enc',
             eventKind: EventKind.fileMessage,
             additionalTags: any(named: 'additionalTags'),
+            createdAt: any(named: 'createdAt'),
             targetRelays: any(named: 'targetRelays'),
             selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
@@ -17602,6 +17730,7 @@ void main() {
             participantPubkeys: any(named: 'participantPubkeys'),
             isGroup: false,
             createdAt: any(named: 'createdAt'),
+            lastMessageId: any(named: 'lastMessageId'),
             lastMessageContent: 'Sent a photo',
             lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
             lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -17630,6 +17759,7 @@ void main() {
             content: any(named: 'content'),
             eventKind: any(named: 'eventKind'),
             additionalTags: any(named: 'additionalTags'),
+            createdAt: any(named: 'createdAt'),
             targetRelays: any(named: 'targetRelays'),
             selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
@@ -17710,6 +17840,7 @@ void main() {
               content: any(named: 'content'),
               eventKind: any(named: 'eventKind'),
               additionalTags: any(named: 'additionalTags'),
+              createdAt: any(named: 'createdAt'),
               targetRelays: any(named: 'targetRelays'),
               selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
               awaitRecipientOk: any(named: 'awaitRecipientOk'),
@@ -17757,6 +17888,7 @@ void main() {
               participantPubkeys: any(named: 'participantPubkeys'),
               isGroup: any(named: 'isGroup'),
               createdAt: any(named: 'createdAt'),
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: any(named: 'lastMessageContent'),
               lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -17844,6 +17976,199 @@ void main() {
         );
       });
 
+      group('rumor created_at (#10436)', () {
+        Future<NIP17SendResult> anyPrivateMessage({Object? createdAt}) =>
+            mockMessageService.sendPrivateMessage(
+              recipientPubkey: any(named: 'recipientPubkey'),
+              content: any(named: 'content'),
+              eventKind: any(named: 'eventKind'),
+              additionalTags: any(named: 'additionalTags'),
+              createdAt: createdAt == null
+                  ? any(named: 'createdAt')
+                  : createdAt as int,
+              targetRelays: any(named: 'targetRelays'),
+              selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
+              awaitRecipientOk: any(named: 'awaitRecipientOk'),
+              selfWrapOnSoftUnconfirmed: any(
+                named: 'selfWrapOnSoftUnconfirmed',
+              ),
+            );
+
+        Future<NIP17SendResult> sendFile({
+          int? createdAt,
+          void Function(int createdAt)? onRumorCreatedAt,
+        }) => createRepository().sendFileMessage(
+          recipientPubkey: _validPubkeyB,
+          fileUrl: 'https://blossom.example.com/file.enc',
+          fileMetadata: testFileMetadata,
+          createdAt: createdAt,
+          onRumorCreatedAt: onRumorCreatedAt,
+        );
+
+        test(
+          'builds the rumor with the createdAt it is given and reports it',
+          () async {
+            when(anyPrivateMessage).thenAnswer(
+              (_) async => const NIP17SendResult.failure('relay rejected'),
+            );
+            final reported = <int>[];
+
+            await sendFile(
+              createdAt: 1700000000,
+              onRumorCreatedAt: reported.add,
+            );
+
+            verify(() => anyPrivateMessage(createdAt: 1700000000)).called(1);
+            expect(reported, equals([1700000000]));
+          },
+        );
+
+        test(
+          'stamps a send given no createdAt with the time now and reports '
+          'that time',
+          () async {
+            when(anyPrivateMessage).thenAnswer(
+              (_) async => const NIP17SendResult.failure('relay rejected'),
+            );
+            final reported = <int>[];
+            int nowSeconds() => DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+            final before = nowSeconds();
+            await sendFile(onRumorCreatedAt: reported.add);
+            final after = nowSeconds();
+
+            final stamped =
+                verify(
+                      () => mockMessageService.sendPrivateMessage(
+                        recipientPubkey: any(named: 'recipientPubkey'),
+                        content: any(named: 'content'),
+                        eventKind: any(named: 'eventKind'),
+                        additionalTags: any(named: 'additionalTags'),
+                        createdAt: captureAny(named: 'createdAt'),
+                        targetRelays: any(named: 'targetRelays'),
+                        selfWrapTargetRelays: any(
+                          named: 'selfWrapTargetRelays',
+                        ),
+                        awaitRecipientOk: any(named: 'awaitRecipientOk'),
+                        selfWrapOnSoftUnconfirmed: any(
+                          named: 'selfWrapOnSoftUnconfirmed',
+                        ),
+                      ),
+                    ).captured.single
+                    as int;
+            expect(stamped, inInclusiveRange(before, after));
+            expect(reported, equals([stamped]));
+          },
+        );
+
+        test('reports the createdAt even when the send then throws', () async {
+          when(anyPrivateMessage).thenThrow(StateError('wrap build failed'));
+          final reported = <int>[];
+
+          await expectLater(
+            sendFile(createdAt: 1700000000, onRumorCreatedAt: reported.add),
+            throwsStateError,
+          );
+
+          expect(reported, equals([1700000000]));
+        });
+
+        test(
+          'a retry given the created_at the first attempt reported puts the '
+          'same rumor on the wire, as the recipient unwraps it',
+          () async {
+            final senderPrivateKey = generatePrivateKey();
+            final senderPubkey = getPublicKey(senderPrivateKey);
+            final recipientPrivateKey = generatePrivateKey();
+            final recipientPubkey = getPublicKey(recipientPrivateKey);
+            final wraps = <Event>[];
+            when(
+              () => mockNostrClient.publishEventAwaitOk(
+                any(),
+                targetRelays: any(named: 'targetRelays'),
+                timeout: any(named: 'timeout'),
+                diagnosticTag: any(named: 'diagnosticTag'),
+              ),
+            ).thenAnswer((invocation) async {
+              final wrap = invocation.positionalArguments.first as Event;
+              wraps.add(wrap);
+              return PublishOutcome(
+                eventId: wrap.id,
+                acceptedBy: const [],
+                rejectedBy: const {'wss://relay.divine.video': 'blocked'},
+                noResponseFrom: const [],
+              );
+            });
+            final repository = createRepository(
+              userPubkey: senderPubkey,
+              messageService: NIP17MessageService(
+                signer: LocalNostrSigner(senderPrivateKey),
+                senderPublicKey: senderPubkey,
+                nostrService: mockNostrClient,
+              ),
+            );
+            final reported = <int>[];
+            Future<NIP17SendResult> send({int? createdAt}) =>
+                repository.sendFileMessage(
+                  recipientPubkey: recipientPubkey,
+                  fileUrl: 'https://blossom.example.com/file.enc',
+                  fileMetadata: testFileMetadata,
+                  createdAt: createdAt,
+                  onRumorCreatedAt: reported.add,
+                );
+
+            // A first attempt made long before the retry.
+            final first = await send(createdAt: 1700000000);
+            final retry = await send(createdAt: reported.single);
+
+            expect(first.success, isFalse);
+            expect(retry.success, isFalse);
+            expect(wraps, hasLength(2));
+            final reader = Nostr(
+              LocalNostrSigner(recipientPrivateKey),
+              [],
+              (url) => throw UnimplementedError('no relays in this test'),
+            );
+            final rumors = [
+              for (final wrap in wraps)
+                await GiftWrapUtil.getRumorEvent(reader, wrap),
+            ];
+            expect(rumors[0], isNotNull);
+            expect(rumors[1]!.id, equals(rumors[0]!.id));
+            expect(rumors[0]!.createdAt, equals(1700000000));
+            expect(rumors[1]!.createdAt, equals(1700000000));
+            expect(reported, equals([1700000000, 1700000000]));
+            // Only the gift wrap is rebuilt.
+            expect(wraps[1].id, isNot(equals(wraps[0].id)));
+          },
+        );
+
+        test('reports nothing when no rumor is built', () async {
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
+            ),
+          ).thenAnswer((_) async => unansweredList(timedOut: true));
+          final reported = <int>[];
+
+          final result = await sendFile(onRumorCreatedAt: reported.add);
+
+          expect(result.success, isFalse);
+          expect(reported, isEmpty);
+          verifyNever(anyPrivateMessage);
+        });
+      });
+
       test('appends extraTags to the rumor and persists them', () async {
         when(
           () => mockMessageService.sendPrivateMessage(
@@ -17851,6 +18176,7 @@ void main() {
             content: any(named: 'content'),
             eventKind: any(named: 'eventKind'),
             additionalTags: any(named: 'additionalTags'),
+            createdAt: any(named: 'createdAt'),
             targetRelays: any(named: 'targetRelays'),
             selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
@@ -17895,6 +18221,7 @@ void main() {
             participantPubkeys: any(named: 'participantPubkeys'),
             isGroup: any(named: 'isGroup'),
             createdAt: any(named: 'createdAt'),
+            lastMessageId: any(named: 'lastMessageId'),
             lastMessageContent: any(named: 'lastMessageContent'),
             lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
             lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -17932,6 +18259,7 @@ void main() {
                     content: any(named: 'content'),
                     eventKind: EventKind.fileMessage,
                     additionalTags: captureAny(named: 'additionalTags'),
+                    createdAt: any(named: 'createdAt'),
                     targetRelays: any(named: 'targetRelays'),
                     selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
                     awaitRecipientOk: any(named: 'awaitRecipientOk'),
@@ -18030,6 +18358,7 @@ void main() {
             participantPubkeys: any(named: 'participantPubkeys'),
             isGroup: any(named: 'isGroup'),
             createdAt: any(named: 'createdAt'),
+            lastMessageId: any(named: 'lastMessageId'),
             lastMessageContent: any(named: 'lastMessageContent'),
             lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
             lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -18209,6 +18538,7 @@ void main() {
               participantPubkeys: any(named: 'participantPubkeys'),
               isGroup: false,
               createdAt: 1700000000,
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent:
                   'Your report has been reviewed. Action taken.',
               lastMessageTimestamp: 1700000000,
@@ -18412,6 +18742,7 @@ void main() {
             participantPubkeys: any(named: 'participantPubkeys'),
             isGroup: any(named: 'isGroup'),
             createdAt: any(named: 'createdAt'),
+            lastMessageId: any(named: 'lastMessageId'),
             lastMessageContent: any(named: 'lastMessageContent'),
             lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
             lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -18584,6 +18915,7 @@ void main() {
             participantPubkeys: any(named: 'participantPubkeys'),
             isGroup: any(named: 'isGroup'),
             createdAt: any(named: 'createdAt'),
+            lastMessageId: any(named: 'lastMessageId'),
             lastMessageContent: any(named: 'lastMessageContent'),
             lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
             lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -18808,6 +19140,7 @@ void main() {
             participantPubkeys: any(named: 'participantPubkeys'),
             isGroup: false,
             createdAt: 1700000000,
+            lastMessageId: any(named: 'lastMessageId'),
             lastMessageContent: 'Decrypted NIP-04 text',
             lastMessageTimestamp: 1700000000,
             lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -18962,6 +19295,7 @@ void main() {
               participantPubkeys: any(named: 'participantPubkeys'),
               isGroup: any(named: 'isGroup'),
               createdAt: any(named: 'createdAt'),
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: any(named: 'lastMessageContent'),
               lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -19057,6 +19391,7 @@ void main() {
               participantPubkeys: any(named: 'participantPubkeys'),
               isGroup: any(named: 'isGroup'),
               createdAt: any(named: 'createdAt'),
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: any(named: 'lastMessageContent'),
               lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -19116,6 +19451,7 @@ void main() {
             participantPubkeys: any(named: 'participantPubkeys'),
             isGroup: false,
             createdAt: any(named: 'createdAt'),
+            lastMessageId: any(named: 'lastMessageId'),
             lastMessageContent: any(named: 'lastMessageContent'),
             lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
             lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -19877,6 +20213,7 @@ void main() {
             participantPubkeys: any(named: 'participantPubkeys'),
             isGroup: any(named: 'isGroup'),
             createdAt: any(named: 'createdAt'),
+            lastMessageId: any(named: 'lastMessageId'),
             lastMessageContent: any(named: 'lastMessageContent'),
             lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
             lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -19896,6 +20233,7 @@ void main() {
             participantPubkeys: any(named: 'participantPubkeys'),
             isGroup: any(named: 'isGroup'),
             createdAt: any(named: 'createdAt'),
+            lastMessageId: any(named: 'lastMessageId'),
             lastMessageContent: any(named: 'lastMessageContent'),
             lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
             lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -19965,6 +20303,7 @@ void main() {
             participantPubkeys: any(named: 'participantPubkeys'),
             isGroup: any(named: 'isGroup'),
             createdAt: any(named: 'createdAt'),
+            lastMessageId: any(named: 'lastMessageId'),
             lastMessageContent: any(named: 'lastMessageContent'),
             lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
             lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -20025,6 +20364,7 @@ void main() {
             participantPubkeys: any(named: 'participantPubkeys'),
             isGroup: false,
             createdAt: any(named: 'createdAt'),
+            lastMessageId: any(named: 'lastMessageId'),
             lastMessageContent: 'Legacy message',
             lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
             lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -20091,6 +20431,7 @@ void main() {
             participantPubkeys: any(named: 'participantPubkeys'),
             isGroup: any(named: 'isGroup'),
             createdAt: any(named: 'createdAt'),
+            lastMessageId: any(named: 'lastMessageId'),
             lastMessageContent: any(named: 'lastMessageContent'),
             lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
             lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -20797,6 +21138,7 @@ void main() {
               participantPubkeys: any(named: 'participantPubkeys'),
               isGroup: any(named: 'isGroup'),
               createdAt: any(named: 'createdAt'),
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: any(named: 'lastMessageContent'),
               lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -20940,6 +21282,7 @@ void main() {
               participantPubkeys: any(named: 'participantPubkeys'),
               isGroup: any(named: 'isGroup'),
               createdAt: any(named: 'createdAt'),
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: any(named: 'lastMessageContent'),
               lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -21148,6 +21491,7 @@ void main() {
             participantPubkeys: any(named: 'participantPubkeys'),
             isGroup: any(named: 'isGroup'),
             createdAt: any(named: 'createdAt'),
+            lastMessageId: any(named: 'lastMessageId'),
             lastMessageContent: any(named: 'lastMessageContent'),
             lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
             lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -21301,6 +21645,7 @@ void main() {
             participantPubkeys: any(named: 'participantPubkeys'),
             isGroup: any(named: 'isGroup'),
             createdAt: any(named: 'createdAt'),
+            lastMessageId: any(named: 'lastMessageId'),
             lastMessageContent: any(named: 'lastMessageContent'),
             lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
             lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -21440,6 +21785,7 @@ void main() {
               participantPubkeys: any(named: 'participantPubkeys'),
               isGroup: any(named: 'isGroup'),
               createdAt: any(named: 'createdAt'),
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: 'Hello',
               lastMessageTimestamp: 1700000000,
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -21580,6 +21926,7 @@ void main() {
             participantPubkeys: any(named: 'participantPubkeys'),
             isGroup: any(named: 'isGroup'),
             createdAt: any(named: 'createdAt'),
+            lastMessageId: any(named: 'lastMessageId'),
             lastMessageContent: any(named: 'lastMessageContent'),
             lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
             lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -21837,6 +22184,7 @@ void main() {
             participantPubkeys: any(named: 'participantPubkeys'),
             isGroup: any(named: 'isGroup'),
             createdAt: any(named: 'createdAt'),
+            lastMessageId: any(named: 'lastMessageId'),
             lastMessageContent: 'Hello',
             lastMessageTimestamp: 1700000000,
             lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -21940,6 +22288,7 @@ void main() {
               participantPubkeys: any(named: 'participantPubkeys'),
               isGroup: any(named: 'isGroup'),
               createdAt: any(named: 'createdAt'),
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: 'Hello',
               lastMessageTimestamp: 1700000000,
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -22490,6 +22839,7 @@ void main() {
               participantPubkeys: any(named: 'participantPubkeys'),
               isGroup: any(named: 'isGroup'),
               createdAt: any(named: 'createdAt'),
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: any(named: 'lastMessageContent'),
               lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -22606,6 +22956,7 @@ void main() {
               participantPubkeys: jsonEncode(canonical1to1),
               isGroup: false,
               createdAt: any(named: 'createdAt'),
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: 'Hello from B!',
               lastMessageTimestamp: 1700000000,
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -22684,6 +23035,7 @@ void main() {
               participantPubkeys: any(named: 'participantPubkeys'),
               isGroup: any(named: 'isGroup'),
               createdAt: any(named: 'createdAt'),
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: any(named: 'lastMessageContent'),
               lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -22768,12 +23120,16 @@ void main() {
               participantPubkeys: jsonEncode(roomParticipants),
               isGroup: true,
               createdAt: any(named: 'createdAt'),
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: 'Hello from B!',
               lastMessageTimestamp: 1700000000,
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
               lastMessageSenderPubkey: _validPubkeyB,
               isRead: false,
-              currentUserHasSent: any(named: 'currentUserHasSent'),
+              currentUserHasSent: any(
+                named: 'currentUserHasSent',
+                that: isFalse,
+              ),
               ownerPubkey: any(named: 'ownerPubkey'),
               dmProtocol: any(named: 'dmProtocol'),
             ),
@@ -22844,6 +23200,7 @@ void main() {
               participantPubkeys: any(named: 'participantPubkeys'),
               isGroup: any(named: 'isGroup'),
               createdAt: any(named: 'createdAt'),
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: any(named: 'lastMessageContent'),
               lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -22942,6 +23299,7 @@ void main() {
               participantPubkeys: any(named: 'participantPubkeys'),
               isGroup: true,
               createdAt: any(named: 'createdAt'),
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: 'Hello from B!',
               lastMessageTimestamp: 1700000000,
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -23020,6 +23378,7 @@ void main() {
               participantPubkeys: any(named: 'participantPubkeys'),
               isGroup: any(named: 'isGroup'),
               createdAt: any(named: 'createdAt'),
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: any(named: 'lastMessageContent'),
               lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -23093,6 +23452,7 @@ void main() {
               participantPubkeys: jsonEncode(canonical1to1),
               isGroup: false,
               createdAt: any(named: 'createdAt'),
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: 'Hello from me!',
               lastMessageTimestamp: 1700000000,
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -23190,6 +23550,7 @@ void main() {
             participantPubkeys: any(named: 'participantPubkeys'),
             isGroup: any(named: 'isGroup'),
             createdAt: any(named: 'createdAt'),
+            lastMessageId: any(named: 'lastMessageId'),
             lastMessageContent: any(named: 'lastMessageContent'),
             lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
             lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -23263,6 +23624,7 @@ void main() {
             participantPubkeys: any(named: 'participantPubkeys'),
             isGroup: false,
             createdAt: 1700000000,
+            lastMessageId: any(named: 'lastMessageId'),
             lastMessageContent: 'Hello from B!',
             lastMessageTimestamp: 1700000000,
             lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -23765,6 +24127,7 @@ void main() {
 
     group('getConversations', () {
       test('returns mapped $DmConversation list from DAO', () async {
+        stubPlainPreview();
         final participants = [_validPubkeyA, _validPubkeyB]..sort();
         final convId = DmRepository.computeConversationId(participants);
 
@@ -24165,6 +24528,7 @@ void main() {
       test(
         'uses the conversation row preview as the source of truth',
         () async {
+          stubPlainPreview();
           final participants = [_validPubkeyA, _validPubkeyB]..sort();
           final convId = DmRepository.computeConversationId(participants);
 
@@ -24446,6 +24810,7 @@ void main() {
             participantPubkeys: any(named: 'participantPubkeys'),
             isGroup: any(named: 'isGroup'),
             createdAt: any(named: 'createdAt'),
+            lastMessageId: any(named: 'lastMessageId'),
             lastMessageContent: any(named: 'lastMessageContent'),
             lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
             lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -25610,6 +25975,7 @@ void main() {
               participantPubkeys: any(named: 'participantPubkeys'),
               isGroup: any(named: 'isGroup'),
               createdAt: any(named: 'createdAt'),
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: any(named: 'lastMessageContent'),
               lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -25684,6 +26050,7 @@ void main() {
               participantPubkeys: any(named: 'participantPubkeys'),
               isGroup: any(named: 'isGroup'),
               createdAt: any(named: 'createdAt'),
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: any(named: 'lastMessageContent'),
               lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -25764,6 +26131,7 @@ void main() {
             participantPubkeys: any(named: 'participantPubkeys'),
             isGroup: any(named: 'isGroup'),
             createdAt: any(named: 'createdAt'),
+            lastMessageId: any(named: 'lastMessageId'),
             lastMessageContent: any(named: 'lastMessageContent'),
             lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
             lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -25837,6 +26205,7 @@ void main() {
             participantPubkeys: any(named: 'participantPubkeys'),
             isGroup: any(named: 'isGroup'),
             createdAt: any(named: 'createdAt'),
+            lastMessageId: any(named: 'lastMessageId'),
             lastMessageContent: any(named: 'lastMessageContent'),
             lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
             lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -25869,6 +26238,7 @@ void main() {
             participantPubkeys: any(named: 'participantPubkeys'),
             isGroup: any(named: 'isGroup'),
             createdAt: any(named: 'createdAt'),
+            lastMessageId: any(named: 'lastMessageId'),
             lastMessageContent: any(named: 'lastMessageContent'),
             lastMessageTimestamp: newMessageAt,
             lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -25976,6 +26346,7 @@ void main() {
             participantPubkeys: any(named: 'participantPubkeys'),
             isGroup: any(named: 'isGroup'),
             createdAt: any(named: 'createdAt'),
+            lastMessageId: any(named: 'lastMessageId'),
             lastMessageContent: any(named: 'lastMessageContent'),
             lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
             lastMessageSenderPubkey: any(named: 'lastMessageSenderPubkey'),
@@ -26061,6 +26432,7 @@ void main() {
               participantPubkeys: any(named: 'participantPubkeys'),
               isGroup: any(named: 'isGroup'),
               createdAt: any(named: 'createdAt'),
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: any(named: 'lastMessageContent'),
               lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -26211,6 +26583,7 @@ void main() {
               participantPubkeys: any(named: 'participantPubkeys'),
               isGroup: any(named: 'isGroup'),
               createdAt: any(named: 'createdAt'),
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: any(named: 'lastMessageContent'),
               lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -26436,6 +26809,7 @@ void main() {
               participantPubkeys: any(named: 'participantPubkeys'),
               isGroup: any(named: 'isGroup'),
               createdAt: any(named: 'createdAt'),
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: any(named: 'lastMessageContent'),
               lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -26456,6 +26830,7 @@ void main() {
               participantPubkeys: any(named: 'participantPubkeys'),
               isGroup: any(named: 'isGroup'),
               createdAt: any(named: 'createdAt'),
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: 'Older message',
               lastMessageTimestamp: 1699999000,
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -26565,6 +26940,7 @@ void main() {
               participantPubkeys: any(named: 'participantPubkeys'),
               isGroup: any(named: 'isGroup'),
               createdAt: any(named: 'createdAt'),
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: any(named: 'lastMessageContent'),
               lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -26585,6 +26961,7 @@ void main() {
               participantPubkeys: any(named: 'participantPubkeys'),
               isGroup: any(named: 'isGroup'),
               createdAt: any(named: 'createdAt'),
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: 'Sent a photo',
               lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -26645,6 +27022,7 @@ void main() {
     // fails here.
     group('post-auth maintenance leaves a group conversation intact', () {
       test('does not reassign or delete a group sharing a 1:1 peer', () async {
+        stubPlainPreview();
         final oneToOne = [_validPubkeyA, _validPubkeyB]..sort();
         final groupParticipants = [
           _validPubkeyA,
@@ -26919,6 +27297,7 @@ void main() {
             participantPubkeys: any(named: 'participantPubkeys'),
             isGroup: any(named: 'isGroup'),
             createdAt: any(named: 'createdAt'),
+            lastMessageId: any(named: 'lastMessageId'),
             lastMessageContent: any(named: 'lastMessageContent'),
             lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
             lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -26982,6 +27361,7 @@ void main() {
 
     group('sendGroupMessage - success', () {
       setUp(stubSendPolicyPermitsEveryone);
+      setUp(stubOwnCopyPublishes);
 
       void stubDaoInserts() {
         when(
@@ -27016,6 +27396,7 @@ void main() {
             participantPubkeys: any(named: 'participantPubkeys'),
             isGroup: any(named: 'isGroup'),
             createdAt: any(named: 'createdAt'),
+            lastMessageId: any(named: 'lastMessageId'),
             lastMessageContent: any(named: 'lastMessageContent'),
             lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
             lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -27077,6 +27458,7 @@ void main() {
               participantPubkeys: any(named: 'participantPubkeys'),
               isGroup: true,
               createdAt: any(named: 'createdAt'),
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: 'Group hello!',
               lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -27318,6 +27700,7 @@ void main() {
 
     group('sendSharedVideoGroup', () {
       setUp(stubSendPolicyPermitsEveryone);
+      setUp(stubOwnCopyPublishes);
 
       void stubDaoInserts() {
         when(
@@ -27352,6 +27735,7 @@ void main() {
             participantPubkeys: any(named: 'participantPubkeys'),
             isGroup: any(named: 'isGroup'),
             createdAt: any(named: 'createdAt'),
+            lastMessageId: any(named: 'lastMessageId'),
             lastMessageContent: any(named: 'lastMessageContent'),
             lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
             lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -27702,6 +28086,7 @@ void main() {
               participantPubkeys: any(named: 'participantPubkeys'),
               isGroup: any(named: 'isGroup'),
               createdAt: any(named: 'createdAt'),
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: any(named: 'lastMessageContent'),
               lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -27856,6 +28241,7 @@ void main() {
               participantPubkeys: any(named: 'participantPubkeys'),
               isGroup: any(named: 'isGroup'),
               createdAt: any(named: 'createdAt'),
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: any(named: 'lastMessageContent'),
               lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -28001,6 +28387,7 @@ void main() {
               participantPubkeys: any(named: 'participantPubkeys'),
               isGroup: any(named: 'isGroup'),
               createdAt: any(named: 'createdAt'),
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: any(named: 'lastMessageContent'),
               lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -28052,6 +28439,7 @@ void main() {
               participantPubkeys: any(named: 'participantPubkeys'),
               isGroup: false,
               createdAt: 1690000000,
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: 'New message',
               lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -28067,7 +28455,18 @@ void main() {
       );
     });
 
+    void stubRecipientAckWrite() {
+      when(
+        () => mockDirectMessagesDao.markRecipientAccepted(
+          ownerPubkey: any(named: 'ownerPubkey'),
+          rumorId: any(named: 'rumorId'),
+          environment: any(named: 'environment'),
+        ),
+      ).thenAnswer((_) async {});
+    }
+
     group('sendMessage with outgoing_dms queue wired in', () {
+      setUp(stubRecipientAckWrite);
       setUp(stubSendPolicyPermitsEveryone);
 
       late _MockOutgoingDmsDao mockOutgoingDmsDao;
@@ -28154,6 +28553,7 @@ void main() {
             participantPubkeys: any(named: 'participantPubkeys'),
             isGroup: any(named: 'isGroup'),
             createdAt: any(named: 'createdAt'),
+            lastMessageId: any(named: 'lastMessageId'),
             lastMessageContent: any(named: 'lastMessageContent'),
             lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
             lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -28206,6 +28606,13 @@ void main() {
           ).captured;
           expect(captured, hasLength(1));
           final enqueued = captured.single as OutgoingDm;
+          verify(
+            () => mockDirectMessagesDao.markRecipientAccepted(
+              ownerPubkey: _validPubkeyA,
+              rumorId: enqueued.id,
+              environment: '',
+            ),
+          ).called(1);
           expect(enqueued.recipientPubkey, equals(_validPubkeyB));
           expect(enqueued.ownerPubkey, equals(_validPubkeyA));
           expect(enqueued.content, equals('queue-wired message'));
@@ -28844,6 +29251,7 @@ void main() {
               participantPubkeys: any(named: 'participantPubkeys'),
               isGroup: any(named: 'isGroup'),
               createdAt: any(named: 'createdAt'),
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: any(named: 'lastMessageContent'),
               lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -29473,6 +29881,7 @@ void main() {
 
     group('sendGroupMessage with outgoing_dms queue wired in', () {
       setUp(stubSendPolicyPermitsEveryone);
+      setUp(stubOwnCopyPublishes);
 
       setUp(stubNoMessageForSendBatch);
 
@@ -29556,6 +29965,7 @@ void main() {
             participantPubkeys: any(named: 'participantPubkeys'),
             isGroup: any(named: 'isGroup'),
             createdAt: any(named: 'createdAt'),
+            lastMessageId: any(named: 'lastMessageId'),
             lastMessageContent: any(named: 'lastMessageContent'),
             lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
             lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -29890,21 +30300,103 @@ void main() {
         },
       );
 
+      /// Answers every member's send as delivered, the way the real service
+      /// answers a send handed the copy callback: it hands its copy over and
+      /// publishes none (#10016). The batch's one copy then [ownCopyLands] or
+      /// not. Returns, per recipient, whether its send was handed the callback.
+      Map<String, bool> stubDeliveredMembers({required bool ownCopyLands}) {
+        final handedOver = <String, bool>{};
+        when(
+          () => mockMessageService.sendRumor(
+            rumorEvent: any(named: 'rumorEvent'),
+            recipientPubkey: any(named: 'recipientPubkey'),
+            targetRelays: any(named: 'targetRelays'),
+            selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
+            awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            selfWrapOnSoftUnconfirmed: any(named: 'selfWrapOnSoftUnconfirmed'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
+            recipientWrap: any(named: 'recipientWrap'),
+            publishRefusal: any(named: 'publishRefusal'),
+          ),
+        ).thenAnswer((inv) async {
+          final recipient = inv.namedArguments[#recipientPubkey] as String;
+          final callback =
+              inv.namedArguments[#onSelfWrapDue] as void Function(Event?)?;
+          handedOver[recipient] = callback != null;
+          callback?.call(null);
+          return NIP17SendResult.success(
+            rumorEventId: 'rumor-$recipient',
+            messageEventId: 'wrap-$recipient',
+            recipientPubkey: recipient,
+            selfWrapPublished: callback == null,
+          );
+        });
+        when(
+          () => mockMessageService.publishSelfWrap(
+            rumorEvent: any(named: 'rumorEvent'),
+            targetRelays: any(named: 'targetRelays'),
+            prebuiltSelfWrap: any(named: 'prebuiltSelfWrap'),
+          ),
+        ).thenAnswer(
+          (_) async => ownCopyLands
+              ? NIP17SendResult.success(
+                  rumorEventId: 'rumor',
+                  messageEventId: 'rumor',
+                  recipientPubkey: _validPubkeyA,
+                )
+              : const NIP17SendResult.failure('own copy not published'),
+        );
+        return handedOver;
+      }
+
+      int ownCopyPublishes() => verify(
+        () => mockMessageService.publishSelfWrap(
+          rumorEvent: any(named: 'rumorEvent'),
+          targetRelays: any(named: 'targetRelays'),
+          prebuiltSelfWrap: any(named: 'prebuiltSelfWrap'),
+        ),
+      ).callCount;
+
       test(
-        'marks recipient sent + self failed only for the recipients '
-        'whose self-wrap failed, deletes rows for fully-delivered ones',
+        "deletes every delivered member's row when the batch's one own copy "
+        'lands after their sends (#10016)',
         () async {
-          stubSendRumor((_, recipient) async {
-            return NIP17SendResult.success(
-              rumorEventId: 'rumor-$recipient',
-              messageEventId: 'wrap-$recipient',
-              recipientPubkey: recipient,
-              // First recipient (B) is fully delivered, second (C) is
-              // partial. The asymmetry pins "scope recovery to only the
-              // affected successful recipient sends" from #4102.
-              selfWrapPublished: recipient == _validPubkeyB,
-            );
-          });
+          final handedOver = stubDeliveredMembers(ownCopyLands: true);
+
+          final repository = createRepository(
+            outgoingDmsDao: mockOutgoingDmsDao,
+          );
+
+          final results = await repository.sendGroupMessage(
+            recipientPubkeys: [_validPubkeyB, _validPubkeyC],
+            content: 'group delivery',
+          );
+
+          expect(handedOver, {_validPubkeyB: true, _validPubkeyC: true});
+          expect(ownCopyPublishes(), 1);
+          expect(results.every((r) => r.success), isTrue);
+          expect(results.every((r) => r.selfWrapPublished ?? false), isTrue);
+          final captured = verify(
+            () => mockOutgoingDmsDao.enqueue(captureAny()),
+          ).captured;
+          for (final row in captured.cast<OutgoingDm>()) {
+            verify(() => mockOutgoingDmsDao.deleteById(row.id)).called(1);
+          }
+          verifyNever(
+            () => mockOutgoingDmsDao.markSelfWrapStatus(
+              id: any(named: 'id'),
+              status: OutgoingWrapStatus.failed,
+              lastError: any(named: 'lastError'),
+            ),
+          );
+        },
+      );
+
+      test(
+        'keeps every delivered member as recipient sent + self failed when '
+        "the batch's one own copy fails, so recovery publishes only that copy",
+        () async {
+          stubDeliveredMembers(ownCopyLands: false);
 
           final repository = createRepository(
             outgoingDmsDao: mockOutgoingDmsDao,
@@ -29915,36 +30407,37 @@ void main() {
             content: 'group partial delivery',
           );
 
-          expect(results, hasLength(2));
+          expect(
+            ownCopyPublishes(),
+            1,
+            reason: 'one failed copy is not tried again for each member',
+          );
           expect(results.every((r) => r.success), isTrue);
-
+          expect(results.every((r) => r.selfWrapPublished == false), isTrue);
           final captured = verify(
             () => mockOutgoingDmsDao.enqueue(captureAny()),
           ).captured;
-          final enqueuedB = captured.first as OutgoingDm;
-          final enqueuedC = captured.last as OutgoingDm;
-
-          // Recipient B: full delivery → row deleted.
-          expect(results.first.queuedRumorId, isNull);
-          verify(() => mockOutgoingDmsDao.deleteById(enqueuedB.id)).called(1);
-          // Recipient C: partial → recipient sent + self failed, row
-          // preserved for recovery.
-          expect(results.last.queuedRumorId, equals(enqueuedC.id));
-          verify(
-            () => mockOutgoingDmsDao.markRecipientWrapStatus(
-              id: enqueuedC.id,
-              status: OutgoingWrapStatus.sent,
-              eventId: 'wrap-$_validPubkeyC',
-            ),
-          ).called(1);
-          verify(
-            () => mockOutgoingDmsDao.markSelfWrapStatus(
-              id: enqueuedC.id,
-              status: OutgoingWrapStatus.failed,
-              lastError: 'Recipient delivered, but self-wrap publish failed',
-            ),
-          ).called(1);
-          verifyNever(() => mockOutgoingDmsDao.deleteById(enqueuedC.id));
+          for (final row in captured.cast<OutgoingDm>()) {
+            verify(
+              () => mockOutgoingDmsDao.markRecipientWrapStatus(
+                id: row.id,
+                status: OutgoingWrapStatus.sent,
+                eventId: 'wrap-${row.recipientPubkey}',
+              ),
+            ).called(1);
+            verify(
+              () => mockOutgoingDmsDao.markSelfWrapStatus(
+                id: row.id,
+                status: OutgoingWrapStatus.failed,
+                lastError: 'Recipient delivered, but self-wrap publish failed',
+              ),
+            ).called(1);
+            verifyNever(() => mockOutgoingDmsDao.deleteById(row.id));
+          }
+          expect(
+            results.map((r) => r.queuedRumorId),
+            captured.cast<OutgoingDm>().map((row) => row.id),
+          );
         },
       );
 
@@ -30293,6 +30786,7 @@ void main() {
               participantPubkeys: any(named: 'participantPubkeys'),
               isGroup: any(named: 'isGroup'),
               createdAt: any(named: 'createdAt'),
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: any(named: 'lastMessageContent'),
               lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -30390,6 +30884,7 @@ void main() {
               participantPubkeys: any(named: 'participantPubkeys'),
               isGroup: true,
               createdAt: any(named: 'createdAt'),
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: 'one sibling cannot be parked or unwound',
               lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -30505,6 +31000,7 @@ void main() {
               participantPubkeys: any(named: 'participantPubkeys'),
               isGroup: any(named: 'isGroup'),
               createdAt: any(named: 'createdAt'),
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: any(named: 'lastMessageContent'),
               lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -30784,6 +31280,17 @@ void main() {
               selfWrapPublished: false,
             ),
           );
+          // The batch's one own copy does not land either (#10016).
+          when(
+            () => mockMessageService.publishSelfWrap(
+              rumorEvent: any(named: 'rumorEvent'),
+              targetRelays: any(named: 'targetRelays'),
+              prebuiltSelfWrap: any(named: 'prebuiltSelfWrap'),
+            ),
+          ).thenAnswer(
+            (_) async =>
+                const NIP17SendResult.failure('own copy not published'),
+          );
 
           final repository = createRepository(
             outgoingDmsDao: mockOutgoingDmsDao,
@@ -30915,6 +31422,7 @@ void main() {
               participantPubkeys: any(named: 'participantPubkeys'),
               isGroup: any(named: 'isGroup'),
               createdAt: any(named: 'createdAt'),
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: any(named: 'lastMessageContent'),
               lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -32234,6 +32742,7 @@ void main() {
     });
 
     group('recoverFullSend', () {
+      setUp(stubRecipientAckWrite);
       setUp(stubNoMatchingStoredMessage);
 
       late _MockOutgoingDmsDao mockOutgoingDmsDao;
@@ -32338,6 +32847,7 @@ void main() {
             participantPubkeys: any(named: 'participantPubkeys'),
             isGroup: any(named: 'isGroup'),
             createdAt: any(named: 'createdAt'),
+            lastMessageId: any(named: 'lastMessageId'),
             lastMessageContent: any(named: 'lastMessageContent'),
             lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
             lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -32471,6 +32981,7 @@ void main() {
               participantPubkeys: any(named: 'participantPubkeys'),
               isGroup: any(named: 'isGroup'),
               createdAt: any(named: 'createdAt'),
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: any(named: 'lastMessageContent'),
               lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -32756,6 +33267,7 @@ void main() {
               participantPubkeys: groupParticipants,
               isGroup: true,
               createdAt: 1690000000,
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: any(named: 'lastMessageContent'),
               lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -32774,9 +33286,12 @@ void main() {
         'group-row recovery skips the direct_messages insert when a batch '
         'sibling already persisted the message (no duplicate group bubble)',
         () async {
+          final groupRow = queuedRow(
+            sendBatchId: 'batch-recover',
+          ).copyWith(id: '$_rumorEventId:$_validPubkeyB');
           when(
-            () => mockOutgoingDmsDao.getById(_rumorEventId),
-          ).thenAnswer((_) async => queuedRow(sendBatchId: 'batch-recover'));
+            () => mockOutgoingDmsDao.getById(groupRow.id),
+          ).thenAnswer((_) async => groupRow);
           // queuedRow's conversationId ('conv') differs from the computed
           // 1:1 pair id, so the row classifies as a group sibling. The
           // recovered row carries a durable batch id, so the dedup probes
@@ -32795,15 +33310,44 @@ void main() {
             ),
           );
 
+          // The recovered member's copy is its batch's (#10016): no other
+          // member's row records it yet, so this recovery publishes it.
+          when(
+            () => mockOutgoingDmsDao.getForConversation(
+              conversationId: any(named: 'conversationId'),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async => [groupRow]);
+          when(
+            () => mockMessageService.publishSelfWrap(
+              rumorEvent: any(named: 'rumorEvent'),
+              targetRelays: any(named: 'targetRelays'),
+              prebuiltSelfWrap: any(named: 'prebuiltSelfWrap'),
+            ),
+          ).thenAnswer(
+            (_) async => NIP17SendResult.success(
+              rumorEventId: _rumorEventId,
+              messageEventId: _rumorEventId,
+              recipientPubkey: _validPubkeyA,
+            ),
+          );
+
           final repository = createRepository(
             outgoingDmsDao: mockOutgoingDmsDao,
           );
 
           final result = await repository.recoverFullSend(
-            rumorId: _rumorEventId,
+            rumorId: groupRow.id,
           );
 
           expect(result.success, isTrue);
+          verify(
+            () => mockMessageService.publishSelfWrap(
+              rumorEvent: any(named: 'rumorEvent'),
+              targetRelays: any(named: 'targetRelays'),
+              prebuiltSelfWrap: any(named: 'prebuiltSelfWrap'),
+            ),
+          ).called(1);
           verify(
             () => mockDirectMessagesDao.hasMessageWithSendBatchId(
               batchId: 'batch-recover',
@@ -32838,7 +33382,7 @@ void main() {
           );
           // The queue row still finalizes — full delivery deletes it.
           verify(
-            () => mockOutgoingDmsDao.deleteById(_rumorEventId),
+            () => mockOutgoingDmsDao.deleteById(groupRow.id),
           ).called(1);
         },
       );
@@ -32997,6 +33541,7 @@ void main() {
               participantPubkeys: any(named: 'participantPubkeys'),
               isGroup: any(named: 'isGroup'),
               createdAt: any(named: 'createdAt'),
+              lastMessageId: any(named: 'lastMessageId'),
               lastMessageContent: any(named: 'lastMessageContent'),
               lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
@@ -33030,10 +33575,15 @@ void main() {
             'content': 'love this reel',
             'sig': '',
           });
+          // The pair's own thread: a one-to-one share is recovered on the
+          // one-to-one path, not as a group row.
+          final pairConversationId = DmRepository.computeConversationId(
+            [_validPubkeyA, _validPubkeyB]..sort(),
+          );
           when(() => mockOutgoingDmsDao.getById(_rumorEventId)).thenAnswer(
             (_) async => OutgoingDm(
               id: _rumorEventId,
-              conversationId: 'conv',
+              conversationId: pairConversationId,
               recipientPubkey: _validPubkeyB,
               content: 'love this reel',
               createdAt: 1700000000,
@@ -33067,7 +33617,7 @@ void main() {
           verify(
             () => mockDirectMessagesDao.insertMessage(
               id: _rumorEventId,
-              conversationId: 'conv',
+              conversationId: pairConversationId,
               senderPubkey: _validPubkeyA,
               content: 'love this reel',
               createdAt: any(named: 'createdAt'),

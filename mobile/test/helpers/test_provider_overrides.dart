@@ -84,7 +84,16 @@ class MockVideoEventService extends Mock implements VideoEventService {
   Stream<String> get removedVideoIds => const Stream<String>.empty();
 
   @override
+  Stream<void> get deletionTombstonesChanged => const Stream<void>.empty();
+
+  @override
   bool isVideoEventKnownDeleted(VideoEvent video) => false;
+}
+
+/// A visible video fixture for inbox tests that resolve a real preview.
+class VisibleTestVideoEventService extends MockVideoEventService {
+  @override
+  bool shouldHideVideo(VideoEvent video) => false;
 }
 
 /// Prevents unrelated widget tests from starting timers or sending analytics.

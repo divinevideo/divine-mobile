@@ -652,6 +652,7 @@ AnalyticsService analyticsService(Ref ref) {
     viewEventRetryService: retryService,
     productEventQueue: productQueue,
     analyticsCollectionControl: ref.watch(analyticsCollectionControlProvider),
+    performanceConsentControl: ref.watch(performanceMonitoringServiceProvider),
     currentUserPubkey: () => authService.currentPublicKeyHex,
     appVersion: () => appVersion,
   );
@@ -760,6 +761,7 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
       ref.watch(flutterSecureStorageProvider),
     ),
     onAccountStateWritesStop: accountWrites.stop,
+    shareRecents: ref.watch(shareRecentsStoreProvider),
   );
 
   Future<void> clearSharedAccountStores({

@@ -460,6 +460,11 @@ void main() {
           l10n.videoEditorEffectDisco,
           l10n.videoEditorEffectLaser,
           l10n.videoEditorEffectLightning,
+          l10n.videoEditorEffectShockwave,
+          l10n.videoEditorEffectSubwoofer,
+          l10n.videoEditorEffectPlasma,
+          l10n.videoEditorEffectEnergyWave,
+          l10n.videoEditorEffectSmokeBurst,
           l10n.videoEditorEffectTealOrange,
           l10n.videoEditorEffectBleachBypass,
           l10n.videoEditorEffectSilver,
@@ -490,7 +495,7 @@ void main() {
           expect(tile?.values, isNotEmpty, reason: type.name);
         }
       }
-      // One shader draws every particle style, told apart by its last value.
+      // One shader draws every particle style, told apart by its third value.
       expect(
         [
           EditorEffectType.snow,
@@ -508,10 +513,10 @@ void main() {
           EditorEffectType.embers,
           EditorEffectType.money,
           EditorEffectType.balloons,
-        ].map((type) => shaderTileOf(type)!.values.last),
+        ].map((type) => shaderTileOf(type)!.values[2]),
         [for (var style = 0; style < 15; style++) style],
       );
-      // One shader paints watercolour and oil, told apart by its last value.
+      // One shader paints watercolour and oil, told apart by its second value.
       expect(
         [
           EditorEffectType.watercolor,
@@ -525,8 +530,8 @@ void main() {
           ),
         ),
       );
-      expect(shaderTileOf(EditorEffectType.watercolor)!.values.last, 0);
-      expect(shaderTileOf(EditorEffectType.oilPaint)!.values.last, 1);
+      expect(shaderTileOf(EditorEffectType.watercolor)!.values[1], 0);
+      expect(shaderTileOf(EditorEffectType.oilPaint)!.values[1], 1);
       // One shader draws every look, from the look's own table.
       for (final type in EditorEffectCategory.looks.types) {
         expect(
@@ -561,6 +566,53 @@ void main() {
         0.0,
         1.0,
       ]);
+      // One shader draws both bass hits, the subwoofer told apart by its third
+      // value: the shockwave with its ring on the way out, the subwoofer
+      // bulged out right as it hits.
+      final bassHits = [EditorEffectType.shockwave, EditorEffectType.subwoofer];
+      expect(bassHits.map((type) => shaderTileOf(type)!.asset), [
+        'shaders/bass_hit.frag',
+        'shaders/bass_hit.frag',
+      ]);
+      // Full strength, the moment, the style, then the default look:
+      // reach, where it hits, shake, punch and the shockwave's fringes.
+      expect(shaderTileOf(EditorEffectType.shockwave)!.values, [
+        1.0,
+        0.12,
+        0.0,
+        1.0,
+        0.5,
+        0.5,
+        1.0,
+        1.0,
+        1.0,
+      ]);
+      expect(shaderTileOf(EditorEffectType.subwoofer)!.values.take(3), [
+        1.0,
+        0.0,
+        1.0,
+      ]);
+      // One shader draws every blast, told apart by its third value.
+      final blasts = [
+        EditorEffectType.plasma,
+        EditorEffectType.energyWave,
+        EditorEffectType.smokeBurst,
+      ];
+      expect(
+        blasts.map((type) => shaderTileOf(type)!.asset),
+        everyElement('shaders/blast.frag'),
+      );
+      // The style third, and each blast's own colour last.
+      expect(blasts.map((type) => shaderTileOf(type)!.values[2]), [
+        0.0,
+        1.0,
+        2.0,
+      ]);
+      expect(shaderTileOf(EditorEffectType.energyWave)!.values.skip(8), [
+        1.0,
+        41 / 255,
+        15 / 255,
+      ]);
       // One shader draws every intro and outro: halfway covered, at its
       // look's starting structure, the look told apart by its third value,
       // which an intro shares with the outro of the same look.
@@ -584,10 +636,19 @@ void main() {
         [0.8, IntroOutroLook.curtain.startingIntensity, 3.0, 0.3],
       );
       // The lightning tile fills the shader's four vec4 uniforms: how bright
-      // the flash and the bolt are, then the shape of the first bolt.
+      // the flash and the bolt are, then the shape of the first bolt; then
+      // the flash's colour and the glow's.
       final lightning = shaderTileOf(EditorEffectType.lightning)!;
-      expect(lightning.values, hasLength(2 + lightningBoltValueCount));
-      expect(lightning.values.skip(2), lightningBolt(0));
+      expect(lightning.values, hasLength(2 + lightningBoltValueCount + 6));
+      expect(
+        lightning.values.skip(2).take(lightningBoltValueCount),
+        lightningBolt(0),
+      );
+      expect(lightning.values.skip(2 + lightningBoltValueCount + 3), [
+        0.55,
+        0.65,
+        1.0,
+      ]);
     });
 
     test('holds a tile where its effect starts, plays it, and holds it '

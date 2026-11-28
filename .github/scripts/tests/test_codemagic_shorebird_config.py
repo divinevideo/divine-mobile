@@ -42,6 +42,13 @@ APP_GRADLE_PATH = (
     / "app"
     / "build.gradle.kts"
 )
+WEAR_GRADLE_PATH = (
+    Path(__file__).resolve().parents[3]
+    / "mobile"
+    / "android"
+    / "wear"
+    / "build.gradle.kts"
+)
 CAPTION_GENERATOR_GRADLE_PATH = (
     Path(__file__).resolve().parents[3]
     / "mobile"
@@ -331,9 +338,35 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         publisher = self._definition_block("publish_github_release")
         self.assertIn('--release-env "build/shorebird/${SHOREBIRD_PLATFORM}_release.env"', publisher)
         macos = config['macos-build']['scripts']
-        direct = next(i for i, step in enumerate(macos) if 'release_identity.py direct' in step['script'])
+        allocate = next(i for i, step in enumerate(macos) if 'allocate_build_identity.py macos' in step['script'])
         build = next(i for i, step in enumerate(macos) if step['name'] == 'Build macOS app')
-        self.assertLess(direct, build)
+        self.assertLess(allocate, build)
+
+    def test_android_build_bundles_the_wear_remote_beside_the_phone_bundle(self) -> None:
+        workflow = self._resolved_config()["workflows"]["android-build"]
+        names = [step["name"] for step in workflow["scripts"]]
+        wear = workflow["scripts"][names.index("Build Wear OS AAB")]
+        self.assertLess(
+            names.index("Build Android AAB (Shorebird release)"),
+            names.index("Build Wear OS AAB"),
+        )
+        # The watch's version code is derived from the build number allocated
+        # for the phone, so the watch build must read the same identity, under
+        # the property names the watch's Gradle build reads.
+        self.assertIn(". build/shorebird/android_release.env", wear["script"])
+        self.assertIn('-PdivineBuildName="$SHOREBIRD_BUILD_NAME"', wear["script"])
+        self.assertIn('-PdivineBuildNumber="$SHOREBIRD_BUILD_NUMBER"', wear["script"])
+        wear_gradle = WEAR_GRADLE_PATH.read_text()
+        self.assertIn('gradleProperty("divineBuildName")', wear_gradle)
+        self.assertIn('gradleProperty("divineBuildNumber")', wear_gradle)
+        # A broken watch build must not hold up the phone release.
+        self.assertIs(wear.get("ignore_failure"), True)
+        # The guarded Play upload expects exactly one bundle in the phone's
+        # output directory; the watch's lands in its own.
+        self.assertNotIn("build/app/outputs/bundle", wear["script"])
+        self.assertIn(
+            "android/wear/build/outputs/bundle/release/*.aab", workflow["artifacts"]
+        )
 
     def test_android_release_uses_explicit_guarded_internal_publisher(self) -> None:
         workflow = self._resolved_config()['workflows']['android-build']
@@ -366,7 +399,7 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
 
     def test_release_channel_is_explicit_and_defaults_to_beta(self) -> None:
         config = self._resolved_config()
-        for name in ('ios-build', 'android-build', 'macos-build'):
+        for name in ('ios-build', 'android-build'):
             channel = config['workflows'][name]['inputs']['RELEASE_CHANNEL']
             self.assertEqual(channel['default'], 'BETA')
             self.assertEqual(channel['options'], ['BETA', 'PRODUCTION'])
@@ -430,7 +463,7 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
             self.assertEqual(list(root.iterdir()), [root / 'zapstore.yaml'])
 
     def test_stable_publish_refuses_non_main_branches(self) -> None:
-        scripts = self._resolved_config()['workflows']['macos-build']['scripts']
+        scripts = self._resolved_config()['workflows']['ios-build']['scripts']
         original = next(step['script'] for step in scripts if step['name'] == 'Publish to GitHub Release')
         for channel, branch, allowed in [('PRODUCTION', 'main', True),
                                           ('PRODUCTION', 'feature/test', False),
@@ -1436,20 +1469,45 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         self.assertIn("Crashlytics", self.shorebird_doc_contents)
 
     def test_macos_build_signs_and_packages_for_mac_app_store(self) -> None:
-        workflow = self._resolved_config()["workflows"]["macos-build"]
+        resolved = self._resolved_config()["workflows"]
+        workflow = resolved["macos-build"]
         self.assertEqual(
             workflow["integrations"]["app_store_connect"],
             "API key for Codemagic",
         )
+        groups = workflow["environment"]["groups"]
+        self.assertIn("macos_signing_credentials", groups)
+        self.assertEqual(groups[-1], "store_release_credentials")
+        for other_name, other_workflow in resolved.items():
+            if other_name in {"macos-build", "macos-scheduled-build"}:
+                continue
+            other_groups = (other_workflow.get("environment") or {}).get("groups") or []
+            self.assertNotIn("macos_signing_credentials", other_groups)
+
+        scheduled = resolved["macos-scheduled-build"]
+        self.assertIs(scheduled["publishing"]["app_store_connect"]["submit_to_testflight"], False)
+        self.assertIs(scheduled["publishing"]["app_store_connect"]["submit_to_app_store"], False)
+
         env_vars = workflow["environment"]["vars"]
         self.assertEqual(env_vars["BUNDLE_ID"], "co.openvine.app")
-        self.assertEqual(env_vars["FIREBASE_ANALYTICS_WITHOUT_ADID"], "true")
+        self.assertNotIn("FIREBASE_ANALYTICS_WITHOUT_ADID", env_vars)
 
         step_names = [step["name"] for step in workflow["scripts"]]
+        self.assertEqual(
+            workflow["scripts"][0]["script"].strip(),
+            "bash scripts/verify_release_source.sh",
+        )
         self.assertIn("Check macOS App Store configuration", step_names)
         self.assertIn("Setup Mac App Store code signing", step_names)
         self.assertIn("Build macOS app", step_names)
         self.assertIn("Archive and export Mac App Store pkg", step_names)
+        self.assertIn("Record macOS release provenance", step_names)
+        provenance_step = next(
+            step for step in workflow["scripts"] if step["name"] == "Record macOS release provenance"
+        )
+        self.assertIn('DEFAULT_ENV="${{ inputs.DEFAULT_ENV }}"', provenance_step["script"])
+        self.assertNotIn("Package macOS DMG", step_names)
+        self.assertNotIn("Publish to GitHub Release", step_names)
         self.assertLess(
             step_names.index("Setup Mac App Store code signing"),
             step_names.index("Build macOS app"),
@@ -1458,16 +1516,153 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
             step_names.index("Build macOS app"),
             step_names.index("Archive and export Mac App Store pkg"),
         )
+        self.assertLess(
+            step_names.index("Archive and export Mac App Store pkg"),
+            step_names.index("Record macOS release provenance"),
+        )
+
+        allocate_script = next(
+            step["script"]
+            for step in workflow["scripts"]
+            if "allocate_build_identity.py macos" in step["script"]
+        )
+        self.assertIn("allocate_build_identity.py macos", allocate_script)
 
         build_macos = self._definition_block("build_macos")
         self.assertNotIn("CODE_SIGNING_ALLOWED=NO", build_macos)
         self.assertNotIn("CODE_SIGNING_REQUIRED=NO", build_macos)
 
         self.assertIn("build/macos/pkg/*.pkg", workflow["artifacts"])
+        self.assertIn("build/shorebird/macos_provenance.json", workflow["artifacts"])
+        self.assertNotIn("build/macos/Build/Products/Release/*.dmg", workflow["artifacts"])
         publishing = workflow["publishing"]["app_store_connect"]
         self.assertEqual(publishing["auth"], "integration")
         self.assertIs(publishing["submit_to_testflight"], True)
         self.assertIs(publishing["submit_to_app_store"], False)
+
+    def test_macos_signing_script_identity_lookup_works_with_posix_ere_sed(self) -> None:
+        script_path = CODEMAGIC_PATH.parent / "mobile/scripts/setup_macos_mas_signing.sh"
+        script_text = script_path.read_text()
+        self.assertNotIn(r"\|", script_text)
+        self.assertIn("Library/Developer/Xcode/UserData/Provisioning Profiles", script_text)
+        self.assertIn("--profiles-dir", script_text)
+
+        sample = (
+            '  1) AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA "Apple Development: Example (TEAM1)"\n'
+            '  2) BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB "Apple Distribution: Verse Communications, Inc. (GZCZBKH7MY)"\n'
+            '  3) CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC "3rd Party Mac Developer Installer: Verse Communications, Inc. (GZCZBKH7MY)"\n'
+        )
+        for fn_name, expected in (
+            (
+                "find_app_signing_identity",
+                "Apple Distribution: Verse Communications, Inc. (GZCZBKH7MY)",
+            ),
+            (
+                "find_installer_signing_identity",
+                "3rd Party Mac Developer Installer: Verse Communications, Inc. (GZCZBKH7MY)",
+            ),
+        ):
+            with self.subTest(fn=fn_name):
+                sed_match = re.search(
+                    rf"{fn_name}\(\)\s*\{{(.*?)\n\}}",
+                    script_text,
+                    re.DOTALL,
+                )
+                self.assertIsNotNone(sed_match)
+                body = sed_match.group(1)
+                cmd = (
+                    f'security() {{ printf "%s" {shlex.quote(sample)}; }}\n'
+                    f"{fn_name}() {{\n{body}\n}}\n"
+                    f"{fn_name}\n"
+                )
+                result = subprocess.run(
+                    ["bash", "-c", cmd],
+                    check=True,
+                    text=True,
+                    capture_output=True,
+                )
+                self.assertEqual(expected, result.stdout.strip())
+
+    def test_macos_signing_and_pkg_scripts_authorize_productbuild_and_log_failures(self) -> None:
+        signing_text = (CODEMAGIC_PATH.parent / "mobile/scripts/setup_macos_mas_signing.sh").read_text()
+        add_cert_lines = [
+            line.strip()
+            for line in signing_text.splitlines()
+            if line.strip().startswith("keychain add-certificates")
+        ]
+        self.assertGreaterEqual(len(add_cert_lines), 2)
+        for line in add_cert_lines:
+            self.assertIn("--allow-app codesign productsign productbuild", line)
+        self.assertIn('BUILD_KEYCHAIN="$(keychain get-default)"', signing_text)
+        self.assertIn(
+            'security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" "$BUILD_KEYCHAIN"',
+            signing_text,
+        )
+
+        pkg_script = CODEMAGIC_PATH.parent / "mobile/scripts/package_macos_mas_pkg.sh"
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            work_dir = root / "mobile"
+            (work_dir / "macos").mkdir(parents=True)
+            (work_dir / "scripts").mkdir(parents=True)
+            (work_dir / "build/macos").mkdir(parents=True)
+            (work_dir / "build/macos/ExportOptions.plist").write_text("<plist/>")
+            (work_dir / "scripts/check_ios_analytics_product.sh").write_text("#!/usr/bin/env bash\nexit 0\n")
+
+            bin_dir = root / "bin"
+            bin_dir.mkdir()
+            dist_logs = root / "Runner_test.xcdistributionlogs"
+            dist_logs.mkdir()
+            (dist_logs / "IDEDistribution.critical.log").write_text("CRITICAL_PRODUCTBUILD_ERR\n")
+            (dist_logs / "IDEDistribution.standard.log").write_text("STANDARD_KEYCHAIN_ACL_ERR\n")
+
+            codesign_stub = bin_dir / "codesign"
+            codesign_stub.write_text(
+                "#!/usr/bin/env bash\n"
+                'if [ "${1:-}" = "-d" ]; then\n'
+                '  printf "<key>com.apple.security.app-sandbox</key>\\n<key>keychain-access-groups</key>\\n"\n'
+                "fi\n"
+                "exit 0\n"
+            )
+            codesign_stub.chmod(0o755)
+
+            xcodebuild_stub = bin_dir / "xcodebuild"
+            xcodebuild_stub.write_text(
+                "#!/usr/bin/env bash\n"
+                "set -euo pipefail\n"
+                'if [ "${1:-}" = "-exportArchive" ]; then\n'
+                f'  echo \'[MT] IDEDistribution: Created bundle at path "{dist_logs}".\'\n'
+                "  echo 'error: exportArchive productbuild failed' >&2\n"
+                "  exit 70\n"
+                "fi\n"
+                'archive_path=""\n'
+                'while [ "$#" -gt 0 ]; do\n'
+                '  if [ "$1" = "-archivePath" ]; then\n'
+                '    archive_path="$2"\n'
+                "    shift 2\n"
+                "  else\n"
+                "    shift\n"
+                "  fi\n"
+                "done\n"
+                'app="$archive_path/Products/Applications/Divine.app"\n'
+                'mkdir -p "$app/Contents/Resources"\n'
+                'touch "$app/Contents/embedded.provisionprofile" "$app/Contents/Resources/PrivacyInfo.xcprivacy"\n'
+                "exit 0\n"
+            )
+            xcodebuild_stub.chmod(0o755)
+
+            env = dict(os.environ, PATH=f"{bin_dir}:{os.environ['PATH']}")
+            result = subprocess.run(
+                ["bash", str(pkg_script)],
+                cwd=work_dir,
+                env=env,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 70, result.stderr)
+            self.assertIn("CRITICAL_PRODUCTBUILD_ERR", result.stderr)
+            self.assertIn("STANDARD_KEYCHAIN_ACL_ERR", result.stderr)
 
     def _definition_block(self, anchor_name: str) -> str:
         start = self.contents.index(f"    - &{anchor_name}\n")

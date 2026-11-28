@@ -19,6 +19,7 @@ import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/state/video_feed_state.dart';
+import 'package:openvine/ui/adaptive_grid.dart';
 import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
@@ -33,7 +34,7 @@ import 'package:unified_logger/unified_logger.dart';
 /// Tab widget displaying Classics archive videos (pre-2017).
 ///
 /// Handles its own:
-/// - Riverpod provider watching (classicVinesFeedProvider)
+/// - The visible Explore window from [visibleClassicVinesFeedProvider]
 /// - Loading/error/data states
 /// - Empty state when REST API unavailable
 class ClassicVinesTab extends ConsumerStatefulWidget {
@@ -60,9 +61,9 @@ class _ClassicVinesTabState extends ConsumerState<ClassicVinesTab> {
 
   @override
   Widget build(BuildContext context) {
-    final classicVinesAsync = ref.watch(classicVinesFeedProvider);
+    final classicVinesAsync = ref.watch(visibleClassicVinesFeedProvider);
     final isAvailableAsync = ref.watch(classicVinesAvailableProvider);
-    final isAvailable = isAvailableAsync.asData?.value;
+    final isAvailable = isAvailableAsync.value;
 
     Log.debug(
       '🎬 ClassicVinesTab: AsyncValue state - isLoading: ${classicVinesAsync.isLoading}, '
@@ -71,7 +72,7 @@ class _ClassicVinesTabState extends ConsumerState<ClassicVinesTab> {
       category: LogCategory.video,
     );
 
-    if (isAvailableAsync.isLoading) {
+    if (isAvailableAsync.isLoading && isAvailable == null) {
       return const _ClassicVinesLoadingState();
     }
 
@@ -85,10 +86,14 @@ class _ClassicVinesTabState extends ConsumerState<ClassicVinesTab> {
     }
 
     // Track feed loading start
-    if (classicVinesAsync.isLoading && _feedLoadStartTime == null) {
+    final isReplacingWindow = classicVinesAsync.value?.isInitialLoad ?? false;
+    if ((classicVinesAsync.isLoading || isReplacingWindow) &&
+        _feedLoadStartTime == null) {
       _feedLoadStartTime = DateTime.now();
       _feedLoad = _feedTracker?.startFeedLoad('classics');
     }
+
+    if (isReplacingWindow) return const _ClassicVinesLoadingState();
 
     // Check hasValue FIRST before isLoading
     if (classicVinesAsync.hasValue && classicVinesAsync.value != null) {
@@ -150,20 +155,17 @@ class _ClassicVinesTabState extends ConsumerState<ClassicVinesTab> {
       videos: videos,
       isLoadingMore: feedState.isLoadingMore,
       hasMoreContent: feedState.hasMoreContent,
+      onRefresh: _refreshClassics,
     );
   }
 
   Future<void> _refreshClassics() async {
-    ref.read(funnelcakeAvailableProvider.notifier).refresh();
-    await ref.read(funnelcakeAvailableProvider.future);
-    // The widget can be disposed during any of these awaits (e.g. the Explore
-    // TabController settling on another tab, or navigating away) while a
-    // throttled-network refresh is still in flight. Using `ref` after that
-    // throws a StateError, so bail out once unmounted. See issue #6157.
-    if (!mounted) return;
-    ref.invalidate(classicVinesAvailableProvider);
-    await ref.read(classicVinesAvailableProvider.future);
-    if (!mounted) return;
+    if (ref.read(classicVinesAvailableProvider).value != true) {
+      ref.read(funnelcakeAvailableProvider.notifier).refresh();
+      await ref.read(classicVinesAvailableProvider.future);
+      // The user can leave the tab while the availability check is in flight.
+      if (!mounted) return;
+    }
     await ref.read(classicVinesFeedProvider.notifier).refresh();
   }
 
@@ -183,11 +185,13 @@ class _ClassicVinesTabState extends ConsumerState<ClassicVinesTab> {
 class _ClassicVinesContent extends ConsumerStatefulWidget {
   const _ClassicVinesContent({
     required this.videos,
+    required this.onRefresh,
     this.isLoadingMore = false,
     this.hasMoreContent = false,
   });
 
   final List<VideoEvent> videos;
+  final RefreshCallback onRefresh;
   final bool isLoadingMore;
   final bool hasMoreContent;
 
@@ -231,22 +235,9 @@ class _ClassicVinesContentState extends ConsumerState<_ClassicVinesContent>
 
   @override
   Widget build(BuildContext context) {
-    final classicVinesFeedNotifier = ref.read(
-      classicVinesFeedProvider.notifier,
-    );
-
     return FeedRefreshControl(
       scrollController: _scrollController,
-      onRefresh: () async {
-        Log.info(
-          '🔄 ClassicVinesTab: Spinning to next batch of classics',
-          name: 'ClassicVinesTab',
-          category: LogCategory.video,
-        );
-        ref.read(funnelcakeAvailableProvider.notifier).refresh();
-        await ref.read(funnelcakeAvailableProvider.future);
-        await classicVinesFeedNotifier.refresh();
-      },
+      onRefresh: widget.onRefresh,
       child: CustomScrollView(
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
@@ -257,19 +248,34 @@ class _ClassicVinesContentState extends ConsumerState<_ClassicVinesContent>
           _ClassicVideosSliverGrid(
             videos: widget.videos,
             onVideoTap: (videos, index, captureOrigin) {
+              final selected = videos[index];
+              final visible = ref.read(visibleClassicVinesFeedProvider).value;
+              // A pointer can hit the previous grid before Flutter redraws it.
+              if (visible == null) return;
+              final selectedIndex = visible.videos.indexWhere(
+                (video) => video.id == selected.id,
+              );
+              if (selectedIndex < 0) return;
               Log.info(
                 '🎯 ClassicVinesTab TAP: gridIndex=$index, '
-                'videoId=${videos[index].id}',
+                'videoId=${selected.id}',
                 category: LogCategory.video,
               );
               runDetached(
                 PooledFullscreenVideoFeedRouteData(
-                  video: videos[index].id,
+                  video: selected.id,
                   $extra: PooledFullscreenVideoFeedArgs(
-                    source: ClassicVinesViewSource(anchor: videos[index]),
+                    source: ClassicVinesViewSource(
+                      anchor: selected,
+                      archiveSeed: visible.containsRecommendations
+                          ? const []
+                          : List.unmodifiable(
+                              visible.videos.skip(selectedIndex + 1),
+                            ),
+                    ),
                     feedRepository: ref.read(feedRepositoryProvider),
                     initialIndex: 0,
-                    initialVideoId: videos[index].id,
+                    initialVideoId: selected.id,
                     tileOrigin: captureOrigin(),
                     contextTitle: context.l10n.exploreTabClassics,
                     trafficSource: ViewTrafficSource.discoveryClassic,
@@ -343,25 +349,21 @@ class _ClassicVideosSliverGrid extends ConsumerWidget {
       return const SliverToBoxAdapter(child: _ClassicVinesEmptyState());
     }
 
-    // Responsive column count
-    final screenWidth = MediaQuery.of(context).size.width;
-    final layout = context.adaptiveLayout;
-    final crossAxisCount = layout.gridColumns(
-      compact: 2,
-      width: screenWidth,
-      largeColumnsWithoutFlag: 3,
-    );
-
     return SliverPadding(
       // Explore grids are edge-to-edge; the 4px gap between columns comes
       // from `crossAxisSpacing` below, not from outer side padding.
       padding: const EdgeInsets.symmetric(vertical: 4),
-      sliver: SliverMasonryGrid.count(
-        crossAxisCount: crossAxisCount,
+      sliver: SliverMasonryGrid(
+        // 2 columns on a phone and 3 on a tablet; with the large-screen
+        // layouts on, a column more at each breakpoint the grid crosses.
+        gridDelegate: AdaptiveMasonryColumns(
+          layout: context.adaptiveLayout,
+          compactColumns: 2,
+          largeColumnsWithoutFlag: 3,
+        ),
         mainAxisSpacing: 4,
         crossAxisSpacing: 4,
-        childCount: videosToShow.length,
-        itemBuilder: (context, index) {
+        delegate: SliverChildBuilderDelegate((context, index) {
           final video = videosToShow[index];
           return _ClassicVideoItem(
             video: video,
@@ -369,7 +371,7 @@ class _ClassicVideosSliverGrid extends ConsumerWidget {
             videos: videosToShow,
             onVideoTap: onVideoTap,
           );
-        },
+        }, childCount: videosToShow.length),
       ),
     );
   }

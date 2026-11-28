@@ -10,6 +10,21 @@ class AppLocalizationsUr extends AppLocalizations {
   AppLocalizationsUr([String locale = 'ur']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'یہ پیغام کھولنے کے لیے $account پر سوئچ کریں؟';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'براہ راست پیغامات';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'بھیجنے والے کا نام یا پیغام کا متن دکھائے بغیر اطلاع دیں۔';
+
+  @override
+  String get dmNotificationMessageUnavailable => 'یہ پیغام دستیاب نہیں ہے۔';
+
+  @override
   String get devOptionsClipRecovery => 'کلپ کی بازیابی';
 
   @override
@@ -316,7 +331,7 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get privacySettingsShareUsageSubtitle =>
-      'یہ ہمیں دیکھنے میں مدد دیتا ہے کہ لوگ واقعی کیا استعمال کرتے ہیں۔ بند کرنے پر اس ڈیوائس پر قطار میں موجود ڈیٹا حذف ہو جاتا ہے۔';
+      'یہ ہمیں دیکھنے میں مدد دیتا ہے کہ لوگ واقعی کیا استعمال کرتے ہیں۔ بند کرنے پر اس ڈیوائس پر قطار میں موجود ڈیٹا حذف ہو جاتا ہے۔ خرابیاں ٹھیک کرنے کے لیے کریش رپورٹس اب بھی بھیجی جاتی ہیں۔';
 
   @override
   String get privacySettingsSaveFailed =>
@@ -1823,51 +1838,8 @@ class AppLocalizationsUr extends AppLocalizations {
   String get shareVideoLabel => 'ویڈیو شیئر کریں';
 
   @override
-  String sharePostSharedWith(String recipientName) {
-    return 'پوسٹ $recipientName کے ساتھ شیئر ہوئی';
-  }
-
-  @override
-  String sharePostSharedWithCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'پوسٹ $count لوگوں کے ساتھ شیئر ہوئی',
-      one: 'پوسٹ $count شخص کے ساتھ شیئر ہوئی',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String shareStillTryingToSendTo(String recipientName) {
-    return '$recipientName کو بھیجنے کی کوشش ابھی جاری ہے';
-  }
-
-  @override
-  String shareStillTryingToSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count لوگوں کو بھیجنے کی کوشش ابھی جاری ہے',
-      one: '$count شخص کو بھیجنے کی کوشش ابھی جاری ہے',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String shareCouldNotSendTo(String recipientName) {
     return '$recipientName کو نہیں بھیجا جا سکا';
-  }
-
-  @override
-  String shareCouldNotSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count لوگوں کو نہیں بھیجا جا سکا',
-      one: '$count شخص کو نہیں بھیجا جا سکا',
-    );
-    return '$_temp0';
   }
 
   @override
@@ -1902,11 +1874,32 @@ class AppLocalizationsUr extends AppLocalizations {
   String get shareFindPeopleMultiline => 'لوگ\nتلاش کریں';
 
   @override
+  String get shareDeliveryFailed => 'ابھی بھیجا نہیں جا سکا';
+
+  @override
+  String shareDeliveryHeld(String name) {
+    return 'جب $name سے رابطہ ممکن ہوگا تو بھیج دیا جائے گا';
+  }
+
+  @override
+  String shareDeliveryForRecipient(String name, String status) {
+    return '$name — $status';
+  }
+
+  @override
   String get shareSent => 'بھیج دیا';
 
   @override
   String shareSelectedRecipientAnnouncement(String name) {
     return '$name منتخب ہوئے';
+  }
+
+  @override
+  String get shareRecipientSend => 'بھیجیں';
+
+  @override
+  String shareRecipientSendTo(String name) {
+    return '$name کو بھیجیں';
   }
 
   @override
@@ -2129,6 +2122,28 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get videoStickerAddYoursButton => 'آپ کی باری';
+
+  @override
+  String get videoStickerAddYoursWatchSeries => 'سیریز دیکھیں';
+
+  @override
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'سیریز دیکھیں: $prompt';
+  }
+
+  @override
+  String videoSeriesChipEpisode(String episode, String total) {
+    return 'قسط $episode از $total';
+  }
+
+  @override
+  String videoSeriesChipSemanticLabel(
+    String seriesName,
+    String episode,
+    String total,
+  ) {
+    return 'سیریز $seriesName، قسط $episode از $total';
+  }
 
   @override
   String videoStickerAddYoursJoined(int count) {
@@ -3458,6 +3473,9 @@ class AppLocalizationsUr extends AppLocalizations {
       'یہاں سائن ان کرنے سے وہ مسودے اور کلپس چھپ جائیں گے';
 
   @override
+  String get authWatchClassicsAsGuest => 'بطور مہمان کلاسکس دیکھیں';
+
+  @override
   String get authTermsPrefix =>
       'نیچے کوئی آپشن منتخب کر کے، آپ تصدیق کرتے ہیں کہ آپ کی عمر کم از کم 16 سال ہے (یا آپ نے ';
 
@@ -4087,6 +4105,10 @@ class AppLocalizationsUr extends AppLocalizations {
   String get remixStartFailed => 'ری مکس شروع نہیں ہو سکا۔ دوبارہ کوشش کریں۔';
 
   @override
+  String get remixSettingSaveFailed =>
+      'آپ کی ری مکس سیٹنگ اپ ڈیٹ نہیں ہو سکی۔ دوبارہ کوشش کریں۔';
+
+  @override
   String get remixSettingAllowTitle => 'دوسروں کو میری ویڈیوز ری مکس کرنے دیں';
 
   @override
@@ -4497,6 +4519,10 @@ class AppLocalizationsUr extends AppLocalizations {
       'ریلے نے اپ ڈیٹ قبول نہیں کی۔ تھوڑی دیر بعد دوبارہ کوشش کریں۔';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      'یہ ویڈیو کسی دوسرے ڈیوائس پر بدلی گئی ہے اور اب اس میں بہت زیادہ ٹیگز یا شریک کار ہیں۔ اسے دوبارہ کھولیں اور کچھ ہٹا دیں۔';
+
+  @override
   String get videoUpdateErrorGeneric =>
       'اس ویڈیو کو اپ ڈیٹ نہیں کیا جا سکا۔ دوبارہ کوشش کریں۔';
 
@@ -4590,6 +4616,18 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get soundsNoSoundsFoundDescription =>
       'کوئی اور تلاش کی اصطلاح آزمائیں';
+
+  @override
+  String soundsSearchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count آوازیں ملیں',
+      one: '$count آواز ملی',
+      zero: 'کوئی آواز نہیں ملی',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get soundsSavedToLibrary => 'آوازوں میں محفوظ ہو گئی';
@@ -6359,6 +6397,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get inboxCollabInviteSentStatus => 'دعوت بھیج دی گئی';
 
   @override
+  String get inboxSharedVideoPreview => 'ایک ویڈیو شیئر کی';
+
+  @override
   String get inboxConversationCollabInvitePreview => 'شریک کار دعوت';
 
   @override
@@ -7170,6 +7211,54 @@ class AppLocalizationsUr extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'نقل کریں';
 
   @override
+  String get libraryDraftActionConvertToClip => 'کلپ میں تبدیل کریں';
+
+  @override
+  String get libraryDraftConvertingToClip => 'کلپ میں تبدیل ہو رہا ہے...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar =>
+      'مسودہ کلپ میں تبدیل ہو گیا';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar =>
+      'مسودہ تبدیل نہیں ہو سکا';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'اس مسودے کا ٹیکسٹ اور اسٹیکرز تیار نہیں ہو سکے۔ اسے ایڈیٹر میں کھولیں، پھر دوبارہ کوشش کریں۔';
+
+  @override
+  String get libraryDraftActionShare => 'مسودہ شیئر کریں';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return 'کیا $name کو قابلِ تدوین مسودہ بھیجنا ہے؟';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'اصل کلپس اور ترمیم کی سرگزشت بھی شیئر ہوتی ہے۔ وصول کنندہ کٹے ہوئے حصے دیکھ سکتا ہے اور اپنی کاپی میں ترمیم کر کے اسے پوسٹ کر سکتا ہے یا واپس بھیج سکتا ہے۔';
+
+  @override
+  String get libraryDraftShareFailed => 'مسودہ بھیجا نہیں جا سکا۔';
+
+  @override
+  String get libraryDraftShareTooLarge => 'مسودہ بھیجنے کے لیے بہت بڑا ہے۔';
+
+  @override
+  String get dmSharedDraft => 'شیئر کیا گیا مسودہ';
+
+  @override
+  String get dmOpenDraft => 'درآمد کریں اور ترمیم کریں';
+
+  @override
+  String get dmDraftImportFailed => 'مسودہ درآمد نہیں ہو سکا۔';
+
+  @override
+  String get libraryDraftSent => 'مسودہ بھیج دیا گیا';
+
+  @override
   String get libraryDraftActionDelete => 'مسودہ حذف کریں';
 
   @override
@@ -7795,6 +7884,14 @@ class AppLocalizationsUr extends AppLocalizations {
   ) {
     return '$displayName آپ کو پیغام بھیجنا چاہتا ہے، انہوں نے $messageText بھیجا ہے۔';
   }
+
+  @override
+  String messageRequestGroupWantsToMessageYou(String messageText) {
+    return 'یہ گروپ آپ کو پیغام بھیجنا چاہتا ہے، انہوں نے $messageText بھیجا ہے۔';
+  }
+
+  @override
+  String get messageRequestGroupMembersHeading => 'اس گروپ میں';
 
   @override
   String get deleteAccountAccountChanged =>
@@ -9525,6 +9622,21 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorEffectSpinBlur => 'اسپن بلر';
 
   @override
+  String get videoEditorEffectShockwave => 'جھٹکے کی لہر';
+
+  @override
+  String get videoEditorEffectSubwoofer => 'سب ووفر';
+
+  @override
+  String get videoEditorEffectPlasma => 'پلازما';
+
+  @override
+  String get videoEditorEffectEnergyWave => 'توانائی کی لہر';
+
+  @override
+  String get videoEditorEffectSmokeBurst => 'دھوئیں کا دھماکا';
+
+  @override
   String get videoEditorEffectComic => 'کامک';
 
   @override
@@ -9721,9 +9833,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorFilterCategoryTints => 'رنگ';
 
   @override
-  String get videoEditorDropsSettingsTitle => 'قطرے ایڈجسٹ کریں';
-
-  @override
   String get videoEditorDropsCountLabel => 'تعداد';
 
   @override
@@ -9770,6 +9879,203 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get videoEditorEffectsOnBeatNoSound =>
       'موسیقی شامل کریں یا کسی کلپ کی آواز آن کریں';
+
+  @override
+  String get videoEditorEffectSettingsOpen => 'ایفیکٹ کی ترتیبات';
+
+  @override
+  String videoEditorEffectSettingsTitle(String effect) {
+    return 'ترتیبات: $effect';
+  }
+
+  @override
+  String videoEditorEffectSeconds(String seconds) {
+    return '$seconds سیکنڈ';
+  }
+
+  @override
+  String get videoEditorEffectHitDuration => 'دورانیہ';
+
+  @override
+  String get videoEditorEffectHitRepeat => 'دہرائیں';
+
+  @override
+  String get videoEditorEffectHitOnce =>
+      'ایک بار، جہاں ٹائم لائن پر ایفیکٹ شروع ہوتا ہے';
+
+  @override
+  String get videoEditorEffectHitInterval => 'وقفہ';
+
+  @override
+  String get videoEditorEffectLookTitle => 'ظاہری شکل';
+
+  @override
+  String get videoEditorEffectHitHorizontal => 'افقی جگہ';
+
+  @override
+  String get videoEditorEffectHitVertical => 'عمودی جگہ';
+
+  @override
+  String get videoEditorEffectHitReach => 'پہنچ';
+
+  @override
+  String get videoEditorEffectHitShake => 'جھٹکا';
+
+  @override
+  String get videoEditorEffectHitPunch => 'زوم کا دھکا';
+
+  @override
+  String get videoEditorEffectLookReset => 'ظاہری شکل ری سیٹ کریں';
+
+  @override
+  String get videoEditorEffectTimingTitle => 'وقت بندی';
+
+  @override
+  String get videoEditorEffectTimingReset => 'وقت بندی ری سیٹ کریں';
+
+  @override
+  String get videoEditorEffectMotionTitle => 'حرکت';
+
+  @override
+  String get videoEditorEffectMotionReset => 'حرکت ری سیٹ کریں';
+
+  @override
+  String get videoEditorEffectSettingFocus => 'فوکس';
+
+  @override
+  String get videoEditorEffectSettingWidth => 'چوڑائی';
+
+  @override
+  String get videoEditorEffectSettingDirection => 'سمت';
+
+  @override
+  String get videoEditorEffectSettingHorizontal => 'افقی';
+
+  @override
+  String get videoEditorEffectSettingVertical => 'عمودی';
+
+  @override
+  String get videoEditorEffectSettingClockwise => 'گھڑی کی سمت';
+
+  @override
+  String get videoEditorEffectSettingAnticlockwise => 'گھڑی کی الٹی سمت';
+
+  @override
+  String get videoEditorEffectSettingZoomIn => 'زوم اِن';
+
+  @override
+  String get videoEditorEffectSettingZoomOut => 'زوم آؤٹ';
+
+  @override
+  String get videoEditorEffectSettingSpacing => 'فاصلہ';
+
+  @override
+  String get videoEditorEffectSettingAngle => 'زاویہ';
+
+  @override
+  String get videoEditorEffectSettingHue => 'رنگت';
+
+  @override
+  String get videoEditorEffectSettingLength => 'لمبائی';
+
+  @override
+  String get videoEditorEffectSettingSensitivity => 'حساسیت';
+
+  @override
+  String get videoEditorEffectSettingPosition => 'مقام';
+
+  @override
+  String get videoEditorEffectSettingWind => 'ہوا';
+
+  @override
+  String get videoEditorEffectSettingDotSize => 'نقطوں کا سائز';
+
+  @override
+  String get videoEditorEffectSettingOutline => 'خاکہ';
+
+  @override
+  String get videoEditorEffectSettingLevels => 'درجے';
+
+  @override
+  String get videoEditorEffectSettingPixelSize => 'پکسل کا سائز';
+
+  @override
+  String get videoEditorEffectSettingOffset => 'کھسکاؤ';
+
+  @override
+  String get videoEditorEffectSettingBrushSize => 'برش کا سائز';
+
+  @override
+  String get videoEditorEffectSettingDensity => 'کثافت';
+
+  @override
+  String get videoEditorEffectSettingGrain => 'دانے';
+
+  @override
+  String get videoEditorEffectSettingGrid => 'گرڈ';
+
+  @override
+  String get videoEditorEffectSettingLayers => 'تہیں';
+
+  @override
+  String get videoEditorEffectSettingShadow => 'سایہ';
+
+  @override
+  String get videoEditorEffectSettingFirstInk => 'پہلی سیاہی';
+
+  @override
+  String get videoEditorEffectSettingSecondInk => 'دوسری سیاہی';
+
+  @override
+  String get videoEditorEffectSettingColors => 'رنگ';
+
+  @override
+  String get videoEditorEffectSettingOriginalColors => 'اصل';
+
+  @override
+  String get videoEditorEffectSettingSingleColor => 'ایک رنگ';
+
+  @override
+  String get videoEditorEffectSettingDelay => 'تاخیر';
+
+  @override
+  String get videoEditorEffectSettingDown => 'نیچے';
+
+  @override
+  String get videoEditorEffectSettingUp => 'اوپر';
+
+  @override
+  String get videoEditorEffectSettingRight => 'دائیں';
+
+  @override
+  String get videoEditorEffectSettingLeft => 'بائیں';
+
+  @override
+  String get videoEditorEffectSettingFrequency => 'تعدد';
+
+  @override
+  String get videoEditorEffectSettingDistance => 'فاصلہ';
+
+  @override
+  String get videoEditorEffectSettingScanlines => 'اسکین لائنز';
+
+  @override
+  String get videoEditorEffectSettingGrainSize => 'دانوں کا سائز';
+
+  @override
+  String get videoEditorEffectSettingSepia => 'سیپیا';
+
+  @override
+  String get videoEditorEffectSettingFlicker => 'جھلملاہٹ';
+
+  @override
+  String get videoEditorEffectSettingVignette => 'وگنیٹ';
+
+  @override
+  String get videoEditorEffectSettingTempo => 'رفتار';
+
+  @override
+  String get videoEditorEffectSettingWavelength => 'لہر کی لمبائی';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {
@@ -11613,6 +11919,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorAudioUseSound => 'استعمال کریں';
 
   @override
+  String get videoEditorAudioOpenSoundDetails => 'آواز کی تفصیلات کھولیں';
+
+  @override
   String get videoEditorAudioFileMissing => 'آڈیو فائل اب اس ڈیوائس پر نہیں ہے';
 
   @override
@@ -11640,6 +11949,9 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get videoEditorAudioCategoryMySounds => 'میری آوازیں';
+
+  @override
+  String get videoEditorAudioCategorySongs => 'Songs';
 
   @override
   String get videoEditorAudioFilterEffects => 'صوتی اثرات';
@@ -11862,6 +12174,34 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get videoEditorSocialStickerRepliesNote =>
       'دکھاتا ہے کہ کس نے اس ویڈیو کا جواب ویڈیو سے دیا۔ ناظرین جوابات دیکھنے کے لیے اسے ٹیپ کرتے ہیں۔';
+
+  @override
+  String get videoEditorSocialStickerAudienceTitle => 'جواب دینے کی اجازت';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => 'سب';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => 'دوست';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => 'صرف میں';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      'صرف آپ کے فالو کردہ اکاؤنٹس حصہ لے سکتے ہیں۔ باقی سب کو اسٹیکر تب نظر آتا ہے جب کوئی حصہ لے لے۔';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      'اسٹیکر صرف آپ کے فالو کردہ اکاؤنٹس کے ویڈیو جوابات دکھاتا ہے۔ باقی سب کو یہ تب نظر آتا ہے جب ان میں سے کوئی جواب دے دے۔';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      'حصہ لینا صرف آپ کے لیے ہے۔ آپ کے حصہ لینے تک کسی اور کو اسٹیکر نظر نہیں آتا۔';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      'اسٹیکر صرف آپ کے اپنے ویڈیو جوابات دکھاتا ہے۔ آپ کے جواب دینے تک کسی اور کو یہ نظر نہیں آتا۔';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>
@@ -13660,6 +14000,29 @@ class AppLocalizationsUr extends AppLocalizations {
       'محفوظ نابالغ اووررائیڈ صاف ہو گیا';
 
   @override
+  String get devOptionsConfirmationAccessTitle => 'Divine Confirmation access';
+
+  @override
+  String get devOptionsConfirmationAccessReal => 'Real answer';
+
+  @override
+  String get devOptionsConfirmationAccessHas => 'Has Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessHasNot => 'Doesn\'t have Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessUnknown => 'Couldn\'t check';
+
+  @override
+  String get devOptionsConfirmationRequirementSimulatedTitle =>
+      'Act as if Confirmation is required';
+
+  @override
+  String get devOptionsConfirmationRequirementSimulatedSubtitle =>
+      'Treats signing in as needing Confirmation even when the verifier doesn\'t. Needs the Confirmation Sign-in flag; choose \"Doesn\'t have Confirmation\" above to see the offer. The verifier still approves sign-ins.';
+
+  @override
   String get commentsRecordVideoButtonLabel => 'ویڈیو تبصرہ ریکارڈ کریں';
 
   @override
@@ -14701,6 +15064,65 @@ class AppLocalizationsUr extends AppLocalizations {
   String get verifyStatusAccountChanged => 'Account changed';
 
   @override
+  String get verifyStatusNeedsConfirmation => 'Needs Confirmation';
+
+  @override
+  String get verifyConfirmationTitle => 'Divine Confirmation';
+
+  @override
+  String get verifyConfirmationHeroBody =>
+      'Divine Confirmation lets you link your accounts on other platforms by signing in to them.';
+
+  @override
+  String get verifyConfirmationIncludedTitle => 'What\'s included';
+
+  @override
+  String get verifyConfirmationIncludedSignIn => 'Link accounts by signing in';
+
+  @override
+  String get verifyConfirmationComingSoon => 'Coming soon';
+
+  @override
+  String get verifyConfirmationSmallPrint =>
+      'Details will appear here when Divine Confirmation is ready.';
+
+  @override
+  String get verifyConfirmationStoreOnly =>
+      'Divine Confirmation is available in the App Store and Google Play versions of Divine.';
+
+  @override
+  String get verifyConfirmationBuySemantic =>
+      'Divine Confirmation, coming soon, unavailable';
+
+  @override
+  String get verifyConfirmationRestoreSemantic =>
+      'Restore purchases, unavailable';
+
+  @override
+  String get verifyConfirmationCardTitle => 'Link by signing in';
+
+  @override
+  String get verifyConfirmationCardBody =>
+      'One-tap linking is part of Divine Confirmation.';
+
+  @override
+  String get verifyGetConfirmation => 'Get Divine Confirmation';
+
+  @override
+  String get verifyProofAlwaysAvailable => 'Proof posts are always available';
+
+  @override
+  String get verifyConfirmationSheetTitle =>
+      'Linking by signing in needs Divine Confirmation';
+
+  @override
+  String get verifyConfirmationSheetSubtitle =>
+      'You can still link this account with a proof post.';
+
+  @override
+  String get verifyConfirmationSheetUseProof => 'Use a proof post';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return '$platform اکاؤنٹ $identity کا جوڑ ختم کریں';
   }
@@ -14732,7 +15154,26 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
+  String verifyLinkNeedsConfirmationSemanticLabel(String platform) {
+    return 'Link your $platform account. Signing in needs Divine Confirmation';
+  }
+
+  @override
   String get verifyOneTapBadge => 'ایک ٹیپ';
+
+  @override
+  String get verifyOneTapWithConfirmationBadge => 'One tap with Confirmation';
+
+  @override
+  String get verifyRenewConfirmation => 'Renew Confirmation';
+
+  @override
+  String verifyRenewConfirmationSemanticLabel(
+    String platform,
+    String identity,
+  ) {
+    return 'Renew Divine Confirmation to restore $platform account $identity';
+  }
 
   @override
   String verifyConnectSignInLifetime(int days) {
@@ -14844,6 +15285,18 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get verifyErrorPublishFailed =>
       'تصدیق ہو گئی، مگر کسی ریلے نے اپ ڈیٹ قبول نہیں کی۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get verifyErrorConfirmationRequired =>
+      'Linking by signing in needs Divine Confirmation. You can still link with a proof post.';
+
+  @override
+  String get verifyErrorConfirmationUnavailable =>
+      'Couldn\'t check Divine Confirmation right now. Try again in a few minutes.';
+
+  @override
+  String get verifyErrorConfirmationPending =>
+      'This can take a minute after buying. Try again shortly.';
 
   @override
   String get verifyErrorOauthUnavailable =>
@@ -15131,7 +15584,7 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get changeEmailSubtitle =>
-      'ہم آپ کے نئے پتے اور اکاؤنٹ والے پتے، دونوں پر تصدیقی لنک بھیجیں گے۔ دونوں سے تصدیق کے بعد آپ کی ای میل بدل جائے گی۔';
+      'ہم آپ کے نئے ای میل پتے پر ایک لنک بھیجیں گے۔ اگر آپ کے اکاؤنٹ میں پہلے سے کوئی ای میل پتہ ہے تو ہم وہاں بھی ایک لنک بھیجیں گے۔';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -15151,19 +15604,19 @@ class AppLocalizationsUr extends AppLocalizations {
   String get changeEmailWrongPassword => 'یہ آپ کا پاس ورڈ نہیں ہے۔';
 
   @override
-  String get changeEmailSubmit => 'تصدیقی لنک بھیجیں';
+  String get changeEmailSubmit => 'تصدیق کی درخواست کریں';
 
   @override
-  String get changeEmailSentTitle => 'دو لنک بھیج دیے گئے ہیں';
+  String get changeEmailSentTitle => 'اپنی ای میل دیکھیں';
 
   @override
   String changeEmailSentMessage(String email) {
-    return '$email سے اور اپنے اکاؤنٹ والے پتے سے تصدیق کریں۔ دونوں مکمل ہونے پر ای میل بدل جائے گی۔';
+    return '$email پر موصول ہونے والا لنک کھولیں۔ اگر آپ کے اکاؤنٹ میں پہلے سے کوئی ای میل پتہ ہے تو وہاں موصول ہونے والا لنک بھی کھولیں۔';
   }
 
   @override
   String get changeEmailSentExpiry =>
-      'لنک 24 گھنٹے بعد کام کرنا بند کر دیتے ہیں۔';
+      'ہر لنک کی میعاد 24 گھنٹے بعد ختم ہو جاتی ہے۔';
 
   @override
   String get changeEmailSentDone => 'سمجھ گیا';
@@ -15448,6 +15901,12 @@ class AppLocalizationsUr extends AppLocalizations {
   String get updateAction => 'اپ ڈیٹ کریں';
 
   @override
+  String get announcementViewContest => 'مقابلہ دیکھیں';
+
+  @override
+  String get featuredFeedUnavailable => 'یہ نمایاں فیڈ اب دستیاب نہیں ہے۔';
+
+  @override
   String updateNewIn(String version) {
     return '$version میں نیا:';
   }
@@ -15599,6 +16058,15 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get settingsHelpAboutSubtitle =>
       'مدد، قانونی معلومات اور ایپ کی تفصیلات';
+
+  @override
+  String get settingsDiscordTitle => 'ہمارے Discord سرور میں شامل ہوں';
+
+  @override
+  String get settingsDiscordSubtitle => 'Divine کی ٹیم اور کمیونٹی سے بات کریں';
+
+  @override
+  String get settingsDiscordOpenError => 'Discord نہیں کھل سکا';
 
   @override
   String listLoopsCount(int count, String formatted) {
@@ -16879,4 +17347,114 @@ class AppLocalizationsUr extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return '$badgeName کی ویڈیوز';
   }
+
+  @override
+  String get menuBarEdit => 'ترمیم';
+
+  @override
+  String get menuBarUndo => 'واپس کریں';
+
+  @override
+  String get menuBarRedo => 'دوبارہ کریں';
+
+  @override
+  String get menuBarCut => 'کاٹیں';
+
+  @override
+  String get menuBarCopy => 'کاپی کریں';
+
+  @override
+  String get menuBarPaste => 'چسپاں کریں';
+
+  @override
+  String get menuBarSelectAll => 'سب منتخب کریں';
+
+  @override
+  String get menuBarView => 'منظر';
+
+  @override
+  String get menuBarVideo => 'ویڈیو';
+
+  @override
+  String get menuBarPreviousVideo => 'پچھلی ویڈیو';
+
+  @override
+  String get menuBarNextVideo => 'اگلی ویڈیو';
+
+  @override
+  String get menuBarPlayPause => 'چلائیں/روکیں';
+
+  @override
+  String get menuBarMute => 'میوٹ کریں';
+
+  @override
+  String get menuBarUnmute => 'ان میوٹ کریں';
+
+  @override
+  String get menuBarWindow => 'ونڈو';
+
+  @override
+  String get menuBarHelp => 'مدد';
+
+  @override
+  String get emailConfirmationTitle => 'اپنی ای میل کی تصدیق کریں';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return 'ہم نے $email پر ایک لنک بھیجا ہے۔ پیغامات کھولنے اور ہمیشہ اپنے اکاؤنٹ میں واپس آ سکنے کے لیے یہ لنک کھولیں۔';
+  }
+
+  @override
+  String get emailConfirmationResendButton => 'ای میل دوبارہ بھیجیں';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return 'خوش آمدید! اپنے اکاؤنٹ کی تصدیق کے لیے $email چیک کریں۔';
+  }
+
+  @override
+  String get emailConfirmationResendSent =>
+      'تصدیق کی درخواست موصول ہوئی۔ اپنا ان باکس دیکھیں۔';
+
+  @override
+  String get emailConfirmationResendFailed =>
+      'یہ نہیں بھیجی جا سکی۔ تھوڑی دیر بعد دوبارہ کوشش کریں۔';
+
+  @override
+  String get emailConfirmationMessagesTitle =>
+      'پیغامات شروع کرنے کے لیے اپنی ای میل کی تصدیق کریں';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return 'ہم نے $email پر جو لنک بھیجا ہے اسے کھولیں۔ پھر پیغامات پوری طرح آپ کے ہیں۔';
+  }
+
+  @override
+  String get emailConfirmationCheckInbox =>
+      'تصدیقی لنک کے لیے اپنا ان باکس دیکھیں۔';
+
+  @override
+  String get emailConfirmationDone =>
+      'ای میل کی تصدیق ہو گئی۔ پیغامات کھل گئے ہیں۔';
+
+  @override
+  String get emailConfirmationLinkConfirmed => 'ای میل کی تصدیق ہو گئی۔';
+
+  @override
+  String get emailConfirmationAddEmailTitle => 'ای میل شامل کریں';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      'آپ کے اکاؤنٹ میں ابھی کوئی ای میل نہیں ہے۔ ایک ای میل شامل کریں تاکہ آپ ہمیشہ واپس آ سکیں۔';
+
+  @override
+  String get emailConfirmationAddEmailButton => 'ای میل شامل کریں';
+
+  @override
+  String get emailConfirmationSendBlocked =>
+      'پیغامات بھیجنے کے لیے اپنی ای میل کی تصدیق کریں۔';
+
+  @override
+  String get emailConfirmationCapReached =>
+      'نئے اکاؤنٹس کے لیے فی گھنٹہ کی حد یہی ہے۔ یہ حد ختم کرنے کے لیے اپنی ای میل کی تصدیق کریں۔';
 }

@@ -1,8 +1,8 @@
 # Marketing campaign push contract
 
 Campaigns use the existing encrypted push registration and preference protocols.
-Kind 3079 advertises `campaignTargetTypes` with `app_route`, `video_address` and
-`creator_profile`. The push backend must support this optional field before the
+Kind 3079 advertises `campaignTargetTypes` with `app_route`, `video_address`,
+`creator_profile`, `announcement` and `featured_feed`. The push backend must support this optional field before the
 app advertises it. A device capability never grants account marketing consent:
 `campaignsEnabled` remains an explicit, default-off kind-3083 preference.
 
@@ -12,8 +12,26 @@ nonempty d-tag (`video_address`), and a 64-character lowercase hex creator pubke
 (`creator_profile`). Registration advertises
 `NotificationWireValues.campaignTargetTypes`, and a test checks that every type
 in that list routes a valid value.
+Announcement targets carry the announcement's catalog UUID. Featured-feed
+targets carry the Funnelcake featured-tab id (`ft_` followed by eight lowercase
+letters or digits).
+Announcements resolve through the trusted catalog. Featured feeds preserve the
+requested identity through repository selection and caching. A campaign's
+featured tab shows an unavailable state when the feed is ineligible or
+withdrawn, even when the viewer's 18+ check is unsettled. An otherwise eligible
+feed hidden by the audience rule waits while verification loads and shows an
+error if that check fails. A catalog lookup with no usable answer also shows
+an error, retried on the next poll or foreground. Announcement details show
+unavailable only once the endpoint has answered without the announcement, or it
+expired while shown; a lookup the endpoint did not answer shows an error with a
+retry.
 Campaigns reuse normal video/profile navigation. Malformed or unsupported targets
-open the inbox. HTTPS destinations remain unsupported.
+open the inbox. HTTPS push destinations remain unsupported. Validated
+announcement actions can open canonical store links or approved contest details.
+
+Encrypted registration also includes the known platform, install channel and
+canonical marketing version for release targeting. Unknown install channels or
+versions are omitted. Marketing consent remains independent of this metadata.
 
 The `campaignRevisionId` survives FCM, local notification normalization and
 foreground/background/cold-start tap handling. The existing
@@ -41,7 +59,9 @@ counted as measured zero conversions. A provider-accepted send is not proof of
 notification display or opening.
 
 Release order: compatible push backend, this app, then campaign dashboard
-video/profile choices. Physical iOS/Android verification must cover one alert,
+video, profile, announcement and featured-feed choices. Physical iOS/Android
+verification must cover one alert,
 correct destination, campaign revision preservation, foreground/background/cold
-starts, account changes and analytics opt-out. Older devices retain Following
-support and are filtered out of unsupported video/profile sends server-side.
+starts, account changes and analytics opt-out. Older devices that advertise no
+`campaignTargetTypes` keep Following support. The server filters those devices
+from sends for other target types.

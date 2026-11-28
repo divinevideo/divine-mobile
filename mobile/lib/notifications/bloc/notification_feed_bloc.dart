@@ -14,6 +14,7 @@ import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/features/consumption_analytics/consumption_analytics_tracker.dart';
 import 'package:openvine/notifications/bloc/reportable_sites.dart';
 import 'package:openvine/observability/reportable_error.dart';
+import 'package:openvine/observability/screen_load_telemetry.dart';
 import 'package:openvine/services/app_badge_service.dart';
 
 part 'notification_feed_event.dart';
@@ -34,11 +35,13 @@ class NotificationFeedBloc
     required AppBadgeClearer appBadgeClearer,
     required ConsumptionAnalyticsTracker consumptionAnalytics,
     NotificationKind? filter,
+    ScreenLoadTelemetry? loadTelemetry,
   }) : _notificationRepository = notificationRepository,
        _followRepository = followRepository,
        _appBadgeClearer = appBadgeClearer,
        _consumptionAnalytics = consumptionAnalytics,
        _filter = filter,
+       _loadTelemetry = loadTelemetry,
        super(const NotificationFeedState()) {
     on<_SnapshotChanged>(_onSnapshotChanged);
     on<NotificationFeedStarted>(_onStarted, transformer: droppable());
@@ -63,6 +66,9 @@ class NotificationFeedBloc
   final AppBadgeClearer _appBadgeClearer;
   final ConsumptionAnalyticsTracker _consumptionAnalytics;
   final NotificationKind? _filter;
+
+  /// Times the first open until the list shows; null for unmeasured feeds.
+  final ScreenLoadTelemetry? _loadTelemetry;
   late final StreamSubscription<NotificationPage> _snapshotSubscription;
   int _emptyPageContinuations = 0;
   bool _loadMoreFailed = false;
@@ -187,6 +193,7 @@ class NotificationFeedBloc
     _emptyPageContinuations = 0;
     _loadMoreFailed = false;
     _emptyPageContinuationPending = false;
+    _loadTelemetry?.start();
     // Stale-while-revalidate: keep any hydrated/cached items rendered and
     // flag the in-flight refresh so the view shows a thin progress bar
     // instead of a blanking full-screen spinner.
@@ -542,8 +549,31 @@ class NotificationFeedBloc
     }
   }
 
+  /// Completes the load once the view leaves its cold-start spinner.
+  ///
+  /// The view lists any notifications as soon as they arrive, cached ones
+  /// included, and shows the empty or failure state once the first refresh
+  /// settled, so those states are the boundary rather than the refresh call.
+  @override
+  void onChange(Change<NotificationFeedState> change) {
+    super.onChange(change);
+    final telemetry = _loadTelemetry;
+    if (telemetry == null || !telemetry.isTiming) return;
+    final next = change.nextState;
+    if (next.notifications.isNotEmpty ||
+        next.status == NotificationFeedStatus.loaded) {
+      telemetry.completeLoaded(
+        itemCount: next.notifications.length,
+        hasMore: next.hasMore,
+      );
+    } else if (next.status == NotificationFeedStatus.failure) {
+      telemetry.completeFailure();
+    }
+  }
+
   @override
   Future<void> close() async {
+    _loadTelemetry?.dismiss();
     await _snapshotSubscription.cancel();
     _notificationRepository.resetPaginationDepth(filter: _filter);
     return super.close();

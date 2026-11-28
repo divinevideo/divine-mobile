@@ -216,14 +216,17 @@ mixin $SoundDetailRouteData on GoRouteData {
   static SoundDetailRouteData _fromState(GoRouterState state) =>
       SoundDetailRouteData(
         id: state.pathParameters['id']!,
+        purpose: state.uri.queryParameters['for'],
         $extra: state.extra as Object?,
       );
 
   SoundDetailRouteData get _self => this as SoundDetailRouteData;
 
   @override
-  String get location =>
-      GoRouteData.$location('/sound/${Uri.encodeComponent(_self.id)}');
+  String get location => GoRouteData.$location(
+    '/sound/${Uri.encodeComponent(_self.id)}',
+    queryParams: {if (_self.purpose != null) 'for': _self.purpose},
+  );
 
   @override
   void go(BuildContext context) => context.go(location, extra: _self.$extra);

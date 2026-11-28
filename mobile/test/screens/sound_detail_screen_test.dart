@@ -937,6 +937,122 @@ void main() {
         expect(find.textContaining('CC BY 4.0'), findsOneWidget);
         expect(find.byType(DivineTextLink), findsNothing);
       });
+
+      group('edited note', () {
+        final edited =
+            ' · ${lookupAppLocalizations(const Locale('en')).soundCreditEdited}';
+
+        Future<void> pumpCredited(
+          WidgetTester tester, {
+          required String licenseName,
+          required String description,
+        }) async {
+          final testSound = createTestAudioEvent(id: 'sound1').copyWith(
+            creatorName: 'Kevin MacLeod (incompetech.com)',
+            licenseName: licenseName,
+            description: description,
+          );
+          await tester.pumpWidget(
+            createTestWidget(
+              child: SoundDetailScreen(sound: testSound),
+              overrides: [
+                soundUsageCountProvider(
+                  testSound.id,
+                ).overrideWith((ref) => Future.value(0)),
+                videosUsingSoundProvider(
+                  testSound.id,
+                ).overrideWith((ref) => Future.value(<String>[])),
+                audioPlaybackServiceProvider.overrideWithValue(
+                  mockAudioService,
+                ),
+              ],
+            ),
+          );
+          await tester.pumpAndSettle();
+        }
+
+        testWidgets('says a CC BY sound was changed before it was shared', (
+          tester,
+        ) async {
+          await pumpCredited(
+            tester,
+            licenseName: 'CC BY 4.0',
+            description:
+                'Crypto\n${AudioEvent.editedLinePrefix}loudness normalized',
+          );
+
+          expect(find.textContaining('CC BY 4.0$edited'), findsOneWidget);
+        });
+
+        testWidgets('leaves it out for a sound shared as recorded', (
+          tester,
+        ) async {
+          await pumpCredited(
+            tester,
+            licenseName: 'CC BY 4.0',
+            description: 'Crypto\nCreated by Kevin MacLeod',
+          );
+
+          expect(find.textContaining('CC BY 4.0'), findsOneWidget);
+          expect(find.textContaining(edited), findsNothing);
+        });
+
+        testWidgets('says a shipped CC BY excerpt was changed', (
+          tester,
+        ) async {
+          SharedPreferences.setMockInitialValues({});
+          final soundLibraryService = SoundLibraryService();
+          final vineSound = VineSound(
+            id: 'freesound_elevator_music',
+            title: 'Elevator Music',
+            assetPath: 'assets/sounds/elevator-music.mp3',
+            duration: const Duration(milliseconds: 6021),
+            artist: 'YellowTree',
+            license: 'CC BY 4.0',
+            licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
+            isExcerpt: true,
+          );
+          await soundLibraryService.addCustomSound(vineSound);
+          final testSound = AudioEvent.fromBundledSound(vineSound);
+
+          await tester.pumpWidget(
+            createTestWidget(
+              child: SoundDetailScreen(sound: testSound),
+              overrides: [
+                soundLibraryServiceSyncProvider.overrideWithValue(
+                  soundLibraryService,
+                ),
+                soundUsageCountProvider(
+                  testSound.id,
+                ).overrideWith((ref) => Future.value(0)),
+                videosUsingSoundProvider(
+                  testSound.id,
+                ).overrideWith((ref) => Future.value(<String>[])),
+                audioPlaybackServiceProvider.overrideWithValue(
+                  mockAudioService,
+                ),
+              ],
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.textContaining(edited), findsOneWidget);
+        });
+
+        testWidgets('leaves it out under a licence that asks for no credit', (
+          tester,
+        ) async {
+          await pumpCredited(
+            tester,
+            licenseName: 'CC0 1.0',
+            description:
+                'Switch 1\n${AudioEvent.editedLinePrefix}loudness normalized',
+          );
+
+          expect(find.textContaining('CC0 1.0'), findsOneWidget);
+          expect(find.textContaining(edited), findsNothing);
+        });
+      });
     });
 
     group('Action Buttons', () {
@@ -1454,6 +1570,215 @@ void main() {
             [testSound.id],
           );
           expect(container.read(selectedSoundProvider), isNull);
+        },
+      );
+
+      testWidgets(
+        'picks the sound for the video instead of saving it when the sound '
+        'picker opened the page',
+        (tester) async {
+          final testSound = createTestAudioEvent(id: 'sound1');
+          SharedPreferences.setMockInitialValues({});
+          final sharedPreferences = await SharedPreferences.getInstance();
+
+          await tester.pumpWidget(
+            SavedSoundsScope(
+              service: SavedSoundsService(sharedPreferences),
+              mediaProbe: _NoopSavedSoundMediaProbe(),
+              child: ProviderScope(
+                overrides: [
+                  ..._testAudioReuseOverrides(),
+                  authServiceProvider.overrideWithValue(
+                    createMockAuthService(),
+                  ),
+                  sharedPreferencesProvider.overrideWithValue(
+                    sharedPreferences,
+                  ),
+                  soundUsageCountProvider(
+                    testSound.id,
+                  ).overrideWith((ref) => Future.value(0)),
+                  videosUsingSoundProvider(
+                    testSound.id,
+                  ).overrideWith((ref) => Future.value(<String>[])),
+                  audioPlaybackServiceProvider.overrideWithValue(
+                    mockAudioService,
+                  ),
+                ],
+                child: MockGoRouterProvider(
+                  goRouter: mockGoRouter,
+                  child: MaterialApp(
+                    localizationsDelegates: appLocalizationsDelegates,
+                    supportedLocales: AppLocalizations.supportedLocales,
+                    theme: VineTheme.theme,
+                    home: SoundDetailScreen(
+                      sound: testSound,
+                      choosesForVideo: true,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.text('Use Sound'));
+          await tester.pumpAndSettle();
+
+          verify(() => mockGoRouter.pop<Object>(true)).called(1);
+          expect(find.text('Saved to Sounds'), findsNothing);
+          expect(
+            SavedSoundsService(sharedPreferences).loadSavedSounds(),
+            isEmpty,
+          );
+        },
+      );
+
+      testWidgets(
+        'saves the sound when nothing waits for it, as after a reload',
+        (tester) async {
+          when(() => mockGoRouter.canPop()).thenReturn(false);
+          final testSound = createTestAudioEvent(id: 'sound1');
+          SharedPreferences.setMockInitialValues({});
+          final sharedPreferences = await SharedPreferences.getInstance();
+
+          await tester.pumpWidget(
+            SavedSoundsScope(
+              service: SavedSoundsService(sharedPreferences),
+              mediaProbe: _NoopSavedSoundMediaProbe(),
+              child: ProviderScope(
+                overrides: [
+                  ..._testAudioReuseOverrides(),
+                  authServiceProvider.overrideWithValue(
+                    createMockAuthService(),
+                  ),
+                  sharedPreferencesProvider.overrideWithValue(
+                    sharedPreferences,
+                  ),
+                  soundUsageCountProvider(
+                    testSound.id,
+                  ).overrideWith((ref) => Future.value(0)),
+                  videosUsingSoundProvider(
+                    testSound.id,
+                  ).overrideWith((ref) => Future.value(<String>[])),
+                  audioPlaybackServiceProvider.overrideWithValue(
+                    mockAudioService,
+                  ),
+                ],
+                child: MockGoRouterProvider(
+                  goRouter: mockGoRouter,
+                  child: MaterialApp(
+                    localizationsDelegates: appLocalizationsDelegates,
+                    supportedLocales: AppLocalizations.supportedLocales,
+                    theme: VineTheme.theme,
+                    home: SoundDetailScreen(
+                      sound: testSound,
+                      choosesForVideo: true,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.text('Use Sound'));
+          await tester.pumpAndSettle();
+
+          verifyNever(() => mockGoRouter.go(any()));
+          expect(find.text('Saved to Sounds'), findsOneWidget);
+          expect(
+            SavedSoundsService(
+              sharedPreferences,
+            ).loadSavedSounds().map((sound) => sound.id),
+            [testSound.id],
+          );
+        },
+      );
+
+      testWidgets(
+        'starts no preview that finishes loading after Use Sound closed the '
+        'page',
+        (tester) async {
+          final testSound = createTestAudioEvent(id: 'sound1');
+          SharedPreferences.setMockInitialValues({});
+          final sharedPreferences = await SharedPreferences.getInstance();
+          final load = Completer<Duration?>();
+          when(
+            () => mockAudioService.loadAudio(any()),
+          ).thenAnswer((_) => load.future);
+          bool? chosen;
+          final router = GoRouter(
+            routes: [
+              GoRoute(
+                path: '/',
+                builder: (context, _) => Scaffold(
+                  body: TextButton(
+                    onPressed: () async {
+                      chosen = await context.push<bool>('/sound');
+                    },
+                    child: const Text('open'),
+                  ),
+                ),
+              ),
+              GoRoute(
+                path: '/sound',
+                builder: (_, _) =>
+                    SoundDetailScreen(sound: testSound, choosesForVideo: true),
+              ),
+            ],
+          );
+          addTearDown(router.dispose);
+
+          await tester.pumpWidget(
+            SavedSoundsScope(
+              service: SavedSoundsService(sharedPreferences),
+              mediaProbe: _NoopSavedSoundMediaProbe(),
+              child: ProviderScope(
+                overrides: [
+                  ..._testAudioReuseOverrides(),
+                  authServiceProvider.overrideWithValue(
+                    createMockAuthService(),
+                  ),
+                  sharedPreferencesProvider.overrideWithValue(
+                    sharedPreferences,
+                  ),
+                  soundUsageCountProvider(
+                    testSound.id,
+                  ).overrideWith((ref) => Future.value(0)),
+                  videosUsingSoundProvider(
+                    testSound.id,
+                  ).overrideWith((ref) => Future.value(<String>[])),
+                  audioPlaybackServiceProvider.overrideWithValue(
+                    mockAudioService,
+                  ),
+                ],
+                child: MaterialApp.router(
+                  routerConfig: router,
+                  localizationsDelegates: appLocalizationsDelegates,
+                  supportedLocales: AppLocalizations.supportedLocales,
+                  theme: VineTheme.theme,
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('open'));
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.text('Preview'));
+          await tester.pump();
+          verify(() => mockAudioService.loadAudio(any())).called(1);
+
+          await tester.tap(find.text('Use Sound'));
+          await tester.pumpAndSettle();
+          expect(find.byType(SoundDetailScreen), findsNothing);
+          expect(chosen, isTrue);
+
+          load.complete(const Duration(seconds: 6));
+          await tester.pump();
+          await tester.pump();
+
+          verifyNever(() => mockAudioService.play());
         },
       );
 

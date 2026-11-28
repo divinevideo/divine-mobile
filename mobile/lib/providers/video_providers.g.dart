@@ -373,7 +373,7 @@ final class VideoEventPublisherProvider
 }
 
 String _$videoEventPublisherHash() =>
-    r'3a40d2a3de92880b3365f735fb22d2bddf85dfe3';
+    r'f734cb3146cf9f487c7ee45522e450aa7caca580';
 
 /// View event publisher for kind 22236 ephemeral analytics events
 ///
@@ -577,7 +577,7 @@ final class VideoSharingServiceProvider
 }
 
 String _$videoSharingServiceHash() =>
-    r'9eb7e2f0e6e9e7ff4be4814706a05d7407d2c04f';
+    r'0603ad24e3b2cb7c6b7ccba59cdd1fb72d00ec60';
 
 /// Unified resolver for fetching a [VideoEvent] by its event id, with
 /// in-memory → personal cache → relay fallback. See [VideoEventResolver].
@@ -687,7 +687,7 @@ final class VideoMetadataUpdateServiceProvider
 }
 
 String _$videoMetadataUpdateServiceHash() =>
-    r'549eaa7d18f7ce4435d19000e64c4ab442f5ea07';
+    r'45c5260531cbdd5411c6757cc622f2f87c40df5e';
 
 /// Broken video tracker service for filtering non-functional videos.
 ///
@@ -773,7 +773,7 @@ final class BrokenVideoTrackerProvider
 }
 
 String _$brokenVideoTrackerHash() =>
-    r'a0b2af154496e50f633f49069986b3c0ee1f5585';
+    r'ad8e0f446adb233b25ea05b39fa358f9830cbf63';
 
 /// Guard that HEAD-confirms a feed item's media is 404 and verifies moderation
 /// says the blob is `blocked` before marking it broken. A canonical API 404
@@ -930,7 +930,7 @@ final class FeedUnavailabilityGateProvider
 }
 
 String _$feedUnavailabilityGateHash() =>
-    r'e6bdbe891fa7d22dfcb0cc6c7c35db7aa0722b12';
+    r'5dab0f84135dd2099e4e496a5a8499d694fa764a';
 
 /// Provider for VideoLocalStorage instance (SQLite-backed)
 ///
@@ -1096,7 +1096,7 @@ final class VideosRepositoryProvider
   }
 }
 
-String _$videosRepositoryHash() => r'8441220dce98f68c4f5ee5ae4305c5a98461f268';
+String _$videosRepositoryHash() => r'd27322d8a262259f6502b0a2a6985662230695ed';
 
 /// Provider for LikesRepository instance
 ///

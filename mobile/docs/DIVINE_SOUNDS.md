@@ -1,6 +1,6 @@
 # Divine's own sounds
 
-Divine ships a library of sounds with the app (`assets/sounds/sounds_manifest.json`). This document describes how those sounds, and any Divine adds later, are published to the network, and what the app does with them. The app side is in place; nothing has been published yet.
+Divine ships a library of sounds with the app (`assets/sounds/sounds_manifest.json`). This document describes how those sounds, and any Divine adds later, are published to the network, and what the app does with them. The app side is in place; nothing has been published yet. The 22 shipped sounds whose licence allows it go into the imported library instead (see [Sources](#sources)).
 
 ## Why publish them
 
@@ -47,14 +47,9 @@ No `a` tag: that is what marks a video's sound.
 
 ## Publishing
 
-A one-off script, run by a maintainer who holds the account key. The key never goes into the app.
+No Divine sound account publishes the shipped sounds. The 22 whose licence allows it go out with the imported library: the importer's `app` source (`tools/sound_import/app_sounds.dart`) reads them from the manifest and the library account signs them, each with its manifest id as the `divine_sound` tag (see [The imported library](#the-imported-library)). The other 69 have no licence or an unknown one and are not published at all.
 
-1. For each manifest entry, upload the asset to Blossom and note its URL, hash and size.
-2. Build the event from the table above, with the entry's id as the `divine_sound` tag.
-3. Sign it with the account in `kDivineSoundPublisherPubkeys` and publish it to `relay.divine.video` and the app's other default relays.
-4. Check in the app that the sound plays and that a test video referencing it is counted. Use a staging environment, not production posts.
-
-Publishing a sound again with the same `divine_sound` id replaces the link; the app takes the newest event.
+To publish a sound that should rank with the shipped ones, sign it with an account in `kDivineSoundPublisherPubkeys` and give it the event shape above. The key never goes into the app. Check in the app that the sound plays and that a test video referencing it is counted, on a staging environment, not with production posts. Publishing a sound again with the same `divine_sound` id replaces the link; the app takes the newest event.
 
 ## Rollout notes
 
@@ -63,13 +58,13 @@ Publishing a sound again with the same `divine_sound` id replaces the link; the 
 
 ## The imported library
 
-Besides the curated sounds above, Divine publishes a library of freely licensed effects and music, thousands of sounds at once. It is signed by its own account, in `kSoundLibraryPublisherPubkeys` (`lib/config/official_accounts.dart`), not by a Divine sound account, so the bulk does not take the Divine boost:
+Besides the curated sounds above, Divine publishes a library of freely licensed effects and music, thousands of sounds at once. It is signed by its own account, in `kSoundLibraryPublisherPubkeys` (`lib/config/official_accounts.dart`), not by a Divine sound account, so its thousands of sounds are not among the Divine sounds For you lists for every viewer:
 
 - `AudioEvent.isLibrary` (`lib/extensions/divine_sound_extensions.dart`) marks it, by signer and without an `a` tag, as `isDivine` does.
-- New and For you leave it out (`SoundsRepository.withoutLibrarySounds`); search and Popular keep it. It shows without the community mark.
-- A library sound picked for the boost is published again by a Divine sound account.
-- The set is empty until the account exists, and the app behaves as before.
-- Funnelcake's search boost (`SEARCH_DIVINE_SOUND_PUBKEYS`) should not list the library account either.
+- It shows in every list the community's sounds do: New, Popular, search, and For you for a viewer who follows the library account. It shows without the community mark.
+- A library sound picked for every viewer's For you is published again by a Divine sound account.
+- The library account is `npub1n0dqg6d7t8ejzcc0awlhz4sgxxsrg28q37dp5ktxze0t9hs8s9jqncrx0a` (hex `9bda0469be59f321630febbf71560831a03428e08f9a1a5966165eb2de078164`, `kSoundLibraryPubkeyHex`). An app version from before it was added shows the library with the community mark.
+- Funnelcake's search boost (`SEARCH_DIVINE_SOUND_PUBKEYS`) lists the library account beside Divine HQ (divinevideo/divine-iac-coreconfig#2880), so its sounds rank first among equally good search matches. Funnelcake writes the boost into each sound's search document, and its nightly backfill re-indexes every sound, so a change to the list applies from the next run.
 
 ### Sources
 
@@ -77,7 +72,10 @@ Only sources whose terms allow publishing the sounds as a library:
 
 - CC0 effects from `lavenderdotpet/CC0-Public-Domain-Sounds`, only from packs whose own licence file names the original author: Kenney (`kenney_*`, `sci-fi-sounds`), Ben Burnes (`BB_*`, `bb - *`, `Micro Pack - *`), The Motion Monkey (`MMRetroArcadeSoundsPack1_0_5`) and Team Forbidden (`warfork-cc0`, without its trailer voice-overs). Folders without a licence file are left out. `tools/sound_import/cc0_packs.dart` lists the packs, their credits and kinds.
 - Music by Kevin MacLeod from incompetech (`pieces.json`), CC BY 4.0. Its credit is the one incompetech asks for: the title, "Kevin MacLeod (incompetech.com)", "Licensed under Creative Commons: By Attribution 4.0 License" and the licence link.
-- Not Freesound, Pixabay or the Sonniss bundles: their terms forbid this use.
+- The app's own sounds (`assets/sounds/sounds_manifest.json`, read at the revision `appSoundsCommit` in `tools/sound_import/app_sounds.dart` pins) that carry CC0, CC BY 4.0 or CC BY 3.0 and name their Freesound page: 22 of the 91. Each is credited to its Freesound user and carries the `divine_sound` tag with its manifest id. The six under CC BY are credited with the recording's Freesound title, and the two the app ships as excerpts say so. Like the app, the importer files a sound tagged `music` as music and every other one as an effect. The others have no licence or an unknown one and stay in the app only.
+- Not Freesound as a source, nor Pixabay or the Sonniss bundles. Freesound's API terms forbid copying its database, and the others' terms forbid this use. The app's own Freesound sounds above are single files, shared under their own licences.
+
+The app ties a published sound to the file it ships only when a Divine sound account signed it (`linkDivineSounds`). Until it also ties the library's, each of those 22 shows twice in the picker: as the shipped sound and as the library's. Once they are published, their event ids can go into the manifest so the shipped sounds reference them.
 
 The CC0 catalog tree and all audio/source URLs are pinned to the verified
 revision `f2b6264f9ab89fabc266914c3654685d68c5a39b`, not upstream `main`.
@@ -99,7 +97,9 @@ As in the table above, with these values:
 | `summary` | incompetech's description |
 | `alt` | `Sound: <title>` |
 
-`content` holds the readable credit, in English, and a line `Edited: …` naming what preparing changed (edge silence trimmed, loudness normalized), as CC BY 4.0 asks for an adapted file. The encoded file carries the title, artist and credit in its own metadata too.
+`content` holds the readable credit, in English, and, when preparing changed the file, a line `Edited: …` naming what it changed (edge silence trimmed; cut to the first 5 minutes with a fade-out, for a sound longer than `--max-duration 300`; loudness normalized), as CC BY 4.0 asks for an adapted file. The encoded file carries the title, artist and credit in its own metadata too.
+
+The app reads that line, or `Excerpt of the original recording` (`AudioEvent.isChangedFromOriginal`), and the sound's page then says "edited" after a CC BY licence. A shipped sound the manifest marks `"excerpt": true` (`VineSound.isExcerpt`) gets the same note on its bundled page. Where `source` is only a link, the picker's rows and player bar, under the title, and the editor's sound chip, beside it, name the `creator` instead (`AudioEvent.sourceForDisplay`); the link stays on the sound's page as "View source". A video made with a CC BY sound carries its own credit line ending in "(edited)" (`soundCreditLine`).
 
 ### Importing
 
@@ -113,9 +113,9 @@ dart run tools/import_free_sounds.dart upload --work-dir <dir> --blossom <server
 dart run tools/import_free_sounds.dart publish --work-dir <dir> --relay <url> --expect-pubkey <hex> --dry-run
 ```
 
-1. `catalog` reads the two listings; nothing is downloaded.
-2. `prepare` downloads, one file every two seconds, and uses ffmpeg to trim edge silence (below -60 dBFS, keeping 50 ms before and 200 ms after the sound), bring the sound to -16 LUFS without lifting its true peak above -1.5 dBTP, and encode AAC (192 kbps for music, 128 kbps otherwise; mono stays mono). A silent file is rejected. It prepares 20 per run unless `--limit` or `--all` says otherwise: the full sources are about 12.5 GB from incompetech plus the CC0 packs, so a full run needs the maintainers' go and runs once.
-3. `events` writes the unsigned events to `events.jsonl`. A Blossom URL is the server and the file's SHA-256, so the events can be built before the upload. `--created-at` is the newest timestamp: each subsequent unique output in catalog order is one second older. Duplicate outputs consume no timestamp. This allows `until`/`limit` relay pagination to reach the entire import. A base too small to keep every timestamp at or after the Unix epoch is rejected without replacing the events file. Choose a base in the past to keep the import out of the relays' newest pages, which older app versions show as New. Repeating with the same catalog, state and base produces the same events.
+1. `catalog` reads the three listings (`--source cc0`, `incompetech` or `app` reads one); nothing is downloaded.
+2. `prepare` downloads, one file every two seconds, and uses ffmpeg to trim edge silence (below -60 dBFS, keeping 50 ms before and 200 ms after the sound), bring the sound to -16 LUFS without lifting its true peak above -1.5 dBTP, and encode AAC (192 kbps for music, 128 kbps otherwise; mono stays mono). A silent file is rejected. With `--max-duration <seconds>`, a longer sound keeps only its start, faded out over 3 seconds, and its credit says so: Divine's media server takes at most 16 MiB in one upload, which 192 kbps AAC reaches after about 11 minutes, so the first import cut incompetech's 12- to 59-minute ambient tracks to 5 minutes. A sound an earlier run prepared longer than the limit is prepared again as long as it is neither uploaded nor published. It prepares 20 per run unless `--limit` or `--all` says otherwise: the full sources are about 12.5 GB from incompetech plus the CC0 packs, so a full run needs the maintainers' go and runs once.
+3. `events` writes the unsigned events to `events.jsonl`. A Blossom URL is the server and the file's SHA-256, so the events can be built before the upload. `--created-at` is the newest timestamp: each subsequent unique output in catalog order is one second older. Duplicate outputs consume no timestamp. This allows `until`/`limit` relay pagination to reach the entire import. A base too small to keep every timestamp at or after the Unix epoch is rejected without replacing the events file. The base decides where the import lands in New, which lists sounds newest first: a base of now puts the whole import ahead of every community sound until newer ones push it down, and a base in the past files it among the sounds of that time. Repeating with the same catalog, state and base produces the same events.
 4. `upload` asks the server for each file and uploads the missing ones with a BUD-02 authorization signed by the key in `SOUND_IMPORT_UPLOAD_NSEC`. Divine's own media servers need `--confirm-production`. Staging builds use the production media server too, so trying the library on staging needs that go as well.
 5. `publish` signs each event with the key in `SOUND_IMPORT_PUBLISHER_NSEC`, which must belong to `--expect-pubkey`, and sends the events the account has not published yet, found by their `x` tags. Each event is signed once and kept in `signed.json`, so every relay and every later run gets the same event.
 
@@ -131,7 +131,6 @@ Keys come from the environment of the maintainer who runs the step and never go 
 
 ## Open decisions
 
-- **Signing account.** HQ is configured. A dedicated sound account keeps HQ's own posts apart; changing it is one line in `official_accounts.dart` and needs a release, like the other official sets. The imported library has its own account, decided 2026-11-04; its pubkey goes into `kSoundLibraryPublisherPubkeys` once it exists.
-- **Browsing the library.** New and For you leave the library out, so it is reached through search and Popular. A picker list that shows it by kind, without a search, is not built yet.
+- **Signing account.** HQ is configured. A dedicated sound account keeps HQ's own posts apart; changing it is one line in `official_accounts.dart` and needs a release, like the other official sets. The imported library has its own account, decided 2026-11-04 and created 2026-11-24; its pubkey is in `kSoundLibraryPublisherPubkeys`, and it is the `--expect-pubkey` for `publish`.
 - **Tag schema.** `divine_sound` and the use of `music`/`sfx` should be confirmed before the first publish. The app also reads the effect synonyms above.
 - **The shipped set.** Once the library is published, the app can ship a small starter set and load the rest from the network.

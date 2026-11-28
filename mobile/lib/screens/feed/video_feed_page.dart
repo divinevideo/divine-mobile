@@ -39,6 +39,7 @@ import 'package:openvine/utils/video_nostr_enrichment.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/feed_tuning/feed_tuning_swipe_overlay.dart';
 import 'package:openvine/widgets/nav_rounded_shell.dart';
+import 'package:openvine/widgets/screen_frame_trace_scope.dart';
 import 'package:openvine/widgets/video_feed_item/feed_comments_panel.dart';
 import 'package:openvine/widgets/video_feed_item/feed_videos.dart';
 import 'package:rxdart/rxdart.dart';
@@ -92,7 +93,6 @@ class VideoFeedPage extends ConsumerWidget {
       isFeatureEnabledProvider(FeatureFlag.clientSeenFiltering),
     );
     final videosRepository = ref.watch(videosRepositoryProvider);
-    final useAdaptiveClassics = ref.watch(adaptiveClassicsEnabledProvider);
     final followRepository = ref.watch(followRepositoryProvider);
     final hashtagRepository = ref.watch(hashtagSubscriptionRepositoryProvider);
     final curatedListRepository = ref.watch(curatedListRepositoryProvider);
@@ -110,11 +110,14 @@ class VideoFeedPage extends ConsumerWidget {
     final feedTuningRepository = ref.watch(feedTuningRepositoryProvider);
     final badgeRepository = ref.watch(badgeRepositoryProvider);
     final enrichmentAttemptTracker = NostrTagEnrichmentAttemptTracker();
+    // Stable for the app's lifetime and follows identity changes itself, so
+    // a read here cannot go stale (#9341).
+    final unavailabilityGate = ref.read(feedUnavailabilityGateProvider);
 
     final persistence = ref
         .watch(feedModePersistenceRegistryProvider)
         .forAccount(viewerPubkey);
-    return RepositoryProvider<FeedModePersistenceCoordinator>.value(
+    final feed = RepositoryProvider<FeedModePersistenceCoordinator>.value(
       key: ValueKey((viewerPubkey, sharedPreferences)),
       value: persistence,
       child: MultiBlocProvider(
@@ -139,11 +142,37 @@ class VideoFeedPage extends ConsumerWidget {
                 VideoFeedBloc(
                   videosRepository: videosRepository,
                   removedIdsStream: videosRepository.removedVideoIds,
+                  replacedVideosStream: videosRepository.replacedVideos,
                   removalRepositoryStream: ref.read(
                     videosRepositoryIdentityStreamProvider,
                   ),
-                  classicSession: useAdaptiveClassics
-                      ? _homeClassicSession(ref, viewerPubkey)
+                  unavailableFilter: unavailabilityGate.isVideoBroken,
+                  unavailableVideoIds: unavailabilityGate.markedVideoIds,
+                  classicSession:
+                      adaptiveClassicsEnabled &&
+                          ref.read(adaptiveClassicsEnabledProvider)
+                      ? _homeClassicSession(
+                          ref,
+                          viewerPubkey,
+                          isUnavailable: unavailabilityGate.isVideoBroken,
+                        )
+                      : null,
+                  createClassicSession: adaptiveClassicsEnabled
+                      ? () => ref.context.mounted
+                            ? _homeClassicSession(
+                                ref,
+                                viewerPubkey,
+                                isUnavailable: unavailabilityGate.isVideoBroken,
+                              )
+                            : null
+                      : null,
+                  adaptiveClassicsEnabledStream: adaptiveClassicsEnabled
+                      ? ref.read(adaptiveClassicsEnabledStreamProvider)
+                      : null,
+                  isAdaptiveClassicsAllowed: adaptiveClassicsEnabled
+                      ? () =>
+                            ref.context.mounted &&
+                            ref.read(adaptiveClassicsEnabledProvider)
                       : null,
                   followRepository: followRepository,
                   curatedListRepository: curatedListRepository,
@@ -183,6 +212,9 @@ class VideoFeedPage extends ConsumerWidget {
         child: VideoFeedView(initialIndex: initialIndex),
       ),
     );
+    // Above the keyed providers, so a filter change, which replaces the
+    // feed's blocs, does not split the visit.
+    return ScreenFrameTraceScope(screen: .homeFeed, child: feed);
   }
 }
 
@@ -528,6 +560,8 @@ class _VideoFeedViewState extends ConsumerState<VideoFeedView>
                   ),
               builder: (context, state) {
                 final itemCount = state.videos.length;
+                final isForYou =
+                    state.source.type == VideoFeedSourceType.forYou;
                 final clampedIndex = _clampIndexForItemCount(
                   _currentIndex,
                   itemCount,
@@ -571,9 +605,23 @@ class _VideoFeedViewState extends ConsumerState<VideoFeedView>
 
                 // Empty state
                 if (state.isEmpty) {
+                  final canContinueForYou =
+                      isForYou &&
+                      state.hasMore &&
+                      state.paginationCursor != null;
                   return Stack(
                     children: [
-                      FeedEmptyWidget(state: state),
+                      if (canContinueForYou && state.isLoadingMore)
+                        const Center(child: BrandedLoadingIndicator())
+                      else
+                        FeedEmptyWidget(
+                          state: state,
+                          onRetry: canContinueForYou
+                              ? () => context.read<VideoFeedBloc>().add(
+                                  const VideoFeedLoadMoreRequested(),
+                                )
+                              : null,
+                        ),
                       const FeedModeSwitch(),
                     ],
                   );
@@ -622,6 +670,11 @@ class _VideoFeedViewState extends ConsumerState<VideoFeedView>
                                   !shouldRetainPlayer,
                               hasMore: state.hasMore,
                               isLoadingMore: state.isLoadingMore,
+                              prefetchOnMount: isForYou,
+                              loadMoreOnEndSwipe:
+                                  isForYou ||
+                                  state.source.type ==
+                                      VideoFeedSourceType.classic,
                               trafficSource: ViewTrafficSource.home,
                               // Every feed mode renders through this one page and
                               // reports source=home, so without this detail the
@@ -804,8 +857,14 @@ class _KeyboardStableBottomInsetState
 /// the provider: the old service emits a privacy change synchronously while it
 /// is disposed, and Riverpod rejects re-reading the provider inside that
 /// disposal. Such a read sees the disposed service and sends no identity.
-ClassicFeedSession _homeClassicSession(WidgetRef ref, String? viewerPubkey) {
+ClassicFeedSession _homeClassicSession(
+  WidgetRef ref,
+  String? viewerPubkey, {
+  required bool Function(String videoId) isUnavailable,
+}) {
   var analytics = ref.read(analyticsServiceProvider);
+  bool isAdaptiveAllowed() =>
+      ref.context.mounted && ref.read(adaptiveClassicsEnabledProvider);
   return ClassicFeedSession(
     loadPage: (request) {
       final requestAnalytics = analytics;
@@ -817,11 +876,13 @@ ClassicFeedSession _homeClassicSession(WidgetRef ref, String? viewerPubkey) {
             request: request,
             userPubkey: allowed ? viewerPubkey : null,
             isCurrent: () =>
+                isAdaptiveAllowed() &&
                 contextId == requestAnalytics.privacyGeneration &&
                 allowed == requestAnalytics.initializedAnalyticsConsent,
           );
     },
-    canPersonalize: () => analytics.initializedAnalyticsConsent,
+    canPersonalize: () =>
+        isAdaptiveAllowed() && analytics.initializedAnalyticsConsent,
     // Each listener tracks the current service; transforms of the identity
     // stream are single-subscription, so one chain per listener.
     feedback: ref
@@ -832,6 +893,7 @@ ClassicFeedSession _homeClassicSession(WidgetRef ref, String? viewerPubkey) {
         .read(analyticsServiceIdentityStreamProvider)
         .doOnData((current) => analytics = current)
         .switchMap((current) => current.privacyChanges),
+    isUnavailable: isUnavailable,
     filter: (videos) {
       final repository = ref.read(videosRepositoryProvider);
       return repository

@@ -65,6 +65,7 @@ class DatabaseEncryptionBootstrap {
     Future<bool> Function(String rawKeyHex)? canOpenEncryptedDatabase,
     Future<bool> Function(String rawKeyHex)? salvageDatabase,
     Future<bool> Function(String rawKeyHex)? encryptedKeyMatches,
+    Future<bool> Function()? hasAlternateDatabase,
     Future<void> Function(Object error, StackTrace stack)? recordRecovery,
     Future<void> Function(DatabaseRecoveryOutcome outcome)?
     persistRecoveryOutcome,
@@ -102,7 +103,9 @@ class DatabaseEncryptionBootstrap {
                salvageCorruptEncryptedDatabase(rawKeyHex: rawKeyHex)),
        _encryptedKeyMatches =
            encryptedKeyMatches ??
-           ((rawKeyHex) => encryptedDatabaseKeyDecrypts(rawKeyHex: rawKeyHex));
+           ((rawKeyHex) => encryptedDatabaseKeyDecrypts(rawKeyHex: rawKeyHex)),
+       _hasAlternateDatabase =
+           hasAlternateDatabase ?? _hasAlternateDatabaseOnMac;
 
   /// Reads and writes [dbCipherKeyStorageKey] under the current options — on
   /// iOS `first_unlock`, see `appDbCipherKeyIosSecureStorageOptions`.
@@ -146,6 +149,7 @@ class DatabaseEncryptionBootstrap {
   /// when salvage fails, to keep a still-valid key (so the backup stays
   /// readable) instead of rotating it. Returns `false` on genuine key loss.
   final Future<bool> Function(String rawKeyHex) _encryptedKeyMatches;
+  final Future<bool> Function() _hasAlternateDatabase;
 
   /// Whether a previous session's runtime corruption report scheduled a
   /// recovery. When it did, [resolveCipherKey] skips [_canOpenEncryptedDatabase]
@@ -526,8 +530,9 @@ class DatabaseEncryptionBootstrap {
       );
     }
     try {
-      await _secureStorage.delete(
-        key: dbCipherKeyAccessibilityBackupStorageKey,
+      await _deleteStoredCipherKey(
+        _secureStorage,
+        dbCipherKeyAccessibilityBackupStorageKey,
       );
     } on Object catch (error) {
       // The copy holds the verified primary's key, and every write of a
@@ -572,10 +577,9 @@ class DatabaseEncryptionBootstrap {
   }
 
   /// The default probe, iOS only. macOS also answers
-  /// `isCupertinoProtectedDataAvailable` (macOS 12+), but its key stays on the
-  /// `unlocked` class (#5563), a Mac app never launches while the login
-  /// session is locked, and a wrong `false` there would fail every fresh
-  /// install closed for good — so macOS trusts a `null` read as it always has.
+  /// `isCupertinoProtectedDataAvailable` (macOS 12+), but its plugin reports
+  /// individual read errors directly. A wrong `false` from the probe could
+  /// prevent a fresh install from creating a key.
   static Future<bool?> _iosProtectedDataAvailable(
     FlutterSecureStorage storage,
   ) async {
@@ -586,7 +590,8 @@ class DatabaseEncryptionBootstrap {
   /// Reads the stored cipher key, translating a platform secure-storage
   /// failure into [DatabaseCipherStorageUnavailableException], or into
   /// [DatabaseCipherKeyUnrecoverableException] when Android can never decrypt
-  /// the stored value again.
+  /// the stored value again. On macOS, checks the accessibility class used by
+  /// the iPad app when the default query returns no item.
   ///
   /// Rethrows rather than degrading a failed read into "no key stored": the
   /// caller would generate a replacement and overwrite the only key that can
@@ -598,7 +603,12 @@ class DatabaseEncryptionBootstrap {
     String storageKey,
   ) async {
     try {
-      return await storage.read(key: storageKey);
+      final value = await storage.read(key: storageKey);
+      if (value != null) return value;
+
+      final iPadOptions = _iPadCipherKeyOptionsOnMac(storage, storageKey);
+      if (iPadOptions == null) return null;
+      return await storage.read(key: storageKey, mOptions: iPadOptions);
     } on Object catch (error, stack) {
       Error.throwWithStackTrace(
         _isUndecryptableAndroidSecureStorageRead(error)
@@ -611,14 +621,34 @@ class DatabaseEncryptionBootstrap {
 
   Future<void> _writeCipherKey(String key) async {
     try {
+      if (await _hasAlternateDatabase()) {
+        throw StateError(
+          'Another Mac database may still depend on the stored cipher key',
+        );
+      }
       // Do not let an obsolete recovery copy, or a key an earlier build left
       // in `.v2`, resurrect a previous key after a later interrupted
       // replacement.
-      await _secureStorage.delete(
-        key: dbCipherKeyAccessibilityBackupStorageKey,
+      await _deleteStoredCipherKey(
+        _secureStorage,
+        dbCipherKeyAccessibilityBackupStorageKey,
       );
       await _deleteV2Slot(_secureStorage);
-      await _secureStorage.write(key: dbCipherKeyStorageKey, value: key);
+      final iPadOptions = _iPadCipherKeyOptionsOnMac(
+        _secureStorage,
+        dbCipherKeyStorageKey,
+      );
+      final hasIPadKey =
+          iPadOptions != null &&
+          await _secureStorage.containsKey(
+            key: dbCipherKeyStorageKey,
+            mOptions: iPadOptions,
+          );
+      await _secureStorage.write(
+        key: dbCipherKeyStorageKey,
+        value: key,
+        mOptions: hasIPadKey ? iPadOptions : null,
+      );
     } on Object catch (error, stack) {
       Error.throwWithStackTrace(
         DatabaseCipherStorageUnavailableException(error),
@@ -915,6 +945,10 @@ Future<bool> _shouldRecordBootstrapFailure(
 bool _isValidCipherKey(String value) =>
     RegExp(r'^[0-9a-fA-F]{64}$').hasMatch(value);
 
+Future<bool> _hasAlternateDatabaseOnMac() async =>
+    defaultTargetPlatform == TargetPlatform.macOS &&
+    await hasAlternateMacOsSharedDatabase();
+
 const _sqliteCorrupt = 11;
 const _sqliteNotADb = 26;
 
@@ -971,6 +1005,8 @@ bool shouldRepairLocalDatabaseCacheAfterBootstrapError(Object error) {
 /// this call leaves behind is encrypted under that key, so deleting it makes
 /// the backup permanently unreadable — while a retained key opens a fresh
 /// database just as well as a rotated one.
+/// On macOS, a second database in the same sandbox can still use the shared
+/// key, so the reset preserves the key whenever that database exists.
 ///
 /// [deleteDatabase] overrides that backup step. Callers that have proved the
 /// file is plaintext-shaped pass [deleteSharedDatabase] via
@@ -979,20 +1015,27 @@ Future<void> resetEncryptedDatabaseCache({
   required FlutterSecureStorage secureStorage,
   required FlutterSecureStorage legacySecureStorage,
   bool deleteCipherKey = true,
+  @visibleForTesting Future<bool> Function()? hasAlternateDatabase,
   Future<void> Function()? deleteDatabase,
   Future<void> Function()? onDatabaseReset,
   DatabaseRecoveryOutcome? recoveryOutcome,
   Future<void> Function(DatabaseRecoveryOutcome outcome)?
   persistRecoveryOutcome,
 }) async {
+  final shouldDeleteCipherKey =
+      deleteCipherKey &&
+      !await (hasAlternateDatabase ?? _hasAlternateDatabaseOnMac)();
   await (deleteDatabase ?? backUpAndRemoveSharedDatabase)();
-  if (deleteCipherKey) {
+  if (shouldDeleteCipherKey) {
     // Delete auxiliary/legacy copies before the primary. A failed cleanup
     // must not leave a stale fallback as the only surviving key (#9389).
-    await secureStorage.delete(key: dbCipherKeyAccessibilityBackupStorageKey);
+    await _deleteStoredCipherKey(
+      secureStorage,
+      dbCipherKeyAccessibilityBackupStorageKey,
+    );
     await _deleteV2Slot(secureStorage);
     await legacySecureStorage.delete(key: dbCipherKeyStorageKey);
-    await secureStorage.delete(key: dbCipherKeyStorageKey);
+    await _deleteStoredCipherKey(secureStorage, dbCipherKeyStorageKey);
   }
   if (recoveryOutcome != null) {
     try {
@@ -1034,13 +1077,44 @@ Future<void> resetUnreadablePlaintextDatabaseCache({
 ///
 /// On iOS the plugin puts the accessibility into its delete query, so the call
 /// names the class #9380 wrote the item under; the item survives a delete that
-/// names any other. The per-call iOS options are ignored elsewhere, where
-/// [storage]'s own options apply, and those are what #9380 used on Android and
-/// macOS.
-Future<void> _deleteV2Slot(FlutterSecureStorage storage) => storage.delete(
-  key: dbCipherKeyV2StorageKey,
-  iOptions: dbCipherKeyV2IosSecureStorageOptions(),
-);
+/// names any other. macOS needs both the class its own earlier builds used and
+/// the class left by the iPad app. Android uses the existing storage options.
+Future<void> _deleteV2Slot(FlutterSecureStorage storage) =>
+    _deleteStoredCipherKey(
+      storage,
+      dbCipherKeyV2StorageKey,
+      iOptions: dbCipherKeyV2IosSecureStorageOptions(),
+    );
+
+Future<void> _deleteStoredCipherKey(
+  FlutterSecureStorage storage,
+  String storageKey, {
+  IOSOptions? iOptions,
+}) async {
+  await storage.delete(key: storageKey, iOptions: iOptions);
+  final iPadOptions = _iPadCipherKeyOptionsOnMac(storage, storageKey);
+  if (iPadOptions != null) {
+    await storage.delete(key: storageKey, mOptions: iPadOptions);
+  }
+}
+
+/// The native Mac App Store app shares the iPad app's data-protection Keychain
+/// group. The macOS plugin filters reads, updates and deletes by accessibility,
+/// but Keychain rejects an add if the same item exists in another class.
+/// Try the class the iPad app wrote before treating a database key as absent.
+MacOsOptions? _iPadCipherKeyOptionsOnMac(
+  FlutterSecureStorage storage,
+  String storageKey,
+) {
+  if (defaultTargetPlatform != TargetPlatform.macOS) return null;
+  final options = storage.mOptions;
+  if (options.toMap()['useDataProtectionKeyChain'] != 'true') return null;
+  return options.copyWith(
+    accessibility: storageKey == dbCipherKeyV2StorageKey
+        ? KeychainAccessibility.first_unlock_this_device
+        : KeychainAccessibility.first_unlock,
+  );
+}
 
 Future<void> _runPostDatabaseReset(
   Future<void> Function()? onDatabaseReset,

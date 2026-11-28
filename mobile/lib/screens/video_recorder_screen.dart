@@ -3,7 +3,9 @@
 
 import 'dart:async';
 
+import 'package:divine_camera/divine_camera.dart' show DivineCamera;
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -39,6 +41,7 @@ import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/mounted_post_frame.dart';
 import 'package:openvine/widgets/camera_permission_gate.dart';
+import 'package:openvine/widgets/screen_frame_trace_scope.dart';
 import 'package:openvine/widgets/video_clip/clip_crop_guide.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/audio_selection_bottom_sheet.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_shader.dart';
@@ -184,18 +187,23 @@ class VideoRecorderRoute extends ConsumerWidget {
       );
     }
     final selection = initialSound;
-    if (selection == null) return recorder;
-    return RecorderSoundSelectionGate(
-      selection: selection,
-      apply: (value) {
-        if (ref.read(authServiceProvider).currentPublicKeyHex !=
-            value.ownerPubkey) {
-          throw StateError('Recorder sound account changed');
-        }
-        ref
-            .read(videoEditorProvider.notifier)
-            .selectRecorderAudioTrack(value.sound);
-      },
+    if (selection != null) {
+      recorder = RecorderSoundSelectionGate(
+        selection: selection,
+        apply: (value) {
+          if (ref.read(authServiceProvider).currentPublicKeyHex !=
+              value.ownerPubkey) {
+            throw StateError('Recorder sound account changed');
+          }
+          ref
+              .read(videoEditorProvider.notifier)
+              .selectRecorderAudioTrack(value.sound);
+        },
+        child: recorder,
+      );
+    }
+    return ScreenFrameTraceScope(
+      screen: .recorder,
       child: recorder,
     );
   }
@@ -277,10 +285,13 @@ class VideoRecorderScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final part = fromEditor ? ref.watch(collabRoomPartProvider) : null;
     final collabPart = part?.isActive ?? false;
-    final view = VideoRecorderView(
-      fromEditor: fromEditor,
-      entryPoint: entryPoint,
-      collabPart: collabPart,
+    final view = ScreenFrameTraceScope(
+      screen: .recorder,
+      child: VideoRecorderView(
+        fromEditor: fromEditor,
+        entryPoint: entryPoint,
+        collabPart: collabPart,
+      ),
     );
     return _VideoRecorderBlocScope(
       child: switch (cropGuideAspectRatio) {
@@ -389,6 +400,14 @@ class _VideoRecorderBlocScope extends ConsumerWidget {
             session: analyticsSession,
           ),
         ),
+        // The watch remotes that mirror the recorder: the Apple Watch app on
+        // iOS and the Wear OS app on Android.
+        publishRemoteRecorderState:
+            !kIsWeb &&
+                (defaultTargetPlatform == TargetPlatform.iOS ||
+                    defaultTargetPlatform == TargetPlatform.android)
+            ? DivineCamera.instance.updateRemoteRecorderState
+            : null,
         liveChromaKeySupported: ChromaKeyShader.isBackendSupported,
       ),
       child: child,
@@ -525,6 +544,15 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
   /// then show the one-time prompt and offer an autosaved session back.
   Future<void> _openRecorder() async {
     _pauseBackgroundPlayback();
+    // Hold remote input across startup, including the gaps before the
+    // education and recovery sheets have taken their own pause.
+    await showWithRemoteRecordPaused(
+      context.read<VideoRecorderBloc>(),
+      _initializeAndOfferRecovery,
+    );
+  }
+
+  Future<void> _initializeAndOfferRecovery() async {
     final autoStartRecording =
         widget.autoRecord && await _opensStraightToPreview();
     if (!mounted) return;
@@ -726,12 +754,6 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     final bloc = context.read<VideoRecorderBloc>();
-    // The Upload tab keeps the camera paused; coming back to the app must not
-    // restart it behind the static explainer.
-    if (state == AppLifecycleState.resumed &&
-        !bloc.state.recorderMode.recordsVideo) {
-      return;
-    }
     bloc.add(VideoRecorderAppLifecycleChanged(state));
   }
 
@@ -761,6 +783,27 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
         context.select(
           (VideoRecorderBloc bloc) => _reactionTakeInFlight(bloc.state),
         );
+    // The watch remote mirrors the clip budget, and clips are also added,
+    // deleted and restored without the recorder bloc changing state.
+    ref.listen(
+      clipManagerProvider.select(
+        (clips) => (
+          clips.totalDuration,
+          clips.activeRecordingDuration == Duration.zero,
+        ),
+      ),
+      (_, _) => context.read<VideoRecorderBloc>().addIfOpen(
+        const VideoRecorderRemoteStateRefreshRequested(),
+      ),
+    );
+    // A selected sound turns the remote off, and it can change without the
+    // recorder bloc changing state.
+    ref.listen(
+      videoEditorProvider.select((editor) => editor.selectedSound != null),
+      (_, _) => context.read<VideoRecorderBloc>().addIfOpen(
+        const VideoRecorderRemoteStateRefreshRequested(),
+      ),
+    );
     return BlocProvider<SoundWaveformBloc>(
       // Eager: the create factory installs the selected-sound listener that
       // drives waveform extraction. The only consumer (capture's audio
@@ -791,13 +834,17 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
           );
           if (!state.recorderMode.recordsVideo) {
             context.read<VideoRecorderBloc>().add(
-              const VideoRecorderAppLifecycleChanged(AppLifecycleState.paused),
+              const VideoRecorderAppLifecycleChanged(
+                AppLifecycleState.paused,
+                isTabTransition: true,
+              ),
             );
           } else if (previous != null && !previous.recordsVideo) {
             if (state.isCameraInitialized) {
               context.read<VideoRecorderBloc>().add(
                 const VideoRecorderAppLifecycleChanged(
                   AppLifecycleState.resumed,
+                  isTabTransition: true,
                 ),
               );
             } else {

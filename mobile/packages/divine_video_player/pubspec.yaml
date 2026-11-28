@@ -1,8 +1,8 @@
 name: divine_video_player
 description: >-
   Seamless multi-clip video player using native platform APIs.
-  Supports Android (Media3/ExoPlayer), iOS (AVFoundation), and
-  macOS (AVFoundation).
+  Supports Android (Media3/ExoPlayer), iOS (AVFoundation), macOS
+  (AVFoundation), Windows (Media Foundation) and Linux (media_kit).
 version: 0.1.0
 publish_to: none
 resolution: workspace
@@ -17,11 +17,10 @@ dependencies:
   flutter_web_plugins:
     sdk: flutter
   media_kit: ^1.2.6
-  # Only the Linux backend plays through media_kit; Android uses Media3 and
-  # iOS/macOS use AVFoundation. The other platforms' libs packages shipped
-  # libmpv and FFmpeg that nothing called, yet loaded them at every launch
-  # (#9493, #9548). Without one, media_kit_video builds a stub on Darwin and
-  # Windows; on Android it registers its Java plugin but loads no native code.
+  # Linux plays through media_kit. Keep unused libmpv/FFmpeg binaries off
+  # Android, Apple platforms and Windows (#9493, #9548), which use Media3,
+  # AVFoundation and Media Foundation. Linux uses libmpv supplied by the
+  # application package or distribution.
   media_kit_libs_linux: ^1.2.1
   media_kit_video: ^2.0.1
   path_provider: ^2.1.5
@@ -51,6 +50,8 @@ flutter:
         sharedDarwinSource: true
       linux:
         dartPluginClass: DivineVideoPlayerLinuxPlugin
+      windows:
+        pluginClass: DivineVideoPlayerPluginCApi
       web:
         pluginClass: DivineVideoPlayerWebPlugin
         fileName: src/web/divine_video_player_web_plugin.dart

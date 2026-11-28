@@ -565,7 +565,15 @@ class BadgeRepository {
   /// Most accepted holders one community preview shows.
   static const holderPreviewLimit = 3;
 
-  static const _indexedDiscoveryTimeout = Duration(milliseconds: 750);
+  /// How long the ranked index may take before discovery falls back to the
+  /// relays.
+  ///
+  /// The index answers with a ~150 KB page in 0.4–0.9 s on a fast
+  /// connection, and slower over a cold mobile connection, while the relay
+  /// fallback takes over ten seconds and is not ranked. A cutoff below the
+  /// index's own response time sent the first open after a cold start to the
+  /// relays every time.
+  static const _indexedDiscoveryTimeout = Duration(seconds: 5);
   bool _indexedDiscoveryNotFound = false;
 
   /// Prefers the ranked index, falling back to verified relay discovery when

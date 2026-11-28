@@ -19,9 +19,11 @@ import 'package:openvine/l10n/generated/app_localizations_en.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/screens/hashtag_screen_router.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/encrypted_video_card.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/message_bubble.dart';
 import 'package:openvine/screens/inbox/dm_display_text.dart';
+import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/services/stats_visibility_preferences.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/blurhash_display.dart';
@@ -36,6 +38,44 @@ import '../../../../helpers/test_provider_overrides.dart';
 import '../../../../helpers/test_pubkeys.dart';
 
 class _MockVideosRepository extends Mock implements VideosRepository {}
+
+/// Hides every video, as a block or mute of its author would.
+class _HidingVideoEventService extends VisibleTestVideoEventService {
+  @override
+  bool shouldHideVideo(VideoEvent video) => true;
+}
+
+/// Emits a live deletion signal for videos marked deleted after mount.
+class _DeletingVideoEventService extends VisibleTestVideoEventService {
+  final _removedIds = StreamController<String>.broadcast();
+  final _tombstonesChanged = StreamController<void>.broadcast();
+  final _deletedIds = <String>{};
+
+  @override
+  Stream<String> get removedVideoIds => _removedIds.stream;
+
+  @override
+  Stream<void> get deletionTombstonesChanged => _tombstonesChanged.stream;
+
+  @override
+  bool isVideoEventKnownDeleted(VideoEvent video) =>
+      _deletedIds.contains(video.id);
+
+  void markDeleted(String videoId) {
+    _deletedIds.add(videoId);
+    _removedIds.add(videoId);
+  }
+
+  void markDeletedByTombstone(String videoId) {
+    _deletedIds.add(videoId);
+    _tombstonesChanged.add(null);
+  }
+
+  Future<void> close() async {
+    await _removedIds.close();
+    await _tombstonesChanged.close();
+  }
+}
 
 Finder _divineIcon(DivineIconName icon) => find.byWidgetPredicate(
   (widget) => widget is DivineIcon && widget.icon == icon,
@@ -77,8 +117,15 @@ GoRouter _messageRouter(String message) {
       ),
       GoRoute(
         path: '/video/:id',
-        builder: (context, state) =>
-            Scaffold(body: Text('video:${state.pathParameters['id']}')),
+        builder: (context, state) => Scaffold(
+          body: Column(
+            children: [
+              Text('video:${state.pathParameters['id']}'),
+              if ((state.extra as VideoDetailRouteExtra?)?.fromMessage ?? false)
+                const Text('Opened from a message'),
+            ],
+          ),
+        ),
       ),
     ],
   );
@@ -90,6 +137,7 @@ Widget _routerTestApp(
   MockNostrClient? mockNostrService,
 }) {
   return testProviderScope(
+    mockVideoEventService: VisibleTestVideoEventService(),
     additionalOverrides: additionalOverrides,
     mockNostrService: mockNostrService,
     child: MaterialApp.router(
@@ -1605,6 +1653,48 @@ void main() {
         expect(router.canPop(), isTrue);
       });
 
+      testWidgets(
+        'opens one hashtag feed when a hashtag is tapped twice before the '
+        'next frame',
+        (tester) async {
+          final router = GoRouter(
+            routes: [
+              GoRoute(
+                path: '/',
+                builder: (context, state) => const Scaffold(
+                  body: MessageBubble(
+                    message: 'Look #funny',
+                    timestamp: '2:30 PM',
+                    isSent: true,
+                  ),
+                ),
+              ),
+              GoRoute(
+                path: HashtagScreenRouter.path,
+                builder: (context, state) => Scaffold(
+                  body: Text('feed:${state.pathParameters['tag']}'),
+                ),
+              ),
+            ],
+          );
+          addTearDown(router.dispose);
+
+          await tester.pumpWidget(_routerTestApp(router));
+          await tester.pump();
+
+          final recognizer = _linkRecognizer(tester, '#funny');
+          recognizer.onTap!();
+          recognizer.onTap!();
+          await tester.pumpAndSettle();
+
+          expect(find.text('feed:funny', skipOffstage: false), findsOneWidget);
+        },
+        variant: const TargetPlatformVariant({
+          TargetPlatform.android,
+          TargetPlatform.iOS,
+        }),
+      );
+
       testWidgets('URL span has $TapGestureRecognizer', (tester) async {
         await tester.pumpWidget(
           const MaterialApp(
@@ -1854,7 +1944,10 @@ void main() {
         DmSharedVideoRef? sharedVideoRef,
         VoidCallback? onDoubleTap,
         SharedPreferences? mockSharedPreferences,
+        MockVideoEventService? videoEventService,
       }) => testMaterialApp(
+        mockVideoEventService:
+            videoEventService ?? VisibleTestVideoEventService(),
         home: Scaffold(
           body: MessageBubble(
             message: message,
@@ -1902,7 +1995,7 @@ void main() {
         },
       );
 
-      testWidgets('shows loading spinner before video resolves', (
+      testWidgets('offers Play on the first frame before video resolves', (
         tester,
       ) async {
         // Use a Completer that never completes so the cubit stays in
@@ -1921,7 +2014,16 @@ void main() {
         // Single pump to build the widget tree (don't settle).
         await tester.pump();
 
-        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is Semantics &&
+                widget.properties.label ==
+                    AppLocalizationsEn().videoPlayerPlayVideo &&
+                widget.properties.button == true,
+          ),
+          findsOneWidget,
+        );
         expect(find.byType(VideoThumbnailWidget), findsNothing);
       });
 
@@ -1970,6 +2072,29 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.textContaining('1.2K'), findsOneWidget);
+      });
+
+      testWidgets('resolves an naddr link by that naddr, not its d tag', (
+        tester,
+      ) async {
+        final reference = NIP19Tlv.encodeNaddr(
+          Naddr(id: 'abc123', author: _testHexPubkey, kind: 34235),
+        );
+        when(
+          () => mockVideosRepository.fetchVideoWithStatsForRouteId(
+            reference,
+            fallbackRouteIds: any(named: 'fallbackRouteIds'),
+          ),
+        ).thenAnswer((_) async => testVideo);
+
+        await tester.pumpWidget(
+          buildWithVideoMessage(
+            message: 'https://divine.video/video/$reference',
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('My Cool Video'), findsOneWidget);
       });
 
       testWidgets('renders from structured q-tag ref without a legacy URL', (
@@ -2023,6 +2148,7 @@ void main() {
 
           await tester.pumpWidget(
             testMaterialApp(
+              mockVideoEventService: VisibleTestVideoEventService(),
               home: Scaffold(
                 body: SingleChildScrollView(
                   child: MessageBubble(
@@ -2073,6 +2199,7 @@ void main() {
 
           await tester.pumpWidget(
             testMaterialApp(
+              mockVideoEventService: VisibleTestVideoEventService(),
               home: Scaffold(
                 body: SingleChildScrollView(
                   child: MessageBubble(
@@ -2198,6 +2325,70 @@ void main() {
         expect(decoration.color, isNot(VineTheme.primaryAccessible));
       });
 
+      testWidgets(
+        'two taps on first-frame Play open only one video and Back returns to the thread',
+        (tester) async {
+          final stats = Completer<VideoEvent?>();
+          final playable = Completer<VideoEvent?>();
+          when(
+            () => mockVideosRepository.fetchVideoWithStatsForRouteId(
+              'abc123',
+              fallbackRouteIds: any(named: 'fallbackRouteIds'),
+            ),
+          ).thenAnswer((_) => stats.future);
+          when(() => mockVideosRepository.pendingPlayableRoute('abc123'))
+              .thenAnswer((_) => playable.future);
+          final router = _messageRouter('https://divine.video/video/abc123');
+          addTearDown(router.dispose);
+          await tester.pumpWidget(
+            _routerTestApp(
+              router,
+              mockNostrService: mockNostrClient,
+              additionalOverrides: [
+                videosRepositoryProvider.overrideWithValue(
+                  mockVideosRepository,
+                ),
+              ],
+            ),
+          );
+          await tester.pump();
+          final fullPlayIcon = find.byWidgetPredicate(
+            (widget) =>
+                widget is DivineIcon &&
+                widget.icon == DivineIconName.play &&
+                widget.size == 24,
+          );
+          expect(fullPlayIcon, findsOneWidget);
+          final play = find.byWidgetPredicate(
+            (widget) =>
+                widget is Semantics &&
+                widget.properties.label ==
+                    AppLocalizationsEn().videoPlayerPlayVideo &&
+                widget.properties.button == true,
+          );
+          expect(tester.getSize(play), const Size(248, 350));
+          await tester.tap(play);
+          await tester.tap(play);
+          playable.complete(testVideo);
+          await tester.pumpAndSettle();
+          expect(find.text('video:${testVideo.id}'), findsOneWidget);
+          expect(find.text('Opened from a message'), findsOneWidget);
+          expect(stats.isCompleted, isFalse);
+          router.pop();
+          stats.complete(testVideo);
+          await tester.pumpAndSettle();
+          expect(find.byType(VideoThumbnailWidget), findsOneWidget);
+          expect(fullPlayIcon, findsOneWidget);
+          expect(tester.getSize(play), const Size(248, 350));
+          verify(
+            () => mockVideosRepository.fetchVideoWithStatsForRouteId(
+              'abc123',
+              fallbackRouteIds: any(named: 'fallbackRouteIds'),
+            ),
+          ).called(1);
+        },
+      );
+
       testWidgets('shared-video card matches Figma geometry', (tester) async {
         when(
           () => mockVideosRepository.fetchVideoWithStatsForRouteId(
@@ -2302,6 +2493,102 @@ void main() {
           ),
         ).called(1);
       });
+
+      testWidgets('shows the unavailable card for a video moderation hides', (
+        tester,
+      ) async {
+        when(
+          () => mockVideosRepository.fetchVideoWithStatsForRouteId(
+            'abc123',
+            fallbackRouteIds: any(named: 'fallbackRouteIds'),
+          ),
+        ).thenAnswer((_) async => testVideo);
+        await tester.pumpWidget(
+          buildWithVideoMessage(
+            message: 'https://divine.video/video/abc123',
+            videoEventService: _HidingVideoEventService(),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(AppLocalizationsEn().notificationsVideoUnavailable),
+          findsOneWidget,
+        );
+        expect(find.byType(VideoThumbnailWidget), findsNothing);
+      });
+
+      testWidgets(
+        'switches to the unavailable card when the video is deleted while '
+        'mounted',
+        (tester) async {
+          final videoEventService = _DeletingVideoEventService();
+          addTearDown(videoEventService.close);
+
+          when(
+            () => mockVideosRepository.fetchVideoWithStatsForRouteId(
+              'abc123',
+              fallbackRouteIds: any(named: 'fallbackRouteIds'),
+            ),
+          ).thenAnswer((_) async => testVideo);
+
+          await tester.pumpWidget(
+            buildWithVideoMessage(
+              message: 'https://divine.video/video/abc123',
+              videoEventService: videoEventService,
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.byType(VideoThumbnailWidget), findsOneWidget);
+
+          videoEventService.markDeleted(testVideo.id);
+          await tester.pump();
+          await tester.pumpAndSettle();
+
+          expect(
+            find.text(AppLocalizationsEn().notificationsVideoUnavailable),
+            findsOneWidget,
+          );
+          expect(find.byType(VideoThumbnailWidget), findsNothing);
+        },
+      );
+
+      testWidgets(
+        'switches to the unavailable card when a remote tombstone-only '
+        'deletion arrives while mounted',
+        (tester) async {
+          final videoEventService = _DeletingVideoEventService();
+          addTearDown(videoEventService.close);
+
+          when(
+            () => mockVideosRepository.fetchVideoWithStatsForRouteId(
+              'abc123',
+              fallbackRouteIds: any(named: 'fallbackRouteIds'),
+            ),
+          ).thenAnswer((_) async => testVideo);
+
+          await tester.pumpWidget(
+            buildWithVideoMessage(
+              message: 'https://divine.video/video/abc123',
+              videoEventService: videoEventService,
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.byType(VideoThumbnailWidget), findsOneWidget);
+
+          videoEventService.markDeletedByTombstone(testVideo.id);
+          await tester.pump();
+          await tester.pumpAndSettle();
+
+          expect(
+            find.text(AppLocalizationsEn().notificationsVideoUnavailable),
+            findsOneWidget,
+          );
+          expect(find.byType(VideoThumbnailWidget), findsNothing);
+        },
+      );
 
       testWidgets('shows the unavailable card when video not found', (
         tester,
@@ -2842,7 +3129,10 @@ void main() {
         required String message,
         DmSharedVideoRef? quotedVideoRef,
         VoidCallback? onDoubleTap,
+        MockVideoEventService? videoEventService,
       }) => testMaterialApp(
+        mockVideoEventService:
+            videoEventService ?? VisibleTestVideoEventService(),
         home: Scaffold(
           body: MessageBubble(
             message: message,
@@ -2856,6 +3146,80 @@ void main() {
         additionalOverrides: [
           videosRepositoryProvider.overrideWithValue(mockVideosRepository),
         ],
+      );
+
+      testWidgets(
+        'switches the quoted preview to unavailable when the video is '
+        'deleted while mounted',
+        (tester) async {
+          final videoEventService = _DeletingVideoEventService();
+          addTearDown(videoEventService.close);
+
+          when(
+            () => mockVideosRepository.fetchVideoWithStatsForRouteId(
+              _testCoordinate,
+              fallbackRouteIds: any(named: 'fallbackRouteIds'),
+            ),
+          ).thenAnswer((_) async => testVideo);
+
+          await tester.pumpWidget(
+            buildWithQuotedReply(
+              message: 'love this one',
+              quotedVideoRef: quotedRef,
+              videoEventService: videoEventService,
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.byType(VideoThumbnailWidget), findsOneWidget);
+
+          videoEventService.markDeleted(testVideo.id);
+          await tester.pump();
+          await tester.pumpAndSettle();
+
+          expect(
+            find.text(AppLocalizationsEn().notificationsVideoUnavailable),
+            findsOneWidget,
+          );
+          expect(find.byType(VideoThumbnailWidget), findsNothing);
+        },
+      );
+
+      testWidgets(
+        'switches the quoted preview to unavailable when a remote '
+        'tombstone-only deletion arrives while mounted',
+        (tester) async {
+          final videoEventService = _DeletingVideoEventService();
+          addTearDown(videoEventService.close);
+
+          when(
+            () => mockVideosRepository.fetchVideoWithStatsForRouteId(
+              _testCoordinate,
+              fallbackRouteIds: any(named: 'fallbackRouteIds'),
+            ),
+          ).thenAnswer((_) async => testVideo);
+
+          await tester.pumpWidget(
+            buildWithQuotedReply(
+              message: 'love this one',
+              quotedVideoRef: quotedRef,
+              videoEventService: videoEventService,
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.byType(VideoThumbnailWidget), findsOneWidget);
+
+          videoEventService.markDeletedByTombstone(testVideo.id);
+          await tester.pump();
+          await tester.pumpAndSettle();
+
+          expect(
+            find.text(AppLocalizationsEn().notificationsVideoUnavailable),
+            findsOneWidget,
+          );
+          expect(find.byType(VideoThumbnailWidget), findsNothing);
+        },
       );
 
       testWidgets(
@@ -2994,6 +3358,7 @@ void main() {
 
           await tester.pumpWidget(
             testMaterialApp(
+              mockVideoEventService: VisibleTestVideoEventService(),
               home: const Scaffold(
                 body: MessageBubble(
                   message: 'watch this',

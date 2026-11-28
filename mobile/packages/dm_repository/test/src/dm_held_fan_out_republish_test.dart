@@ -353,7 +353,7 @@ void main() {
               .cast<nostr_filter.Filter>(),
         ),
       );
-      // A recipient wrap: the pool confirms it unless a test says the OK was
+      // The targeted relays confirm unless a test says the OK was
       // lost, for every recipient or for those in okLostFor, which holds an
       // attempt for a reason other than the inbox.
       when(
@@ -376,11 +376,12 @@ void main() {
                   tag[0] == 'p' &&
                   okLostFor.contains(tag[1]),
             );
+        final attempted = recipientWrapTargets[event.id] ?? const [_poolRelay];
         return PublishOutcome(
           eventId: event.id,
-          acceptedBy: confirmed ? const [_poolRelay] : const [],
+          acceptedBy: confirmed ? attempted : const [],
           rejectedBy: const {},
-          noResponseFrom: confirmed ? const [] : const [_poolRelay],
+          noResponseFrom: confirmed ? const [] : attempted,
         );
       });
       // The sender's own copy.
@@ -1776,7 +1777,7 @@ void main() {
 
         test('settles that member on the held wrap once their inbox reads '
             'absent, sending the member who has it nothing, with one own '
-            'copy per member as before', () async {
+            'copy for the retraction', () async {
           await heldRoomRetraction();
           inboxes[peerC] = _Inbox.absent;
 
@@ -1786,12 +1787,12 @@ void main() {
           expect(wrapsTo(peerB), hasLength(1));
           expect(
             wrapsTo(owner),
-            hasLength(2),
-            reason: 'a retraction publishes the own copy per member (#10016)',
+            hasLength(1),
+            reason: 'one own copy per retraction, not one per member (#10016)',
           );
         });
 
-        test('publishes the own copies when only an already-delivered member '
+        test('publishes the own copy when only an already-delivered member '
             'has an unreadable inbox after a restart', () async {
           await heldRoomRetraction();
           expect(heldWraps((await messageRow()).heldDeletionWraps), {
@@ -1808,7 +1809,7 @@ void main() {
           expect(wrapsTo(peerB), hasLength(1));
           expect(wrapsTo(peerC), hasLength(1));
           expect((await messageRow()).deletionPublishStatus, 'deletion_sent');
-          expect(wrapsTo(owner), hasLength(2));
+          expect(wrapsTo(owner), hasLength(1));
         });
 
         test('reads who has it from the row, so a restart sends them nothing '

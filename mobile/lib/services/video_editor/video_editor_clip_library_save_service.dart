@@ -5,16 +5,27 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:models/models.dart' show AudioEvent;
+import 'package:models/models.dart' show AudioEvent, NativeProofData;
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/extensions/video_editor_history_extensions.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/video_editor/editor_overlay_snapshot.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
+import 'package:openvine/services/video_editor/captured_chroma_key_baker.dart';
+import 'package:openvine/services/video_editor/draft_render_parameters_service.dart';
+import 'package:openvine/services/video_editor/video_editor_merge_service.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
 import 'package:pro_image_editor/pro_image_editor.dart' show CompleteParameters;
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 import 'package:unified_logger/unified_logger.dart';
+
+/// A newly rendered draft clip and the source thumbnail it might borrow.
+typedef DraftLibraryRender = ({
+  DivineVideoClip clip,
+  String? sourceThumbnailPath,
+});
 
 /// Service for saving a single timeline clip to the persistent clip library.
 class VideoEditorClipLibrarySaveService {
@@ -129,6 +140,124 @@ class VideoEditorClipLibrarySaveService {
             )
           : null,
     );
+  }
+
+  /// Renders the whole [draft] — every clip with its edits, overlays and
+  /// sound — into one standalone file and returns it as a fresh library clip.
+  ///
+  /// This is the render a post from the library runs, with the overlays the
+  /// stored parameters drop restored by [renderParameters], so the clip looks
+  /// and sounds like the draft. Flashing effects are left out and flash
+  /// transitions become dissolves, as in [flattenClipForLibrary] and the
+  /// merge: a library clip keeps no record of what is baked into it, so a
+  /// video reusing it could not carry the Flashing Lights warning.
+  ///
+  /// [renderId] keys the native progress/cancel stream. Pending recorded
+  /// chroma keys are baked through [bakeCapturedChromaKey] first.
+  ///
+  /// Throws:
+  ///
+  /// * [DraftOverlayRestoreException] when the draft's overlays cannot be
+  ///   reproduced.
+  /// * [VideoRenderFailedException] when the render produced no video.
+  ///
+  /// The returned clip's file lives in the persistent documents dir; when it
+  /// does not reach the library, pass it to [cleanupFlattenedClip] with
+  /// the result's `sourceThumbnailPath` as the thumbnail to keep.
+  static Future<DraftLibraryRender> renderDraftForLibrary({
+    required DivineVideoDraft draft,
+    required DraftRenderParametersService renderParameters,
+    required String renderId,
+    Future<DivineVideoClip> Function(DivineVideoClip clip)?
+    bakeCapturedChromaKey,
+  }) async {
+    Log.info(
+      '💾 Rendering draft ${draft.id} (${draft.clips.length} clip(s)) '
+      'for the clip library',
+      name: 'VideoEditorClipLibrarySaveService',
+      category: LogCategory.video,
+    );
+
+    final parameters = _withoutFlashingEffects(
+      await renderParameters.buildForDraft(draft),
+    );
+    final clips = VideoEditorMergeService.withoutFlashTransitions(
+      bakeCapturedChromaKey == null
+          ? draft.clips
+          : await bakePendingCapturedChromaKeys(
+              draft.clips,
+              bakeCapturedChromaKey,
+            ),
+    );
+
+    final (
+      rendered,
+      proofJson,
+    ) = await VideoEditorRenderService.renderVideoToClip(
+      clips: clips,
+      parameters: parameters,
+      editorStateHistory: draft.editorStateHistory,
+      taskId: renderId,
+    );
+
+    final proof = proofJson == null
+        ? null
+        : NativeProofData.fromJson(
+            jsonDecode(proofJson) as Map<String, dynamic>,
+          );
+
+    final clip = rendered.copyWith(
+      id: 'clip_library_${DateTime.now().microsecondsSinceEpoch}',
+      lensMetadata: draft.clips.first.lensMetadata,
+      sourceCredits: DivineVideoClip.combinedSourceCredits(draft.clips),
+      // Its hash lets an offline conversion be signed later, as a flattened
+      // clip is.
+      proofManifestJson: proofJson,
+      // Left unsigned, for example offline, an edit of it is signed against
+      // the media the draft was made from, as with a flattened clip.
+      derivedFrom: proof?.c2paManifestId == null
+          ? await VideoEditorRenderService.renderedVideoSources(
+              clips: clips,
+              parameters: parameters,
+            )
+          : null,
+    );
+    // The bake can give the source clip a new thumbnail before rendering.
+    // The rendered clip can borrow that thumbnail when extraction fails.
+    return (clip: clip, sourceThumbnailPath: clips.first.thumbnailPath);
+  }
+
+  /// [parameters] without the flashing effects (see [isFlashingVideoEffect]
+  /// and [isFlashingCustomVideoEffect]) the render reads from its meta.
+  ///
+  /// An entry this build cannot read is kept: the render skips it anyway.
+  static CompleteParameters? _withoutFlashingEffects(
+    CompleteParameters? parameters,
+  ) {
+    const key = VideoEditorConstants.effectsStateHistoryKey;
+    final raw = parameters?.meta[key];
+    if (parameters == null || raw is! List) return parameters;
+
+    final kept = [
+      for (final entry in raw)
+        if (!_isFlashingEffectEntry(entry)) entry,
+    ];
+    if (kept.length == raw.length) return parameters;
+    return parameters.copyWith(meta: {...parameters.meta, key: kept});
+  }
+
+  static bool _isFlashingEffectEntry(Object? entry) {
+    for (final effect in videoEffectEntriesFromMeta([entry])) {
+      if (effect.effect case final builtIn?
+          when isFlashingVideoEffect(builtIn.type)) {
+        return true;
+      }
+      if (effect.custom case final custom?
+          when isFlashingCustomVideoEffect(custom.id)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /// [clip] with its own sound turned back up when Extract audio moved that

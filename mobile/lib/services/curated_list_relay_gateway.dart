@@ -103,22 +103,50 @@ class CuratedListRelayGateway {
     );
   }
 
-  /// Fetches a complete source before an existing owned list is replaced.
+  /// Reads the current version of an owned list before it is replaced.
+  ///
+  /// The read is complete only when every relay answered: a replacement built
+  /// on a read that missed a relay deletes whatever only that relay held
+  /// (#11317). The snapshot carries the newest version, or no event when no
+  /// relay holds one; a failed read, or [cancelled] completing first, is
+  /// incomplete and carries none.
+  ///
+  /// [timeout] bounds each of up to two reads, so a call can take twice as
+  /// long. Throws [ArgumentError] when [listId] is empty or [ownerPubkey] is
+  /// not lowercase hex.
   Future<CuratedListRelaySnapshot> readOwnedListForMutation(
     String ownerPubkey,
     String listId, {
     required Duration timeout,
     required Future<void> cancelled,
-  }) =>
-      CuratedListRelaySnapshotReader(nostrClient: _nostrService)
-          .readForMutation(
-            ownerPubkey: ownerPubkey,
-            listId: listId,
-            timeout: timeout,
-            cancelled: cancelled,
-          );
+  }) async {
+    final read = await Future.any<CurrentVersionRead?>([
+      _nostrService.readCurrentVersion(
+        kind: 30005,
+        pubkey: ownerPubkey,
+        dTag: listId,
+        timeout: timeout,
+      ),
+      cancelled.then((_) => null),
+    ]);
+    return switch (read) {
+      CurrentVersionFound(:final event) => CuratedListRelaySnapshot(
+        events: [event],
+        completedNormally: true,
+      ),
+      CurrentVersionAbsent() => CuratedListRelaySnapshot(
+        events: const [],
+        completedNormally: true,
+      ),
+      CurrentVersionFailed() || null => CuratedListRelaySnapshot(
+        events: const [],
+        completedNormally: false,
+      ),
+    };
+  }
 
-  /// NIP-44 encrypts [list]'s item tags to their owner.
+  /// NIP-44 encrypts [list]'s sealed tags to their owner: its videos and the
+  /// preserved tags it keeps private.
   ///
   /// Encrypting to our own pubkey is what makes a list readable on our other
   /// devices and opaque to everyone else, including the relay storing it.
@@ -179,7 +207,7 @@ class CuratedListRelayGateway {
   }
 
   String _privateItemPlaintext(CuratedList list) {
-    return jsonEncode(CuratedListConverter.toItemTags(list));
+    return jsonEncode(CuratedListConverter.toSealedTags(list));
   }
 
   bool privateItemPayloadFits(CuratedList list) =>

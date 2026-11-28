@@ -3,7 +3,12 @@
 // ABOUTME(WIP): read-only query methods, and in-memory state populated by the
 // ABOUTME(WIP): Page layer. Persistence and relay sync come in later phases.
 
+import 'dart:convert';
+import 'dart:math';
+
+import 'package:cache_sync/cache_sync.dart';
 import 'package:curated_list_repository/src/curated_list_converter.dart';
+import 'package:curated_list_repository/src/curated_list_search_result.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
@@ -42,6 +47,30 @@ const kPublicListsRelayWindow = 500;
 /// Shared by search and discovery, so a user-typed search is not cut off by
 /// the client's default query budget while startup work holds the relay pool.
 const kPublicCuratedListsRelayReadTimeout = Duration(seconds: 12);
+
+/// How long a list search or discovery waits for FunnelCake's list index
+/// before the relays stand in.
+///
+/// Shorter than the API client's own budget, which also spans its retries, so
+/// a stalled backend falls back within seconds.
+const kCuratedListSearchIndexTimeout = Duration(seconds: 5);
+
+/// Most video lists one search asks FunnelCake's list index for.
+const kCuratedListSearchIndexLimit = 50;
+
+/// How long a series read from relays is served from the cache.
+///
+/// Short, so the episode count moves while a creator publishes episodes one
+/// after another, yet a feed of one series' episodes still reads it once.
+const kSeriesListCacheTtl = Duration(seconds: 60);
+
+/// Thrown by [CuratedListRepository.discoverLists] when FunnelCake's list
+/// index did not answer and no relay answered either, so an empty gallery
+/// would claim there are no lists when none could be read.
+class PublicCuratedListReadUnavailableException implements Exception {
+  /// Creates a retryable failure for an unconfirmed relay read.
+  const PublicCuratedListReadUnavailableException();
+}
 
 /// An immutable subscription snapshot and its resolution readiness.
 ///
@@ -334,6 +363,20 @@ class CuratedListRepository {
       timeout: kPublicCuratedListsRelayReadTimeout,
     );
 
+    return _publicListsWithVideos(
+      events,
+      where: (list) =>
+          !excluded.contains(list.authorScopedId) &&
+          _matchesQuery(list, lowerQuery),
+    );
+  }
+
+  /// The public lists with videos among [events], by authors who are not
+  /// blocked, that pass [where].
+  List<CuratedList> _publicListsWithVideos(
+    List<Event> events, {
+    bool Function(CuratedList list)? where,
+  }) {
     final results = <CuratedList>[];
     // The newest revision wins before any filter, or an older populated one
     // would surface for a list its author has since emptied or renamed.
@@ -341,12 +384,10 @@ class CuratedListRepository {
       if (_isBlocked(event.pubkey)) continue;
       final list = CuratedListConverter.fromEvent(event);
       if (list == null) continue;
-      if (excluded.contains(list.authorScopedId)) continue;
       if (!list.isPublic || !list.hasVideos) continue;
-      if (!_matchesQuery(list, lowerQuery)) continue;
+      if (where != null && !where(list)) continue;
       results.add(list);
     }
-
     return results;
   }
 
@@ -358,23 +399,276 @@ class CuratedListRepository {
     return blockFilter(pubkey);
   }
 
-  /// Searches both local subscribed lists and relay lists for [query].
+  /// Searches public video lists for [query], FunnelCake's list index first.
   ///
-  /// Yields results progressively so the UI can render list names immediately
-  /// while thumbnails resolve in the background:
+  /// When the index answers, its lists are the result, in the server's order,
+  /// and no relay is searched. They arrive progressively, so the UI can show
+  /// them before their previews resolve:
+  ///
+  /// 1. The index's summaries: names and video counts, no video references
+  ///    (see [CuratedListSearchResult.isComplete]).
+  /// 2. The lists completed from their own events, read from relays by
+  ///    coordinate. A list whose newest revision is private or empty drops
+  ///    out; one the relays do not return stays a summary.
+  /// 3. The complete lists with thumbnails resolved.
+  ///
+  /// The index leaves out lists published since its last refresh, which
+  /// runs every 30 minutes.
+  ///
+  /// When the index is unconfigured, fails or takes longer than
+  /// [kCuratedListSearchIndexTimeout], the local and relay search stands in:
   ///
   /// 1. Local matches (no thumbnails)
   /// 2. Local matches with thumbnails resolved
   /// 3. Local + relay matches merged (relay items without thumbnails)
   /// 4. Fully enriched (relay thumbnails resolved)
   ///
-  /// Deduplicates by author-qualified list coordinate (pubkey + d-tag).
-  Stream<List<CuratedList>> searchAllLists(
+  /// Either way, results are deduplicated by author-qualified list coordinate
+  /// (pubkey + d-tag), and lists by blocked authors are left out.
+  Stream<List<CuratedListSearchResult>> searchAllLists(
     String query, {
     int maxThumbnails = 5,
   }) async* {
-    if (query.trim().isEmpty) return;
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) return;
 
+    final summaries = await _searchListIndex(trimmed);
+    if (summaries == null) {
+      yield* _searchLocalAndRelays(query, maxThumbnails: maxThumbnails).map(
+        (lists) => List<CuratedListSearchResult>.unmodifiable(
+          lists.map(CuratedListSearchResult.new),
+        ),
+      );
+      return;
+    }
+
+    yield* _completeIndexResults(summaries, maxThumbnails: maxThumbnails);
+  }
+
+  /// Public video lists to browse, FunnelCake's list index first, most
+  /// recently updated first, at most [limit] of them.
+  ///
+  /// When the index answers, its lists are the result, in its order, and
+  /// arrive in the three steps [searchAllLists] describes: summaries, the
+  /// lists completed from their own events, then thumbnails. The index
+  /// leaves out lists published since its last refresh, which runs every 30
+  /// minutes.
+  ///
+  /// When the index is unconfigured, fails or takes longer than
+  /// [kCuratedListSearchIndexTimeout], the newest [kPublicListsRelayWindow]
+  /// list events on relays stand in: their public lists with videos, newest
+  /// first, then the same lists with thumbnails resolved. That read throws
+  /// [PublicCuratedListReadUnavailableException] when no relay answered and
+  /// nothing arrived.
+  ///
+  /// Either way, empty lists and lists by blocked authors or by
+  /// [excludeAuthor] are left out, and each list gets up to [maxThumbnails]
+  /// thumbnails.
+  Stream<List<CuratedListSearchResult>> discoverLists({
+    required int limit,
+    String? excludeAuthor,
+    int maxThumbnails = 5,
+  }) async* {
+    final summaries = await _discoverListIndex(
+      limit: limit,
+      excludeAuthor: excludeAuthor,
+    );
+    if (summaries != null) {
+      yield* _completeIndexResults(summaries, maxThumbnails: maxThumbnails);
+      return;
+    }
+
+    final lists = (await _discoverListsFromRelays())
+        .where((list) => list.pubkey != excludeAuthor)
+        .take(limit)
+        .toList();
+    yield List.unmodifiable(lists.map(CuratedListSearchResult.new));
+    if (lists.isEmpty) return;
+    final enriched = await _resolveAllThumbnails(
+      lists,
+      maxThumbnails: maxThumbnails,
+    );
+    yield List.unmodifiable(enriched.map(CuratedListSearchResult.new));
+  }
+
+  /// Emits the index's [summaries], then the lists completed from relays,
+  /// then the complete ones with thumbnails resolved.
+  Stream<List<CuratedListSearchResult>> _completeIndexResults(
+    List<CuratedListSearchResult> summaries, {
+    required int maxThumbnails,
+  }) async* {
+    yield List.unmodifiable(summaries);
+    if (summaries.isEmpty) return;
+
+    final completed = await _completeFromRelays(summaries);
+    yield List.unmodifiable(completed);
+
+    final complete = [
+      for (final result in completed)
+        if (result.isComplete) result.list,
+    ];
+    if (complete.isEmpty) return;
+    final enriched = {
+      for (final list in await _resolveAllThumbnails(
+        complete,
+        maxThumbnails: maxThumbnails,
+      ))
+        list.authorScopedId: list,
+    };
+    yield List.unmodifiable([
+      for (final result in completed)
+        switch (enriched[result.list.authorScopedId]) {
+          final list? => CuratedListSearchResult(list),
+          _ => result,
+        },
+    ]);
+  }
+
+  /// FunnelCake's newest [limit] video lists, as summaries without lists by
+  /// [excludeAuthor], or `null` when the index is unconfigured, fails, or
+  /// takes longer than [kCuratedListSearchIndexTimeout].
+  Future<List<CuratedListSearchResult>?> _discoverListIndex({
+    required int limit,
+    required String? excludeAuthor,
+  }) async {
+    if (!_funnelcakeApiClient.isAvailable) return null;
+    final ListSearchResponse page;
+    try {
+      page = await _funnelcakeApiClient
+          .discoverLists(
+            kind: PublicListKind.videos,
+            limit: min(limit, FunnelcakeApiClient.maxListSearchLimit),
+          )
+          .timeout(kCuratedListSearchIndexTimeout);
+    } on Exception {
+      return null;
+    }
+    return _summariesFrom(
+      page.cards.where((card) => card.pubkey != excludeAuthor),
+    );
+  }
+
+  /// The newest public video lists with videos on relays, newest first.
+  ///
+  /// Throws [PublicCuratedListReadUnavailableException] when no relay
+  /// answered and nothing arrived.
+  Future<List<CuratedList>> _discoverListsFromRelays() async {
+    final read = await _nostrClient.readEvents(
+      [
+        Filter(kinds: [_curatedListKind], limit: kPublicListsRelayWindow),
+      ],
+      useCache: false,
+      timeout: kPublicCuratedListsRelayReadTimeout,
+    );
+    if (read.events.isEmpty && read.answeredNetworkRelayCount == 0) {
+      throw const PublicCuratedListReadUnavailableException();
+    }
+    return _publicListsWithVideos(read.events)
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  }
+
+  /// Searches FunnelCake's list index for video lists matching [query].
+  ///
+  /// Returns `null` when the index is unconfigured, fails, or takes longer
+  /// than [kCuratedListSearchIndexTimeout]; otherwise its summaries in the
+  /// server's order, without empty lists or lists by blocked authors.
+  Future<List<CuratedListSearchResult>?> _searchListIndex(String query) async {
+    if (!_funnelcakeApiClient.isAvailable) return null;
+    final ListSearchResponse page;
+    try {
+      page = await _funnelcakeApiClient
+          .searchLists(
+            query: query,
+            kind: PublicListKind.videos,
+            limit: kCuratedListSearchIndexLimit,
+          )
+          .timeout(kCuratedListSearchIndexTimeout);
+    } on Exception {
+      return null;
+    }
+    return _summariesFrom(page.cards);
+  }
+
+  /// Summaries of the video lists among [cards], in their order, without
+  /// empty lists, lists by blocked authors, or repeated coordinates.
+  List<CuratedListSearchResult> _summariesFrom(Iterable<PublicListCard> cards) {
+    final summaries = <String, CuratedListSearchResult>{};
+    for (final card in cards) {
+      if (card.kind != _curatedListKind || card.itemCount <= 0) continue;
+      if (_isBlocked(card.pubkey)) continue;
+      final list = CuratedList(
+        id: card.dTag,
+        name: card.title.isNotEmpty
+            ? card.title
+            : CuratedListConverter.untitledListName,
+        pubkey: card.pubkey,
+        videoEventIds: const [],
+        description: card.description.isNotEmpty ? card.description : null,
+        createdAt: card.updatedAt,
+        updatedAt: card.updatedAt,
+      );
+      summaries.putIfAbsent(
+        list.authorScopedId,
+        () => CuratedListSearchResult.summary(
+          list: list,
+          itemCount: card.itemCount,
+        ),
+      );
+    }
+    return summaries.values.toList();
+  }
+
+  /// Completes [summaries] from their lists' own events, read from relays by
+  /// coordinate, keeping their order.
+  ///
+  /// A list whose newest revision is private or has no videos is dropped. A
+  /// list the relays do not return, or only in a revision older than the
+  /// summary's, stays a summary, as do all of them when the read fails.
+  Future<List<CuratedListSearchResult>> _completeFromRelays(
+    List<CuratedListSearchResult> summaries,
+  ) async {
+    final List<Event> events;
+    try {
+      events = await _nostrClient.queryEvents(
+        [
+          Filter(
+            kinds: [_curatedListKind],
+            authors: {for (final s in summaries) s.list.pubkey!}.toList(),
+            d: {for (final s in summaries) s.list.id}.toList(),
+          ),
+        ],
+        timeout: kPublicCuratedListsRelayReadTimeout,
+      );
+    } on Exception {
+      return summaries;
+    }
+
+    final newest = <String, CuratedList>{};
+    for (final event in CuratedListConverter.latestRevisions(events)) {
+      final list = CuratedListConverter.fromEvent(event);
+      if (list != null) newest[list.authorScopedId] = list;
+    }
+
+    final results = <CuratedListSearchResult>[];
+    for (final summary in summaries) {
+      final list = newest[summary.list.authorScopedId];
+      if (list == null || list.updatedAt.isBefore(summary.list.updatedAt)) {
+        results.add(summary);
+      } else if (list.isPublic && list.hasVideos) {
+        results.add(CuratedListSearchResult(list));
+      }
+    }
+    return results;
+  }
+
+  /// Searches the lists held locally and the newest public lists on relays
+  /// for [query], the fallback when the list index does not answer.
+  ///
+  /// See [searchAllLists] for its four emissions.
+  Stream<List<CuratedList>> _searchLocalAndRelays(
+    String query, {
+    required int maxThumbnails,
+  }) async* {
     final localResults = [
       for (final list in searchLists(query))
         list.copyWith(thumbnailUrls: const []),
@@ -418,6 +712,139 @@ class CuratedListRepository {
   }
 
   // ---------------------------------------------------------------------------
+  // Series
+  // ---------------------------------------------------------------------------
+
+  static final _seriesAddress = RegExp(
+    r'^30005:([0-9a-f]{64}):(.+)$',
+    dotAll: true,
+  );
+
+  /// Relay reads of a series in flight, by cache key, so that the episodes of
+  /// one series in a feed share a single read.
+  final Map<String, Future<CuratedList?>> _seriesReads = {};
+
+  /// The series at [seriesCoordinate] (`30005:<pubkey>:<d-tag>`) when it is a
+  /// list marked as a series and [episodeCoordinate] is one of its
+  /// [CuratedList.seriesEpisodes]; otherwise null. A private list never is:
+  /// its episodes are sealed to its owner.
+  ///
+  /// A series read from relays is cached for [kSeriesListCacheTtl]. A cached
+  /// copy that does not hold [episodeCoordinate] is never the answer, since
+  /// it may predate that episode: the series is read from relays again first.
+  ///
+  /// Also null when [seriesCoordinate] is malformed or the relays cannot be
+  /// read. The cache only saves reads: when it fails, the relays answer.
+  Future<CuratedList?> fetchSeriesContaining({
+    required String seriesCoordinate,
+    required String episodeCoordinate,
+  }) async {
+    final address = _seriesAddress.firstMatch(seriesCoordinate);
+    if (address == null) return null;
+    final key = 'global:series-list:v1:$seriesCoordinate';
+
+    final cached = await _readCachedSeries(key);
+    if (cached != null) {
+      if (cached.seriesEpisodes.contains(episodeCoordinate)) return cached;
+      await _forgetCachedSeries(key);
+    }
+
+    final series = await _readSeriesOnce(
+      key,
+      pubkey: address[1]!,
+      dTag: address[2]!,
+    );
+    if (series == null || !series.seriesEpisodes.contains(episodeCoordinate)) {
+      return null;
+    }
+    return series;
+  }
+
+  /// Joins the relay read of [key] in flight, or starts one.
+  Future<CuratedList?> _readSeriesOnce(
+    String key, {
+    required String pubkey,
+    required String dTag,
+  }) async {
+    final inFlight = _seriesReads[key];
+    if (inFlight != null) return inFlight;
+
+    final read = _readSeriesFromRelays(key, pubkey: pubkey, dTag: dTag);
+    _seriesReads[key] = read;
+    try {
+      return await read;
+    } finally {
+      _seriesReads.removeWhere((_, pending) => identical(pending, read));
+    }
+  }
+
+  /// Reads the newest revision of the list by [pubkey] with [dTag] from
+  /// relays and caches it under [key] when it is marked as a series.
+  Future<CuratedList?> _readSeriesFromRelays(
+    String key, {
+    required String pubkey,
+    required String dTag,
+  }) async {
+    final List<Event> events;
+    try {
+      events = await _nostrClient.queryEvents(
+        [
+          Filter(
+            kinds: [_curatedListKind],
+            authors: [pubkey],
+            d: [dTag],
+          ),
+        ],
+        timeout: kPublicCuratedListsRelayReadTimeout,
+      );
+    } on Exception {
+      return null;
+    }
+
+    final newest = CuratedListConverter.latestRevisions([
+      for (final event in events)
+        if (event.kind == _curatedListKind &&
+            event.pubkey == pubkey &&
+            CuratedListConverter.extractDTag(event) == dTag)
+          event,
+    ]).firstOrNull;
+    final list = newest == null ? null : CuratedListConverter.fromEvent(newest);
+    if (list == null || !list.isSeries) return null;
+
+    try {
+      await CacheSync.write(
+        key: key,
+        value: list,
+        toJson: (list) => jsonEncode(list.toJson()),
+        ttl: kSeriesListCacheTtl,
+      );
+    } on Object {
+      // Not cached: the next read asks the relays again.
+    }
+    return list;
+  }
+
+  Future<CuratedList?> _readCachedSeries(String key) async {
+    try {
+      return await CacheSync.read(
+        key: key,
+        fromJson: (json) =>
+            CuratedList.fromJson(jsonDecode(json) as Map<String, dynamic>),
+      );
+    } on Object {
+      return null;
+    }
+  }
+
+  Future<void> _forgetCachedSeries(String key) async {
+    try {
+      await CacheSync.invalidate(key);
+    } on Object {
+      // The relay read below overwrites the entry when it finds the series.
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // Lifecycle
   // ---------------------------------------------------------------------------
 
@@ -445,10 +872,8 @@ class CuratedListRepository {
 
   /// Resolves up to [maxThumbnails] thumbnail URLs for each of [lists].
   ///
-  /// The same funnelcake-first, batched-relay-fallback pipeline the search
-  /// stream uses to enrich its results, exposed for discovery surfaces that
-  /// fetch their lists elsewhere (the relay discovery stream) and render
-  /// thumbnail collages.
+  /// Reuses the search and discovery thumbnail pipeline for callers that
+  /// already hold their lists, such as the profile's My Lists gallery.
   Future<List<CuratedList>> resolveListThumbnails(
     List<CuratedList> lists, {
     int maxThumbnails = 5,

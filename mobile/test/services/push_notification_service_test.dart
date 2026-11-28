@@ -4,6 +4,8 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:app_update_repository/app_update_repository.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
@@ -17,6 +19,7 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/notification_helpers.dart'
     show localNotificationTapPayload;
 import 'package:openvine/services/notification_service.dart';
+import 'package:openvine/services/push_device_metadata.dart';
 import 'package:openvine/services/push_notification_service.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -57,13 +60,17 @@ enum _SignerKind {
 class _FakeEvent extends Fake implements Event {
   @override
   String get id => 'push-control-event-id';
+
+  @override
+  int get createdAt => 1700000000;
 }
 
 class _MockEvent extends Mock implements Event {}
 
-_MockEvent _eventWithId(String id) {
+_MockEvent _eventWithId(String id, {int createdAt = 1700000000}) {
   final event = _MockEvent();
   when(() => event.id).thenReturn(id);
+  when(() => event.createdAt).thenReturn(createdAt);
   return event;
 }
 
@@ -125,10 +132,15 @@ void main() {
 
   PushNotificationService buildService({
     String? token = testToken,
+    bool includeDeviceMetadata = true,
     Future<String?> Function()? getToken,
     FutureOr<bool> Function()? isCurrent,
     int Function()? timeZoneOffsetMinutes,
     Future<String?> Function()? timeZoneIdentifier,
+    DateTime Function()? now,
+    Future<int?> Function(String pubkey)? readLastPreferencesCreatedAt,
+    Future<void> Function(String pubkey, int createdAt)?
+    writeLastPreferencesCreatedAt,
   }) {
     return PushNotificationService(
       authService: mockAuthService,
@@ -136,10 +148,20 @@ void main() {
       notificationService: mockNotificationService,
       environmentConfig: testEnvironment,
       getToken: getToken ?? () async => token,
+      deviceMetadata: includeDeviceMetadata
+          ? PushDeviceMetadata.resolve(
+              platform: TargetPlatform.iOS,
+              source: InstallSource.appStore,
+              appVersion: '1.2.3',
+            )
+          : null,
       isCurrent: isCurrent,
       timeZoneIdentifier: timeZoneIdentifier ?? () async => null,
       timeZoneOffsetMinutes:
           timeZoneOffsetMinutes ?? () => testTimeZoneOffsetMinutes,
+      now: now,
+      readLastPreferencesCreatedAt: readLastPreferencesCreatedAt,
+      writeLastPreferencesCreatedAt: writeLastPreferencesCreatedAt,
     );
   }
 
@@ -177,6 +199,7 @@ void main() {
         kind: kind,
         content: any(named: 'content'),
         tags: any(named: 'tags'),
+        createdAt: any(named: 'createdAt'),
       ),
     ).thenAnswer((_) async => signed.removeAt(0));
     when(
@@ -245,11 +268,17 @@ void main() {
           registrationCapture.captured.single as String,
         ) as Map<String, dynamic>;
         expect(registrationJson['token'], testToken);
+        expect(registrationJson['directMessageRouting'], isTrue);
+        expect(registrationJson['platform'], 'ios');
+        expect(registrationJson['installChannel'], 'app_store');
+        expect(registrationJson['appVersion'], '1.2.3');
         expect(registrationJson['timezone'], 'Pacific/Auckland');
         expect(registrationJson['campaignTargetTypes'], [
           'app_route',
           'video_address',
           'creator_profile',
+          'announcement',
+          'featured_feed',
         ]);
         expect(
           registrationJson['timezoneOffsetMinutes'],
@@ -759,6 +788,52 @@ void main() {
         service.dispose();
       });
 
+      test(
+        'an upgraded install registers its existing token with routing',
+        () async {
+          final published = stubSignAndPublish(
+            PushNotificationService.pushRegistrationKind,
+            [
+              _eventWithId('old-registration'),
+              _eventWithId('new-registration'),
+            ],
+            [acceptedOutcome, acceptedOutcome],
+          );
+          final legacy = buildService(includeDeviceMetadata: false);
+          expect(
+            await legacy.register(testPubkey),
+            PushRegistrationResult.published,
+          );
+          legacy.dispose();
+          final upgraded = buildService();
+          expect(
+            await upgraded.register(testPubkey),
+            PushRegistrationResult.published,
+          );
+          upgraded.dispose();
+          final registrations =
+              verify(
+                    () => mockNostrSigner.nip44Encrypt(
+                      testEnvironment.pushServicePubkey,
+                      captureAny(),
+                    ),
+                  ).captured
+                  .cast<String>()
+                  .map((data) => jsonDecode(data) as Map<String, dynamic>)
+                  .toList();
+          expect(published, hasLength(2));
+          expect(registrations.map((data) => data['token']), [
+            testToken,
+            testToken,
+          ]);
+          expect(
+            registrations.first.containsKey('directMessageRouting'),
+            isFalse,
+          );
+          expect(registrations.last['directMessageRouting'], isTrue);
+        },
+      );
+
       // Kind 3079 is a regular kind, so a re-signed retry of a registration
       // the relay already stored leaves a second one beside it (#8380).
       group('after an attempt no relay confirmed', () {
@@ -1232,6 +1307,7 @@ void main() {
             kind: PushNotificationService.pushPreferencesKind,
             content: encryptedPayload,
             tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
           ),
         ).thenAnswer((_) async => fakeEvent);
 
@@ -1275,6 +1351,7 @@ void main() {
             kind: PushNotificationService.pushPreferencesKind,
             content: encryptedPayload,
             tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
           ),
         ).called(1);
 
@@ -1308,6 +1385,7 @@ void main() {
               kind: any(named: 'kind'),
               content: any(named: 'content'),
               tags: any(named: 'tags'),
+              createdAt: any(named: 'createdAt'),
             ),
           );
           service.dispose();
@@ -1325,6 +1403,7 @@ void main() {
             kind: any(named: 'kind'),
             content: any(named: 'content'),
             tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
           ),
         ).thenAnswer((_) async => fakeEvent);
 
@@ -1362,6 +1441,7 @@ void main() {
               kind: any(named: 'kind'),
               content: any(named: 'content'),
               tags: any(named: 'tags'),
+              createdAt: any(named: 'createdAt'),
             ),
           ).thenAnswer((_) async => fakeEvent);
 
@@ -1400,6 +1480,7 @@ void main() {
               kind: PushNotificationService.pushPreferencesKind,
               content: encryptedPayload,
               tags: any(named: 'tags'),
+              createdAt: any(named: 'createdAt'),
             ),
           ).thenAnswer((_) async {
             current = false;
@@ -1528,6 +1609,217 @@ void main() {
           expect(published, [same(first), same(second)]);
           service.dispose();
         });
+      });
+
+      group('monotonic created_at across same-second preference changes', () {
+        test(
+          'same-second opt-in then opt-out stamps strictly increasing createdAt',
+          () async {
+            final fixedNow = DateTime.utc(2026, 11, 25, 15);
+            final stampedCreatedAts = <int>[];
+            final persistedByPubkey = <String, int>{};
+            var eventCounter = 0;
+
+            when(
+              () => mockAuthService.createAndSignEvent(
+                kind: PushNotificationService.pushPreferencesKind,
+                content: any(named: 'content'),
+                tags: any(named: 'tags'),
+                createdAt: any(named: 'createdAt'),
+              ),
+            ).thenAnswer((invocation) async {
+              final createdAt = invocation.namedArguments[#createdAt] as int;
+              stampedCreatedAts.add(createdAt);
+              return _eventWithId(
+                'pref-${++eventCounter}',
+                createdAt: createdAt,
+              );
+            });
+            when(
+              () => mockNostrClient.publishEventAwaitOk(
+                any(),
+                targetRelays: any(named: 'targetRelays'),
+                timeout: any(named: 'timeout'),
+              ),
+            ).thenAnswer(
+              (invocation) async => acceptedOutcome(
+                invocation.positionalArguments.single as Event,
+              ),
+            );
+
+            final service = buildService(
+              now: () => fixedNow,
+              readLastPreferencesCreatedAt: (pubkey) async =>
+                  persistedByPubkey[pubkey],
+              writeLastPreferencesCreatedAt: (pubkey, createdAt) async {
+                persistedByPubkey[pubkey] = createdAt;
+              },
+            );
+
+            expect(
+              await service.updatePreferences(
+                const NotificationPreferences(directMessagesEnabled: true),
+              ),
+              isTrue,
+            );
+            expect(
+              await service.updatePreferences(
+                const NotificationPreferences(),
+              ),
+              isTrue,
+            );
+
+            expect(stampedCreatedAts, hasLength(2));
+            expect(stampedCreatedAts[1], stampedCreatedAts[0] + 1);
+            expect(persistedByPubkey[testPubkey], stampedCreatedAts[1]);
+            service.dispose();
+          },
+        );
+
+        test(
+          'uncertain publish advances floor for a different update while retrying identical request reuses the kept event',
+          () async {
+            final fixedNow = DateTime.utc(2026, 11, 25, 15, 1);
+            final stampedCreatedAts = <int>[];
+            final persistedByPubkey = <String, int>{};
+            final outcomes = <PublishOutcome Function(Event)>[
+              silentOutcome,
+              acceptedOutcome,
+              acceptedOutcome,
+            ];
+            var eventCounter = 0;
+
+            when(
+              () => mockAuthService.createAndSignEvent(
+                kind: PushNotificationService.pushPreferencesKind,
+                content: any(named: 'content'),
+                tags: any(named: 'tags'),
+                createdAt: any(named: 'createdAt'),
+              ),
+            ).thenAnswer((invocation) async {
+              final createdAt = invocation.namedArguments[#createdAt] as int;
+              stampedCreatedAts.add(createdAt);
+              return _eventWithId(
+                'pref-${++eventCounter}',
+                createdAt: createdAt,
+              );
+            });
+            when(
+              () => mockNostrClient.publishEventAwaitOk(
+                any(),
+                targetRelays: any(named: 'targetRelays'),
+                timeout: any(named: 'timeout'),
+              ),
+            ).thenAnswer(
+              (invocation) async => outcomes.removeAt(0)(
+                invocation.positionalArguments.single as Event,
+              ),
+            );
+
+            final service = buildService(
+              now: () => fixedNow,
+              readLastPreferencesCreatedAt: (pubkey) async =>
+                  persistedByPubkey[pubkey],
+              writeLastPreferencesCreatedAt: (pubkey, createdAt) async {
+                persistedByPubkey[pubkey] = createdAt;
+              },
+            );
+
+            const optIn = NotificationPreferences(directMessagesEnabled: true);
+            const optOut = NotificationPreferences();
+            expect(await service.updatePreferences(optIn), isFalse);
+            expect(await service.updatePreferences(optIn), isTrue);
+            expect(await service.updatePreferences(optOut), isTrue);
+
+            expect(stampedCreatedAts, hasLength(2));
+            expect(stampedCreatedAts[1], stampedCreatedAts[0] + 1);
+            service.dispose();
+          },
+        );
+
+        test(
+          'rejected publish does not advance monotonic floor and fresh service respects persisted floor',
+          () async {
+            final fixedNow = DateTime.utc(2026, 11, 25, 15, 2);
+            final stampedCreatedAts = <int>[];
+            final persistedByPubkey = <String, int>{};
+            final outcomes = <PublishOutcome Function(Event)>[
+              refusedOutcome,
+              acceptedOutcome,
+              acceptedOutcome,
+            ];
+            var eventCounter = 0;
+
+            when(
+              () => mockAuthService.createAndSignEvent(
+                kind: PushNotificationService.pushPreferencesKind,
+                content: any(named: 'content'),
+                tags: any(named: 'tags'),
+                createdAt: any(named: 'createdAt'),
+              ),
+            ).thenAnswer((invocation) async {
+              final createdAt = invocation.namedArguments[#createdAt] as int;
+              stampedCreatedAts.add(createdAt);
+              return _eventWithId(
+                'pref-${++eventCounter}',
+                createdAt: createdAt,
+              );
+            });
+            when(
+              () => mockNostrClient.publishEventAwaitOk(
+                any(),
+                targetRelays: any(named: 'targetRelays'),
+                timeout: any(named: 'timeout'),
+              ),
+            ).thenAnswer(
+              (invocation) async => outcomes.removeAt(0)(
+                invocation.positionalArguments.single as Event,
+              ),
+            );
+
+            final service1 = buildService(
+              now: () => fixedNow,
+              readLastPreferencesCreatedAt: (pubkey) async =>
+                  persistedByPubkey[pubkey],
+              writeLastPreferencesCreatedAt: (pubkey, createdAt) async {
+                persistedByPubkey[pubkey] = createdAt;
+              },
+            );
+
+            expect(
+              await service1.updatePreferences(
+                const NotificationPreferences(directMessagesEnabled: true),
+              ),
+              isFalse,
+            );
+            expect(persistedByPubkey, isEmpty);
+
+            expect(
+              await service1.updatePreferences(
+                const NotificationPreferences(directMessagesEnabled: true),
+              ),
+              isTrue,
+            );
+            expect(stampedCreatedAts[1], stampedCreatedAts[0]);
+            expect(persistedByPubkey[testPubkey], stampedCreatedAts[1]);
+            service1.dispose();
+
+            final service2 = buildService(
+              now: () => fixedNow,
+              readLastPreferencesCreatedAt: (pubkey) async =>
+                  persistedByPubkey[pubkey],
+              writeLastPreferencesCreatedAt: (pubkey, createdAt) async {
+                persistedByPubkey[pubkey] = createdAt;
+              },
+            );
+            expect(
+              await service2.updatePreferences(const NotificationPreferences()),
+              isTrue,
+            );
+            expect(stampedCreatedAts[2], stampedCreatedAts[1] + 1);
+            service2.dispose();
+          },
+        );
       });
     });
 

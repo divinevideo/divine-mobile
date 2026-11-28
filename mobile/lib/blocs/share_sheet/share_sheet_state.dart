@@ -27,55 +27,31 @@ sealed class ShareSheetActionResult {
   ShareSheetActionResult();
 }
 
-class ShareSheetSendSuccess extends ShareSheetActionResult {
-  ShareSheetSendSuccess({
-    required this.recipientNames,
-    this.recipientPubkey,
-    this.conversationId,
-  });
-
-  /// Display names of everyone the video was sent to, in selection order.
-  final List<String> recipientNames;
-
-  /// Recipient pubkey, passed as the conversation participant when the
-  /// success snackbar's "View chat" action navigates to the DM thread.
-  /// Set only for a single-recipient send.
-  final String? recipientPubkey;
-
-  /// NIP-17 conversation ID for "View chat" navigation. Set only for a
-  /// single-recipient send — a multi-recipient send has no single thread to
-  /// open, so no action is shown.
-  final String? conversationId;
-}
-
-/// A send where at least one recipient did not get the video now.
+/// A send finished, with the local outcome of every attempted recipient.
 ///
-/// Every recipient lands in exactly one list, in selection order, so the sheet
-/// can say who got it, who the retry sweep is still sending to, and who will
-/// never get it (#8672). A share to one recipient that did not go out lands
-/// here too — whether a retry is coming is exactly what it has to say.
-class ShareSheetSendIncomplete extends ShareSheetActionResult {
-  ShareSheetSendIncomplete({
-    required this.sentNames,
-    required this.retryingNames,
-    required this.notSentNames,
-  }) : assert(
-         retryingNames.isNotEmpty || notSentNames.isNotEmpty,
-         'A send with every recipient sent is a ShareSheetSendSuccess',
-       );
+/// When at least one recipient is queued the sheet hands [recipients] to the
+/// delivery banner and closes; when none is, it stays open on the draft.
+class ShareSheetEnqueueResult extends ShareSheetActionResult {
+  ShareSheetEnqueueResult(this.ownerPubkey, this.recipients);
 
-  /// Recipients the video was sent to.
-  final List<String> sentNames;
+  /// The account that sent the share.
+  final String ownerPubkey;
 
-  /// Recipients whose send is queued; the retry sweep keeps sending it.
-  final List<String> retryingNames;
+  /// Every attempted recipient in selection order, refused ones included.
+  final List<ShareDeliveryRecipient> recipients;
 
-  /// Recipients nothing will send it to: refused by the send policy, or failed
-  /// before the send was queued.
-  final List<String> notSentNames;
+  /// Whether no recipient reached the outgoing queue.
+  bool get noneQueued =>
+      recipients.every((r) => r.outcome.delivery == ShareDelivery.notSent);
 }
 
-/// The whole send threw before any recipient's outcome was known.
+/// The account that opened the sheet is no longer the signed-in one.
+///
+/// The sheet closes; nothing it held may be sent as the new account.
+class ShareSheetAccountChanged extends ShareSheetActionResult {}
+
+/// The whole send threw before committing, so nothing was queued and a resend
+/// cannot duplicate a message.
 class ShareSheetSendFailure extends ShareSheetActionResult {
   ShareSheetSendFailure();
 }
@@ -110,8 +86,7 @@ class ShareSheetShareViaTriggered extends ShareSheetActionResult {
   /// The share URL to pass as text to the platform share sheet.
   final String shareUrl;
 
-  /// Local file path of the downloaded thumbnail image, or `null` if
-  /// the download failed or no thumbnail was available.
+  /// A ready local thumbnail, if the cache found one before the tap.
   final String? thumbnailPath;
 
   /// Video title used as the share sheet title / Android `EXTRA_TITLE`.
@@ -126,10 +101,16 @@ class ShareSheetState extends Equatable {
   const ShareSheetState({
     this.status = ShareSheetStatus.initial,
     this.contacts = const [],
-    this.selectedRecipients = const [],
+    List<ShareableUser> selectedRecipients = const [],
+    this.disabledPubkeys = const {},
+    this.unavailablePubkeys = const {},
     this.isSending = false,
+    this.refusedRecipients = const [],
+    this.sendFailed = false,
+    this.ownerExpired = false,
+    this.readyThumbnailPath,
     this.actionResult,
-  });
+  }) : attemptedRecipients = selectedRecipients;
 
   /// Current loading status.
   final ShareSheetStatus status;
@@ -138,10 +119,44 @@ class ShareSheetState extends Equatable {
   final List<ShareableUser> contacts;
 
   /// Recipients selected for the message-send flow, in selection order.
-  final List<ShareableUser> selectedRecipients;
+  final List<ShareableUser> attemptedRecipients;
+
+  List<ShareableUser> get selectedRecipients => disabledPubkeys.isEmpty
+      ? attemptedRecipients
+      : attemptedRecipients
+            .where((r) => !disabledPubkeys.contains(r.pubkey))
+            .toList(growable: false);
+
+  /// Contacts shown but not selectable or sendable: ineligible under the
+  /// local block and mute policy, or in [unavailablePubkeys].
+  ///
+  /// A selected recipient that becomes disabled stays in
+  /// [attemptedRecipients] but leaves [selectedRecipients].
+  final Set<String> disabledPubkeys;
+
+  /// The part of [disabledPubkeys] that eligibility does not decide: contacts
+  /// the ranking snapshot excluded, and rows hydration left without an
+  /// identity. Kept so an eligibility change cannot re-enable them.
+  final Set<String> unavailablePubkeys;
 
   /// Whether a send operation is in progress.
   final bool isSending;
+
+  /// Every recipient of the latest send when none of them was queued, so the
+  /// sheet keeps naming them until the selection changes or a send starts.
+  final List<ShareDeliveryRecipient> refusedRecipients;
+
+  /// Whether the latest send threw before committing, kept until the
+  /// selection changes or a send starts.
+  final bool sendFailed;
+
+  /// Whether the account that opened the sheet has gone. Once set it stays
+  /// set, and the sheet refuses every further load, selection and send.
+  final bool ownerExpired;
+
+  /// A local image-cache file for the video's thumbnail, once the lookup that
+  /// starts with the sheet finds one. Share via attaches it when it is set.
+  final String? readyThumbnailPath;
 
   /// One-shot action result for BlocListener consumption.
   /// Cleared on next state emission.
@@ -158,15 +173,26 @@ class ShareSheetState extends Equatable {
     ShareSheetStatus? status,
     List<ShareableUser>? contacts,
     List<ShareableUser>? selectedRecipients,
+    Set<String>? disabledPubkeys,
+    Set<String>? unavailablePubkeys,
     bool? isSending,
+    List<ShareDeliveryRecipient>? refusedRecipients,
+    bool? sendFailed,
+    String? readyThumbnailPath,
     ShareSheetActionResult? actionResult,
     bool clearActionResult = false,
   }) {
     return ShareSheetState(
       status: status ?? this.status,
       contacts: contacts ?? this.contacts,
-      selectedRecipients: selectedRecipients ?? this.selectedRecipients,
+      selectedRecipients: selectedRecipients ?? attemptedRecipients,
+      disabledPubkeys: disabledPubkeys ?? this.disabledPubkeys,
+      unavailablePubkeys: unavailablePubkeys ?? this.unavailablePubkeys,
       isSending: isSending ?? this.isSending,
+      refusedRecipients: refusedRecipients ?? this.refusedRecipients,
+      sendFailed: sendFailed ?? this.sendFailed,
+      ownerExpired: ownerExpired,
+      readyThumbnailPath: readyThumbnailPath ?? this.readyThumbnailPath,
       actionResult: clearActionResult
           ? null
           : (actionResult ?? this.actionResult),
@@ -177,8 +203,14 @@ class ShareSheetState extends Equatable {
   List<Object?> get props => [
     status,
     contacts,
-    selectedRecipients,
+    attemptedRecipients,
+    disabledPubkeys,
+    unavailablePubkeys,
     isSending,
+    refusedRecipients,
+    sendFailed,
+    ownerExpired,
+    readyThumbnailPath,
     actionResult,
   ];
 }

@@ -844,6 +844,461 @@ void main() {
       });
     });
 
+    group('preserved tags', () {
+      const video = '34236:pubkey456:clip';
+      const article = '30023:pubkey123:some-article';
+      const person =
+          'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+      final now = DateTime.utc(2026, 11, 25);
+
+      CuratedList privateList({
+        List<List<String>> preservedTags = const [],
+        List<List<String>> preservedPrivateTags = const [],
+      }) => CuratedList(
+        id: 'my-list',
+        name: 'My List',
+        isPublic: false,
+        videoEventIds: const ['abc123', video],
+        createdAt: now,
+        updatedAt: now,
+        preservedTags: preservedTags,
+        preservedPrivateTags: preservedPrivateTags,
+      );
+
+      test('fromEvent keeps the tags it does not read, in order', () {
+        final event = _makeEvent(
+          tags: [
+            ['d', 'my-list'],
+            ['series', 'true'],
+            ['title', 'Meet the neighbors'],
+            ['L', 'video.divine'],
+            ['client', 'Other app'],
+            ['l', 'series', 'video.divine'],
+            ['a', article],
+            ['a', video],
+            ['t', 'music'],
+            ['alt', 'A video series'],
+          ],
+        );
+
+        final list = CuratedListConverter.fromEvent(event)!;
+
+        expect(list.preservedTags, [
+          ['series', 'true'],
+          ['L', 'video.divine'],
+          ['l', 'series', 'video.divine'],
+          ['a', article],
+          ['alt', 'A video series'],
+        ]);
+        expect(list.preservedPrivateTags, isEmpty);
+        expect(list.isSeries, isTrue);
+        expect(list.name, 'Meet the neighbors');
+        expect(list.tags, ['music']);
+        expect(list.videoEventIds, [video]);
+      });
+
+      test('toEventTags writes them back after the app metadata', () {
+        final event = _makeEvent(
+          tags: [
+            ['d', 'my-list'],
+            ['L', 'video.divine'],
+            ['title', 'My List'],
+            ['series', 'true'],
+            ['client', 'Other app'],
+            ['e', 'abc123'],
+          ],
+        );
+        final list = CuratedListConverter.fromEvent(event)!;
+
+        expect(CuratedListConverter.toEventTags(list), [
+          ['d', 'my-list'],
+          ['title', 'My List'],
+          ['playorder', 'chronological'],
+          ['L', 'video.divine'],
+          ['series', 'true'],
+          ['e', 'abc123'],
+        ]);
+      });
+
+      test('a list with no unknown tags round-trips to the same tags', () {
+        final list = CuratedList(
+          id: 'my-list',
+          name: 'My List',
+          description: 'A description',
+          videoEventIds: const ['abc123', video],
+          tags: const ['music'],
+          thumbnailEventId: 'abc123',
+          createdAt: now,
+          updatedAt: now,
+        );
+        final tags = CuratedListConverter.toEventTags(list);
+
+        final reread = CuratedListConverter.fromEvent(_makeEvent(tags: tags))!;
+
+        expect(reread.preservedTags, isEmpty);
+        expect(CuratedListConverter.toEventTags(reread), tags);
+      });
+
+      test('fromEvent keeps sealed tags other than videos sealed, unread', () {
+        final event = _makeEvent(
+          tags: [
+            ['d', 'my-list'],
+            ['title', 'My List'],
+          ],
+          content: _sealedPayload,
+        );
+
+        final list = CuratedListConverter.fromEvent(
+          event,
+          privateTags: const [
+            ['e', 'abc123'],
+            ['p', person],
+            ['title', 'Sealed title'],
+            ['a', video],
+            ['t', 'secret'],
+            ['a', article],
+          ],
+        )!;
+
+        expect(list.isPublic, isFalse);
+        expect(list.name, 'My List');
+        expect(list.tags, isEmpty);
+        expect(list.videoEventIds, ['abc123', video]);
+        expect(list.preservedTags, isEmpty);
+        expect(list.preservedPrivateTags, [
+          ['p', person],
+          ['title', 'Sealed title'],
+          ['t', 'secret'],
+          ['a', article],
+        ]);
+      });
+
+      test('a private list seals preserved tags that reference items', () {
+        final list = privateList(
+          preservedTags: const [
+            ['L', 'video.divine'],
+            ['p', person],
+            ['series', 'true'],
+          ],
+          preservedPrivateTags: const [
+            ['word', 'secret'],
+          ],
+        );
+
+        final clear = CuratedListConverter.toPrivateMetadataTags(list);
+        expect(
+          clear,
+          containsAllInOrder([
+            ['L', 'video.divine'],
+            ['series', 'true'],
+          ]),
+        );
+        expect(clear.any((tag) => tag.first == 'p'), isFalse);
+        expect(clear.any((tag) => tag.first == 'word'), isFalse);
+        expect(CuratedListConverter.toSealedTags(list), [
+          ['e', 'abc123'],
+          ['a', video],
+          ['p', person],
+          ['word', 'secret'],
+        ]);
+      });
+
+      test('a list made public publishes its sealed tags, '
+          'except those named like its own', () {
+        final list = privateList(
+          preservedTags: const [
+            ['L', 'video.divine'],
+          ],
+          preservedPrivateTags: const [
+            ['p', person],
+            ['title', 'Sealed title'],
+            ['t', 'secret'],
+            ['a', article],
+          ],
+        ).copyWith(isPublic: true);
+
+        expect(CuratedListConverter.toSealedTags(list), [
+          ['e', 'abc123'],
+          ['a', video],
+        ]);
+        final tags = CuratedListConverter.toEventTags(list);
+        expect(
+          tags,
+          containsAllInOrder([
+            ['L', 'video.divine'],
+            ['p', person],
+            ['a', article],
+            ['e', 'abc123'],
+            ['a', video],
+          ]),
+        );
+        expect(tags.where((tag) => tag.first == 'title'), [
+          ['title', 'My List'],
+        ]);
+        expect(tags.any((tag) => tag.first == 't'), isFalse);
+      });
+
+      test('the relay copy of a list made private compares equal to it', () {
+        final local = privateList(
+          preservedTags: const [
+            ['p', person],
+            ['L', 'video.divine'],
+          ],
+        );
+
+        final echo = CuratedListConverter.fromEvent(
+          _makeEvent(
+            tags: CuratedListConverter.toPrivateMetadataTags(local),
+            content: _sealedPayload,
+          ),
+          privateTags: CuratedListConverter.toSealedTags(local),
+        )!;
+
+        expect(echo.preservedTags, [
+          ['L', 'video.divine'],
+        ]);
+        expect(echo.preservedPrivateTags, [
+          ['p', person],
+        ]);
+        expect(
+          CuratedListConverter.toEventTags(echo),
+          CuratedListConverter.toEventTags(local),
+        );
+      });
+
+      test('isNonVideoItemTag names the NIP-51 items that are not videos', () {
+        for (final name in ['p', 'r', 'word', 'emoji', 'relay', 'group']) {
+          expect(CuratedListConverter.isNonVideoItemTag([name, 'x']), isTrue);
+        }
+        for (final tag in [
+          ['e', 'abc123'],
+          ['a', video],
+          ['a', article],
+          ['t', 'music'],
+          ['future', 'item'],
+          <String>[],
+        ]) {
+          expect(CuratedListConverter.isNonVideoItemTag(tag), isFalse);
+        }
+      });
+
+      test('recognizes only valid opaque address references as non-video', () {
+        for (final address in [
+          '30023:$person:article:slug',
+          '30023:$person:',
+          '10002:$person:',
+        ]) {
+          expect(
+            CuratedListConverter.isNonVideoItemTag(['a', address]),
+            isTrue,
+          );
+        }
+        for (final address in [
+          '34235:$person:video',
+          '34236:$person:',
+          '30023:short:article',
+          '30023:$person',
+          '99999:$person:article',
+          '10002:$person:unexpected',
+          '+30023:$person:article',
+        ]) {
+          expect(
+            CuratedListConverter.isNonVideoItemTag(['a', address]),
+            isFalse,
+          );
+        }
+      });
+
+      test('accepts complete visible and sealed item snapshots', () {
+        const items = [
+          ['e', person],
+          ['a', '34236:$person:clip'],
+          ['a', '30023:$person:article:slug'],
+        ];
+        expect(
+          CuratedListConverter.hasFullyKnownItemTags([
+            ...items,
+            ['future', 'metadata'],
+            <String>[],
+          ]),
+          isTrue,
+        );
+        expect(
+          CuratedListConverter.hasFullyKnownItemTags(
+            [
+              ...items,
+              ['p', person],
+            ],
+            isSealed: true,
+          ),
+          isTrue,
+        );
+      });
+
+      test('keeps malformed and unknown sealed item snapshots opaque', () {
+        expect(
+          CuratedListConverter.hasFullyKnownItemTags(null, isSealed: true),
+          isFalse,
+        );
+        for (final tag in [
+          ['a', article],
+          ['a', '99999:$person:article'],
+          ['a', '34236:$person:'],
+          ['a'],
+          ['e', 'short'],
+          ['p'],
+          ['word', ''],
+          ['future', 'item'],
+          <String>[],
+        ]) {
+          expect(
+            CuratedListConverter.hasFullyKnownItemTags([tag], isSealed: true),
+            isFalse,
+          );
+        }
+        expect(
+          CuratedListConverter.hasFullyKnownItemTags([
+            ['a', '99999:$person:article'],
+          ]),
+          isFalse,
+        );
+      });
+
+      test('the size limit counts the sealed preserved tags', () {
+        final list = privateList(
+          preservedPrivateTags: [
+            ['word', 'x' * NIP44V2.maxU16PlaintextSize],
+          ],
+        );
+
+        expect(CuratedListConverter.privateItemPayloadFits(list), isFalse);
+        expect(
+          CuratedListConverter.privateItemPayloadFits(
+            list.copyWith(preservedPrivateTags: const []),
+          ),
+          isTrue,
+        );
+      });
+
+      test('a list made private seals only what the sealed check reads back, '
+          'and keeps every other item tag in the clear', () {
+        const shapes = <(List<String>, {bool sealed})>[
+          (['p'], sealed: false),
+          (['p', ''], sealed: false),
+          (['p', person], sealed: true),
+          (['p', person, 'wss://relay.example', 'petname'], sealed: true),
+          (['p', '', 'wss://relay.example', 'petname'], sealed: true),
+          (['word'], sealed: false),
+          (['word', ''], sealed: false),
+          (['word', 'secret'], sealed: true),
+          (['r', ''], sealed: false),
+          (['r', 'https://example.com'], sealed: true),
+          (['emoji'], sealed: false),
+          (['emoji', 'smile', 'https://example.com/smile.png'], sealed: true),
+          (['emoji', '', 'https://example.com/secret.png'], sealed: true),
+          (['relay'], sealed: false),
+          (['relay', 'wss://relay.example'], sealed: true),
+          (['group', ''], sealed: false),
+          (['group', 'abc'], sealed: true),
+          (['a', '30023:$person:some-article'], sealed: true),
+        ];
+        for (final (tag, :sealed) in shapes) {
+          expect(
+            CuratedListConverter.hasFullyKnownItemTags([tag]),
+            isTrue,
+            reason: '$tag passes the public check',
+          );
+          final list = privateList(
+            preservedTags: [tag],
+          ).copyWith(videoEventIds: const []);
+          final sealedTags = CuratedListConverter.toSealedTags(list);
+          final clearTags = CuratedListConverter.toPrivateMetadataTags(list);
+
+          expect(
+            sealed ? sealedTags : clearTags,
+            contains(equals(tag)),
+            reason: '$tag is ${sealed ? 'sealed' : 'kept in the clear'}',
+          );
+          expect(
+            sealed ? clearTags : sealedTags,
+            isNot(contains(equals(tag))),
+            reason: '$tag is published once',
+          );
+          expect(
+            CuratedListConverter.hasFullyKnownItemTags(
+              sealedTags,
+              isSealed: true,
+            ),
+            isTrue,
+            reason: 'sealing $tag keeps the revision readable',
+          );
+        }
+      });
+
+      test('a private list seals and reads back an item whose first field '
+          'is empty and another is not', () {
+        const tag = ['emoji', '', 'https://example.com/secret.png'];
+        final list = privateList(
+          preservedTags: const [tag],
+        ).copyWith(videoEventIds: const []);
+        final sealedTags = CuratedListConverter.toSealedTags(list);
+        final clearTags = CuratedListConverter.toPrivateMetadataTags(list);
+
+        expect(clearTags, isNot(contains(equals(tag))));
+        expect(
+          CuratedListConverter.hasFullyKnownItemTags(
+            sealedTags,
+            isSealed: true,
+          ),
+          isTrue,
+        );
+        final read = CuratedListConverter.fromEvent(
+          _makeEvent(tags: clearTags, content: _sealedPayload),
+          privateTags: sealedTags,
+          isPrivateEvent: true,
+        )!;
+        expect(read.preservedTags, isEmpty);
+        expect(read.preservedPrivateTags, [tag]);
+      });
+
+      test('reads nothing but videos from the sealed part, even its first '
+          'record', () {
+        final list = CuratedListConverter.fromEvent(
+          _makeEvent(
+            tags: [
+              ['d', 'my-list'],
+              ['title', 'My List'],
+            ],
+            content: _sealedPayload,
+          ),
+          privateTags: const [
+            ['t', 'secret'],
+            ['e', person],
+          ],
+          isPrivateEvent: true,
+        )!;
+
+        expect(list.tags, isEmpty);
+        expect(list.videoEventIds, [person]);
+        expect(list.preservedPrivateTags, [
+          ['t', 'secret'],
+        ]);
+      });
+
+      test('toEventTags includes the sealed tags of a private list', () {
+        final list = privateList(
+          preservedPrivateTags: const [
+            ['p', person],
+          ],
+        );
+
+        expect(
+          CuratedListConverter.toEventTags(list),
+          contains(equals(['p', person])),
+        );
+      });
+    });
+
     group('extractDTag', () {
       test('returns null when no d-tag is present', () {
         final event = _makeEvent(

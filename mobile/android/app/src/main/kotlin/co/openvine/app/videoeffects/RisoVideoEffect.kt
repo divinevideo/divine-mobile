@@ -15,15 +15,26 @@ import com.divinevideo.divine_video_player.VideoFrameEffects
  * interleaved gradient noise of its own, with a soft edge, and the blue one
  * is read a little off to the side.
  *
- * Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1: how
- * far the picture turns into the print).
+ * Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how far
+ * the picture turns into the print), `color` and `color2` (the two inks, as
+ * ARGB integers: pink and blue by default) and `offset` (0–3: how far the
+ * second ink slips from the first, as a share of the default).
  */
 class RisoVideoEffect(params: Map<String, Any?>) : ShaderVideoEffect(FRAGMENT_SHADER) {
 
     private val intensity = intensityOf(params)
 
+    private val inkA = colorOf(params, "color", 0xFFFF47B0)
+
+    private val inkB = colorOf(params, "color2", 0xFF0078BF)
+
+    private val slip = numberOf(params, "offset", 1f, 0f, 3f)
+
     override fun setUniforms(shader: CustomVideoEffectShader, effectTimeUs: Long) {
         shader.setFloat("uIntensity", intensity)
+        shader.setFloats("uInkA", inkA)
+        shader.setFloats("uInkB", inkB)
+        shader.setFloat("uSlip", slip)
     }
 
     companion object {
@@ -42,6 +53,9 @@ class RisoVideoEffect(params: Map<String, Any?>) : ShaderVideoEffect(FRAGMENT_SH
         // covers everything.
         private const val FRAGMENT_SHADER = ShaderVideoEffect.PRELUDE + """
 uniform float uIntensity;
+uniform vec3 uInkA;
+uniform vec3 uInkB;
+uniform float uSlip;
 
 float grain(vec2 q) {
   return fract(52.9829189 * fract(dot(q, vec2(0.06711056, 0.00583715))));
@@ -56,11 +70,11 @@ void main() {
   float s = min(uSize.x, uSize.y);
   vec2 g = floor(p / max(1.0, s / 360.0));
   vec3 color = tap(p);
-  vec3 slipped = tap(p + vec2(0.006, -0.004) * s);
+  vec3 slipped = tap(p + vec2(0.006, -0.004) * s * uSlip);
   float pink = cover(1.0 - color.g, grain(g));
   float blue = cover(1.0 - slipped.r, grain(g + vec2(19.0, 7.0)));
-  vec3 riso = vec3(0.96, 0.94, 0.9) * mix(vec3(1.0), vec3(1.0, 0.28, 0.69), pink) *
-    mix(vec3(1.0), vec3(0.0, 0.47, 0.75), blue);
+  vec3 riso = vec3(0.96, 0.94, 0.9) * mix(vec3(1.0), uInkA, pink) *
+    mix(vec3(1.0), uInkB, blue);
   gl_FragColor = vec4(mix(color, riso, uIntensity), 1.0);
 }
 """

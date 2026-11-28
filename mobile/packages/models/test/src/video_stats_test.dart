@@ -1279,6 +1279,73 @@ void main() {
         expect(stats.toVideoEvent().textTrackLang, 'ja');
       });
 
+      test('skips a chapters track before the caption track in event '
+          'tags', () {
+        final json = {
+          'text_track_ref': 'https://media.divine.video/chapters',
+          'event': {
+            'id': 'test-id',
+            'pubkey': 'test-pubkey',
+            'created_at': 1700000000,
+            'kind': 34236,
+            'tags': [
+              ['d', 'video-1'],
+              ['url', 'https://example.com/video.mp4'],
+              [
+                'text-track',
+                'https://media.divine.video/chapters',
+                '',
+                'chapters',
+                'fr',
+              ],
+              [
+                'text-track',
+                '39307:abc123:subtitles:video-1',
+                '',
+                'captions',
+                'ja-JP',
+              ],
+            ],
+          },
+          'stats': {
+            'reactions': 0,
+            'comments': 0,
+            'reposts': 0,
+            'engagement_score': 0,
+          },
+        };
+
+        final stats = VideoStats.fromJson(json);
+
+        expect(stats.textTrackRef, equals('39307:abc123:subtitles:video-1'));
+        expect(stats.textTrackLang, 'ja');
+        expect(stats.toVideoEvent().textTrackRefs, [
+          '39307:abc123:subtitles:video-1',
+        ]);
+      });
+
+      test('keeps caption tag order and appends an indexed fallback', () {
+        const original = 'https://media.divine.video/edited.vtt';
+        const translation = 'https://media.divine.video/translated.vtt';
+        const indexed = '39307:abc123:subtitles:video-1';
+        final video = VideoStats.fromJson(const {
+          'id': 'test-id',
+          'pubkey': 'test-pubkey',
+          'created_at': 1700000000,
+          'd_tag': 'video-1',
+          'text_track_ref': indexed,
+          'tags': [
+            ['text-track', original, '', 'captions', 'ja-JP'],
+            ['text-track', translation, '', 'subtitles', 'en'],
+            ['text-track', original],
+          ],
+        }).toVideoEvent();
+
+        expect(video.textTrackRef, original);
+        expect(video.textTrackRefs, [original, translation, indexed]);
+        expect(video.textTrackLang, 'ja');
+      });
+
       test('normalizes empty text-track fields to null', () {
         final json = {
           'id': 'test-id',
@@ -2563,6 +2630,89 @@ void main() {
           expect(video.isArchiveVerificationUnknown, isTrue);
         });
       }
+    });
+
+    group('series', () {
+      final author = 'a' * 64;
+      final series = '30005:$author:our-story';
+
+      Map<String, dynamic> row({
+        Object? seriesField,
+        List<List<String>>? tags,
+      }) => {
+        'id': '1' * 64,
+        'pubkey': author,
+        'created_at': 1700000000,
+        'kind': 34236,
+        'd_tag': 'episode-3',
+        'title': 'Episode 3',
+        'video_url': 'https://example.com/episode-3.mp4',
+        'series': ?seriesField,
+        'tags': ?tags,
+      };
+
+      test('reads the series of a row that leaves its tags out', () {
+        final stats = VideoStats.fromJson(row(seriesField: series));
+
+        expect(stats.series, equals(series));
+        expect(stats.toVideoEvent().seriesCoordinate, equals(series));
+      });
+
+      test('reads the series from the tags of a row that has them', () {
+        final stats = VideoStats.fromJson(
+          row(
+            tags: [
+              ['d', 'episode-3'],
+              ['a', series, '', videoSeriesTagMarker],
+            ],
+          ),
+        );
+
+        expect(stats.series, isNull);
+        expect(stats.toVideoEvent().seriesCoordinate, equals(series));
+      });
+
+      test('drops a series that is a list by someone else', () {
+        final stats = VideoStats.fromJson(
+          row(seriesField: '30005:${'d' * 64}:their-story'),
+        );
+
+        expect(stats.toVideoEvent().seriesCoordinate, isNull);
+      });
+
+      test('prefers the series the row names over its tags', () {
+        final stats = VideoStats.fromJson(
+          row(
+            seriesField: series,
+            tags: [
+              ['a', '30005:$author:another-story', '', videoSeriesTagMarker],
+            ],
+          ),
+        );
+
+        expect(stats.toVideoEvent().seriesCoordinate, equals(series));
+      });
+
+      test("reads the tags when the row names someone else's list", () {
+        // An API row can name another creator's list; the tags still name ours.
+        final stats = VideoStats.fromJson(
+          row(
+            seriesField: '30005:${'d' * 64}:their-story',
+            tags: [
+              ['a', series, '', videoSeriesTagMarker],
+            ],
+          ),
+        );
+
+        expect(stats.toVideoEvent().seriesCoordinate, equals(series));
+      });
+
+      test('ignores a series that is not a string', () {
+        final stats = VideoStats.fromJson(row(seriesField: 42));
+
+        expect(stats.series, isNull);
+        expect(stats.toVideoEvent().seriesCoordinate, isNull);
+      });
     });
 
     group('toString', () {

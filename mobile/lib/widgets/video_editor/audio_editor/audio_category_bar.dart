@@ -8,11 +8,15 @@ class AudioCategoryBar extends StatelessWidget {
   const AudioCategoryBar({
     required this.controller,
     required this.onSelect,
+    this.categories = AudioCategory.standard,
     super.key,
   });
 
-  /// Drives the lists below; one tab per [AudioCategory], in order.
+  /// Drives the lists below; one tab per entry of [categories], in order.
   final TabController controller;
+
+  /// The lists the picker shows, in tab order.
+  final List<AudioCategory> categories;
 
   final ValueChanged<AudioCategory> onSelect;
 
@@ -22,15 +26,16 @@ class AudioCategoryBar extends StatelessWidget {
     return VideoEditorCategoryTabs(
       controller: controller,
       labels: [
-        for (final category in AudioCategory.values)
+        for (final category in categories)
           switch (category) {
             AudioCategory.forYou => l10n.exploreTabForYou,
             AudioCategory.popular => l10n.exploreTabPopular,
             AudioCategory.newest => l10n.exploreTabNew,
+            AudioCategory.songs => l10n.videoEditorAudioCategorySongs,
             AudioCategory.mySounds => l10n.videoEditorAudioCategoryMySounds,
           },
       ],
-      onTap: (index) => onSelect(AudioCategory.values[index]),
+      onTap: (index) => onSelect(categories[index]),
     );
   }
 }
@@ -46,6 +51,22 @@ enum AudioCategory {
   /// The newest community sounds.
   newest,
 
+  /// Songs from the song catalog: the most played, or a search's matches.
+  /// Experimental, so only listed while the catalog is available.
+  songs,
+
   /// The viewer's saved sounds.
-  mySounds,
+  mySounds;
+
+  /// The lists every picker shows.
+  static const List<AudioCategory> standard = [
+    forYou,
+    popular,
+    newest,
+    mySounds,
+  ];
+
+  /// The lists to show, with [songs] only when the song catalog is there.
+  static List<AudioCategory> available({required bool songs}) =>
+      songs ? values : standard;
 }

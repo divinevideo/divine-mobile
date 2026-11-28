@@ -160,6 +160,7 @@ class RelayBase extends Relay {
             // definition, including the one `forceReconnect` drives without
             // going through `doConnect`.
             _connectionIsFresh = true;
+            markSocketOpened();
             onConnected(source: 'stateStream-reconnect');
           }
         case ConnectionState.connecting:

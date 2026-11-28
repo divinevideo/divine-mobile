@@ -3,8 +3,10 @@
 
 import 'dart:async';
 
+import 'package:app_update_repository/app_update_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
@@ -15,6 +17,8 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/notifications/providers/notification_repository_provider.dart';
 import 'package:openvine/notifications/view/announcement_detail_screen.dart';
 import 'package:openvine/notifications/view/notifications_page.dart';
+import 'package:openvine/providers/app_version_provider.dart';
+import 'package:openvine/providers/install_source_provider.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/announcement_routes.dart';
 
@@ -38,11 +42,13 @@ void main() {
   Future<void> pump(
     WidgetTester tester,
     GoRouter router,
-    NotificationRepository? repository,
-  ) => tester.pumpWidget(
+    NotificationRepository? repository, {
+    List<Override> overrides = const [],
+  }) => tester.pumpWidget(
     ProviderScope(
       overrides: [
         notificationRepositoryProvider.overrideWithValue(repository),
+        ...overrides,
       ],
       child: MaterialApp.router(
         routerConfig: router,
@@ -74,13 +80,29 @@ void main() {
       );
       addTearDown(router.dispose);
       await pump(tester, router, null);
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('Untrusted route content'), findsNothing);
-      expect(
-        find.text(l10n.announcementUnavailable),
-        findsOneWidget,
+      expect(find.text(l10n.announcementUnavailable), findsNothing);
+      expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
+    });
+
+    testWidgets('a session without an announcement catalog reports failure', (
+      tester,
+    ) async {
+      final repository = _MockNotificationRepository();
+      when(() => repository.announcementsRepository).thenReturn(null);
+      final router = GoRouter(
+        initialLocation: AnnouncementDetailScreen.pathForId('missing'),
+        routes: announcementRoutes(),
       );
+      addTearDown(router.dispose);
+      await pump(tester, router, repository);
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text(l10n.commonSomethingWentWrong), findsOneWidget);
+      expect(find.text(l10n.announcementUnavailable), findsNothing);
+      expect(find.byType(DivineCircularProgressIndicator), findsNothing);
     });
 
     testWidgets('back from a cold entry falls back to notifications', (
@@ -98,7 +120,7 @@ void main() {
       );
       addTearDown(router.dispose);
       await pump(tester, router, null);
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       await tester.tap(
         find.bySemanticsIdentifier(DiVineAppBarLeading.backButtonSemanticId),
@@ -120,8 +142,12 @@ void main() {
       final announcements = _MockAnnouncementsRepository();
       final repository = _MockNotificationRepository();
       final announcement = item('current', 'Current announcement');
+      final refresh = Completer<bool>();
+      List<AnnouncementNotification>? catalog;
       when(() => repository.announcementsRepository).thenReturn(announcements);
-      when(() => announcements.items).thenReturn(const []);
+      when(() => announcements.hasCatalog).thenAnswer((_) => catalog != null);
+      when(() => announcements.items).thenAnswer((_) => catalog ?? const []);
+      when(announcements.refresh).thenAnswer((_) => refresh.future);
       when(announcements.watchSnapshot).thenAnswer((_) => snapshots.stream);
       final router = GoRouter(
         initialLocation: AnnouncementDetailScreen.pathForId('current'),
@@ -130,16 +156,20 @@ void main() {
       addTearDown(router.dispose);
       addTearDown(snapshots.close);
       await pump(tester, router, repository);
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
       expect(
         find.text(l10n.announcementUnavailable),
-        findsOneWidget,
+        findsNothing,
       );
 
+      verify(announcements.refresh).called(1);
+      catalog = [announcement];
       snapshots.add([announcement]);
+      refresh.complete(true);
       await tester.pumpAndSettle();
       expect(find.text('Current announcement'), findsOneWidget);
 
+      catalog = const [];
       snapshots.add(const []);
       await tester.pumpAndSettle();
       expect(find.text('Current announcement'), findsNothing);
@@ -147,6 +177,47 @@ void main() {
         find.text(l10n.announcementUnavailable),
         findsOneWidget,
       );
+    });
+
+    testWidgets('a failed cold lookup allows retry before confirming absence', (
+      tester,
+    ) async {
+      final announcements = _MockAnnouncementsRepository();
+      final repository = _MockNotificationRepository();
+      var hasCatalog = false;
+      final retry = Completer<void>();
+      var refreshCount = 0;
+      when(() => repository.announcementsRepository).thenReturn(announcements);
+      when(() => announcements.hasCatalog).thenAnswer((_) => hasCatalog);
+      when(() => announcements.items).thenReturn(const []);
+      when(announcements.refresh).thenAnswer((_) async {
+        if (++refreshCount < 2) return false;
+        await retry.future;
+        return true;
+      });
+      when(announcements.watchSnapshot).thenAnswer(
+        (_) => Stream.value(const []),
+      );
+      final router = GoRouter(
+        initialLocation: AnnouncementDetailScreen.pathForId('missing'),
+        routes: announcementRoutes(),
+      );
+      addTearDown(router.dispose);
+      await pump(tester, router, repository);
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.announcementUnavailable), findsNothing);
+      expect(find.text(l10n.commonSomethingWentWrong), findsOneWidget);
+      await tester.tap(find.text(l10n.commonRetry));
+      await tester.pump();
+      expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
+      expect(find.text(l10n.announcementUnavailable), findsNothing);
+
+      hasCatalog = true;
+      retry.complete();
+      await tester.pumpAndSettle();
+      expect(refreshCount, 2);
+      expect(find.text(l10n.announcementUnavailable), findsOneWidget);
     });
 
     testWidgets('changing the route ID resolves the new catalog item', (
@@ -157,7 +228,9 @@ void main() {
       final announcements = _MockAnnouncementsRepository();
       final repository = _MockNotificationRepository();
       when(() => repository.announcementsRepository).thenReturn(announcements);
+      when(() => announcements.hasCatalog).thenReturn(true);
       when(() => announcements.items).thenReturn([first, second]);
+      when(announcements.refresh).thenAnswer((_) async => true);
       when(announcements.watchSnapshot).thenAnswer(
         (_) => const Stream<List<AnnouncementNotification>>.empty(),
       );
@@ -174,6 +247,91 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Second announcement'), findsOneWidget);
       expect(find.text('First announcement'), findsNothing);
+    });
+  });
+
+  group('actions', () {
+    const id = 'with-action';
+    const updateToTwo = UpdateAppAnnouncementAction(
+      platform: 'android',
+      channel: 'google_play',
+      version: '2.0.0',
+    );
+
+    Future<void> pumpAction(
+      WidgetTester tester,
+      AnnouncementAction action, {
+      String installedVersion = '1.0.0',
+    }) async {
+      final announcements = _MockAnnouncementsRepository();
+      final repository = _MockNotificationRepository();
+      when(() => repository.announcementsRepository).thenReturn(announcements);
+      when(() => announcements.hasCatalog).thenReturn(true);
+      when(() => announcements.items).thenReturn([
+        AnnouncementNotification(
+          announcementId: id,
+          title: 'Announcement with an action',
+          body: 'A current message from the catalog.',
+          timestamp: DateTime.utc(2026, 10, 23),
+          expiresAt: DateTime.utc(2026, 11, 23),
+          action: action,
+        ),
+      ]);
+      when(announcements.refresh).thenAnswer((_) async => true);
+      when(announcements.watchSnapshot).thenAnswer(
+        (_) => const Stream<List<AnnouncementNotification>>.empty(),
+      );
+      final router = GoRouter(
+        initialLocation: AnnouncementDetailScreen.pathForId(id),
+        routes: announcementRoutes(),
+      );
+      addTearDown(router.dispose);
+      await pump(
+        tester,
+        router,
+        repository,
+        overrides: [
+          installSourceProvider.overrideWithValue(InstallSource.playStore),
+          appVersionProvider.overrideWithValue(installedVersion),
+        ],
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('a contest action offers to view the contest', (tester) async {
+      await pumpAction(
+        tester,
+        ContestAnnouncementAction(
+          url: Uri.parse('https://divine-challenges.pages.dev/contests/spring'),
+        ),
+      );
+
+      expect(
+        find.widgetWithText(DivineButton, l10n.announcementViewContest),
+        findsOneWidget,
+      );
+      expect(find.text(l10n.updateAction), findsNothing);
+    });
+
+    testWidgets('an update action offers to update an older matching install', (
+      tester,
+    ) async {
+      await pumpAction(tester, updateToTwo);
+
+      expect(
+        find.widgetWithText(DivineButton, l10n.updateAction),
+        findsOneWidget,
+      );
+      expect(find.text(l10n.announcementViewContest), findsNothing);
+    });
+
+    testWidgets('an update action is hidden from an install already on it', (
+      tester,
+    ) async {
+      await pumpAction(tester, updateToTwo, installedVersion: '2.0.0');
+
+      expect(find.text('Announcement with an action'), findsOneWidget);
+      expect(find.text(l10n.updateAction), findsNothing);
     });
   });
 }

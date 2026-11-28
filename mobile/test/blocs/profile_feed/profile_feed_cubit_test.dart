@@ -4,6 +4,7 @@
 
 import 'dart:async';
 
+import 'package:analytics/analytics.dart';
 import 'package:cache_sync/cache_sync.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:fake_async/fake_async.dart';
@@ -16,12 +17,15 @@ import 'package:openvine/blocs/profile_feed/profile_feed_cubit.dart';
 import 'package:openvine/blocs/profile_shared/profile_video_offset_snapshot.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/observability/crash_reporter.dart';
+import 'package:openvine/observability/screen_load_telemetry.dart';
 import 'package:openvine/repositories/profile_pins_repository.dart';
 import 'package:openvine/services/divine_host_filter_service.dart';
 import 'package:openvine/services/feed_aspect_ratio_preference_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:videos_repository/videos_repository.dart';
+
+import '../../helpers/screen_load_recorder.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
@@ -210,15 +214,17 @@ class _Harness {
     ).thenThrow(error);
   }
 
-  ProfileFeedCubit build() => ProfileFeedCubit(
-    authorPubkey: _author,
-    videosRepository: repo,
-    videoEventService: ves,
-    blocklistRepository: blocklist,
-    profilePinsRepository: pins,
-    enrichVideos: enrichOverride ?? _noopEnrich,
-    retryTriggers: retryTriggers.stream,
-  );
+  ProfileFeedCubit build({ScreenLoadTelemetry? loadTelemetry}) =>
+      ProfileFeedCubit(
+        authorPubkey: _author,
+        videosRepository: repo,
+        videoEventService: ves,
+        blocklistRepository: blocklist,
+        profilePinsRepository: pins,
+        enrichVideos: enrichOverride ?? _noopEnrich,
+        retryTriggers: retryTriggers.stream,
+        loadTelemetry: loadTelemetry,
+      );
 }
 
 void main() {
@@ -1123,6 +1129,29 @@ void main() {
         });
       },
     );
+
+    test('a relay snapshot fills missing series for the same video', () {
+      fakeAsync((clock) {
+        final episode = _video('episode', dTag: 'episode-3');
+        const series = '30005:$_author:our-story';
+        final cubit = buildReadyWithClock(_result([episode]), clock);
+
+        when(() => h.ves.authorVideos(_author)).thenReturn([
+          episode.copyWith(
+            nostrEventTags: [
+              ['a', series, '', videoSeriesTagMarker],
+            ],
+          ),
+        ]);
+        h.onChanged!();
+        clock.elapse(ProfileFeedCubit.relaySnapshotAudit);
+        clock.flushMicrotasks();
+
+        expect(cubit.state.videos.single.seriesCoordinate, equals(series));
+        unawaited(cubit.close());
+        clock.flushMicrotasks();
+      });
+    });
 
     test(
       'relay-snapshot bursts coalesce into a single reconciliation (audit)',
@@ -2393,6 +2422,104 @@ void main() {
             skipCache: any(named: 'skipCache'),
           ),
         );
+      });
+    });
+
+    group('load telemetry', () {
+      late ScreenLoadRecorder recorder;
+
+      setUp(() => recorder = ScreenLoadRecorder());
+
+      ProfileFeedCubit buildTimed() =>
+          h.build(loadTelemetry: recorder.telemetry(AnalyticsSurface.profile));
+
+      /// Holds the REST author feed open, so a test controls what shows first.
+      ///
+      /// The cold load runs `sequential()`, so closing the cubit waits for it:
+      /// each test answers the feed before the cubit's close is awaited.
+      Completer<AuthorFeedResult> holdAuthorFeed() {
+        final feed = Completer<AuthorFeedResult>();
+        when(
+          () => h.repo.getAuthorFeed(
+            authorPubkey: any(named: 'authorPubkey'),
+            offset: any(named: 'offset'),
+            relaySeed: any(named: 'relaySeed'),
+            skipCache: any(named: 'skipCache'),
+          ),
+        ).thenAnswer((_) => feed.future);
+        return feed;
+      }
+
+      test('completes when the first page of videos shows', () async {
+        h.stubAuthorFeed(
+          _result([_video('v1'), _video('v2')], nextOffset: 2, hasMore: true),
+        );
+        final cubit = buildTimed();
+        addTearDown(cubit.close);
+        await pumpEventQueue();
+
+        expect(recorder.results, [SurfaceLoadResult.success]);
+        expect(
+          recorder.loads.single,
+          allOf(
+            containsPair(AnalyticsParam.itemCount, 2),
+            containsPair(AnalyticsParam.hasMore, 1),
+          ),
+        );
+      });
+
+      test('completes on the persisted videos, before REST answers', () async {
+        await seedSnapshot(
+          ProfileVideoOffsetSnapshot(
+            videos: [_video('v1', createdAt: 5000)],
+            nextOffset: 50,
+            totalVideoCount: 80,
+            hasMoreContent: true,
+          ),
+        );
+        final feed = holdAuthorFeed();
+        final cubit = buildTimed();
+        addTearDown(cubit.close);
+        await pumpEventQueue();
+
+        expect(cubit.state.isRefreshing, isTrue);
+        expect(recorder.results, [SurfaceLoadResult.success]);
+
+        feed.complete(_result([_video('v1', createdAt: 5000)]));
+        await pumpEventQueue();
+        expect(recorder.results, [SurfaceLoadResult.success]);
+      });
+
+      test('reports empty for a profile without videos', () async {
+        h.stubAuthorFeed(_result(const [], hasMore: false));
+        final cubit = buildTimed();
+        addTearDown(cubit.close);
+        await pumpEventQueue();
+
+        expect(recorder.results, [SurfaceLoadResult.empty]);
+      });
+
+      test('reports failure when the cold load fails', () async {
+        h.stubAuthorFeedThrows(Exception('offline'));
+        final cubit = buildTimed();
+        addTearDown(cubit.close);
+        await pumpEventQueue();
+
+        expect(cubit.state.status, ProfileFeedStatus.failure);
+        expect(recorder.results, [SurfaceLoadResult.failure]);
+      });
+
+      test('reports dismissed when closed during the cold load', () async {
+        final feed = holdAuthorFeed();
+        final cubit = buildTimed();
+        await pumpEventQueue();
+        expect(cubit.state.isLoadingVideos, isTrue);
+
+        final closing = cubit.close();
+        feed.complete(_result([_video('v1')]));
+        await closing;
+
+        expect(recorder.results, [SurfaceLoadResult.dismissed]);
       });
     });
   });

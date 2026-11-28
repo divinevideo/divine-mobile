@@ -48,6 +48,22 @@ class _AuthRequiredPublishRetry {
   bool resent = false;
 }
 
+/// The one-shot queries, COUNT requests and awaited publishes a relay object
+/// still owed an answer to when it left the pool.
+class _OrphanedRequests {
+  _OrphanedRequests(this.queries, this.counts, this.publishes);
+
+  final List<Subscription> queries;
+  final List<
+    ({String id, Completer<CountResponse> completer, List<dynamic>? request})
+  >
+  counts;
+
+  /// Awaited publishes written to the removed object that it never answered,
+  /// by event id (#11446).
+  final SavedPublishes publishes;
+}
+
 class RelayPool {
   // avoid to send these events to cache relay
   static List<int> cacheAvoidEvents = [
@@ -115,6 +131,21 @@ class RelayPool {
   /// [_relaysStillReplaying] could still take them, with the last reason.
   final Map<String, String> _refusedAwaitingReplay = {};
 
+  /// What a relay object removed from the pool still owed an answer to, by
+  /// url, until the object that replaces it takes it over in [add] or the
+  /// removal's follow-up ends it (#11343).
+  ///
+  /// `RelayManager` reconnects a relay by removing its object and adding a
+  /// new one for the same url. A subscription id names a request on one
+  /// socket only (NIP-01), so whatever the old socket was still answering
+  /// has to be asked again on the new one.
+  final Map<String, _OrphanedRequests> _orphanedRequests = {};
+
+  /// Replacement relays still dialling after taking over another object's
+  /// requests. Each sends them as it connects, so it still counts as able to
+  /// answer them; see [_canStillSettleQuery].
+  final Set<Relay> _relaysTakingOver = {};
+
   // init query
   final Map<String, Subscription> _initQuery = {};
 
@@ -128,9 +159,18 @@ class RelayPool {
 
   final Set<String> _queryFanoutInProgress = {};
 
-  /// Tracks which relays have sent EOSE for each subscription.
-  /// Used to determine when all relays have finished sending stored events.
-  final Map<String, Set<String>> _subscriptionEoseRelays = {};
+  /// Which REQs have drawn EOSE for each live subscription since its
+  /// [Subscription.onEose] last fired.
+  final Map<String, Map<String, (int, int)>> _subscriptionEoseRelays = {};
+
+  /// REQ resends after AUTH, keyed by subscription id and relay URL.
+  final Map<String, Map<String, int>> _liveRequestResends = {};
+
+  /// Armed [subscriptionEoseSettleWindow] timers, keyed by subscription id.
+  final Map<String, Timer> _subscriptionEoseSettleTimers = {};
+
+  /// Live subscriptions whose [Subscription.onEose] has fired at least once.
+  final Set<String> _subscriptionEoseFired = {};
 
   /// Subscription ids the pool released most recently, so a late `EOSE` or
   /// `CLOSED` for one still logs which request it answered.
@@ -324,6 +364,17 @@ class RelayPool {
   /// let a later full-settlement query skip its hold.
   final Set<String> _queryReachedNoRelay = {};
 
+  /// One-shot queries a relay took and can no longer answer: it left the pool
+  /// with nothing replacing it, or its replacement could not reconnect to ask
+  /// again (#11343).
+  ///
+  /// Unlike [_queryAnswered] this proves nothing about the fan-out being
+  /// served, so it never arms [querySettleWindow] against the relays still
+  /// answering. It only lets a [requireAllRelaysSettled] read end once no
+  /// relay holds the query, instead of waiting for an answer that cannot
+  /// come; the outcome reports the lost relay as dropped.
+  final Set<String> _queryLostRelay = {};
+
   /// Track publishes awaiting OK confirmations (per event id).
   final Map<String, PublishTracker> _pendingPublishes = {};
 
@@ -348,6 +399,7 @@ class RelayPool {
     this.minSubscriptionAgeBeforeRepair = const Duration(seconds: 10),
     this.minQueryAgeBeforeRepair = const Duration(seconds: 4),
     this.subscriptionSilenceProbe = const Duration(seconds: 8),
+    this.subscriptionEoseSettleWindow = const Duration(seconds: 15),
     this.tempRelayIdleTimeout = const Duration(seconds: 120),
     this.tempRelaySweepInterval = const Duration(seconds: 60),
   });
@@ -501,6 +553,19 @@ class RelayPool {
   /// never judged at all rather than being judged and then excused.
   Duration subscriptionSilenceProbe;
 
+  /// How long the relays that owe a live subscription its first EOSE can hold
+  /// [Subscription.onEose] back after another relay sent one, while none of
+  /// them sends the subscription anything.
+  ///
+  /// Each event one of them sends restarts it, as for [querySettleWindow]. The
+  /// default outlasts [subscriptionSilenceProbe], so a relay the probe
+  /// reconnects can still answer the REQ it re-sends. Counted from the first
+  /// EOSE, it also outlasts any subscriber timeout of 15s or less counted from
+  /// the subscribe, so such a subscriber gives up before it ends. It starts
+  /// only once some relay has sent EOSE: while none has, onEose waits as it
+  /// always has.
+  Duration subscriptionEoseSettleWindow;
+
   /// Controls whether [_dispatchTypedFrame] performs expensive Schnorr
   /// verification. The event id is always recomputed first; policy skips only
   /// bypass the signature check for relay origins the app is configured to
@@ -623,6 +688,35 @@ class RelayPool {
     )[relay.url] = retry;
   }
 
+  /// Lets an AUTH retry run again after the next writable socket authenticates
+  /// because the previous socket took its `OK` with it (#11446).
+  void _allowAuthRetryOnNewSocket(Relay relay) {
+    for (final entry in _retryEntriesForRelay(relay)) {
+      if (relay.relayStatus.writeAccess) {
+        entry.value.resent = false;
+      } else {
+        _endAuthRetryWithoutWriteAccess(entry.key, relay.url);
+      }
+    }
+  }
+
+  void _endAuthRetryWithoutWriteAccess(String eventId, String relayUrl) {
+    // AUTH retry entries are keyed on URL. A read-only connection must not
+    // discard a retry the writable normal or temp connection can still send.
+    if (_relays[relayUrl]?.relayStatus.writeAccess == true ||
+        _tempRelays[relayUrl]?.relayStatus.writeAccess == true) {
+      return;
+    }
+    _endPublishWithoutWriteAccess(eventId, relayUrl);
+  }
+
+  void _endPublishWithoutWriteAccess(String eventId, String relayUrl) {
+    _removeAuthRequiredPublish(eventId, relayUrl);
+    final tracker = _pendingPublishes[eventId];
+    tracker?.clearDeferredRejection(relayUrl);
+    tracker?.onRelayLost(relayUrl);
+  }
+
   void _removeAuthRequiredPublish(String eventId, String relayUrl) {
     final retriesForEvent = _authRequiredPublishRetries[eventId];
     if (retriesForEvent == null) return;
@@ -647,8 +741,13 @@ class RelayPool {
 
   Future<void> _retryAuthRequiredPublishesForRelay(Relay relay) async {
     for (final entry in _retryEntriesForRelay(relay)) {
+      if (!_holdsRelay(relay)) return;
       final eventId = entry.key;
       final retry = entry.value;
+      if (!relay.relayStatus.writeAccess) {
+        _endAuthRetryWithoutWriteAccess(eventId, relay.url);
+        continue;
+      }
       // A resent entry lingers only as the dedup marker; do not push it again
       // on a later AUTH/OK trigger for this relay.
       if (retry.resent) continue;
@@ -676,7 +775,7 @@ class RelayPool {
             deadline: retry.deadline,
           )
           .timeout(timeout, onTimeout: () => false);
-      if (!sent) {
+      if (!sent && _holdsRelay(relay)) {
         // The relay answered — `auth-required` is why we are here — so it is
         // not an unreachable target, whatever happened to the resend. Report
         // what it said, the same as the expired-deadline branch above; a
@@ -735,6 +834,40 @@ class RelayPool {
     relay.recordSentFrame(message);
   }
 
+  /// Keeps a just-written awaited EVENT on [relay] until the relay answers it
+  /// or the publish settles, so it is sent again if the socket it went out on
+  /// is replaced or reconnects before the `OK` arrives (#11446).
+  ///
+  /// Only a publish with a [PublishTracker] still waiting for [relay] is kept:
+  /// a fire-and-forget frame has nobody to report an answer to.
+  void _retainUntilAnswered(
+    Relay relay,
+    List<dynamic> message,
+    DateTime? deadline,
+  ) {
+    if (deadline == null || message.length < 2 || message[0] != 'EVENT') {
+      return;
+    }
+    final event = message[1];
+    if (event is! Map) return;
+    final eventId = event['id'];
+    if (eventId is! String) return;
+    if (!(_pendingPublishes[eventId]?.isAwaiting(relay.url) ?? false)) return;
+    relay.savePublish(eventId, message, deadline);
+  }
+
+  /// Stops every relay object holding the publish of [eventId], once it has
+  /// settled and nothing waits for another answer.
+  void _forgetSavedPublish(String eventId) {
+    for (final relay in [
+      ..._relaysSnapshot(),
+      ..._cacheRelaysSnapshot(),
+      ..._tempRelaysSnapshot(),
+    ]) {
+      relay.forgetPublish(eventId);
+    }
+  }
+
   Future<bool> add(
     Relay relay, {
     bool autoSubscribe = false,
@@ -758,8 +891,17 @@ class RelayPool {
 
     relay.onMessage = _onEvent;
     _observeRelayStatus(relay);
+    final takenOver = _takeOverOrphanedRequests(relay);
 
-    if (!autoSubscribe) return _connectAdded(relay, init: init);
+    if (!autoSubscribe) {
+      var connected = false;
+      try {
+        connected = await _connectAdded(relay, init: init);
+        return connected;
+      } finally {
+        _finishTakeover(relay, takenOver, connected: connected);
+      }
+    }
     _relaysStillReplaying.add(relay);
     var replaySucceeded = false;
     try {
@@ -777,7 +919,70 @@ class RelayPool {
           unsentIds: null,
         );
       }
+      _finishTakeover(relay, takenOver, connected: replaySucceeded);
       _settleRefusedAwaitingReplay();
+    }
+  }
+
+  /// Hands [relay] what the previous object for its url still owed an answer
+  /// to, before [relay] connects, so its socket asks for it again (#11343).
+  ///
+  /// A one-shot query is saved on [relay], which re-issues saved requests on
+  /// a fresh socket, and the query's outcome judges [relay] on its own answer
+  /// in place of the object it replaces. A COUNT is queued to go out the same
+  /// way, and so is an awaited publish the old socket never answered
+  /// (#11446). Until the dial ends, [relay] counts as able to answer the
+  /// queries and is not judged silent; a publish keeps its settle window, so a
+  /// sibling relay that answered can still settle it first.
+  _OrphanedRequests? _takeOverOrphanedRequests(Relay relay) {
+    final orphans = _orphanedRequests.remove(relay.url);
+    if (orphans == null) return null;
+    for (final query in orphans.queries) {
+      relay.saveQuery(query);
+      _queryOutcomes[query.id]?.recordTakeover(relay);
+    }
+    orphans.publishes.forEach(relay.adoptPublish);
+    for (final count in orphans.counts) {
+      final request = count.request;
+      if (request == null) {
+        _failOrphanedCount(count.completer, relay.url, count.id);
+      } else {
+        relay.adoptCountQuery(count.id, count.completer, request);
+      }
+    }
+    _relaysTakingOver.add(relay);
+    return orphans;
+  }
+
+  /// Ends [relay]'s takeover of [takenOver] once its dial is over.
+  ///
+  /// Once connected, its socket asks for them again as it replays its saved
+  /// requests. Otherwise nothing will, so they end now as unanswered by it, as
+  /// on a removal with no replacement. A relay replaced again meanwhile handed
+  /// them on already.
+  void _finishTakeover(
+    Relay relay,
+    _OrphanedRequests? takenOver, {
+    required bool connected,
+  }) {
+    if (takenOver == null) return;
+    _relaysTakingOver.remove(relay);
+    if (connected || !_holdsRelay(relay)) return;
+    for (final count in takenOver.counts) {
+      relay.failCountQuery(
+        count.id,
+        '${relay.url} could not reconnect to answer it',
+      );
+    }
+    for (final query in takenOver.queries) {
+      if (relay.discardQuery(query.id)) {
+        _fireQueryCompleteIfSettled(query.id, afterRelayLost: true);
+      }
+    }
+    for (final eventId in takenOver.publishes.keys) {
+      if (relay.forgetPublish(eventId)) {
+        _pendingPublishes[eventId]?.onRelayLost(relay.url);
+      }
     }
   }
 
@@ -891,19 +1096,24 @@ class RelayPool {
   /// `connect()`; the socket and heartbeat timer it opens then outlive the
   /// [removeAll] that was supposed to close them, because the relay holding
   /// them is disposed a moment later and nothing can reach them again (#7367).
-  /// Calling this first closes that window: the probes are disarmed and every
-  /// path that could start a connection turns into a no-op.
+  /// Calling this first closes that window: the probes and EOSE settle windows
+  /// are disarmed and every path that could start a connection turns into a
+  /// no-op.
   void beginClose() {
     if (_closed) return;
     _closed = true;
-    _cancelSilenceProbes();
+    _cancelSubscriptionTimers();
   }
 
-  void _cancelSilenceProbes() {
+  void _cancelSubscriptionTimers() {
     for (final probe in _subscriptionSilenceProbes.values) {
       probe.cancel();
     }
     _subscriptionSilenceProbes.clear();
+    for (final timer in _subscriptionEoseSettleTimers.values) {
+      timer.cancel();
+    }
+    _subscriptionEoseSettleTimers.clear();
   }
 
   /// Removes every relay from the pool.
@@ -927,7 +1137,7 @@ class RelayPool {
     _tempRelaySweepTimer = null;
     // Nothing left to repair, and a probe outliving the pool would fire into
     // an empty relay set on every armed subscription.
-    _cancelSilenceProbes();
+    _cancelSubscriptionTimers();
     // As in [remove]: a caller starting over re-adds relays synchronously.
     scheduleMicrotask(_settleRefusedAwaitingReplay);
   }
@@ -940,6 +1150,9 @@ class RelayPool {
   /// and a counter that restarted could match it to the new socket's
   /// challenge.
   void _forgetRelayBookkeeping(String url) {
+    for (final subId in _subscriptionEoseRelays.keys.toList()) {
+      _withdrawLiveEose(subId, url);
+    }
     _lastSilentRepairAt.remove(url);
     _authHandshakeStartedAt.remove(url);
     _authGateClosed.remove(url);
@@ -965,22 +1178,73 @@ class RelayPool {
 
   void remove(String url, {int relayType = RelayType.normal}) {
     log('Removing $url');
-    if (relayType == RelayType.normal) {
-      _relays[url]?.disconnect();
-      _relays[url]?.dispose();
-      _relays.remove(url);
-    } else if (relayType == RelayType.cache) {
-      _cacheRelays[url]?.disconnect();
-      _cacheRelays[url]?.dispose();
-      _cacheRelays.remove(url);
+    final removed = switch (relayType) {
+      RelayType.normal => _relays.remove(url),
+      RelayType.cache => _cacheRelays.remove(url),
+      _ => null,
+    };
+    if (removed != null) {
+      _orphanRequestsOf(removed);
+      removed.disconnect();
+      removed.dispose();
     }
     _forgetRelayBookkeeping(url);
     // After the caller's synchronous follow-up, so a reconnect that re-adds
     // the same URL is judged on the replacement rather than on its absence.
     scheduleMicrotask(() {
+      _endOrphanedRequests(url);
       _recheckStoredEventsPhasesFor(url);
       _settleRefusedAwaitingReplay();
     });
+  }
+
+  /// Keeps what [relay] still owed an answer to as it leaves the pool, for
+  /// the object that replaces it under the same url; see [_orphanedRequests].
+  ///
+  /// The queries stay on [relay] as well, so an event its socket delivered
+  /// before closing, still being verified off the main isolate, reaches the
+  /// caller. The query's outcome ignores what [relay] reports once a
+  /// replacement has taken the query over.
+  void _orphanRequestsOf(Relay relay) {
+    final queries = relay.getQueries();
+    final counts = relay.takePendingCountQueries();
+    final publishes = relay.takeSavedPublishes();
+    if (queries.isEmpty && counts.isEmpty && publishes.isEmpty) return;
+    final earlier = _orphanedRequests[relay.url];
+    _orphanedRequests[relay.url] = _OrphanedRequests(
+      [...?earlier?.queries, ...queries],
+      [...?earlier?.counts, ...counts],
+      {...?earlier?.publishes, ...publishes},
+    );
+  }
+
+  /// Ends what a removed relay still owed when no replacement for its url
+  /// took it over: no socket is left to answer it.
+  void _endOrphanedRequests(String url) {
+    final orphans = _orphanedRequests.remove(url);
+    if (orphans == null) return;
+    for (final count in orphans.counts) {
+      _failOrphanedCount(count.completer, url, count.id);
+    }
+    for (final query in orphans.queries) {
+      _fireQueryCompleteIfSettled(query.id, afterRelayLost: true);
+    }
+    for (final eventId in orphans.publishes.keys) {
+      _pendingPublishes[eventId]?.onRelayLost(url);
+    }
+  }
+
+  void _failOrphanedCount(
+    Completer<CountResponse> completer,
+    String url,
+    String id,
+  ) {
+    if (completer.isCompleted) return;
+    completer.completeError(
+      CountNotSupportedException(
+        '$url left the relay pool before answering COUNT $id',
+      ),
+    );
   }
 
   /// Whether a pooled relay is still connecting or replaying [_subscriptions],
@@ -1011,9 +1275,11 @@ class RelayPool {
   /// its subscriber why.
   void _endRefusedSubscription(String subId, String reason) {
     _subscriptionSilenceProbes.remove(subId)?.cancel();
+    _clearLiveEoseWindow(subId);
+    _subscriptionEoseFired.remove(subId);
+    _liveRequestResends.remove(subId);
     _refusedAwaitingReplay.remove(subId);
     final subscription = _subscriptions.remove(subId);
-    _subscriptionEoseRelays.remove(subId);
     _storedEventsPhases.remove(subId);
     _subscriptionSentAt.remove(subId);
     if (subscription != null) {
@@ -1338,6 +1604,8 @@ class RelayPool {
   /// absence for callers that require full settlement.
   /// Set [afterFanoutReachedNoRelay] when the REQ fan-out ended with no relay
   /// having taken the query.
+  /// Set [afterRelayLost] when a relay that took the query can no longer
+  /// answer it; see [_queryLostRelay].
   ///
   /// A fourth fact takes no flag because it is read from the relays
   /// themselves: whether any relay still holds this query while being unable
@@ -1353,12 +1621,14 @@ class RelayPool {
     bool afterTerminalFrame = false,
     bool afterClosedWithoutAnswer = false,
     bool afterFanoutReachedNoRelay = false,
+    bool afterRelayLost = false,
   }) {
     final callback = _queryCompleteCallbacks[subId];
     if (callback == null) return;
     if (afterTerminalFrame) _queryAnswered.add(subId);
     if (afterClosedWithoutAnswer) _queryClosedWithoutAnswer.add(subId);
     if (afterFanoutReachedNoRelay) _queryReachedNoRelay.add(subId);
+    if (afterRelayLost) _queryLostRelay.add(subId);
     if (_queryFanoutInProgress.contains(subId)) return;
 
     final list = [
@@ -1414,9 +1684,13 @@ class RelayPool {
     // [strandedOnBlockedRelay] joins the two existing reasons to keep waiting.
     // It cannot coincide with [_queryReachedNoRelay]: a fan-out no relay took
     // leaves no relay holding the query, so nothing can be stranded on one.
+    // A lost relay ([_queryLostRelay]) cannot answer either, so once nothing
+    // else holds the query, waiting on it is as pointless as on no relay.
     if (_queriesRequiringFullSettlement.contains(subId) &&
         !_queryReachedNoRelay.contains(subId) &&
-        (!_queryAnswered.contains(subId) || strandedOnBlockedRelay)) {
+        (strandedOnBlockedRelay ||
+            !(_queryAnswered.contains(subId) ||
+                _queryLostRelay.contains(subId)))) {
       return;
     }
 
@@ -1497,9 +1771,12 @@ class RelayPool {
   /// replay after NIP-42. One part-way through its answer, or still answering
   /// the requests queued ahead of this one on the same socket, keeps sending
   /// frames; only one that has gone quiet stops, and only time tells the two
-  /// apart. A relay mid-handshake is not silent. A relay the pool no longer
-  /// holds, removed or replaced by a fresh object for its url, can never
-  /// answer, so it counts as silent at once.
+  /// apart. A relay mid-handshake is not silent, and neither is one still
+  /// dialling to take over a request from the object it replaced, which has
+  /// had no socket to send on yet. A relay the pool no longer holds can never
+  /// answer, so it counts as silent at once. One replaced by a fresh object
+  /// for its url is not that: the replacement takes the REQ over and is
+  /// judged in its place (#11343).
   ({String relayUrl, bool leftPool})? relaySilentOnQuery(
     String subId, {
     required Duration quietFor,
@@ -1514,7 +1791,9 @@ class RelayPool {
     final now = _monotonic.elapsed;
     for (final relay in owing) {
       if (!_holdsRelay(relay)) return (relayUrl: relay.url, leftPool: true);
-      if (_hasLiveAuthHandshake(relay)) continue;
+      if (_hasLiveAuthHandshake(relay) || _relaysTakingOver.contains(relay)) {
+        continue;
+      }
       final heard = _lastHeardAt[relay];
       if (heard == null || now - heard >= quietFor) {
         return (relayUrl: relay.url, leftPool: false);
@@ -1551,6 +1830,7 @@ class RelayPool {
     _queryAnswered.remove(subId);
     _queryClosedWithoutAnswer.remove(subId);
     _queryReachedNoRelay.remove(subId);
+    _queryLostRelay.remove(subId);
     _queriesRequiringFullSettlement.remove(subId);
     _querySettleTimers.remove(subId)?.cancel();
     _releaseQuery(subId);
@@ -1640,7 +1920,11 @@ class RelayPool {
   bool _canStillSettleQuery(Relay relay) {
     // A dropped socket cannot deliver the terminal frame for a REQ that was
     // written to it; the reconnect path re-issues the REQ on a fresh socket.
-    if (relay.relayStatus.connected != ClientConnected.connected) return false;
+    // A replacement still dialling is the exception: it sends the requests it
+    // took over as it connects, and reports `connecting` meanwhile (#11343).
+    if (relay.relayStatus.connected != ClientConnected.connected) {
+      return _relaysTakingOver.contains(relay);
+    }
 
     // A connection being force-cycled as a zombie reports `connected`
     // throughout, so it would otherwise keep charging concurrent queries the
@@ -1759,9 +2043,15 @@ class RelayPool {
   void _observeRelayStatus(Relay relay) {
     if (_statusObserved[relay] ?? false) return;
     _statusObserved[relay] = true;
+    relay.onPublishReplayDisabled = (eventId) {
+      if (_holdsRelay(relay)) {
+        _endPublishWithoutWriteAccess(eventId, relay.url);
+      }
+    };
     final previous = relay.relayStatusCallback;
     relay.relayStatusCallback = () {
       previous?.call();
+      if (!_holdsRelay(relay)) return;
       if (relay.relayStatus.connected == ClientConnected.connected) {
         _lastHeardAt[relay] = _monotonic.elapsed;
       }
@@ -1775,6 +2065,7 @@ class RelayPool {
       _queriesParkedForAuth.remove(relay.url);
       _queriesHeldAfterEose.remove(relay.url);
       _authRejected.remove(relay.url);
+      _allowAuthRetryOnNewSocket(relay);
       _moveAuthEpochOn(relay.url);
       _settleQueriesBlockedBy(relay);
       _recheckStoredEventsPhasesOf(relay);
@@ -1980,6 +2271,12 @@ class RelayPool {
     // A queued frame may be dispatched after the relay reconnected: it still
     // belongs to the socket it arrived on.
     final receivedOnGeneration = relay.connectionGeneration;
+    final subId = json.length > 1 && json[1] is String
+        ? json[1] as String
+        : null;
+    final answeredRequest = messageType == 'EOSE' && subId != null
+        ? _liveRequestVersion(relay, subId)
+        : null;
 
     // #5863: when an off-main verify worker is wired, serialize the frames
     // that carry or terminate a query per subscription so the asynchronous
@@ -1993,19 +2290,19 @@ class RelayPool {
     // [_dispatchTypedFrame] logs and drops it without awaiting. With no
     // worker the original synchronous path runs unchanged.
     if (_verifyWorker != null &&
-        json.length > 1 &&
-        json[1] is String &&
+        subId != null &&
         (messageType == 'EVENT' ||
             messageType == 'EOSE' ||
             messageType == 'CLOSED')) {
       return _enqueueOrdered(
         relay,
-        json[1] as String,
+        subId,
         () => _dispatchTypedFrame(
           relay,
           json,
           messageType,
           receivedOnGeneration: receivedOnGeneration,
+          answeredRequest: answeredRequest,
         ),
       );
     }
@@ -2014,6 +2311,7 @@ class RelayPool {
       json,
       messageType,
       receivedOnGeneration: receivedOnGeneration,
+      answeredRequest: answeredRequest,
     );
   }
 
@@ -2183,7 +2481,11 @@ class RelayPool {
   /// Records that the pool re-sent [subId]'s REQ to [relay] on its current
   /// connection. The relay answers it again, after replaying its stored
   /// events.
-  void _storedEventsPhaseResent(Relay relay, String subId) {
+  void _recordLiveRequestResent(Relay relay, String subId) {
+    if (_subscriptions[subId]?.onEose != null) {
+      final resends = _liveRequestResends.putIfAbsent(subId, () => {});
+      resends.update(relay.url, (count) => count + 1, ifAbsent: () => 1);
+    }
     final phase = _storedEventsPhases[subId];
     if (phase == null) return;
     phase.expected.add(relay.url);
@@ -2294,6 +2596,109 @@ class RelayPool {
     }
   }
 
+  /// Fires live subscription [subId]'s [Subscription.onEose] once every relay
+  /// that holds its REQ has sent EOSE.
+  ///
+  /// Until it first fires, the relays that still owe EOSE hold it for no
+  /// longer than [subscriptionEoseSettleWindow] of their silence after the
+  /// first EOSE. Nothing else bounds them: a relay that never connected sends
+  /// nothing, and one that refused the REQ with `NOTICE`, which names no
+  /// subscription (NIP-01 sets no rules for it), keeps the REQ saved and
+  /// stays connected. Either one held it for good (#9007). After it has
+  /// fired, it fires again only once every relay has sent EOSE since, as
+  /// after a reconnect replays the REQ everywhere.
+  void _maybeFireLiveEose(String subId, {bool settleWindowElapsed = false}) {
+    final onEose = _subscriptions[subId]?.onEose;
+    final eosed = _subscriptionEoseRelays[subId];
+    if (onEose == null || eosed == null || eosed.isEmpty) return;
+    final holders = _getRelaysWithSubscription(subId);
+    if (holders.isEmpty) {
+      _clearLiveEoseWindow(subId);
+      return;
+    }
+    final owing = [
+      for (final relay in holders.values)
+        if (eosed[relay.url] != _liveRequestVersion(relay, subId)) relay.url,
+    ];
+    // The timer is not on the ordered frame chain. Do not close a bounded
+    // read while an owing relay's already-received frames await verification.
+    if (owing.isNotEmpty &&
+        (!settleWindowElapsed ||
+            owing.any((url) => _orderedFrameTails.containsKey((url, subId))))) {
+      if (!_subscriptionEoseFired.contains(subId)) _armEoseSettleWindow(subId);
+      return;
+    }
+    if (owing.isNotEmpty) {
+      final message =
+          'Live subscription $subId ended its EOSE wait after '
+          '${subscriptionEoseSettleWindow.inMilliseconds}ms of silence from '
+          '${owing.length} relay(s)';
+      log(message);
+      _diagnose(
+        RelayDiagnosticSite.requestSettlement,
+        RelayDiagnosticLevel.info,
+        RelayDiagnostic.poolScope,
+        message,
+      );
+    }
+    _clearLiveEoseWindow(subId);
+    _subscriptionEoseFired.add(subId);
+    onEose();
+  }
+
+  void _armEoseSettleWindow(String subId) {
+    if (_closed || _subscriptionEoseSettleTimers.containsKey(subId)) return;
+    _subscriptionEoseSettleTimers[subId] = Timer(
+      subscriptionEoseSettleWindow,
+      () {
+        _subscriptionEoseSettleTimers.remove(subId);
+        _maybeFireLiveEose(subId, settleWindowElapsed: true);
+      },
+    );
+  }
+
+  void _clearLiveEoseWindow(String subId) {
+    _subscriptionEoseRelays.remove(subId);
+    _subscriptionEoseSettleTimers.remove(subId)?.cancel();
+  }
+
+  /// A replayed REQ must draw a fresh EOSE once all previous answers are gone.
+  void _withdrawLiveEose(String subId, String relayUrl) {
+    final eosed = _subscriptionEoseRelays[subId];
+    if (eosed == null) return;
+    eosed.remove(relayUrl);
+    if (eosed.isEmpty) _clearLiveEoseWindow(subId);
+  }
+
+  /// Restarts [subId]'s armed EOSE settle window because [relay], which holds
+  /// its REQ and still owes it EOSE, is sending it events: part-way through
+  /// its stored events, or replaying them after a reconnect, it is being
+  /// served, not silent. A relay that already sent EOSE is streaming live
+  /// events instead, and restarting for those would hold the window open for
+  /// as long as the subscription is busy.
+  void _restartEoseSettleWindow(Relay relay, String subId) {
+    final armed = _subscriptionEoseSettleTimers[subId];
+    if (armed == null) return;
+    if (!_relayHoldsLiveRequest(relay, subId)) return;
+    if (_subscriptionEoseRelays[subId]?[relay.url] ==
+        _liveRequestVersion(relay, subId)) {
+      return;
+    }
+    _subscriptionEoseSettleTimers.remove(subId);
+    armed.cancel();
+    _armEoseSettleWindow(subId);
+  }
+
+  bool _relayHoldsLiveRequest(Relay relay, String subId) =>
+      relay.hasSubscriptionById(subId) &&
+      (identical(_relays[relay.url], relay) ||
+          identical(_tempRelays[relay.url], relay) ||
+          identical(_cacheRelays[relay.url], relay));
+
+  /// Identifies the current REQ across reconnects and resends on one socket.
+  (int, int) _liveRequestVersion(Relay relay, String subId) =>
+      (relay.connectionGeneration, _liveRequestResends[subId]?[relay.url] ?? 0);
+
   /// Records that [relay] sent [subId] an `EVENT` frame the pool rejected,
   /// on the connection of [generation]. The frame may have taken a slot of
   /// the relay's `limit`, so a one-shot query's outcome treats the relay as
@@ -2339,6 +2744,7 @@ class RelayPool {
     List<dynamic> json,
     String messageType, {
     required int receivedOnGeneration,
+    required (int, int)? answeredRequest,
   }) async {
     if (messageType == 'EVENT') {
       try {
@@ -2454,6 +2860,8 @@ class RelayPool {
           // gone silent. Restart the grace period rather than cutting its
           // result set off part-way through.
           _restartQuerySettleWindow(subId);
+        } else {
+          _restartEoseSettleWindow(relay, subId);
         }
 
         if (!subscription.matchesEvent(event)) {
@@ -2552,6 +2960,13 @@ class RelayPool {
       // at once, and a completion that runs while its CLOSE is in flight
       // would otherwise find this relay gone without an answer.
       if (relay.checkQuery(subId)) {
+        if (!_holdsRelay(relay)) {
+          // A removed/replaced relay kept its queries only so already-received
+          // events still verifying reach the caller. Its late EOSE must not
+          // arm settlement against the replacement or pollute URL auth state.
+          relay.discardQuery(subId);
+          return;
+        }
         _queryOutcomes[subId]?.recordEose(relay, json);
         if (_eoseAsksForAuth(relay, json)) {
           _holdQueryForAuth(relay, subId);
@@ -2569,19 +2984,12 @@ class RelayPool {
           completesBatch: true,
           eoseFrame: json,
         );
-        // Handle EOSE for long-running subscriptions
-        final subscription = _subscriptions[subId];
-        if (subscription != null && subscription.onEose != null) {
-          // Track which relays have sent EOSE for this subscription
-          _subscriptionEoseRelays.putIfAbsent(subId, () => <String>{});
-          _subscriptionEoseRelays[subId]!.add(relay.url);
-
-          // Check if all relays that have this subscription have sent EOSE
-          final activeRelays = _getRelaysWithSubscription(subId);
-          if (_subscriptionEoseRelays[subId]!.length >= activeRelays.length) {
-            subscription.onEose!();
-            _subscriptionEoseRelays.remove(subId);
-          }
+        if (_subscriptions[subId]?.onEose != null &&
+            answeredRequest != null &&
+            answeredRequest == _liveRequestVersion(relay, subId) &&
+            _relayHoldsLiveRequest(relay, subId)) {
+          (_subscriptionEoseRelays[subId] ??= {})[relay.url] = answeredRequest;
+          _maybeFireLiveEose(subId);
         }
       }
     } else if (messageType == "OK") {
@@ -2622,6 +3030,9 @@ class RelayPool {
           )) {
         relay.takeSentFrame(eventId);
       }
+      // This socket has answered, so a reconnect has nothing to send again;
+      // an `auth-required` refusal is re-sent by the NIP-42 retry instead.
+      relay.forgetPublish(eventId);
 
       // Check if this OK is for a publish we are awaiting.
       //
@@ -2715,7 +3126,7 @@ class RelayPool {
                 '🔐 AUTH post-auth: sending ${subscription.id} '
                 '${relay.url}',
               );
-              _storedEventsPhaseResent(relay, subscription.id);
+              _recordLiveRequestResent(relay, subscription.id);
               relay.send(subscription.toJson());
             }
           } else {
@@ -2885,7 +3296,13 @@ class RelayPool {
 
       log('📊 COUNT response: $count (approximate: $approximate)');
 
-      final response = CountResponse(count: count, approximate: approximate);
+      // One relay's own answer is all that relay holds; the pool decides
+      // whether the request as a whole settled.
+      final response = CountResponse(
+        count: count,
+        approximate: approximate,
+        isComplete: true,
+      );
 
       relay.completeCountQuery(subscriptionId, response);
     } else if (messageType == 'CLOSED') {
@@ -2940,6 +3357,10 @@ class RelayPool {
         }
         if (awaitsReplay) {
           _refusedAwaitingReplay[subscriptionId] = reason;
+          // The replacement's replay must draw a new EOSE.
+          _clearLiveEoseWindow(subscriptionId);
+        } else {
+          _withdrawLiveEose(subscriptionId, relay.url);
         }
         _storedEventsPhaseAnswered(
           relay,
@@ -2948,21 +3369,15 @@ class RelayPool {
           completesBatch: false,
           dropsRequest: true,
         );
-        if (subscription.onEose != null) {
-          final activeRelays = _getRelaysWithSubscription(subscriptionId);
-          final eoseRelays = _subscriptionEoseRelays[subscriptionId];
-          // A relay that reported EOSE and then refused the REQ leaves the
-          // tally with it. Left in, its EOSE would stand in for a relay that
-          // is still streaming stored events, and a bounded read would close
-          // on a partial result.
-          eoseRelays?.remove(relay.url);
-          if (activeRelays.isNotEmpty &&
-              eoseRelays != null &&
-              eoseRelays.length >= activeRelays.length) {
-            subscription.onEose!();
-            _subscriptionEoseRelays.remove(subscriptionId);
-          }
-        }
+        _maybeFireLiveEose(subscriptionId);
+        return;
+      }
+
+      // A removed/replaced relay kept its queries only so already-received
+      // events still verifying reach the caller. Its late CLOSED must not
+      // arm settlement against the replacement or pollute URL auth state.
+      if (relay.checkQuery(subscriptionId) && !_holdsRelay(relay)) {
+        relay.discardQuery(subscriptionId);
         return;
       }
 
@@ -3207,9 +3622,10 @@ class RelayPool {
   void unsubscribe(String id) {
     _subscriptionSilenceProbes.remove(id)?.cancel();
     _refusedAwaitingReplay.remove(id);
+    _clearLiveEoseWindow(id);
+    _subscriptionEoseFired.remove(id);
+    _liveRequestResends.remove(id);
     final subscription = _subscriptions.remove(id);
-    // Clean up EOSE tracking for this subscription
-    _subscriptionEoseRelays.remove(id);
     _storedEventsPhases.remove(id);
     if (subscription != null) {
       // A relay that still holds this REQ never served it, so offer it to the
@@ -3227,6 +3643,7 @@ class RelayPool {
       _queryAnswered.remove(id);
       _queryClosedWithoutAnswer.remove(id);
       _queryReachedNoRelay.remove(id);
+      _queryLostRelay.remove(id);
       _queriesRequiringFullSettlement.remove(id);
       _querySettleTimers.remove(id)?.cancel();
       _releaseQuery(id);
@@ -3264,12 +3681,14 @@ class RelayPool {
     final answered = _queryAnswered.contains(subId);
     final closedWithoutAnswer = _queryClosedWithoutAnswer.contains(subId);
     final noRelayTookRequest = _queryReachedNoRelay.contains(subId);
+    final lostRelay = _queryLostRelay.contains(subId);
     final strandedOnBlockedRelay = unsettled.any(
       (relay) => !_canStillSettleQuery(relay),
     );
     if (answered &&
         !closedWithoutAnswer &&
         !noRelayTookRequest &&
+        !lostRelay &&
         !strandedOnBlockedRelay &&
         unsettled.isEmpty) {
       return;
@@ -3282,6 +3701,7 @@ class RelayPool {
       '(answered=$answered, closedWithoutAnswer=$closedWithoutAnswer, '
       'noRelayTookRequest=$noRelayTookRequest, '
       'strandedOnBlockedRelay=$strandedOnBlockedRelay, '
+      'lostRelay=$lostRelay, '
       'unsettledRelays=${unsettled.length})',
     );
   }
@@ -3685,6 +4105,7 @@ class RelayPool {
               attemptedRelayUrls.add(relay.url);
             }
             if (result) {
+              _retainUntilAnswered(relay, message, deadline);
               sentTo.add(relay.url);
             }
           } else {
@@ -3726,6 +4147,7 @@ class RelayPool {
               );
           if (result) {
             _retainForAuthRetry(relay, message, deadline);
+            _retainUntilAnswered(relay, message, deadline);
           }
           if (result ||
               timedOut ||
@@ -3797,6 +4219,7 @@ class RelayPool {
         }
         if (result) {
           _retainForAuthRetry(tempRelay, message, deadline);
+          _retainUntilAnswered(tempRelay, message, deadline);
           sentTo.add(tempRelay.url);
         }
       }
@@ -3890,13 +4313,16 @@ class RelayPool {
   ///
   /// Registers a [PublishTracker] keyed on the event id. The returned future
   /// completes when either:
-  ///  * every relay the fan-out reached has responded (accept or reject), OR
+  ///  * every relay the fan-out reached has responded (accept or reject) or
+  ///    left the pool with no socket to answer on, OR
   ///  * [PublishTracker.settleWindow] elapses after the first response, OR
   ///  * [timeout] elapses.
   ///
   /// It does **not** complete on the first acceptance. A publish that one
-  /// relay accepts and another rejects must report both, and nothing in this
-  /// client republishes to the relays that did not accept.
+  /// relay accepts and another rejects must report both, and once it settles
+  /// nothing in this client republishes to the relays that did not accept.
+  /// Until then, an `EVENT` is sent again on a relay's new socket when the one
+  /// it went out on is replaced or reconnects.
   ///
   /// Relays that were targeted but could not be written to are reported in
   /// [PublishOutcome.unreachableTargets]. Callers should inspect
@@ -3975,6 +4401,7 @@ class RelayPool {
           .whenComplete(() {
             _pendingPublishes.remove(eventId);
             _authRequiredPublishRetries.remove(eventId);
+            _forgetSavedPublish(eventId);
           }),
     );
     return tracker.future;
@@ -4035,8 +4462,9 @@ class RelayPool {
   }
 
   /// Force-cycles [relay]'s socket. [Relay.onConnected] re-issues the saved
-  /// subscriptions and pending one-shot queries on the fresh connection, so an
-  /// in-flight REQ that the closed socket swallowed still runs.
+  /// subscriptions, pending one-shot queries and unanswered publishes on the
+  /// fresh connection, so an in-flight REQ or EVENT that the closed socket
+  /// swallowed still runs.
   ///
   /// The closed-check is belt and braces, not a second line of defence that
   /// can be reached on its own: [_repairSilentRelays] is the only caller and
@@ -4076,8 +4504,10 @@ class RelayPool {
 
   Relay checkAndGenTempRelay(String addr) {
     var tempRelay = _tempRelays[addr];
+    SavedPublishes? heldByReplaced;
     if (tempRelay != null && _shouldReplaceTempRelay(tempRelay)) {
       _tempRelays.remove(addr);
+      heldByReplaced = tempRelay.takeSavedPublishes();
       unawaited(tempRelay.disconnect());
       tempRelay.dispose();
       // The replacement is a different socket, so nothing the pool concluded
@@ -4088,6 +4518,7 @@ class RelayPool {
     }
     if (tempRelay == null) {
       tempRelay = tempRelayGener(addr);
+      heldByReplaced?.forEach(tempRelay.adoptPublish);
       tempRelay.onMessage = _onEvent;
       // Temp relays serve one-shot queries like any other relay, so they need
       // the same drop-releases-the-query sweep [add] wires up.
@@ -4154,6 +4585,10 @@ class RelayPool {
         relay.pendingAuthedMessages.isNotEmpty) {
       return false;
     }
+
+    // A publish written but not yet answered is resent when the socket comes
+    // back, which reaping would cancel (#11446).
+    if (relay.holdsPublishes) return false;
 
     // A relay that failed to connect, or has since dropped, is doing nothing
     // for anyone. [RelayBase.isSilentSince] deliberately answers false for a
@@ -4384,6 +4819,11 @@ class RelayPool {
   /// ([Relay.countUnsupported]) is skipped. A missing NIP-45 advertisement
   /// is inconclusive because some relays answer COUNT without listing it.
   ///
+  /// The result is [CountResponse.isComplete] only when every relay asked
+  /// answered or replied that it does not know COUNT. A relay that timed out,
+  /// refused with CLOSED, could not be sent the COUNT or failed otherwise
+  /// makes it incomplete: the largest answer is then only a floor.
+  ///
   /// Throws [CountNotSentException] when no relay accepted the COUNT, and
   /// [CountNotSupportedException] when relays accepted it but none answered
   /// in time, whether by timing out, refusing with CLOSED or replying that
@@ -4468,6 +4908,9 @@ class RelayPool {
     }
 
     var acceptedByAny = false;
+    // Set when a relay that may hold matching events did not settle the
+    // COUNT, so the largest answer is only a floor.
+    var unsettled = false;
     final futures = <Future<CountResponse?>>[];
     for (var i = 0; i < eligibleRelays.length; i++) {
       final relay = eligibleRelays[i];
@@ -4495,18 +4938,24 @@ class RelayPool {
               relay.url,
               'COUNT $relaySubId not sent',
             );
+            unsettled = true;
             return null;
           }
           acceptedByAny = true;
 
           // Only register after successful send to avoid orphaned completers
-          final responseFuture = relay.registerCountQuery(relaySubId);
+          final responseFuture = relay.registerCountQuery(
+            relaySubId,
+            request: relayMessage,
+          );
           log('📊 COUNT request sent to ${relay.url}');
           answerBudget = remaining();
           return await responseFuture.timeout(answerBudget);
         } on TimeoutException {
           log('📊 COUNT timed out on ${relay.url}');
           relay.failCountQuery(relaySubId, 'Timeout');
+          // A replacement for the url may have taken the COUNT over.
+          _relays[relay.url]?.failCountQuery(relaySubId, 'Timeout');
           _diagnose(
             RelayDiagnosticSite.requestSettlement,
             RelayDiagnosticLevel.warning,
@@ -4514,11 +4963,16 @@ class RelayPool {
             'Relay did not answer COUNT $relaySubId within '
             '${answerBudget.inMilliseconds} ms',
           );
+          unsettled = true;
+          return null;
+        } on CountCommandUnknownException catch (e) {
+          // The relay cannot count at all, so its silence costs nothing.
+          log('📊 COUNT unknown to ${relay.url}: $e');
           return null;
         } on CountNotSupportedException catch (e) {
-          // A CLOSED refusal or an unknown-command NOTICE, which its handler
-          // has already reported.
+          // A CLOSED refusal, which its handler has already reported.
           log('📊 COUNT refused by ${relay.url}: $e');
+          unsettled = true;
           return null;
         } catch (e) {
           log('📊 COUNT failed on ${relay.url}: $e');
@@ -4532,6 +4986,7 @@ class RelayPool {
             relay.url,
             'COUNT $relaySubId failed (${e.runtimeType})',
           );
+          unsettled = true;
           return null;
         }
       }());
@@ -4550,21 +5005,25 @@ class RelayPool {
       throw CountNotSupportedException('No relay responded to COUNT');
     }
 
-    return best;
+    return CountResponse(
+      count: best.count,
+      approximate: best.approximate,
+      isComplete: !unsettled,
+    );
   }
 
-  /// Returns the URLs of relays with a saved copy of this subscription.
+  /// Returns the relays with a saved copy of this subscription, keyed by URL.
   ///
   /// [forRefusalSettlement] excludes relays still attempting a replay and
   /// copies an earlier pool replay failed to send on this socket.
   ///
   /// EOSE settlement includes connecting relays with a queued copy so their
   /// replay has time to arrive.
-  Set<String> _getRelaysWithSubscription(
+  Map<String, Relay> _getRelaysWithSubscription(
     String subscriptionId, {
     bool forRefusalSettlement = false,
   }) {
-    final relays = <String>{};
+    final relays = <String, Relay>{};
     bool holdsRequest(Relay relay) {
       if (!relay.hasSubscriptionById(subscriptionId)) return false;
       if (!forRefusalSettlement) return true;
@@ -4578,21 +5037,21 @@ class RelayPool {
     // Check normal relays
     for (final entry in _relayEntriesSnapshot()) {
       if (holdsRequest(entry.value)) {
-        relays.add(entry.key);
+        relays[entry.key] = entry.value;
       }
     }
 
     // Check temp relays
     for (final entry in _tempRelayEntriesSnapshot()) {
       if (holdsRequest(entry.value)) {
-        relays.add(entry.key);
+        relays[entry.key] = entry.value;
       }
     }
 
     // Check cache relays
     for (final entry in _cacheRelayEntriesSnapshot()) {
       if (holdsRequest(entry.value)) {
-        relays.add(entry.key);
+        relays[entry.key] = entry.value;
       }
     }
 

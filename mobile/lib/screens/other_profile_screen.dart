@@ -13,12 +13,11 @@ import 'package:openvine/blocs/profile_feed/profile_feed_cubit.dart';
 import 'package:openvine/blocs/profile_feed/profile_feed_scope.dart';
 import 'package:openvine/blocs/profile_link/profile_link_cubit.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/features/people_lists/models/people_list_entry_point.dart';
 import 'package:openvine/features/people_lists/view/add_to_people_lists_sheet.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/observability/screen_load_telemetry.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
@@ -95,16 +94,12 @@ class OtherProfileScreen extends ConsumerWidget {
     final identityClaimsRepository = ref.watch(
       identityClaimsRepositoryProvider,
     );
-    final loadSupportLinks = ref.watch(
-      isFeatureEnabledProvider(FeatureFlag.profileMonetizationLinks),
-    );
 
     return BlocProvider(
       // Re-create the bloc when captured dependencies change. A keyless
       // create: would keep stale repositories/current-user state after auth or
-      // account changes, and would also miss support-link flag changes.
+      // account changes.
       key: ValueKey((
-        loadSupportLinks,
         profileRepository,
         blocklistRepository,
         nostrClient.publicKey,
@@ -118,7 +113,6 @@ class OtherProfileScreen extends ConsumerWidget {
         currentUserPubkey: nostrClient.publicKey,
         followRepository: followRepository,
         identityClaimsRepository: identityClaimsRepository,
-        loadSupportLinks: loadSupportLinks,
       )..add(const OtherProfileLoadRequested()),
       child: OtherProfileView(
         pubkey: pubkey,
@@ -447,6 +441,7 @@ class _OtherProfileViewState extends ConsumerState<OtherProfileView> {
 
     return ProfileFeedScope(
       userIdHex: widget.pubkey,
+      loadEntryPoint: ScreenLoadEntryPoint.otherProfile,
       child: Builder(
         builder: (context) {
           final feedState = context.watch<ProfileFeedCubit>().state;

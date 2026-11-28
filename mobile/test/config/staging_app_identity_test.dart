@@ -4,21 +4,40 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('staging app identity', () {
+    Future<ProcessResult> checkShippingSigning(List<String> bundleIds) =>
+        Process.run(
+          'bash',
+          ['scripts/check_ios_extension_signing_contract.sh'],
+          environment: {
+            ...Platform.environment,
+            'IOS_EXTENSION_BUNDLE_IDS': bundleIds.join(' '),
+          },
+        );
+
     test('shipping extension signing ignores debug-only bundle IDs', () async {
-      final result = await Process.run(
-        'bash',
-        ['scripts/check_ios_extension_signing_contract.sh'],
-        environment: {
-          ...Platform.environment,
-          'IOS_EXTENSION_BUNDLE_IDS': [
-            'co.openvine.app.NotificationServiceExtension',
-            'co.openvine.app.CameraQuickActionWidget',
-          ].join(' '),
-        },
-      );
+      final result = await checkShippingSigning([
+        'co.openvine.app.NotificationServiceExtension',
+        'co.openvine.app.CameraQuickActionWidget',
+        'co.openvine.app.watchkitapp',
+      ]);
 
       expect(result.stderr, isEmpty);
       expect(result.exitCode, 0, reason: result.stdout as String);
+    });
+
+    test('shipping signing requires the embedded Watch app', () async {
+      final result = await checkShippingSigning([
+        'co.openvine.app.NotificationServiceExtension',
+        'co.openvine.app.CameraQuickActionWidget',
+      ]);
+
+      expect(result.exitCode, 1);
+      expect(
+        result.stdout,
+        contains(
+          'Missing from IOS_EXTENSION_BUNDLE_IDS: co.openvine.app.watchkitapp',
+        ),
+      );
     });
 
     test('iOS debug build cannot replace the production app', () {

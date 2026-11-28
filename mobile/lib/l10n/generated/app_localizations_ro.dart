@@ -10,6 +10,22 @@ class AppLocalizationsRo extends AppLocalizations {
   AppLocalizationsRo([String locale = 'ro']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'Treci la contul $account pentru a deschide acest mesaj?';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'Mesaje directe';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'Afișează o notificare fără numele expeditorului sau textul mesajului.';
+
+  @override
+  String get dmNotificationMessageUnavailable =>
+      'Acest mesaj nu este disponibil.';
+
+  @override
   String get devOptionsClipRecovery => 'Recuperare clipuri';
 
   @override
@@ -335,7 +351,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get privacySettingsShareUsageSubtitle =>
-      'Ne ajută să vedem ce folosesc oamenii cu adevărat. Dacă îl oprești, datele aflate în așteptare pe acest dispozitiv sunt șterse.';
+      'Ne ajută să vedem ce folosesc oamenii cu adevărat. Dacă îl oprești, datele aflate în așteptare pe acest dispozitiv sunt șterse. Rapoartele de blocare sunt trimise în continuare, ca să putem repara erorile.';
 
   @override
   String get privacySettingsSaveFailed =>
@@ -1871,54 +1887,8 @@ class AppLocalizationsRo extends AppLocalizations {
   String get shareVideoLabel => 'Partajează videoclipul';
 
   @override
-  String sharePostSharedWith(String recipientName) {
-    return 'Postare partajată cu $recipientName';
-  }
-
-  @override
-  String sharePostSharedWithCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Postare partajată cu $count de persoane',
-      few: 'Postare partajată cu $count persoane',
-      one: 'Postare partajată cu $count persoană',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String shareStillTryingToSendTo(String recipientName) {
-    return 'Încă încercăm să trimitem către $recipientName';
-  }
-
-  @override
-  String shareStillTryingToSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Încă încercăm să trimitem către $count de persoane',
-      few: 'Încă încercăm să trimitem către $count persoane',
-      one: 'Încă încercăm să trimitem către $count persoană',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String shareCouldNotSendTo(String recipientName) {
     return 'Nu am putut trimite către $recipientName';
-  }
-
-  @override
-  String shareCouldNotSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Nu am putut trimite către $count de persoane',
-      few: 'Nu am putut trimite către $count persoane',
-      one: 'Nu am putut trimite către $count persoană',
-    );
-    return '$_temp0';
   }
 
   @override
@@ -1954,11 +1924,32 @@ class AppLocalizationsRo extends AppLocalizations {
   String get shareFindPeopleMultiline => 'Găsește\noameni';
 
   @override
+  String get shareDeliveryFailed => 'Încă nu s-a putut trimite';
+
+  @override
+  String shareDeliveryHeld(String name) {
+    return 'Se va trimite când $name poate fi contactat';
+  }
+
+  @override
+  String shareDeliveryForRecipient(String name, String status) {
+    return '$name — $status';
+  }
+
+  @override
   String get shareSent => 'Trimis';
 
   @override
   String shareSelectedRecipientAnnouncement(String name) {
     return '$name selectat';
+  }
+
+  @override
+  String get shareRecipientSend => 'Trimite';
+
+  @override
+  String shareRecipientSendTo(String name) {
+    return 'Trimite către $name';
   }
 
   @override
@@ -2187,6 +2178,28 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get videoStickerAddYoursButton => 'Rândul tău';
+
+  @override
+  String get videoStickerAddYoursWatchSeries => 'Urmărește seria';
+
+  @override
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'Urmărește seria: $prompt';
+  }
+
+  @override
+  String videoSeriesChipEpisode(String episode, String total) {
+    return 'Ep. $episode din $total';
+  }
+
+  @override
+  String videoSeriesChipSemanticLabel(
+    String seriesName,
+    String episode,
+    String total,
+  ) {
+    return 'Seria $seriesName, episodul $episode din $total';
+  }
 
   @override
   String videoStickerAddYoursJoined(int count) {
@@ -3571,6 +3584,10 @@ class AppLocalizationsRo extends AppLocalizations {
       'Autentificarea aici le va ascunde';
 
   @override
+  String get authWatchClassicsAsGuest =>
+      'Urmărește clipuri clasice ca vizitator';
+
+  @override
   String get authTermsPrefix =>
       'Alegând o opțiune de mai jos, confirmi că ai cel puțin 16 ani (sau ai finalizat ';
 
@@ -4206,6 +4223,10 @@ class AppLocalizationsRo extends AppLocalizations {
       'Nu am putut începe remixul. Încearcă din nou.';
 
   @override
+  String get remixSettingSaveFailed =>
+      'Nu s-a putut actualiza setarea ta pentru remixuri. Încearcă din nou.';
+
+  @override
   String get remixSettingAllowTitle =>
       'Permite altora să-mi remixeze videoclipurile';
 
@@ -4632,6 +4653,10 @@ class AppLocalizationsRo extends AppLocalizations {
       'Releul nu a acceptat modificarea. Încearcă din nou în scurt timp.';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      'Acest videoclip s-a schimbat pe alt dispozitiv și acum are prea multe etichete sau prea multe persoane care colaborează. Deschide-l din nou și elimină câteva.';
+
+  @override
   String get videoUpdateErrorGeneric =>
       'N-am putut actualiza acest videoclip. Încearcă din nou.';
 
@@ -4724,6 +4749,19 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get soundsNoSoundsFoundDescription => 'Încearcă alt termen de căutare';
+
+  @override
+  String soundsSearchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count de sunete găsite',
+      few: '$count sunete găsite',
+      one: '$count sunet găsit',
+      zero: 'Niciun sunet găsit',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get soundsSavedToLibrary => 'Salvat în Sunete';
@@ -6523,6 +6561,9 @@ class AppLocalizationsRo extends AppLocalizations {
   String get inboxCollabInviteSentStatus => 'Invitație trimisă';
 
   @override
+  String get inboxSharedVideoPreview => 'A distribuit un videoclip';
+
+  @override
   String get inboxConversationCollabInvitePreview => 'Invitație de colaborare';
 
   @override
@@ -7346,6 +7387,55 @@ class AppLocalizationsRo extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'Duplică';
 
   @override
+  String get libraryDraftActionConvertToClip => 'Transformă în clip';
+
+  @override
+  String get libraryDraftConvertingToClip => 'Se transformă în clip...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar =>
+      'Ciorna a fost transformată în clip';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar =>
+      'Nu s-a putut transforma ciorna';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'Textul și stickerele din această ciornă nu au putut fi pregătite. Deschide-o în editor, apoi încearcă din nou.';
+
+  @override
+  String get libraryDraftActionShare => 'Distribuie ciorna';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return 'Trimiți o ciornă editabilă către $name?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'Trimiți clipurile originale și istoricul editărilor. Cine le primește poate vedea ce ai tăiat, își poate edita copia, o poate publica sau ți-o poate trimite înapoi.';
+
+  @override
+  String get libraryDraftShareFailed => 'Ciorna nu a putut fi trimisă.';
+
+  @override
+  String get libraryDraftShareTooLarge =>
+      'Ciorna este prea mare pentru a fi trimisă.';
+
+  @override
+  String get dmSharedDraft => 'Ciornă distribuită';
+
+  @override
+  String get dmOpenDraft => 'Importă și editează';
+
+  @override
+  String get dmDraftImportFailed => 'Ciorna nu a putut fi importată.';
+
+  @override
+  String get libraryDraftSent => 'Ciornă trimisă';
+
+  @override
   String get libraryDraftActionDelete => 'Șterge ciorna';
 
   @override
@@ -7987,6 +8077,14 @@ class AppLocalizationsRo extends AppLocalizations {
   ) {
     return '$displayName vrea să-ți trimită un mesaj, a trimis $messageText.';
   }
+
+  @override
+  String messageRequestGroupWantsToMessageYou(String messageText) {
+    return 'Acest grup vrea să-ți trimită un mesaj, au trimis $messageText.';
+  }
+
+  @override
+  String get messageRequestGroupMembersHeading => 'În acest grup';
 
   @override
   String get deleteAccountAccountChanged =>
@@ -9740,6 +9838,21 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorEffectSpinBlur => 'Estompare rotativă';
 
   @override
+  String get videoEditorEffectShockwave => 'Undă de șoc';
+
+  @override
+  String get videoEditorEffectSubwoofer => 'Subwoofer';
+
+  @override
+  String get videoEditorEffectPlasma => 'Plasmă';
+
+  @override
+  String get videoEditorEffectEnergyWave => 'Undă de energie';
+
+  @override
+  String get videoEditorEffectSmokeBurst => 'Explozie de fum';
+
+  @override
   String get videoEditorEffectComic => 'Benzi desenate';
 
   @override
@@ -9936,9 +10049,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorFilterCategoryTints => 'Nuanțe';
 
   @override
-  String get videoEditorDropsSettingsTitle => 'Ajustează picăturile';
-
-  @override
   String get videoEditorDropsCountLabel => 'Număr';
 
   @override
@@ -9985,6 +10095,203 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get videoEditorEffectsOnBeatNoSound =>
       'Adaugă muzică sau pornește sunetul unui clip';
+
+  @override
+  String get videoEditorEffectSettingsOpen => 'Setări efect';
+
+  @override
+  String videoEditorEffectSettingsTitle(String effect) {
+    return 'Setări: $effect';
+  }
+
+  @override
+  String videoEditorEffectSeconds(String seconds) {
+    return '$seconds s';
+  }
+
+  @override
+  String get videoEditorEffectHitDuration => 'Durată';
+
+  @override
+  String get videoEditorEffectHitRepeat => 'Repetă';
+
+  @override
+  String get videoEditorEffectHitOnce =>
+      'O dată, unde începe efectul pe cronologie';
+
+  @override
+  String get videoEditorEffectHitInterval => 'Interval';
+
+  @override
+  String get videoEditorEffectLookTitle => 'Aspect';
+
+  @override
+  String get videoEditorEffectHitHorizontal => 'Poziție orizontală';
+
+  @override
+  String get videoEditorEffectHitVertical => 'Poziție verticală';
+
+  @override
+  String get videoEditorEffectHitReach => 'Rază';
+
+  @override
+  String get videoEditorEffectHitShake => 'Zguduire';
+
+  @override
+  String get videoEditorEffectHitPunch => 'Lovitură de zoom';
+
+  @override
+  String get videoEditorEffectLookReset => 'Resetează aspectul';
+
+  @override
+  String get videoEditorEffectTimingTitle => 'Sincronizare';
+
+  @override
+  String get videoEditorEffectTimingReset => 'Resetează sincronizarea';
+
+  @override
+  String get videoEditorEffectMotionTitle => 'Mișcare';
+
+  @override
+  String get videoEditorEffectMotionReset => 'Resetează mișcarea';
+
+  @override
+  String get videoEditorEffectSettingFocus => 'Focalizare';
+
+  @override
+  String get videoEditorEffectSettingWidth => 'Lățime';
+
+  @override
+  String get videoEditorEffectSettingDirection => 'Direcție';
+
+  @override
+  String get videoEditorEffectSettingHorizontal => 'Orizontal';
+
+  @override
+  String get videoEditorEffectSettingVertical => 'Vertical';
+
+  @override
+  String get videoEditorEffectSettingClockwise => 'În sens orar';
+
+  @override
+  String get videoEditorEffectSettingAnticlockwise => 'În sens antiorar';
+
+  @override
+  String get videoEditorEffectSettingZoomIn => 'Apropie';
+
+  @override
+  String get videoEditorEffectSettingZoomOut => 'Depărtează';
+
+  @override
+  String get videoEditorEffectSettingSpacing => 'Spațiere';
+
+  @override
+  String get videoEditorEffectSettingAngle => 'Unghi';
+
+  @override
+  String get videoEditorEffectSettingHue => 'Nuanță';
+
+  @override
+  String get videoEditorEffectSettingLength => 'Lungime';
+
+  @override
+  String get videoEditorEffectSettingSensitivity => 'Sensibilitate';
+
+  @override
+  String get videoEditorEffectSettingPosition => 'Poziție';
+
+  @override
+  String get videoEditorEffectSettingWind => 'Vânt';
+
+  @override
+  String get videoEditorEffectSettingDotSize => 'Mărimea punctelor';
+
+  @override
+  String get videoEditorEffectSettingOutline => 'Contur';
+
+  @override
+  String get videoEditorEffectSettingLevels => 'Niveluri';
+
+  @override
+  String get videoEditorEffectSettingPixelSize => 'Mărimea pixelilor';
+
+  @override
+  String get videoEditorEffectSettingOffset => 'Decalaj';
+
+  @override
+  String get videoEditorEffectSettingBrushSize => 'Mărimea pensulei';
+
+  @override
+  String get videoEditorEffectSettingDensity => 'Densitate';
+
+  @override
+  String get videoEditorEffectSettingGrain => 'Granulație';
+
+  @override
+  String get videoEditorEffectSettingGrid => 'Grilă';
+
+  @override
+  String get videoEditorEffectSettingLayers => 'Straturi';
+
+  @override
+  String get videoEditorEffectSettingShadow => 'Umbră';
+
+  @override
+  String get videoEditorEffectSettingFirstInk => 'Prima cerneală';
+
+  @override
+  String get videoEditorEffectSettingSecondInk => 'A doua cerneală';
+
+  @override
+  String get videoEditorEffectSettingColors => 'Culori';
+
+  @override
+  String get videoEditorEffectSettingOriginalColors => 'Originale';
+
+  @override
+  String get videoEditorEffectSettingSingleColor => 'O culoare';
+
+  @override
+  String get videoEditorEffectSettingDelay => 'Întârziere';
+
+  @override
+  String get videoEditorEffectSettingDown => 'În jos';
+
+  @override
+  String get videoEditorEffectSettingUp => 'În sus';
+
+  @override
+  String get videoEditorEffectSettingRight => 'Spre dreapta';
+
+  @override
+  String get videoEditorEffectSettingLeft => 'Spre stânga';
+
+  @override
+  String get videoEditorEffectSettingFrequency => 'Frecvență';
+
+  @override
+  String get videoEditorEffectSettingDistance => 'Distanță';
+
+  @override
+  String get videoEditorEffectSettingScanlines => 'Linii de scanare';
+
+  @override
+  String get videoEditorEffectSettingGrainSize => 'Mărimea granulației';
+
+  @override
+  String get videoEditorEffectSettingSepia => 'Sepia';
+
+  @override
+  String get videoEditorEffectSettingFlicker => 'Pâlpâire';
+
+  @override
+  String get videoEditorEffectSettingVignette => 'Vignetare';
+
+  @override
+  String get videoEditorEffectSettingTempo => 'Tempo';
+
+  @override
+  String get videoEditorEffectSettingWavelength => 'Lungime de undă';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {
@@ -11847,6 +12154,9 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorAudioUseSound => 'Folosește';
 
   @override
+  String get videoEditorAudioOpenSoundDetails => 'Deschide detaliile sunetului';
+
+  @override
   String get videoEditorAudioFileMissing =>
       'Fișierul audio nu mai este pe dispozitiv';
 
@@ -11877,6 +12187,9 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get videoEditorAudioCategoryMySounds => 'Sunetele mele';
+
+  @override
+  String get videoEditorAudioCategorySongs => 'Songs';
 
   @override
   String get videoEditorAudioFilterEffects => 'Efecte';
@@ -12101,6 +12414,34 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get videoEditorSocialStickerRepliesNote =>
       'Arată cine a răspuns la acest videoclip cu un videoclip. Cei care se uită îl ating ca să vadă răspunsurile.';
+
+  @override
+  String get videoEditorSocialStickerAudienceTitle => 'Cine poate răspunde';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => 'Oricine';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => 'Cercul de prieteni';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => 'Doar eu';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      'Doar persoanele pe care le urmărești pot participa. Restul văd stickerul imediat ce participă cineva.';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      'Stickerul arată doar răspunsurile video ale persoanelor pe care le urmărești. Restul îl văd imediat ce răspunde una dintre ele.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      'Doar tu poți participa. Nimeni altcineva nu vede stickerul până nu participi.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      'Stickerul arată doar propriile tale răspunsuri video. Nimeni altcineva nu îl vede până nu răspunzi.';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>
@@ -13931,6 +14272,29 @@ class AppLocalizationsRo extends AppLocalizations {
       'Suprascrierea de minor protejat a fost ștearsă';
 
   @override
+  String get devOptionsConfirmationAccessTitle => 'Divine Confirmation access';
+
+  @override
+  String get devOptionsConfirmationAccessReal => 'Real answer';
+
+  @override
+  String get devOptionsConfirmationAccessHas => 'Has Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessHasNot => 'Doesn\'t have Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessUnknown => 'Couldn\'t check';
+
+  @override
+  String get devOptionsConfirmationRequirementSimulatedTitle =>
+      'Act as if Confirmation is required';
+
+  @override
+  String get devOptionsConfirmationRequirementSimulatedSubtitle =>
+      'Treats signing in as needing Confirmation even when the verifier doesn\'t. Needs the Confirmation Sign-in flag; choose \"Doesn\'t have Confirmation\" above to see the offer. The verifier still approves sign-ins.';
+
+  @override
   String get commentsRecordVideoButtonLabel => 'Înregistrează comentariu video';
 
   @override
@@ -15008,6 +15372,65 @@ class AppLocalizationsRo extends AppLocalizations {
   String get verifyStatusAccountChanged => 'Account changed';
 
   @override
+  String get verifyStatusNeedsConfirmation => 'Needs Confirmation';
+
+  @override
+  String get verifyConfirmationTitle => 'Divine Confirmation';
+
+  @override
+  String get verifyConfirmationHeroBody =>
+      'Divine Confirmation lets you link your accounts on other platforms by signing in to them.';
+
+  @override
+  String get verifyConfirmationIncludedTitle => 'What\'s included';
+
+  @override
+  String get verifyConfirmationIncludedSignIn => 'Link accounts by signing in';
+
+  @override
+  String get verifyConfirmationComingSoon => 'Coming soon';
+
+  @override
+  String get verifyConfirmationSmallPrint =>
+      'Details will appear here when Divine Confirmation is ready.';
+
+  @override
+  String get verifyConfirmationStoreOnly =>
+      'Divine Confirmation is available in the App Store and Google Play versions of Divine.';
+
+  @override
+  String get verifyConfirmationBuySemantic =>
+      'Divine Confirmation, coming soon, unavailable';
+
+  @override
+  String get verifyConfirmationRestoreSemantic =>
+      'Restore purchases, unavailable';
+
+  @override
+  String get verifyConfirmationCardTitle => 'Link by signing in';
+
+  @override
+  String get verifyConfirmationCardBody =>
+      'One-tap linking is part of Divine Confirmation.';
+
+  @override
+  String get verifyGetConfirmation => 'Get Divine Confirmation';
+
+  @override
+  String get verifyProofAlwaysAvailable => 'Proof posts are always available';
+
+  @override
+  String get verifyConfirmationSheetTitle =>
+      'Linking by signing in needs Divine Confirmation';
+
+  @override
+  String get verifyConfirmationSheetSubtitle =>
+      'You can still link this account with a proof post.';
+
+  @override
+  String get verifyConfirmationSheetUseProof => 'Use a proof post';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return 'Dezleagă contul $platform $identity';
   }
@@ -15039,7 +15462,26 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
+  String verifyLinkNeedsConfirmationSemanticLabel(String platform) {
+    return 'Link your $platform account. Signing in needs Divine Confirmation';
+  }
+
+  @override
   String get verifyOneTapBadge => 'Un tap';
+
+  @override
+  String get verifyOneTapWithConfirmationBadge => 'One tap with Confirmation';
+
+  @override
+  String get verifyRenewConfirmation => 'Renew Confirmation';
+
+  @override
+  String verifyRenewConfirmationSemanticLabel(
+    String platform,
+    String identity,
+  ) {
+    return 'Renew Divine Confirmation to restore $platform account $identity';
+  }
 
   @override
   String verifyConnectSignInLifetime(int days) {
@@ -15151,6 +15593,18 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get verifyErrorPublishFailed =>
       'Verificat, dar niciun releu nu a acceptat actualizarea. Mai încearcă.';
+
+  @override
+  String get verifyErrorConfirmationRequired =>
+      'Linking by signing in needs Divine Confirmation. You can still link with a proof post.';
+
+  @override
+  String get verifyErrorConfirmationUnavailable =>
+      'Couldn\'t check Divine Confirmation right now. Try again in a few minutes.';
+
+  @override
+  String get verifyErrorConfirmationPending =>
+      'This can take a minute after buying. Try again shortly.';
 
   @override
   String get verifyErrorOauthUnavailable =>
@@ -15444,7 +15898,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get changeEmailSubtitle =>
-      'Trimitem un link de confirmare la noua adresă și la cea din contul tău. E-mailul se schimbă după ce confirmi din ambele.';
+      'Îți vom trimite un link la noua adresă. Dacă ai deja o adresă de e-mail în cont, îți vom trimite un link și acolo.';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -15464,18 +15918,18 @@ class AppLocalizationsRo extends AppLocalizations {
   String get changeEmailWrongPassword => 'Asta nu e parola ta.';
 
   @override
-  String get changeEmailSubmit => 'Trimite linkurile de confirmare';
+  String get changeEmailSubmit => 'Cere confirmarea';
 
   @override
-  String get changeEmailSentTitle => 'Două linkuri sunt pe drum';
+  String get changeEmailSentTitle => 'Verifică-ți e-mailul';
 
   @override
   String changeEmailSentMessage(String email) {
-    return 'Confirmă din $email și din adresa contului tău. E-mailul se schimbă după ce le faci pe amândouă.';
+    return 'Deschide linkul primit la $email. Dacă ai deja o adresă de e-mail în cont, deschide și linkul primit acolo.';
   }
 
   @override
-  String get changeEmailSentExpiry => 'Linkurile expiră după 24 de ore.';
+  String get changeEmailSentExpiry => 'Fiecare link expiră după 24 de ore.';
 
   @override
   String get changeEmailSentDone => 'Am înțeles';
@@ -15760,6 +16214,13 @@ class AppLocalizationsRo extends AppLocalizations {
   String get updateAction => 'Actualizează';
 
   @override
+  String get announcementViewContest => 'Vezi concursul';
+
+  @override
+  String get featuredFeedUnavailable =>
+      'Acest flux recomandat nu mai este disponibil.';
+
+  @override
   String updateNewIn(String version) {
     return 'Noutăți în $version:';
   }
@@ -15912,6 +16373,16 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get settingsHelpAboutSubtitle =>
       'Asistență, informații legale și detalii despre aplicație';
+
+  @override
+  String get settingsDiscordTitle => 'Alătură-te serverului nostru de Discord';
+
+  @override
+  String get settingsDiscordSubtitle =>
+      'Vorbește cu echipa și comunitatea Divine';
+
+  @override
+  String get settingsDiscordOpenError => 'Discord nu a putut fi deschis';
 
   @override
   String listLoopsCount(int count, String formatted) {
@@ -17210,4 +17681,114 @@ class AppLocalizationsRo extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return 'Videoclipuri de la $badgeName';
   }
+
+  @override
+  String get menuBarEdit => 'Editare';
+
+  @override
+  String get menuBarUndo => 'Anulează';
+
+  @override
+  String get menuBarRedo => 'Refă';
+
+  @override
+  String get menuBarCut => 'Decupează';
+
+  @override
+  String get menuBarCopy => 'Copiază';
+
+  @override
+  String get menuBarPaste => 'Lipește';
+
+  @override
+  String get menuBarSelectAll => 'Selectează tot';
+
+  @override
+  String get menuBarView => 'Afișare';
+
+  @override
+  String get menuBarVideo => 'Videoclip';
+
+  @override
+  String get menuBarPreviousVideo => 'Videoclipul anterior';
+
+  @override
+  String get menuBarNextVideo => 'Videoclipul următor';
+
+  @override
+  String get menuBarPlayPause => 'Redă/pauză';
+
+  @override
+  String get menuBarMute => 'Dezactivează sunetul';
+
+  @override
+  String get menuBarUnmute => 'Activează sunetul';
+
+  @override
+  String get menuBarWindow => 'Fereastră';
+
+  @override
+  String get menuBarHelp => 'Ajutor';
+
+  @override
+  String get emailConfirmationTitle => 'Confirmă-ți emailul';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return 'Ți-am trimis un link la $email. Apasă-l ca să deblochezi mesajele și să te poți întoarce mereu în cont.';
+  }
+
+  @override
+  String get emailConfirmationResendButton => 'Retrimite emailul';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return 'Ai intrat! Verifică $email ca să-ți confirmi contul.';
+  }
+
+  @override
+  String get emailConfirmationResendSent =>
+      'Confirmare solicitată. Verifică-ți căsuța de e-mail.';
+
+  @override
+  String get emailConfirmationResendFailed =>
+      'Nu l-am putut trimite. Încearcă din nou puțin mai târziu.';
+
+  @override
+  String get emailConfirmationMessagesTitle =>
+      'Confirmă-ți emailul ca să poți trimite mesaje';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return 'Apasă linkul pe care ți l-am trimis la $email. Apoi mesajele sunt ale tale.';
+  }
+
+  @override
+  String get emailConfirmationCheckInbox =>
+      'Caută linkul de confirmare în căsuța ta de e-mail.';
+
+  @override
+  String get emailConfirmationDone =>
+      'Email confirmat. Mesajele sunt deblocate.';
+
+  @override
+  String get emailConfirmationLinkConfirmed => 'Email confirmat.';
+
+  @override
+  String get emailConfirmationAddEmailTitle => 'Adaugă un email';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      'Contul tău nu are acum niciun email. Adaugă unul ca să te poți întoarce mereu în cont.';
+
+  @override
+  String get emailConfirmationAddEmailButton => 'Adaugă email';
+
+  @override
+  String get emailConfirmationSendBlocked =>
+      'Confirmă-ți emailul ca să trimiți mesaje.';
+
+  @override
+  String get emailConfirmationCapReached =>
+      'Asta e limita pe oră pentru conturile noi. Confirmă-ți emailul ca s-o ridici.';
 }

@@ -16,6 +16,8 @@ import 'package:openvine/generated/product_analytics.dart';
 import 'package:openvine/models/view_traffic_source.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/router/route_extra_codec.dart';
+import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/services/analytics_service.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
@@ -448,6 +450,60 @@ void main() {
         );
         await tester.pumpWidget(const SizedBox.shrink());
         expect(_viewEndEvents(analyticsService), hasLength(2));
+        await controller.close();
+      },
+    );
+
+    testWidgets(
+      'restored message playback emits no clip, viewer or impression analytics',
+      (tester) async {
+        final controller = _stubController(isPlaying: true);
+        await tester.pumpWidget(
+          _buildTracker(
+            authService: authService,
+            analyticsService: analyticsService,
+            seenVideosService: seenVideosService,
+            controller: controller.controller,
+            isActive: true,
+            clock: () => now,
+            trafficSource: ViewTrafficSource.share,
+            fromMessage: _restoreVideoOrigin(fromMessage: true),
+          ),
+        );
+        now = now.add(const Duration(seconds: 16));
+        await tester.pump(const Duration(seconds: 16));
+        await tester.pumpWidget(const SizedBox.shrink());
+        expect(analyticsService.events, isEmpty);
+        expect(analyticsService.impressions, isEmpty);
+        expect(analyticsService.playbackSessions, isEmpty);
+        expect(seenVideosService.records.single.videoId, _video.id);
+        await controller.close();
+      },
+    );
+
+    testWidgets(
+      'public video detail retains playback telemetry under share attribution',
+      (tester) async {
+        final controller = _stubController(isPlaying: true);
+        await tester.pumpWidget(
+          _buildTracker(
+            authService: authService,
+            analyticsService: analyticsService,
+            seenVideosService: seenVideosService,
+            controller: controller.controller,
+            isActive: true,
+            clock: () => now,
+            trafficSource: ViewTrafficSource.share,
+            fromMessage: _restoreVideoOrigin(fromMessage: false),
+          ),
+        );
+        now = now.add(const Duration(seconds: 16));
+        await tester.pump(const Duration(seconds: 16));
+        await tester.pumpWidget(const SizedBox.shrink());
+        expect(analyticsService.events, isNotEmpty);
+        expect(analyticsService.impressions, isNotEmpty);
+        expect(analyticsService.playbackSessions, isNotEmpty);
+        expect(seenVideosService.records.single.videoId, _video.id);
         await controller.close();
       },
     );
@@ -1290,6 +1346,14 @@ void main() {
   });
 }
 
+bool _restoreVideoOrigin({required bool fromMessage}) {
+  final before = RouteExtraCodec().encode(
+    VideoDetailRouteExtra(fromMessage: fromMessage),
+  );
+  final after = RouteExtraCodec().decode(before) as VideoDetailRouteExtra?;
+  return after?.fromMessage ?? false;
+}
+
 Widget _buildTracker({
   required AuthService authService,
   required AnalyticsService analyticsService,
@@ -1297,6 +1361,8 @@ Widget _buildTracker({
   required DivineVideoPlayerController controller,
   required bool isActive,
   required DateTime Function() clock,
+  ViewTrafficSource trafficSource = ViewTrafficSource.home,
+  bool fromMessage = false,
   AnalyticsEventSink? legacyAnalytics,
   VideoLoopsCubit? loopCounts,
 }) {
@@ -1316,7 +1382,8 @@ Widget _buildTracker({
         loopCounts: loopCounts,
         controller: controller,
         isActive: isActive,
-        trafficSource: ViewTrafficSource.home,
+        trafficSource: trafficSource,
+        fromMessage: fromMessage,
         clock: clock,
         child: const SizedBox.shrink(),
       ),

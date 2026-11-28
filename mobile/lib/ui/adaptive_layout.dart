@@ -1,6 +1,8 @@
 // ABOUTME: Window-size layout classes for tablets and foldables, gated on the
 // ABOUTME: Large Screen Layout flag, and the orientation policy that goes with them
 
+import 'dart:math' as math;
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -8,6 +10,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
+import 'package:openvine/providers/large_screen_orientation_provider.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -42,13 +45,16 @@ typedef StatusBarColumn = ({double width, bool onRight});
 /// The layout class of the current window.
 ///
 /// Everything is off unless [enabled], which follows
-/// [FeatureFlag.largeScreenLayout]: with the flag off every window lays out
-/// as it did before the flag existed.
+/// [FeatureFlag.largeScreenLayout] (see [AdaptiveLayoutScope] for the one
+/// exception): with the flag off every window lays out as it did before the
+/// flag existed.
 @immutable
 class AdaptiveLayout {
   const AdaptiveLayout({required this.enabled, required this.size});
 
-  /// Whether the large-screen layouts may be used at all.
+  /// Whether the large-screen layouts may be used at all: the flag is on, or
+  /// the app runs on a large display whose platform ignores its portrait
+  /// lock.
   final bool enabled;
 
   /// The size of the window the app is drawn in.
@@ -79,24 +85,40 @@ class AdaptiveLayout {
     return (width: width, onRight: onRight);
   }
 
-  /// The column count for a video grid [width] wide that shows [compact]
-  /// columns on a phone.
+  /// The column count for a grid [width] wide that shows [compact] columns
+  /// on a phone.
   ///
-  /// Adds one column at each breakpoint the grid crosses, so tiles stay about
-  /// as wide as they are on a phone. Without the large-screen layouts a grid
-  /// keeps the rule it had before them: [compact] columns, or
-  /// [largeColumnsWithoutFlag] from [AdaptiveBreakpoints.large] where given.
+  /// [width] is the grid's own width, which the side navigation, the comments
+  /// panel or the grid's padding make narrower than the window. Adds one
+  /// column at each breakpoint the grid crosses, so tiles stay about as wide
+  /// as they are on a phone.
+  ///
+  /// Without the large-screen layouts a grid keeps the rule it had before
+  /// them, which read the window rather than the grid: [compact] columns, or
+  /// [largeColumnsWithoutFlag] in a window at least
+  /// [AdaptiveBreakpoints.large] wide where given.
   int gridColumns({
     required int compact,
     required double width,
     int? largeColumnsWithoutFlag,
   }) {
+    if (!enabled) {
+      return size.width >= AdaptiveBreakpoints.large
+          ? largeColumnsWithoutFlag ?? compact
+          : compact;
+    }
     if (width < AdaptiveBreakpoints.large) return compact;
-    if (!enabled) return largeColumnsWithoutFlag ?? compact;
     if (width < AdaptiveBreakpoints.wide) return compact + 1;
     if (width < AdaptiveBreakpoints.extraWide) return compact + 2;
     return compact + 3;
   }
+
+  @override
+  bool operator ==(Object other) =>
+      other is AdaptiveLayout && other.enabled == enabled && other.size == size;
+
+  @override
+  int get hashCode => Object.hash(enabled, size);
 }
 
 /// Reads the [AdaptiveLayout] of the window this context is drawn in.
@@ -118,6 +140,13 @@ extension AdaptiveLayoutContext on BuildContext {
 /// and a window whose shorter side is at least
 /// [AdaptiveBreakpoints.large], the app may rotate; everywhere else, and while
 /// a [PortraitOrientationLock] is mounted, it stays in portrait as before.
+///
+/// The layouts are also on, whatever the flag, on a display at least
+/// [AdaptiveBreakpoints.large] across whose platform ignores the portrait
+/// lock ([ignoresOrientationLockOnLargeScreensProvider]): Android 16 tablets
+/// and unfolded foldables rotate the app regardless, and the phone layout
+/// in a landscape window crops a vertical video to a strip and shows a
+/// landscape camera preview for a portrait recording.
 class AdaptiveLayoutScope extends ConsumerStatefulWidget {
   const AdaptiveLayoutScope({required this.child, super.key});
 
@@ -140,9 +169,14 @@ class _AdaptiveLayoutScopeState extends ConsumerState<AdaptiveLayoutScope> {
   bool _rotationWanted = false;
   bool? _rotationApplied;
 
+  /// Whether the Android activity may already let this window rotate: it
+  /// allows rotation on a large screen from launch unless the layouts were
+  /// turned off (`MainActivity.kt`).
+  bool _activityMayRotate = false;
+
   /// The flag as last reported to the iOS app delegate, which starts out
-  /// believing it off.
-  bool _reportedToSystem = false;
+  /// believing it on, the build default.
+  bool _reportedToSystem = true;
 
   /// Tells the iOS app delegate whether the flag is on as the app resolves
   /// it, override or build default: its orientation mask allows rotation on
@@ -174,11 +208,16 @@ class _AdaptiveLayoutScopeState extends ConsumerState<AdaptiveLayoutScope> {
     if (!_controlsOrientation) return;
     final allowRotation = _rotationWanted && _portraitLocks == 0;
     if (allowRotation == _rotationApplied) return;
-    // Portrait is what startup already applied: nothing to ask for until
-    // rotation was allowed once, so a camera opened with the flag off (or on
-    // an Android phone) makes no orientation call, exactly as before the
-    // flag.
-    if (_rotationApplied == null && !allowRotation) return;
+    // Portrait is what the platform already holds (the iPhone's supported
+    // orientations, the Android activity's screenOrientation, the app
+    // delegate's mask with the flag off): nothing to ask for until rotation
+    // was allowed once, so a camera opened with the flag off (or on an
+    // Android phone) makes no orientation call, exactly as before the flag.
+    // The exception is a large Android window, which the activity may have
+    // let rotate at launch: with the layouts off there, ask for portrait.
+    if (_rotationApplied == null && !allowRotation && !_activityMayRotate) {
+      return;
+    }
     _rotationApplied = allowRotation;
     runDetached(
       SystemChrome.setPreferredOrientations(
@@ -192,17 +231,23 @@ class _AdaptiveLayoutScopeState extends ConsumerState<AdaptiveLayoutScope> {
 
   @override
   Widget build(BuildContext context) {
-    final enabled = ref.watch(
+    final flagEnabled = ref.watch(
       isFeatureEnabledProvider(FeatureFlag.largeScreenLayout),
     );
+    final enabled =
+        flagEnabled ||
+        (ref.watch(ignoresOrientationLockOnLargeScreensProvider) &&
+            _isOnLargeDisplay(context));
     // Before any orientation request, so the delegate's mask already allows
     // what Dart asks for.
-    _reportToSystem(enabled);
+    _reportToSystem(flagEnabled);
+    final largeWindow =
+        MediaQuery.sizeOf(context).shortestSide >= AdaptiveBreakpoints.large;
+    // The display fallback only changes layout. The system can still honor
+    // portrait lock when its aspect-ratio settings override the default.
     _rotationWanted =
-        enabled &&
-        (_systemKeepsSmallScreensPortrait ||
-            MediaQuery.sizeOf(context).shortestSide >=
-                AdaptiveBreakpoints.large);
+        flagEnabled && (_systemKeepsSmallScreensPortrait || largeWindow);
+    _activityMayRotate = _activityRotatesLargeScreens && largeWindow;
     _applyOrientations();
     return _AdaptiveLayoutInherited(
       enabled: enabled,
@@ -213,15 +258,62 @@ class _AdaptiveLayoutScopeState extends ConsumerState<AdaptiveLayoutScope> {
   }
 }
 
-/// The orientation startup locks the app to (see `app_bootstrap.dart`).
+/// The orientation the platform keeps phones in, and the camera asks for.
 const List<DeviceOrientation> _portraitOnly = [DeviceOrientation.portraitUp];
 
+/// Whether this context's display is at least [AdaptiveBreakpoints.large]
+/// across its shorter side, which is where Android 16 stops honouring the
+/// portrait lock.
+///
+/// Also reads the window, which rebuilds the scope when folding or resizing
+/// changes it, and stands in for a display that reports no size.
+bool _isOnLargeDisplay(BuildContext context) {
+  final window = MediaQuery.sizeOf(context);
+  final display = View.maybeOf(context)?.display;
+  final displayShortestSide = display == null || display.devicePixelRatio <= 0
+      ? 0.0
+      : display.size.shortestSide / display.devicePixelRatio;
+  return math.max(displayShortestSide, window.shortestSide) >=
+      AdaptiveBreakpoints.large;
+}
+
 /// Reports the large-screen layouts to the iOS app delegate
-/// (`AppDelegate.swift`), whose orientation mask depends on them.
+/// (`AppDelegate.swift`), whose orientation mask depends on them, and asks the
+/// Android activity (`MainActivity.kt`) whether the system ignores the
+/// portrait lock on large displays.
 @visibleForTesting
 const MethodChannel largeScreenLayoutChannel = MethodChannel(
   'divine/large_screen_layout',
 );
+
+/// Whether the platform ignores the app's portrait lock on large displays:
+/// Android 16 does for apps that target API 36 (see
+/// [ignoresOrientationLockOnLargeScreensProvider]).
+///
+/// Asked once at startup. False on every other platform, and when the
+/// activity cannot answer, so the layouts then follow the flag alone.
+Future<bool> resolveIgnoresOrientationLockOnLargeScreens() async {
+  if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return false;
+  try {
+    return await largeScreenLayoutChannel.invokeMethod<bool>(
+          'ignoresOrientationLockOnLargeScreens',
+        ) ??
+        false;
+  } on PlatformException catch (error, stackTrace) {
+    Log.warning(
+      'Could not ask whether the system ignores the portrait lock',
+      name: 'AdaptiveLayoutScope',
+      category: LogCategory.ui,
+      error: error,
+      stackTrace: stackTrace,
+    );
+    return false;
+  } on MissingPluginException {
+    // An activity without the channel (an older native shell) predates the
+    // question and keeps its lock.
+    return false;
+  }
+}
 
 /// Whether the platform itself keeps screens smaller than
 /// [AdaptiveBreakpoints.large] in portrait once the flag is on.
@@ -234,8 +326,13 @@ const MethodChannel largeScreenLayoutChannel = MethodChannel(
 bool get _systemKeepsSmallScreensPortrait =>
     !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
-/// Whether this platform takes orientation preferences at all. Mirrors the
-/// startup lock, which skips the web and desktop.
+/// Whether the Android activity lets large screens rotate from launch while
+/// the layouts are on (`MainActivity.kt`), before Dart has resolved the flag.
+bool get _activityRotatesLargeScreens =>
+    !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
+/// Whether this platform takes orientation preferences at all: the web and
+/// desktop do not.
 bool get _controlsOrientation =>
     !kIsWeb &&
     (defaultTargetPlatform == TargetPlatform.iOS ||

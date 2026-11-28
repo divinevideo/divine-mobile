@@ -85,9 +85,23 @@ void main() {
 
     tearDown(() async => db.close());
 
+    // Cache matches become results, and are rechecked, only when REST fails.
+    void failRestSearch() {
+      when(
+        () => api.searchProfiles(
+          query: any(named: 'query'),
+          limit: any(named: 'limit'),
+          offset: any(named: 'offset'),
+          sortBy: any(named: 'sortBy'),
+          hasVideos: any(named: 'hasVideos'),
+        ),
+      ).thenThrow(const FunnelcakeException('search unavailable'));
+    }
+
     test(
       'evicts a cached-only vanished result and preserves sparse misses',
       () async {
+        failRestSearch();
         when(() => api.getBulkProfiles(any())).thenAnswer(
           (_) async => const BulkProfilesResponse(
             profiles: {deleted: UserProfileVanished(pubkey: deleted)},
@@ -113,6 +127,7 @@ void main() {
     test(
       'search rechecks hydrate eligibility without a second lookup',
       () async {
+        failRestSearch();
         when(() => api.getBulkProfiles(any())).thenAnswer(
           (_) async => const BulkProfilesResponse(
             profiles: {
@@ -158,6 +173,7 @@ void main() {
     test(
       'relay results cannot resurrect an account just evicted by bulk',
       () async {
+        failRestSearch();
         final relay = Completer<List<Event>>();
         final event = _Event();
         when(() => event.pubkey).thenReturn(deleted);
@@ -194,7 +210,7 @@ void main() {
     );
 
     test(
-      'only cached results absent from REST need the bulk recheck',
+      'a REST page leaves cached-only matches out without a bulk recheck',
       () async {
         when(
           () => api.searchProfiles(
@@ -214,11 +230,8 @@ void main() {
             .searchUsersProgressive(query: 'test account')
             .toList();
 
-        expect(results.last.profiles, hasLength(2));
-        final requested =
-            verify(() => api.getBulkProfiles(captureAny())).captured.single
-                as List<String>;
-        expect(requested, [deleted]);
+        expect(results.last.profiles.map((p) => p.pubkey), [live]);
+        verifyNever(() => api.getBulkProfiles(any()));
       },
     );
 
@@ -248,6 +261,7 @@ void main() {
     test(
       'bulk failure keeps local results without inventing a vanish',
       () async {
+        failRestSearch();
         when(() => api.getBulkProfiles(any())).thenThrow(
           const FunnelcakeException('offline'),
         );
@@ -261,6 +275,7 @@ void main() {
     );
 
     test('cancelled bulk response cannot evict or emit more results', () async {
+      failRestSearch();
       final response = Completer<BulkProfilesResponse>();
       final started = Completer<void>();
       when(() => api.getBulkProfiles(any())).thenAnswer((_) {
@@ -290,55 +305,41 @@ void main() {
       expect(await db.userProfilesDao.getProfile(deleted), isNotNull);
     });
 
-    test('REST rows are emitted before waiting on the bulk recheck', () async {
-      final response = Completer<BulkProfilesResponse>();
-      final started = Completer<void>();
-      when(() => api.getBulkProfiles(any())).thenAnswer((_) {
-        started.complete();
-        return response.future;
-      });
-      when(
-        () => api.searchProfiles(
-          query: any(named: 'query'),
-          limit: any(named: 'limit'),
-          offset: any(named: 'offset'),
-          sortBy: any(named: 'sortBy'),
-          hasVideos: any(named: 'hasVideos'),
-        ),
-      ).thenAnswer(
-        (_) async => [
-          const ProfileSearchResult(
-            pubkey: live,
-            name: 'test account',
-            displayName: 'test account REST answer',
-          ),
-        ],
-      );
-      final emissions = <ProgressiveSearchResult>[];
-      final done = repo
-          .searchUsersProgressive(query: 'test account')
-          .forEach(emissions.add);
-      await started.future.timeout(const Duration(seconds: 2));
+    test(
+      'cache rows are published before waiting on the bulk recheck',
+      () async {
+        failRestSearch();
+        final response = Completer<BulkProfilesResponse>();
+        final started = Completer<void>();
+        when(() => api.getBulkProfiles(any())).thenAnswer((_) {
+          started.complete();
+          return response.future;
+        });
+        final emissions = <ProgressiveSearchResult>[];
+        final done = repo
+            .searchUsersProgressive(query: 'test account')
+            .forEach(emissions.add);
+        await started.future.timeout(const Duration(seconds: 2));
 
-      expect(emissions, hasLength(2));
-      expect(
-        emissions.last.profiles
-            .singleWhere((p) => p.pubkey == live)
-            .displayName,
-        'test account REST answer',
-      );
-      expect(
-        emissions.last.sources[SearchSource.funnelcakeApi],
-        isA<SearchSourceSuccess>(),
-      );
-      response.complete(const BulkProfilesResponse(profiles: {}));
-      await done;
-      expect(emissions.last.isComplete, isTrue);
-    });
+        expect(emissions, isNotEmpty);
+        expect(
+          emissions.last.profiles.map((p) => p.pubkey),
+          unorderedEquals([deleted, live]),
+        );
+        expect(
+          emissions.last.sources[SearchSource.funnelcakeApi],
+          isA<SearchSourceFailed>(),
+        );
+        response.complete(const BulkProfilesResponse(profiles: {}));
+        await done;
+        expect(emissions.last.isComplete, isTrue);
+      },
+    );
 
     test(
       'large cached result sets respect the bulk endpoint batch limit',
       () async {
+        failRestSearch();
         for (var i = 0; i < 203; i++) {
           await db.userProfilesDao.upsertProfile(
             profile(i.toRadixString(16).padLeft(64, '0')),

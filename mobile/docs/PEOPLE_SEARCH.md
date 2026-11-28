@@ -23,37 +23,44 @@ UserSearchBloc                              mobile/lib/blocs/user_search/
   • on Exception → Reportable wrap + `failure` state
   • per-yield: forward each newly-terminal source to
     FeedPerformanceTracker.trackSearchSource
-  • with a ranking loader: until Funnelcake answers, rows already shown keep
-    their places and new ones join below them; once it answers, or the
-    search completes, the whole list takes the repository's order once.
+  • with a ranking loader: Funnelcake's page arrives as one publication in
+    the repository's order. When the cache and relays stand in for it, rows
+    already shown keep their places and new ones join below them until the
+    search completes, when the whole list takes the repository's order once.
     People you follow or have messaged move up, but never past an exact
     match (#8578); the username owner leads
   • the loader drops accounts hidden from feeds (blocked or muted by you,
     or blocking or muting you); the viewer stays listed on the Search page
+  • clearResultsOnNewQuery (set only by the Search page): a new term clears
+    the previous term's rows and resultCount on its first loading emit, so
+    People shows the skeleton; the pickers leave it off and keep the rows
         ↓
 ProfileRepository.searchUsersProgressive    mobile/packages/profile_repository/
-  Start together on subscription:
+  Start on subscription:
+    REST:              funnelcake.searchProfiles, 5 s search timeout
     Local (offset==0): UserProfilesDao.searchProfilesByIdentity
                        bounded SQLite identity query (name, display name,
                        nip05, whole pubkey; bio excluded), npub decoded to hex
-    REST:              funnelcake.searchProfiles, no explicit timeout
-    Relay (offset==0): nostrClient.queryUsers, 4.5s relay budget + 5s guard
     Owner (first page, username-shaped query, Funnelcake available):
                        name server /.well-known/nostr.json?name=;
                        pinned only if REST search lists the owner
+  REST answers:        its page is the result, published once; the cache only
+                       supplies newer revisions of its rows; relays skipped
+  REST fails or times out, or Funnelcake is unconfigured:
+    Local:             its matches become results
+    Relay (offset==0): nostrClient.queryUsers, 4.5s relay budget + 5s guard,
+                       started only now
+    Recheck:           cached rows, for explicit vanished answers, in batches
   Publication gates:
     All results:       durable vanished-account policy has loaded
     REST page:         owner lookup and any discoverability check have settled
-  Each completed source records a SearchSourceStatus and can publish the
-  accumulated results while other sources remain pending.
-  After local + REST:  recheck cached-only rows for explicit vanished answers,
-                       in batches; this does not wait for pending relay search
   Final yield: _enrichFromCache + _applyFilter (sortBy=relevance: the
-               REST page in Funnelcake's order, then local-only matches by
-               exact > prefix > word > substring; follow boost up to the
-               next exact match. sortBy=followers: relevance tiers, then
-               followers/videos, follow boost behind exact matches; block
-               filter either way); envelope carries nextRestOffset/restHasMore
+               REST page in Funnelcake's order, or without one the cache and
+               NIP-50 matches by exact > prefix > word > substring; follow
+               boost up to the next exact match. sortBy=followers: relevance
+               tiers, then followers/videos, follow boost behind exact
+               matches; block filter either way); envelope carries
+               nextRestOffset/restHasMore
         ↓
 NostrClient.queryUsers                      mobile/packages/nostr_client/
   • tempRelays = [relay.nostr.band, search.nos.today, nostr.wine]
@@ -82,9 +89,11 @@ profile picture and recent posts). A better match outweighs a small difference
 in activity, but a much more active near match can lead an exact match with
 nothing behind it. Funnelcake also puts the owner of a Divine username searched
 for first. The repository keeps that server order for the REST rows that pass
-the matching above; profiles only the local cache or NIP-50 found come after
-them, ordered by the app's relevance tiers (exact > prefix > word > substring),
-as does everything before Funnelcake answers.
+the matching above, and adds nothing beside them: profiles only the local cache
+or NIP-50 would have found are left out, so the list does not reorder when a
+slower source answers. Only when Funnelcake fails or is unconfigured do the
+cache and NIP-50 matches stand in, ordered by the app's relevance tiers
+(exact > prefix > word > substring).
 
 That matching is narrower than Funnelcake's in two places. Funnelcake's
 letter-swap matches (a search for `alcie` finding `alice`) are dropped. And when
@@ -100,11 +109,10 @@ another, so three followed partial matches cannot push an exact account out of
 the three-row preview (#8578), while the server still decides where an unknown
 exact match stands against unknown profiles.
 
-With a ranking loader the bloc keeps rows already shown in place until
-Funnelcake answers, then moves the whole list into the repository's order. The
-profiles Funnelcake returned move once and then keep their places; a row only
-the local cache found can move again when NIP-50 adds a better match ahead of
-it.
+Funnelcake's page is the first publication, so its rows appear once, in place.
+In the fallback, the bloc keeps rows already shown in place while the cache and
+NIP-50 answer, then moves the whole list into the repository's order once when
+the search completes.
 
 A `sort_by=followers` search, which other callers still use, keeps the app's
 relevance tiers first and orders each tier by the REST follower and video
@@ -116,7 +124,7 @@ When the first-page query names a Divine username (`alice`, `@alice`,
 `alice@divine.video`, `_@alice.divine.video` or `alice.divine.video`; not a
 phrase, another domain or a complete npub), the repository asks the name
 server's NIP-05 directory (`/.well-known/nostr.json?name=`) who holds it while
-the local, REST and relay searches run. That read is exact, active-only and
+the REST search runs. That read is exact, active-only and
 cached for 60 seconds. The availability endpoint `/api/username/check` is not
 used: for a free name it runs the username-judgment check, whose per-minute budget
 is shared with claims, so search traffic would spend what sign-ups need.
@@ -131,7 +139,8 @@ fields the server cleared stay cleared; no cache is written for it. Without
 Funnelcake there is no lookup at all.
 
 The REST page waits for the owner lookup and any discoverability check before
-publication; local and relay results can appear during that wait. A pinned owner
+publication. A failed REST search skips both, since the owner is only pinned
+onto a REST page. A pinned owner
 joins the REST yield and leads every yield from there, even when its visible
 name does not match the query, and the envelope reports it as
 `usernameOwnerPubkey`. The bloc keeps it first, including ahead of rows an
@@ -164,63 +173,71 @@ known timestamp, and keeps the server's follower and video counts, which are
 not part of the profile event. Equal or missing server timestamps select the
 server copy; synthetic REST and bundled seed IDs cannot establish an event
 revision. The same comparison runs if the local answer arrives after REST;
-completion order does not change the selected revision. An earlier relay
-answer cannot use the local-revision exception to replace the server copy.
-Preserve the selected server fields through enrichment, including cleared names
+completion order does not change the selected revision. Preserve the selected server fields through enrichment, including cleared names
 and media, then apply identity matching again. A renamed account can therefore
 disappear from a query for its old name.
 
 Pagination uses the raw REST response size, not the number of matching profiles.
 An empty or short matching page may still have later results. Appended pages
-skip accounts already shown, because the first page also merges cache and
-NIP-50 hits. The user picker loads the next page near the end of its list and
+skip accounts already shown. The user picker loads the next page near the end of its list and
 offers Show more whenever another page exists.
 
-## Concurrent sources and progressive completion
+## Sources: Funnelcake first, cache and relays as fallback
 
-On subscription, the repository starts all eligible sources together. A slow
-cache query does not delay REST or relay requests, and REST does not hold up
-relay search:
+Funnelcake is the fastest source and ranks best, so its page is the result
+whenever it answers. The cache and the NIP-50 relays only stand in when it does
+not: publishing them beside the REST page made the list reorder as each source
+answered.
 
-- **localCache** — SQLite profile cache, consulted only on the first page
-  (`offset == 0`). The bounded identity query can still wait for database
-  initialization or other queued storage work.
 - **funnelcakeApi** — Funnelcake REST `/api/profiles/search`, consulted on
-  every page. Recorded as `SearchSourceSkipped` when the client is unavailable
-  or unconfigured.
+  every page and started on subscription. Recorded as `SearchSourceSkipped`
+  when the client is unavailable or unconfigured. A request that fails is
+  recorded as `SearchSourceFailed(network)`; one that takes longer than 5 s
+  as `SearchSourceFailed(timeout)`. That search timeout is shorter than the
+  client's own 15 s, which also spans its retries, so a stalled backend falls
+  back within seconds; a REST answer arriving after it is discarded.
+- **localCache** — SQLite profile cache, consulted only on the first page
+  (`offset == 0`) and started beside REST. Beside a REST page it only supplies
+  newer revisions of that page's profiles and contributes no rows of its own;
+  without one its matches become results. The bounded identity query can still
+  wait for database initialization or other queued storage work.
 - **nip50Relay** — Federated NIP-50 search across three hardcoded relays,
-  consulted only on the first page. The SDK relay query has a 4.5 s budget and
-  returns partial results when that budget expires; the repository keeps a 5 s
-  guard for setup stalls before the SDK budget starts. This budget starts with
-  relay search, independently of cache and REST latency.
+  consulted only on the first page and only when REST failed or is
+  unconfigured; recorded as `SearchSourceSkipped` when REST answered. The SDK
+  relay query has a 4.5 s budget and returns partial results when that budget
+  expires; the repository keeps a 5 s guard for setup stalls before the SDK
+  budget starts.
 
-Remote requests also start while the durable vanished-account policy loads.
+Remote requests start while the durable vanished-account policy loads.
 No source may publish profiles until that policy has loaded, and a failed policy
 read fails the stream without exposing candidates. Every published snapshot
 applies the current vanished and blocked-account filters. The REST publication
-also waits for the username-owner checks described above; other sources can
-publish while those checks are pending.
+also waits for the username-owner checks described above.
 
-As sources settle, the repository merges their answers and publishes the
-accumulated candidate set when nonempty. A completion can therefore emit an
-updated snapshot even when it contributed no new distinct profile. Each
-`ProgressiveSearchResult` carries:
+When REST answers, its page is published once. A later cache answer can only
+replace the revision of a row already on it, which reaches the final yield.
+
+When REST fails, the cache matches are published at once. The relay search
+starts then and publishes when it answers. With REST and the relays each
+bounded at 5 s, a fallback search stays inside the bloc's 20 s wait between
+publications.
+Each `ProgressiveSearchResult` carries:
 
 - the accumulated deduplicated, filtered and ranked profile list
 - the running `Map<SearchSource, SearchSourceStatus>`
 - `isComplete: false` for intermediate yields, `true` for the final yield
 
-After local and REST settle, cached profiles absent from the REST answer are
-rechecked through the bulk endpoint in batches of at most 100. Only an explicit
-`UserProfileVanished` answer evicts a cached row; a sparse miss or request failure
-does not prove deletion. Each batch publishes a snapshot, including sparse or
-failed batches. These rechecks run alongside any still-pending relay query.
+In the fallback, cached profiles are rechecked through the bulk endpoint in
+batches of at most 100. Only an explicit `UserProfileVanished` answer evicts a
+cached row; a sparse miss or request failure does not prove deletion. Each batch
+publishes a snapshot, including sparse or failed batches. These rechecks run
+alongside the relay query. Beside a REST page no cached row is shown, so none is
+rechecked.
 
-The final yield follows all eligible sources and cached-only rechecks, then
-cache enrichment and filtering. It preserves the selected server revision and
-server order regardless of which source completed first. REST pagination
-metadata (`nextRestOffset` and `restHasMore`) is published with the REST page,
-not in an earlier cache or relay snapshot.
+The final yield follows all consulted sources and rechecks, then cache
+enrichment and filtering. It preserves the selected server revision and server
+order. REST pagination metadata (`nextRestOffset` and `restHasMore`) is
+published with the REST page.
 
 A nonblank, uncancelled query that finishes normally with no matches gets a
 final yield with `profiles: []`, `isComplete: true`, and per-source outcomes, so
@@ -236,14 +253,15 @@ for late completion or failure.
 | status | meaning | latency? |
 |---|---|---|
 | `SearchSourcePending` | Source has not yet reported. Internal/initial state, normally not visible in a terminal envelope. | — |
-| `SearchSourceSkipped` | Source was intentionally not consulted (`offset > 0` for local/NIP-50, or Funnelcake unconfigured). | — |
-| `SearchSourceSuccess` | Source returned successfully. Carries `resultCount` (new distinct profiles this source contributed to the accumulated result set) and `latencyMs`. | yes |
+| `SearchSourceSkipped` | Source was intentionally not consulted (`offset > 0` for local/NIP-50, Funnelcake unconfigured, or NIP-50 when REST answered). | — |
+| `SearchSourceSuccess` | Source returned successfully. Carries `resultCount` (new distinct profiles this source contributed to the accumulated result set; 0 for the cache beside a REST page) and `latencyMs`. | yes |
 | `SearchSourceFailed` | Source threw / timed out. Carries `SearchSourceFailureReason` (`timeout` / `network` / `other`) and `latencyMs`. | yes |
 
-A duplicate contributes to the first source that adds it to the accumulated
-set, so per-source result counts can depend on completion order. Revision
-selection and final ranking still follow the rules above. Source latency is
-measured by each worker, without adding the budgets of earlier sources.
+In the fallback, a duplicate contributes to the first source that adds it to
+the accumulated set, so per-source result counts can depend on completion
+order. Revision selection and final ranking still follow the rules above.
+Source latency is measured by each worker; the relay's starts when it is asked,
+after REST failed.
 
 The bloc never re-derives or invents source statuses — it forwards
 the repository's view, except when the outer 20 s timeout fires (see
@@ -283,8 +301,10 @@ empty" (show error-with-retry).
 
 Branch order in `_PeopleContent.build`:
 
-1. `status == initial || (status == loading && results.isEmpty)` →
-   `_PeopleSkeletonLoader`
+1. `(status == initial || status == loading) && results.isEmpty` →
+   `_PeopleSkeletonRows` (three demo `SearchUserTile`s) inside
+   `_PeopleSkeletonizer`, which fades into the list when results arrive
+   (90 ms; no fade under reduced motion)
 2. `status == failure || isDegradedEmpty` →
    `SearchSectionErrorState` (retry button)
 3. `results.isEmpty && showAll` → `SearchSectionEmptyState`

@@ -992,8 +992,8 @@ class VideoEditorRenderService {
       // The effects that read earlier frames first, the looks after the
       // effects editor's other effects, and Adjust after all of them, as in
       // the preview; see customVideoEffectsInRenderOrder and
-      // adjustVideoEffectsOf for why. Lightning keeps clear of the flashes of
-      // the built-in effects.
+      // adjustVideoEffectsOf for why. Lightning and the blasts keep clear of
+      // the flashes of the built-in effects.
       customEffects: customVideoEffectsOnOutput(
         [
           ...customVideoEffectsInRenderOrder(
@@ -1169,7 +1169,7 @@ class VideoEditorRenderService {
   /// censor [ImageLayer] built from the layer itself, see [censorImageLayer];
   /// it hides whatever is composited before it, in its place in the list.
   /// An audio visualizer is drawn by the export from [audioEnergies], see
-  /// [audioVisualizerImageLayer].
+  /// [audioVisualizerImageLayer]. A layer [isLeftOutOfFrames] is left out.
   ///
   /// Public because the detached-clip pass builds the layers that go over its
   /// composition with the same geometry, and both have to agree exactly.
@@ -1190,8 +1190,9 @@ class VideoEditorRenderService {
     );
     return [
       for (final item in capturedLayers)
-        if (!excludeDetachedClips ||
-            !DetachedClipLayerData.isDetachedClipLayer(item.layer))
+        if ((!excludeDetachedClips ||
+                !DetachedClipLayerData.isDetachedClipLayer(item.layer)) &&
+            !isLeftOutOfFrames(item.layer))
           ..._imageLayersFor(
             item,
             bodySize: bodySize,

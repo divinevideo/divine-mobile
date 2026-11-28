@@ -8,7 +8,6 @@ class CommentsSurfacePerformanceTelemetry {
   final SurfacePerformanceTracker _tracker;
 
   void start({
-    required bool videoRepliesEnabled,
     int? initialCount,
   }) {
     _tracker.startSurfaceLoad(
@@ -16,9 +15,7 @@ class CommentsSurfacePerformanceTelemetry {
       params: {
         AnalyticsParam.entryPoint: 'feed_comment_button',
         AnalyticsParam.initialCount: ?initialCount,
-        AnalyticsParam.featureFlag: videoRepliesEnabled
-            ? 'video_replies_enabled'
-            : 'video_replies_disabled',
+        AnalyticsParam.featureFlag: 'video_replies_enabled',
       },
     );
   }

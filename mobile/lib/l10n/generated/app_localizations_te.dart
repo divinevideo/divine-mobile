@@ -10,6 +10,21 @@ class AppLocalizationsTe extends AppLocalizations {
   AppLocalizationsTe([String locale = 'te']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'ఈ సందేశాన్ని తెరవడానికి $account ఖాతాకు మారాలా?';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'ప్రత్యక్ష సందేశాలు';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'పంపినవారి పేరు లేదా సందేశం చూపకుండా నోటిఫికేషన్ ఇవ్వండి.';
+
+  @override
+  String get dmNotificationMessageUnavailable => 'ఈ సందేశం అందుబాటులో లేదు.';
+
+  @override
   String get devOptionsClipRecovery => 'క్లిప్ రికవరీ';
 
   @override
@@ -322,7 +337,7 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get privacySettingsShareUsageSubtitle =>
-      'ప్రజలు నిజంగా ఏమి వాడుతున్నారో చూడటానికి ఇది మాకు సహాయపడుతుంది. దీన్ని ఆఫ్ చేస్తే, ఈ పరికరంలో వేచి ఉన్న డేటా తొలగించబడుతుంది.';
+      'ప్రజలు నిజంగా ఏమి వాడుతున్నారో చూడటానికి ఇది మాకు సహాయపడుతుంది. దీన్ని ఆఫ్ చేస్తే, ఈ పరికరంలో వేచి ఉన్న డేటా తొలగించబడుతుంది. బగ్‌లను సరిచేయడానికి క్రాష్ నివేదికలు ఇప్పటికీ పంపబడతాయి.';
 
   @override
   String get privacySettingsSaveFailed =>
@@ -1862,51 +1877,8 @@ class AppLocalizationsTe extends AppLocalizations {
   String get shareVideoLabel => 'వీడియోను భాగస్వామ్యం చేయండి';
 
   @override
-  String sharePostSharedWith(String recipientName) {
-    return 'పోస్ట్ వీరితో భాగస్వామ్యం చేయబడింది $recipientName';
-  }
-
-  @override
-  String sharePostSharedWithCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'పోస్ట్ వీరితో భాగస్వామ్యం చేయబడింది $countవ్యక్తులు',
-      one: 'పోస్ట్ వీరితో భాగస్వామ్యం చేయబడింది $countవ్యక్తి',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String shareStillTryingToSendTo(String recipientName) {
-    return '$recipientNameకు పంపడానికి ఇంకా ప్రయత్నిస్తున్నాం';
-  }
-
-  @override
-  String shareStillTryingToSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count వ్యక్తులకు పంపడానికి ఇంకా ప్రయత్నిస్తున్నాం',
-      one: '$count వ్యక్తికి పంపడానికి ఇంకా ప్రయత్నిస్తున్నాం',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String shareCouldNotSendTo(String recipientName) {
     return '$recipientNameకు పంపడం సాధ్యపడలేదు';
-  }
-
-  @override
-  String shareCouldNotSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count వ్యక్తులకు పంపడం సాధ్యపడలేదు',
-      one: '$count వ్యక్తికి పంపడం సాధ్యపడలేదు',
-    );
-    return '$_temp0';
   }
 
   @override
@@ -1942,11 +1914,32 @@ class AppLocalizationsTe extends AppLocalizations {
   String get shareFindPeopleMultiline => '\nవ్యక్తులను కనుగొనండి';
 
   @override
+  String get shareDeliveryFailed => 'ఇంకా పంపలేకపోయాం';
+
+  @override
+  String shareDeliveryHeld(String name) {
+    return '$name అందుబాటులోకి వచ్చినప్పుడు పంపుతాం';
+  }
+
+  @override
+  String shareDeliveryForRecipient(String name, String status) {
+    return '$name — $status';
+  }
+
+  @override
   String get shareSent => 'పంపబడింది';
 
   @override
   String shareSelectedRecipientAnnouncement(String name) {
     return 'ఎంచుకోబడింది$name';
+  }
+
+  @override
+  String get shareRecipientSend => 'పంపండి';
+
+  @override
+  String shareRecipientSendTo(String name) {
+    return '$nameకు పంపు';
   }
 
   @override
@@ -2173,6 +2166,28 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get videoStickerAddYoursButton => 'మీ వంతు';
+
+  @override
+  String get videoStickerAddYoursWatchSeries => 'సిరీస్ చూడండి';
+
+  @override
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'సిరీస్ చూడండి: $prompt';
+  }
+
+  @override
+  String videoSeriesChipEpisode(String episode, String total) {
+    return '$totalలో ఎపిసోడ్ $episode';
+  }
+
+  @override
+  String videoSeriesChipSemanticLabel(
+    String seriesName,
+    String episode,
+    String total,
+  ) {
+    return 'సిరీస్ $seriesName, $totalలో ఎపిసోడ్ $episode';
+  }
 
   @override
   String videoStickerAddYoursJoined(int count) {
@@ -3591,6 +3606,9 @@ class AppLocalizationsTe extends AppLocalizations {
       'ఇక్కడ సైన్ ఇన్ చేయడం వల్ల ఆ చిత్తుప్రతులు మరియు క్లిప్‌లు దాచబడతాయి';
 
   @override
+  String get authWatchClassicsAsGuest => 'అతిథిగా క్లాసిక్స్ చూడండి';
+
+  @override
   String get authTermsPrefix =>
       'దిగువన ఉన్న ఎంపికను ఎంచుకోవడం ద్వారా, మీకు కనీసం 16 సంవత్సరాలు (లేదా పూర్తి చేసినట్లు) నిర్ధారిస్తారు ';
 
@@ -4225,6 +4243,10 @@ class AppLocalizationsTe extends AppLocalizations {
       'రీమిక్స్‌ను ప్రారంభించలేకపోయాము. మళ్లీ ప్రయత్నించండి.';
 
   @override
+  String get remixSettingSaveFailed =>
+      'మీ రీమిక్స్ సెట్టింగ్‌ను అప్‌డేట్ చేయలేకపోయాం. మళ్లీ ప్రయత్నించండి.';
+
+  @override
   String get remixSettingAllowTitle =>
       'నా వీడియోలను రీమిక్స్ చేయడానికి ఇతరులను అనుమతించండి';
 
@@ -4650,6 +4672,10 @@ class AppLocalizationsTe extends AppLocalizations {
       'రిలే నవీకరణను అంగీకరించదు. క్షణంలో మళ్లీ ప్రయత్నించండి.';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      'ఈ వీడియో మరొక పరికరంలో మార్చబడింది, ఇప్పుడు దీనికి చాలా ఎక్కువ ట్యాగ్‌లు లేదా సహకారులు ఉన్నాయి. దాన్ని మళ్లీ తెరిచి కొన్నింటిని తీసివేయండి.';
+
+  @override
   String get videoUpdateErrorGeneric =>
       'ఈ వీడియోని అప్‌డేట్ చేయడం సాధ్యపడలేదు. మళ్లీ ప్రయత్నించండి.';
 
@@ -4743,6 +4769,18 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get soundsNoSoundsFoundDescription =>
       'వేరొక శోధన పదాన్ని ప్రయత్నించండి';
+
+  @override
+  String soundsSearchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count శబ్దాలు కనుగొనబడ్డాయి',
+      one: '$count శబ్దం కనుగొనబడింది',
+      zero: 'శబ్దాలు ఏవీ కనుగొనబడలేదు',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get soundsSavedToLibrary => 'సౌండ్‌లకు సేవ్ చేయబడింది';
@@ -6547,6 +6585,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get inboxCollabInviteSentStatus => 'ఆహ్వానం పంపబడింది';
 
   @override
+  String get inboxSharedVideoPreview => 'వీడియోను పంచుకున్నారు';
+
+  @override
   String get inboxConversationCollabInvitePreview => 'సహకారి ఆహ్వానం';
 
   @override
@@ -7377,6 +7418,55 @@ class AppLocalizationsTe extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'నకిలీ';
 
   @override
+  String get libraryDraftActionConvertToClip => 'క్లిప్‌గా మార్చు';
+
+  @override
+  String get libraryDraftConvertingToClip => 'క్లిప్‌గా మారుస్తోంది...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar =>
+      'డ్రాఫ్ట్ క్లిప్‌గా మార్చబడింది';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar =>
+      'డ్రాఫ్ట్‌ను మార్చడంలో విఫలమైంది';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'ఈ డ్రాఫ్ట్‌లోని టెక్స్ట్ మరియు స్టిక్కర్‌లను సిద్ధం చేయడం సాధ్యపడలేదు. దాన్ని ఎడిటర్‌లో తెరిచి, ఆపై మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get libraryDraftActionShare => 'డ్రాఫ్ట్ షేర్ చేయి';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return '$nameకు ఎడిట్ చేయగల డ్రాఫ్ట్ పంపాలా?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'అసలు క్లిప్‌లు, ఎడిటింగ్ చరిత్ర రెండూ షేర్ అవుతాయి. అందుకున్నవారు మీరు కత్తిరించిన భాగాలను చూడవచ్చు. తమ కాపీని ఎడిట్ చేయవచ్చు, పోస్ట్ చేయవచ్చు లేదా తిరిగి పంపవచ్చు.';
+
+  @override
+  String get libraryDraftShareFailed => 'డ్రాఫ్ట్ పంపలేకపోయాం.';
+
+  @override
+  String get libraryDraftShareTooLarge =>
+      'డ్రాఫ్ట్ పంపడానికి చాలా పెద్దగా ఉంది.';
+
+  @override
+  String get dmSharedDraft => 'షేర్ చేసిన డ్రాఫ్ట్';
+
+  @override
+  String get dmOpenDraft => 'ఇంపోర్ట్ చేసి ఎడిట్ చేయి';
+
+  @override
+  String get dmDraftImportFailed => 'డ్రాఫ్ట్ ఇంపోర్ట్ చేయలేకపోయాం.';
+
+  @override
+  String get libraryDraftSent => 'డ్రాఫ్ట్ పంపాం';
+
+  @override
   String get libraryDraftActionDelete => 'డ్రాఫ్ట్‌ను తొలగించండి';
 
   @override
@@ -8029,6 +8119,14 @@ class AppLocalizationsTe extends AppLocalizations {
   ) {
     return '$displayNameమీకు సందేశం పంపాలనుకుంటున్నారు, వారు పంపారు $messageText.';
   }
+
+  @override
+  String messageRequestGroupWantsToMessageYou(String messageText) {
+    return 'ఈ గ్రూప్ మీకు సందేశం పంపాలనుకుంటోంది, వారు పంపారు $messageText.';
+  }
+
+  @override
+  String get messageRequestGroupMembersHeading => 'ఈ గ్రూప్‌లో';
 
   @override
   String get deleteAccountAccountChanged =>
@@ -9784,6 +9882,21 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorEffectSpinBlur => 'స్పిన్ బ్లర్';
 
   @override
+  String get videoEditorEffectShockwave => 'షాక్‌వేవ్';
+
+  @override
+  String get videoEditorEffectSubwoofer => 'సబ్‌వూఫర్';
+
+  @override
+  String get videoEditorEffectPlasma => 'ప్లాస్మా';
+
+  @override
+  String get videoEditorEffectEnergyWave => 'శక్తి తరంగం';
+
+  @override
+  String get videoEditorEffectSmokeBurst => 'పొగ పేలుడు';
+
+  @override
   String get videoEditorEffectComic => 'కామిక్';
 
   @override
@@ -9979,9 +10092,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorFilterCategoryTints => 'రంగులు';
 
   @override
-  String get videoEditorDropsSettingsTitle => 'బిందువుల సర్దుబాటు';
-
-  @override
   String get videoEditorDropsCountLabel => 'సంఖ్య';
 
   @override
@@ -10027,6 +10137,203 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get videoEditorEffectsOnBeatNoSound =>
       'సంగీతాన్ని జోడించండి లేదా ఒక క్లిప్ ధ్వనిని ఆన్ చేయండి';
+
+  @override
+  String get videoEditorEffectSettingsOpen => 'ఎఫెక్ట్ సెట్టింగ్‌లు';
+
+  @override
+  String videoEditorEffectSettingsTitle(String effect) {
+    return 'సెట్టింగ్‌లు: $effect';
+  }
+
+  @override
+  String videoEditorEffectSeconds(String seconds) {
+    return '$seconds సె';
+  }
+
+  @override
+  String get videoEditorEffectHitDuration => 'వ్యవధి';
+
+  @override
+  String get videoEditorEffectHitRepeat => 'పునరావృతం';
+
+  @override
+  String get videoEditorEffectHitOnce =>
+      'ఒకసారి, టైమ్‌లైన్‌లో ఎఫెక్ట్ మొదలయ్యే చోట';
+
+  @override
+  String get videoEditorEffectHitInterval => 'విరామం';
+
+  @override
+  String get videoEditorEffectLookTitle => 'రూపం';
+
+  @override
+  String get videoEditorEffectHitHorizontal => 'అడ్డ స్థానం';
+
+  @override
+  String get videoEditorEffectHitVertical => 'నిలువు స్థానం';
+
+  @override
+  String get videoEditorEffectHitReach => 'పరిధి';
+
+  @override
+  String get videoEditorEffectHitShake => 'కుదుపు';
+
+  @override
+  String get videoEditorEffectHitPunch => 'జూమ్ పంచ్';
+
+  @override
+  String get videoEditorEffectLookReset => 'రూపాన్ని రీసెట్ చేయి';
+
+  @override
+  String get videoEditorEffectTimingTitle => 'సమయం';
+
+  @override
+  String get videoEditorEffectTimingReset => 'సమయాన్ని రీసెట్ చేయి';
+
+  @override
+  String get videoEditorEffectMotionTitle => 'కదలిక';
+
+  @override
+  String get videoEditorEffectMotionReset => 'కదలికను రీసెట్ చేయి';
+
+  @override
+  String get videoEditorEffectSettingFocus => 'ఫోకస్';
+
+  @override
+  String get videoEditorEffectSettingWidth => 'వెడల్పు';
+
+  @override
+  String get videoEditorEffectSettingDirection => 'దిశ';
+
+  @override
+  String get videoEditorEffectSettingHorizontal => 'అడ్డంగా';
+
+  @override
+  String get videoEditorEffectSettingVertical => 'నిలువుగా';
+
+  @override
+  String get videoEditorEffectSettingClockwise => 'సవ్యదిశలో';
+
+  @override
+  String get videoEditorEffectSettingAnticlockwise => 'అపసవ్యదిశలో';
+
+  @override
+  String get videoEditorEffectSettingZoomIn => 'జూమ్ ఇన్';
+
+  @override
+  String get videoEditorEffectSettingZoomOut => 'జూమ్ అవుట్';
+
+  @override
+  String get videoEditorEffectSettingSpacing => 'అంతరం';
+
+  @override
+  String get videoEditorEffectSettingAngle => 'కోణం';
+
+  @override
+  String get videoEditorEffectSettingHue => 'వర్ణం';
+
+  @override
+  String get videoEditorEffectSettingLength => 'పొడవు';
+
+  @override
+  String get videoEditorEffectSettingSensitivity => 'సున్నితత్వం';
+
+  @override
+  String get videoEditorEffectSettingPosition => 'స్థానం';
+
+  @override
+  String get videoEditorEffectSettingWind => 'గాలి';
+
+  @override
+  String get videoEditorEffectSettingDotSize => 'చుక్కల పరిమాణం';
+
+  @override
+  String get videoEditorEffectSettingOutline => 'అవుట్‌లైన్';
+
+  @override
+  String get videoEditorEffectSettingLevels => 'స్థాయిలు';
+
+  @override
+  String get videoEditorEffectSettingPixelSize => 'పిక్సెల్ పరిమాణం';
+
+  @override
+  String get videoEditorEffectSettingOffset => 'తేడా';
+
+  @override
+  String get videoEditorEffectSettingBrushSize => 'బ్రష్ పరిమాణం';
+
+  @override
+  String get videoEditorEffectSettingDensity => 'సాంద్రత';
+
+  @override
+  String get videoEditorEffectSettingGrain => 'గ్రెయిన్';
+
+  @override
+  String get videoEditorEffectSettingGrid => 'గ్రిడ్';
+
+  @override
+  String get videoEditorEffectSettingLayers => 'పొరలు';
+
+  @override
+  String get videoEditorEffectSettingShadow => 'నీడ';
+
+  @override
+  String get videoEditorEffectSettingFirstInk => 'మొదటి ఇంక్';
+
+  @override
+  String get videoEditorEffectSettingSecondInk => 'రెండవ ఇంక్';
+
+  @override
+  String get videoEditorEffectSettingColors => 'రంగులు';
+
+  @override
+  String get videoEditorEffectSettingOriginalColors => 'అసలు';
+
+  @override
+  String get videoEditorEffectSettingSingleColor => 'ఒకే రంగు';
+
+  @override
+  String get videoEditorEffectSettingDelay => 'ఆలస్యం';
+
+  @override
+  String get videoEditorEffectSettingDown => 'కిందికి';
+
+  @override
+  String get videoEditorEffectSettingUp => 'పైకి';
+
+  @override
+  String get videoEditorEffectSettingRight => 'కుడికి';
+
+  @override
+  String get videoEditorEffectSettingLeft => 'ఎడమకు';
+
+  @override
+  String get videoEditorEffectSettingFrequency => 'తరచుదనం';
+
+  @override
+  String get videoEditorEffectSettingDistance => 'దూరం';
+
+  @override
+  String get videoEditorEffectSettingScanlines => 'స్కాన్‌లైన్‌లు';
+
+  @override
+  String get videoEditorEffectSettingGrainSize => 'గ్రెయిన్ పరిమాణం';
+
+  @override
+  String get videoEditorEffectSettingSepia => 'సెపియా';
+
+  @override
+  String get videoEditorEffectSettingFlicker => 'మిణుకు';
+
+  @override
+  String get videoEditorEffectSettingVignette => 'విగ్నెట్';
+
+  @override
+  String get videoEditorEffectSettingTempo => 'టెంపో';
+
+  @override
+  String get videoEditorEffectSettingWavelength => 'తరంగదైర్ఘ్యం';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {
@@ -11906,6 +12213,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorAudioUseSound => 'ఉపయోగించు';
 
   @override
+  String get videoEditorAudioOpenSoundDetails => 'ధ్వని వివరాలను తెరవండి';
+
+  @override
   String get videoEditorAudioFileMissing => 'ఆడియో ఫైల్ ఈ పరికరంలో లేదు';
 
   @override
@@ -11935,6 +12245,9 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get videoEditorAudioCategoryMySounds => 'నా సౌండ్స్';
+
+  @override
+  String get videoEditorAudioCategorySongs => 'Songs';
 
   @override
   String get videoEditorAudioFilterEffects => 'సౌండ్ ఎఫెక్ట్స్';
@@ -12160,6 +12473,34 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get videoEditorSocialStickerRepliesNote =>
       'ఈ వీడియోకు వీడియోతో ఎవరు ప్రత్యుత్తరం ఇచ్చారో చూపిస్తుంది. వీక్షకులు దాన్ని ట్యాప్ చేసి ప్రత్యుత్తరాలను చూస్తారు.';
+
+  @override
+  String get videoEditorSocialStickerAudienceTitle => 'ఎవరు సమాధానం ఇవ్వగలరు';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => 'అందరూ';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => 'స్నేహితులు';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => 'నేను మాత్రమే';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      'మీరు ఫాలో అయ్యేవారు మాత్రమే పాల్గొనగలరు. ఎవరైనా పాల్గొన్న తర్వాత మిగతా వారందరికీ స్టిక్కర్ కనిపిస్తుంది.';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      'మీరు ఫాలో అయ్యేవారి వీడియో ప్రత్యుత్తరాలను మాత్రమే స్టిక్కర్ చూపిస్తుంది. వారిలో ఎవరైనా ప్రత్యుత్తరం ఇచ్చిన తర్వాత మిగతా వారందరికీ అది కనిపిస్తుంది.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      'మీరు మాత్రమే పాల్గొనగలరు. మీరు పాల్గొనే వరకు ఇంకెవరికీ స్టిక్కర్ కనిపించదు.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      'మీ వీడియో ప్రత్యుత్తరాలను మాత్రమే స్టిక్కర్ చూపిస్తుంది. మీరు ప్రత్యుత్తరం ఇచ్చే వరకు ఇంకెవరికీ అది కనిపించదు.';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>
@@ -13981,6 +14322,29 @@ class AppLocalizationsTe extends AppLocalizations {
       'ప్రొటెక్టెడ్-మైనర్ ఓవర్‌రైడ్ క్లియర్ చేయబడింది';
 
   @override
+  String get devOptionsConfirmationAccessTitle => 'Divine Confirmation access';
+
+  @override
+  String get devOptionsConfirmationAccessReal => 'Real answer';
+
+  @override
+  String get devOptionsConfirmationAccessHas => 'Has Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessHasNot => 'Doesn\'t have Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessUnknown => 'Couldn\'t check';
+
+  @override
+  String get devOptionsConfirmationRequirementSimulatedTitle =>
+      'Act as if Confirmation is required';
+
+  @override
+  String get devOptionsConfirmationRequirementSimulatedSubtitle =>
+      'Treats signing in as needing Confirmation even when the verifier doesn\'t. Needs the Confirmation Sign-in flag; choose \"Doesn\'t have Confirmation\" above to see the offer. The verifier still approves sign-ins.';
+
+  @override
   String get commentsRecordVideoButtonLabel =>
       'వీడియో వ్యాఖ్యను రికార్డ్ చేయండి';
 
@@ -15066,6 +15430,65 @@ class AppLocalizationsTe extends AppLocalizations {
   String get verifyStatusAccountChanged => 'Account changed';
 
   @override
+  String get verifyStatusNeedsConfirmation => 'Needs Confirmation';
+
+  @override
+  String get verifyConfirmationTitle => 'Divine Confirmation';
+
+  @override
+  String get verifyConfirmationHeroBody =>
+      'Divine Confirmation lets you link your accounts on other platforms by signing in to them.';
+
+  @override
+  String get verifyConfirmationIncludedTitle => 'What\'s included';
+
+  @override
+  String get verifyConfirmationIncludedSignIn => 'Link accounts by signing in';
+
+  @override
+  String get verifyConfirmationComingSoon => 'Coming soon';
+
+  @override
+  String get verifyConfirmationSmallPrint =>
+      'Details will appear here when Divine Confirmation is ready.';
+
+  @override
+  String get verifyConfirmationStoreOnly =>
+      'Divine Confirmation is available in the App Store and Google Play versions of Divine.';
+
+  @override
+  String get verifyConfirmationBuySemantic =>
+      'Divine Confirmation, coming soon, unavailable';
+
+  @override
+  String get verifyConfirmationRestoreSemantic =>
+      'Restore purchases, unavailable';
+
+  @override
+  String get verifyConfirmationCardTitle => 'Link by signing in';
+
+  @override
+  String get verifyConfirmationCardBody =>
+      'One-tap linking is part of Divine Confirmation.';
+
+  @override
+  String get verifyGetConfirmation => 'Get Divine Confirmation';
+
+  @override
+  String get verifyProofAlwaysAvailable => 'Proof posts are always available';
+
+  @override
+  String get verifyConfirmationSheetTitle =>
+      'Linking by signing in needs Divine Confirmation';
+
+  @override
+  String get verifyConfirmationSheetSubtitle =>
+      'You can still link this account with a proof post.';
+
+  @override
+  String get verifyConfirmationSheetUseProof => 'Use a proof post';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return 'అన్‌లింక్ చేయండి $platformఖాతా $identity';
   }
@@ -15097,7 +15520,26 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
+  String verifyLinkNeedsConfirmationSemanticLabel(String platform) {
+    return 'Link your $platform account. Signing in needs Divine Confirmation';
+  }
+
+  @override
   String get verifyOneTapBadge => 'ఒక్కసారి నొక్కండి';
+
+  @override
+  String get verifyOneTapWithConfirmationBadge => 'One tap with Confirmation';
+
+  @override
+  String get verifyRenewConfirmation => 'Renew Confirmation';
+
+  @override
+  String verifyRenewConfirmationSemanticLabel(
+    String platform,
+    String identity,
+  ) {
+    return 'Renew Divine Confirmation to restore $platform account $identity';
+  }
 
   @override
   String verifyConnectSignInLifetime(int days) {
@@ -15210,6 +15652,18 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get verifyErrorPublishFailed =>
       'ధృవీకరించబడింది, కానీ ఏ రిలే నవీకరణను తీసుకోలేదు. మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get verifyErrorConfirmationRequired =>
+      'Linking by signing in needs Divine Confirmation. You can still link with a proof post.';
+
+  @override
+  String get verifyErrorConfirmationUnavailable =>
+      'Couldn\'t check Divine Confirmation right now. Try again in a few minutes.';
+
+  @override
+  String get verifyErrorConfirmationPending =>
+      'This can take a minute after buying. Try again shortly.';
 
   @override
   String get verifyErrorOauthUnavailable =>
@@ -15501,7 +15955,7 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get changeEmailSubtitle =>
-      'మేము మీ కొత్త చిరునామాకు మరియు మీ ఖాతాలో ఉన్నదానికి నిర్ధారణ లింక్‌ను ఇమెయిల్ చేస్తాము. మీరు రెండింటి నుండి నిర్ధారించిన తర్వాత మీ ఇమెయిల్ మారుతుంది.';
+      'మీ కొత్త ఇమెయిల్ చిరునామాకు లింక్ పంపుతాం. మీ ఖాతాలో ఇప్పటికే ఇమెయిల్ చిరునామా ఉంటే, దానికీ లింక్ పంపుతాం.';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -15521,19 +15975,19 @@ class AppLocalizationsTe extends AppLocalizations {
   String get changeEmailWrongPassword => 'అది మీ పాస్‌వర్డ్ కాదు.';
 
   @override
-  String get changeEmailSubmit => 'నిర్ధారణ లింక్‌లను పంపండి';
+  String get changeEmailSubmit => 'నిర్ధారణ కోరండి';
 
   @override
-  String get changeEmailSentTitle => 'రెండు లింక్‌లు అందుబాటులో ఉన్నాయి';
+  String get changeEmailSentTitle => 'మీ ఇమెయిల్ చూడండి';
 
   @override
   String changeEmailSentMessage(String email) {
-    return 'నుండి నిర్ధారించండి $emailమరియు మీ ఖాతాలోని చిరునామా నుండి. రెండూ పూర్తయిన తర్వాత మీ ఇమెయిల్ స్విచ్ అవుతుంది.';
+    return '$emailకు వచ్చిన లింక్ తెరవండి. మీ ఖాతాలో ఇప్పటికే ఇమెయిల్ చిరునామా ఉంటే, దానికి వచ్చిన లింక్ కూడా తెరవండి.';
   }
 
   @override
   String get changeEmailSentExpiry =>
-      'లింక్‌లు 24 గంటల తర్వాత పని చేయడం ఆగిపోతాయి.';
+      'ప్రతి లింక్ గడువు 24 గంటల తర్వాత ముగుస్తుంది.';
 
   @override
   String get changeEmailSentDone => 'అర్థమైంది';
@@ -15819,6 +16273,13 @@ class AppLocalizationsTe extends AppLocalizations {
   String get updateAction => 'అప్‌డేట్ చేయండి';
 
   @override
+  String get announcementViewContest => 'పోటీని చూడండి';
+
+  @override
+  String get featuredFeedUnavailable =>
+      'ఈ ఫీచర్ చేసిన ఫీడ్ ఇక అందుబాటులో లేదు.';
+
+  @override
   String updateNewIn(String version) {
     return '$versionలో కొత్తవి:';
   }
@@ -15969,6 +16430,16 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get settingsHelpAboutSubtitle =>
       'సహాయం, చట్టపరమైన సమాచారం, యాప్ వివరాలు';
+
+  @override
+  String get settingsDiscordTitle => 'మా Discord సర్వర్‌లో చేరండి';
+
+  @override
+  String get settingsDiscordSubtitle =>
+      'Divine బృందం, కమ్యూనిటీ సభ్యులతో మాట్లాడండి';
+
+  @override
+  String get settingsDiscordOpenError => 'Discordను తెరవలేకపోయాం';
 
   @override
   String listLoopsCount(int count, String formatted) {
@@ -17259,4 +17730,114 @@ class AppLocalizationsTe extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return '$badgeName వీడియోలు';
   }
+
+  @override
+  String get menuBarEdit => 'సవరణ';
+
+  @override
+  String get menuBarUndo => 'అన్డు';
+
+  @override
+  String get menuBarRedo => 'పునరావృతం';
+
+  @override
+  String get menuBarCut => 'కత్తిరించండి';
+
+  @override
+  String get menuBarCopy => 'కాపీ';
+
+  @override
+  String get menuBarPaste => 'అతికించండి';
+
+  @override
+  String get menuBarSelectAll => 'అన్నీ ఎంచుకోండి';
+
+  @override
+  String get menuBarView => 'వీక్షణ';
+
+  @override
+  String get menuBarVideo => 'వీడియో';
+
+  @override
+  String get menuBarPreviousVideo => 'మునుపటి వీడియో';
+
+  @override
+  String get menuBarNextVideo => 'తదుపరి వీడియో';
+
+  @override
+  String get menuBarPlayPause => 'ప్లే/పాజ్';
+
+  @override
+  String get menuBarMute => 'మ్యూట్ చేయండి';
+
+  @override
+  String get menuBarUnmute => 'అన్‌మ్యూట్ చేయండి';
+
+  @override
+  String get menuBarWindow => 'విండో';
+
+  @override
+  String get menuBarHelp => 'సహాయం';
+
+  @override
+  String get emailConfirmationTitle => 'మీ ఇమెయిల్‌ను నిర్ధారించండి';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return 'మేము $email కి ఒక లింక్ పంపాము. సందేశాలను అన్‌లాక్ చేయడానికి, మీ ఖాతాలోకి ఎప్పుడైనా తిరిగి రాగలిగేలా చూసుకోవడానికి దాన్ని నొక్కండి.';
+  }
+
+  @override
+  String get emailConfirmationResendButton => 'ఇమెయిల్‌ను మళ్లీ పంపండి';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return 'మీరు లోపలికి వచ్చేశారు! మీ ఖాతాను నిర్ధారించడానికి $email ని చూడండి.';
+  }
+
+  @override
+  String get emailConfirmationResendSent =>
+      'నిర్ధారణ అభ్యర్థన అందింది. మీ ఇన్‌బాక్స్ చూడండి.';
+
+  @override
+  String get emailConfirmationResendFailed =>
+      'దాన్ని పంపలేకపోయాము. కాసేపటి తర్వాత మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get emailConfirmationMessagesTitle =>
+      'సందేశాలు పంపడం మొదలుపెట్టడానికి మీ ఇమెయిల్‌ను నిర్ధారించండి';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return 'మేము $email కి పంపిన లింక్‌ను నొక్కండి. ఆ తర్వాత సందేశాలు పూర్తిగా మీవే.';
+  }
+
+  @override
+  String get emailConfirmationCheckInbox =>
+      'నిర్ధారణ లింక్ కోసం మీ ఇన్‌బాక్స్‌ను చూడండి.';
+
+  @override
+  String get emailConfirmationDone =>
+      'ఇమెయిల్ నిర్ధారించబడింది. సందేశాలు అన్‌లాక్ అయ్యాయి.';
+
+  @override
+  String get emailConfirmationLinkConfirmed => 'ఇమెయిల్ నిర్ధారించబడింది.';
+
+  @override
+  String get emailConfirmationAddEmailTitle => 'ఇమెయిల్‌ను జోడించండి';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      'ప్రస్తుతం మీ ఖాతాకు ఇమెయిల్ లేదు. ఎప్పుడైనా తిరిగి లోపలికి రాగలిగేలా ఒక ఇమెయిల్‌ను జోడించండి.';
+
+  @override
+  String get emailConfirmationAddEmailButton => 'ఇమెయిల్ జోడించండి';
+
+  @override
+  String get emailConfirmationSendBlocked =>
+      'సందేశాలు పంపడానికి మీ ఇమెయిల్‌ను నిర్ధారించండి.';
+
+  @override
+  String get emailConfirmationCapReached =>
+      'కొత్త ఖాతాలకు గంటకు ఉన్న పరిమితి ఇదే. దాన్ని తొలగించడానికి మీ ఇమెయిల్‌ను నిర్ధారించండి.';
 }

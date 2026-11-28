@@ -12,15 +12,19 @@ import com.divinevideo.divine_video_player.VideoFrameEffects
  * found where the brightness changes sharply with a Sobel filter, are
  * lightened on top, so shapes keep their edges.
  *
- * Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1: how
- * far the picture turns into the X-ray).
+ * Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how far
+ * the picture turns into the X-ray), `color` (the film's colour where it is
+ * densest, as an ARGB integer: a pale blue by default).
  */
 class XRayVideoEffect(params: Map<String, Any?>) : ShaderVideoEffect(FRAGMENT_SHADER) {
 
     private val intensity = intensityOf(params)
 
+    private val film = colorOf(params, "color", 0xFFC7E6FF)
+
     override fun setUniforms(shader: CustomVideoEffectShader, effectTimeUs: Long) {
         shader.setFloat("uIntensity", intensity)
+        shader.setFloats("uFilm", film)
     }
 
     companion object {
@@ -38,6 +42,7 @@ class XRayVideoEffect(params: Map<String, Any?>) : ShaderVideoEffect(FRAGMENT_SH
         // leave undefined for a negative base.
         private const val FRAGMENT_SHADER = ShaderVideoEffect.PRELUDE + """
 uniform float uIntensity;
+uniform vec3 uFilm;
 
 float luma(vec3 c) {
   return dot(c, vec3(0.299, 0.587, 0.114));
@@ -60,7 +65,7 @@ void main() {
   float gy = tl + 2.0 * tc + tr - bl - 2.0 * bc - br;
   float bone = smoothstep(0.1, 0.6, length(vec2(gx, gy)));
   float density = clamp(1.1 * pow(max(1.0 - luma(color), 0.0), 1.6) + 0.5 * bone, 0.0, 1.0);
-  vec3 film = mix(vec3(0.0, 0.02, 0.06), vec3(0.78, 0.9, 1.0), density);
+  vec3 film = mix(vec3(0.0, 0.02, 0.06), uFilm, density);
   gl_FragColor = vec4(mix(color, film, uIntensity), 1.0);
 }
 """

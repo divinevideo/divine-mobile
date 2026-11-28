@@ -98,7 +98,7 @@ class RemixSettingsCubit extends Cubit<RemixSettingsState>
   }
 
   /// Publishes [allow] to the account's kind 0, reverting the switch when
-  /// the publish fails.
+  /// a read or publish fails.
   Future<void> setAllowVideoReuse(bool allow) async {
     final repository = _repository;
     final pubkey = _pubkey;
@@ -117,8 +117,24 @@ class RemixSettingsCubit extends Cubit<RemixSettingsState>
       ),
     );
 
+    final UserProfile? seed;
     try {
-      final seed = await _readSaveSeed(repository, pubkey);
+      seed = await _readSaveSeed(repository, pubkey);
+    } on Exception catch (error, stackTrace) {
+      _revert(previous, RemixSettingsSaveStatus.failedRead, error, stackTrace);
+      return;
+    } catch (error, stackTrace) {
+      _revert(
+        previous,
+        RemixSettingsSaveStatus.failedRead,
+        Reportable(error, context: RemixSettingsReportableSites.readSaveSeed),
+        stackTrace,
+      );
+      return;
+    }
+    if (isClosed) return;
+
+    try {
       Log.info(
         'Saving account remix setting: allowVideoReuse=$allow',
         name: 'RemixSettingsCubit',
@@ -132,6 +148,8 @@ class RemixSettingsCubit extends Cubit<RemixSettingsState>
         banner: seed?.banner,
         allowVideoReuse: allow,
         currentProfile: seed,
+        useLatestProfileFields: true,
+        shouldPublish: () => !isClosed,
       );
       if (isClosed) return;
       await _onProfileSaved(saved);
@@ -148,6 +166,8 @@ class RemixSettingsCubit extends Cubit<RemixSettingsState>
         error,
         stackTrace,
       );
+    } on ProfilePublishSeedUnavailableException catch (error, stackTrace) {
+      _revert(previous, RemixSettingsSaveStatus.failedRead, error, stackTrace);
     } on ProfilePublishFailedException catch (error, stackTrace) {
       _revert(
         previous,
@@ -175,7 +195,7 @@ class RemixSettingsCubit extends Cubit<RemixSettingsState>
   /// A conclusive miss falls back to the locally cached profile, so a first
   /// kind 0 does not publish an empty display name over it.
   ///
-  /// Throws [ProfilePublishFailedException], before anything is published,
+  /// Throws [_RemixProfileReadFailedException], before anything is published,
   /// when the read is inconclusive or answers for another account.
   Future<UserProfile?> _readSaveSeed(
     ProfileRepository repository,
@@ -184,6 +204,9 @@ class RemixSettingsCubit extends Cubit<RemixSettingsState>
     final read = await repository.readFreshProfile(
       pubkey: pubkey,
       requireRawKind0: true,
+      // One retry gives a transiently busy query pool time to recover without
+      // unbounded requests. Each attempt keeps the repository/client timeout.
+      rawKind0RetryDelays: const [Duration(milliseconds: 250)],
     );
     final profile = read.profile;
     if (profile != null && profile.pubkey == pubkey) return profile;
@@ -196,9 +219,7 @@ class RemixSettingsCubit extends Cubit<RemixSettingsState>
       name: 'RemixSettingsCubit',
       category: LogCategory.system,
     );
-    throw const ProfilePublishFailedException(
-      'Failed to publish profile. Please try again.',
-    );
+    throw const _RemixProfileReadFailedException();
   }
 
   void _revert(
@@ -208,7 +229,21 @@ class RemixSettingsCubit extends Cubit<RemixSettingsState>
     StackTrace stackTrace,
   ) {
     if (isClosed) return;
+    Log.warning(
+      'Could not save account remix setting: ${failure.name}',
+      name: 'RemixSettingsCubit',
+      category: LogCategory.system,
+    );
     addError(error, stackTrace);
     emit(state.copyWith(allowVideoReuse: previous, saveStatus: failure));
   }
+}
+
+/// A save was refused because its replacement profile could not be read safely.
+class _RemixProfileReadFailedException implements Exception {
+  const _RemixProfileReadFailedException();
+
+  @override
+  String toString() =>
+      'Remix setting save deferred: current kind 0 unavailable';
 }

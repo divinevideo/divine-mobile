@@ -37,6 +37,7 @@ abstract final class AccountPreferenceRegistry {
     'repostsEnabled',
     'newPostsEnabled',
     'campaignsEnabled',
+    'directMessagesEnabled',
   };
   static Set<String> get keys => {
     ...strings,
@@ -116,6 +117,9 @@ class AccountPreferenceStore {
   int _generation = 0;
 
   bool get isBound => _bound;
+
+  /// The account whose explicit choices can currently be read or written.
+  String? get boundPubkey => _repository?.pubkey;
 
   /// Unset/reset fields resolve to the caller's device default, never another
   /// account's unscoped projection. Standalone services retain local behavior.

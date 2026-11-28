@@ -171,11 +171,13 @@ class _VideoDmSendOutcomeListenerState
         true,
       ),
       VideoDmSendOutcome(status: VideoDmOutcomeStatus.sent) => (
-        l10n.dmVideoSent,
+        outcome.isDraft ? l10n.libraryDraftSent : l10n.dmVideoSent,
         false,
       ),
       VideoDmSendOutcome(status: VideoDmOutcomeStatus.tooLarge) => (
-        l10n.dmVideoTooLarge('$videoDmMaxMegabytes'),
+        outcome.isDraft
+            ? l10n.libraryDraftShareTooLarge
+            : l10n.dmVideoTooLarge('$videoDmMaxMegabytes'),
         true,
       ),
       VideoDmSendOutcome(status: VideoDmOutcomeStatus.clipNotVerified) => (
@@ -183,7 +185,7 @@ class _VideoDmSendOutcomeListenerState
         true,
       ),
       VideoDmSendOutcome(status: VideoDmOutcomeStatus.failed) => (
-        l10n.dmVideoSendFailed,
+        outcome.isDraft ? l10n.libraryDraftShareFailed : l10n.dmVideoSendFailed,
         true,
       ),
     };

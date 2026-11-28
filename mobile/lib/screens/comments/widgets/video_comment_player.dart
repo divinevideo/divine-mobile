@@ -104,7 +104,7 @@ class _VideoCommentPlayerState extends State<VideoCommentPlayer>
 
     final existing = _controller;
     if (existing != null) {
-      if (existing.state.isPlaying) {
+      if (_isRunning(existing.state)) {
         await existing.pause();
       } else {
         await existing.play();
@@ -186,10 +186,16 @@ class _VideoCommentPlayerState extends State<VideoCommentPlayer>
     if (mounted) setState(() => _isMuted = nextMuted);
   }
 
+  // Buffering counts as running, as it does in the feed: a stalled clip
+  // resumes on its own, so it still pauses offscreen and on tap.
+  static bool _isRunning(DivineVideoPlayerState state) =>
+      state.isPlaying || state.isBuffering;
+
   void _onStateChanged(DivineVideoPlayerState state) {
     if (!mounted) return;
-    if (state.isPlaying != _isPlaying) {
-      setState(() => _isPlaying = state.isPlaying);
+    final running = _isRunning(state);
+    if (running != _isPlaying) {
+      setState(() => _isPlaying = running);
     }
   }
 

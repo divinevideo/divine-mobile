@@ -2650,10 +2650,9 @@ void main() {
       });
     });
 
-    group('getVideosByHashtag', () {
-      const validResponseBody =
+    group('getVideosByHashtagPage', () {
+      const validRow =
           '''
-[
   {
     "id": "hash123",
     "pubkey": "$testPubkey",
@@ -2669,52 +2668,94 @@ void main() {
     "reposts": 2,
     "engagement_score": 57
   }
-]
 ''';
+      const validResponseBody = '[$validRow]';
+
+      test(
+        'passes the v2 cursor through even when no rows are usable',
+        () async {
+          when(
+            () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+          ).thenAnswer(
+            (_) async => http.Response(
+              '{"data":[{}],"pagination":'
+              '{"has_more":true,"next_cursor":"o:75"}}',
+              200,
+            ),
+          );
+
+          final page = await client.getVideosByHashtagPage(
+            hashtag: '#Loops',
+            cursor: 'o:50',
+          );
+
+          expect(page.videos, isEmpty);
+          expect(page.nextCursor, 'o:75');
+          final uri =
+              verify(
+                    () => mockHttpClient.get(
+                      captureAny(),
+                      headers: any(named: 'headers'),
+                    ),
+                  ).captured.single
+                  as Uri;
+          expect(uri.path, '/api/v2/videos');
+          expect(uri.queryParameters, containsPair('tag', 'loops'));
+          expect(uri.queryParameters, containsPair('sort', 'trending'));
+          expect(uri.queryParameters, containsPair('cursor', 'o:50'));
+          expect(uri.queryParameters, containsPair('limit', '50'));
+        },
+      );
+
+      test(
+        'returns no next cursor when has_more is false despite a next_cursor',
+        () async {
+          when(
+            () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+          ).thenAnswer(
+            (_) async => http.Response(
+              '{"data":[$validRow],"pagination":'
+              '{"has_more":false,"next_cursor":"o:100"}}',
+              200,
+            ),
+          );
+
+          final page = await client.getVideosByHashtagPage(hashtag: 'flutter');
+
+          expect(page.videos, hasLength(1));
+          expect(page.nextCursor, isNull);
+        },
+      );
+
+      test(
+        'returns no next cursor when has_more is false despite a next_offset',
+        () async {
+          when(
+            () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+          ).thenAnswer(
+            (_) async => http.Response(
+              '{"data":[$validRow],"pagination":'
+              '{"has_more":false,"next_offset":100}}',
+              200,
+            ),
+          );
+
+          final page = await client.getVideosByHashtagPage(hashtag: 'flutter');
+
+          expect(page.videos, hasLength(1));
+          expect(page.nextCursor, isNull);
+        },
+      );
 
       test('returns videos on successful response', () async {
         when(
           () => mockHttpClient.get(any(), headers: any(named: 'headers')),
         ).thenAnswer((_) async => http.Response(validResponseBody, 200));
 
-        final videos = await client.getVideosByHashtag(hashtag: 'flutter');
+        final page = await client.getVideosByHashtagPage(hashtag: 'flutter');
 
-        expect(videos, hasLength(1));
-        expect(videos.first.id, equals('hash123'));
-      });
-
-      test('constructs correct URL with tag and sort=trending', () async {
-        when(
-          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
-        ).thenAnswer((_) async => http.Response('[]', 200));
-
-        await client.getVideosByHashtag(hashtag: 'Flutter');
-
-        final captured = verify(
-          () =>
-              mockHttpClient.get(captureAny(), headers: any(named: 'headers')),
-        ).captured;
-
-        final uri = captured.first as Uri;
-        expect(uri.path, equals('/api/videos'));
-        expect(uri.queryParameters['tag'], equals('flutter'));
-        expect(uri.queryParameters['sort'], equals('trending'));
-      });
-
-      test('strips # prefix from hashtag', () async {
-        when(
-          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
-        ).thenAnswer((_) async => http.Response('[]', 200));
-
-        await client.getVideosByHashtag(hashtag: '#bitcoin');
-
-        final captured = verify(
-          () =>
-              mockHttpClient.get(captureAny(), headers: any(named: 'headers')),
-        ).captured;
-
-        final uri = captured.first as Uri;
-        expect(uri.queryParameters['tag'], equals('bitcoin'));
+        expect(page.videos, hasLength(1));
+        expect(page.videos.first.id, equals('hash123'));
       });
 
       test('throws FunnelcakeNotConfiguredException when not available', () {
@@ -2724,7 +2765,7 @@ void main() {
         );
 
         expect(
-          () => emptyClient.getVideosByHashtag(hashtag: 'test'),
+          () => emptyClient.getVideosByHashtagPage(hashtag: 'test'),
           throwsA(isA<FunnelcakeNotConfiguredException>()),
         );
 
@@ -2733,7 +2774,7 @@ void main() {
 
       test('throws FunnelcakeException when hashtag is empty', () {
         expect(
-          () => client.getVideosByHashtag(hashtag: ''),
+          () => client.getVideosByHashtagPage(hashtag: ''),
           throwsA(
             isA<FunnelcakeException>().having(
               (e) => e.message,
@@ -2746,7 +2787,7 @@ void main() {
 
       test('throws FunnelcakeException when hashtag is just #', () {
         expect(
-          () => client.getVideosByHashtag(hashtag: '#'),
+          () => client.getVideosByHashtagPage(hashtag: '#'),
           throwsA(
             isA<FunnelcakeException>().having(
               (e) => e.message,
@@ -2763,7 +2804,7 @@ void main() {
         ).thenAnswer((_) async => http.Response('Internal Server Error', 500));
 
         expect(
-          () => client.getVideosByHashtag(hashtag: 'test'),
+          () => client.getVideosByHashtagPage(hashtag: 'test'),
           throwsA(
             isA<FunnelcakeApiException>().having(
               (e) => e.statusCode,
@@ -2780,7 +2821,7 @@ void main() {
         ).thenAnswer((_) async => throw TimeoutException('Request timed out'));
 
         expect(
-          () => client.getVideosByHashtag(hashtag: 'test'),
+          () => client.getVideosByHashtagPage(hashtag: 'test'),
           throwsA(isA<FunnelcakeTimeoutException>()),
         );
       });
@@ -2791,7 +2832,7 @@ void main() {
         ).thenThrow(Exception('Network error'));
 
         expect(
-          () => client.getVideosByHashtag(hashtag: 'test'),
+          () => client.getVideosByHashtagPage(hashtag: 'test'),
           throwsA(
             isA<FunnelcakeException>().having(
               (e) => e.message,
@@ -5323,6 +5364,251 @@ void main() {
       });
     });
 
+    group('searchLists', () {
+      Uri requestedUri() =>
+          verify(
+                () => mockHttpClient.get(
+                  captureAny(),
+                  headers: any(named: 'headers'),
+                ),
+              ).captured.single
+              as Uri;
+
+      void answer(String body, [int status = 200]) {
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer((_) async => http.Response(body, status));
+      }
+
+      test('asks the v2 list search and keeps its ranking', () async {
+        answer(
+          '{"data": [ '
+          '{"kind": 30005, "pubkey": "$testPubkey", "d_tag": "music", '
+          '"title": "Music", "item_count": 12, "updated_at": 1764330677}, '
+          '{"kind": 30005, "pubkey": "$testPubkey", "d_tag": "musicians", '
+          '"title": "Musicians", "item_count": 3, "updated_at": 1779334404} '
+          '], "pagination": {"next_cursor": "o:2", "has_more": true}}',
+        );
+
+        final page = await client.searchLists(
+          query: '  music  ',
+          kind: PublicListKind.videos,
+          limit: 2,
+        );
+
+        expect(page.cards.map((card) => card.dTag), ['music', 'musicians']);
+        expect(page.cards.first.itemCount, 12);
+        expect(page.nextCursor, 'o:2');
+        final uri = requestedUri();
+        expect(uri.path, '/api/v2/search/lists');
+        expect(uri.queryParameters, {
+          'q': 'music',
+          'kind': '30005',
+          'limit': '2',
+        });
+      });
+
+      test('searches both kinds a page at a time', () async {
+        answer('{"data": [], "pagination": {"has_more": false}}');
+
+        final page = await client.searchLists(query: 'cats', cursor: 'o:25');
+
+        expect(page.cards, isEmpty);
+        expect(requestedUri().queryParameters, {
+          'q': 'cats',
+          'limit': '25',
+          'cursor': 'o:25',
+        });
+      });
+
+      test('treats an empty cursor as the first page', () async {
+        answer('{"data": []}');
+
+        await client.searchLists(query: 'cats', cursor: '');
+
+        expect(requestedUri().queryParameters, isNot(contains('cursor')));
+      });
+
+      test('refuses a page size the server does not take', () {
+        for (final limit in [0, FunnelcakeApiClient.maxListSearchLimit + 1]) {
+          expect(
+            () => client.searchLists(query: 'cats', limit: limit),
+            throwsArgumentError,
+            reason: '$limit',
+          );
+        }
+      });
+
+      test('throws FunnelcakeNotConfiguredException when not available', () {
+        final emptyClient = FunnelcakeApiClient(
+          baseUrl: '',
+          httpClient: mockHttpClient,
+        );
+
+        expect(
+          () => emptyClient.searchLists(query: 'cats'),
+          throwsA(isA<FunnelcakeNotConfiguredException>()),
+        );
+
+        emptyClient.dispose();
+      });
+
+      test('throws a FunnelcakeException for a blank query', () {
+        expect(
+          () => client.searchLists(query: '   '),
+          throwsA(
+            isA<FunnelcakeException>().having(
+              (e) => e.message,
+              'message',
+              'Search query cannot be empty',
+            ),
+          ),
+        );
+        verifyNever(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        );
+      });
+
+      test('throws FunnelcakeApiException for a rejected request', () {
+        answer('{"error": "q is required"}', 400);
+
+        expect(
+          () => client.searchLists(query: 'cats'),
+          throwsA(
+            isA<FunnelcakeApiException>().having(
+              (e) => e.statusCode,
+              'statusCode',
+              400,
+            ),
+          ),
+        );
+      });
+
+      test('throws FunnelcakeTimeoutException on timeout', () {
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenThrow(TimeoutException('slow'));
+
+        expect(
+          () => client.searchLists(query: 'cats'),
+          throwsA(isA<FunnelcakeTimeoutException>()),
+        );
+      });
+
+      test('wraps a malformed body in a FunnelcakeException', () async {
+        for (final body in const ['[]', 'not json', '{"data": "nope"}']) {
+          answer(body);
+
+          await expectLater(
+            () => client.searchLists(query: 'cats'),
+            throwsA(isA<FunnelcakeException>()),
+            reason: body,
+          );
+        }
+      });
+    });
+
+    group('discoverLists', () {
+      Uri requestedUri() =>
+          verify(
+                () => mockHttpClient.get(
+                  captureAny(),
+                  headers: any(named: 'headers'),
+                ),
+              ).captured.single
+              as Uri;
+
+      void answer(String body, [int status = 200]) {
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer((_) async => http.Response(body, status));
+      }
+
+      test('asks the discover index for one kind, in its order', () async {
+        answer(
+          '{"data": [ '
+          '{"kind": 30000, "pubkey": "$testPubkey", "d_tag": "crew", '
+          '"title": "Crew", "member_count": 7, "members": ["$testPubkey"], '
+          '"updated_at": 1779334404}, '
+          '{"kind": 30000, "pubkey": "$testPubkey", "d_tag": "pals", '
+          '"title": "Pals", "member_count": 2, "updated_at": 1764330677} '
+          '], "pagination": {"next_cursor": "o:2", "has_more": true}}',
+        );
+
+        final page = await client.discoverLists(
+          kind: PublicListKind.people,
+          limit: 2,
+        );
+
+        expect(page.cards.map((card) => card.dTag), ['crew', 'pals']);
+        expect(page.cards.first.memberCount, 7);
+        expect(page.cards.first.members, [testPubkey]);
+        expect(page.nextCursor, 'o:2');
+        final uri = requestedUri();
+        expect(uri.path, '/api/v2/lists/discover');
+        expect(uri.queryParameters, {'kind': '30000', 'limit': '2'});
+      });
+
+      test('continues from the cursor of the page before', () async {
+        answer('{"data": [], "pagination": {"has_more": false}}');
+
+        await client.discoverLists(
+          kind: PublicListKind.videos,
+          cursor: 'o:25',
+        );
+
+        expect(requestedUri().queryParameters, {
+          'kind': '30005',
+          'limit': '25',
+          'cursor': 'o:25',
+        });
+      });
+
+      test('refuses a page size the server does not take', () {
+        for (final limit in [0, FunnelcakeApiClient.maxListSearchLimit + 1]) {
+          expect(
+            () => client.discoverLists(
+              kind: PublicListKind.videos,
+              limit: limit,
+            ),
+            throwsArgumentError,
+            reason: '$limit',
+          );
+        }
+      });
+
+      test('throws FunnelcakeNotConfiguredException when not available', () {
+        final emptyClient = FunnelcakeApiClient(
+          baseUrl: '',
+          httpClient: mockHttpClient,
+        );
+
+        expect(
+          () => emptyClient.discoverLists(kind: PublicListKind.videos),
+          throwsA(isA<FunnelcakeNotConfiguredException>()),
+        );
+
+        emptyClient.dispose();
+      });
+
+      test('throws FunnelcakeApiException for a rejected request', () {
+        answer('{"error": "kind must be 30000 or 30005"}', 400);
+
+        expect(
+          () => client.discoverLists(kind: PublicListKind.videos),
+          throwsA(
+            isA<FunnelcakeApiException>()
+                .having((e) => e.statusCode, 'statusCode', 400)
+                .having(
+                  (e) => e.message,
+                  'message',
+                  'Failed to discover lists',
+                ),
+          ),
+        );
+      });
+    });
+
     group('listSounds', () {
       Uri requestedUri() =>
           verify(
@@ -5456,110 +5742,6 @@ void main() {
             reason: body,
           );
         }
-      });
-    });
-
-    group('getTrendingSounds', () {
-      test('requests trending sounds and parses their usage counts', () async {
-        when(
-          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
-        ).thenAnswer(
-          (_) async => http.Response(
-            '[{"id": "sound-a", "pubkey": "$testPubkey", "title": "Beat", '
-            '"created_at": 1780000000, "usage_count": 28}]',
-            200,
-          ),
-        );
-
-        final sounds = await client.getTrendingSounds(limit: 20);
-
-        expect(sounds.single.id, 'sound-a');
-        expect(sounds.single.usageCount, 28);
-        final uri =
-            verify(
-                  () => mockHttpClient.get(
-                    captureAny(),
-                    headers: any(named: 'headers'),
-                  ),
-                ).captured.single
-                as Uri;
-        expect(uri.path, '/api/sounds');
-        expect(uri.queryParameters, {'sort': 'trending', 'limit': '20'});
-      });
-
-      test('asks for the ranking past offset', () async {
-        when(
-          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
-        ).thenAnswer((_) async => http.Response('[]', 200));
-
-        await client.getTrendingSounds(offset: 100);
-
-        final uri =
-            verify(
-                  () => mockHttpClient.get(
-                    captureAny(),
-                    headers: any(named: 'headers'),
-                  ),
-                ).captured.single
-                as Uri;
-        expect(uri.queryParameters, {
-          'sort': 'trending',
-          'limit': '50',
-          'offset': '100',
-        });
-      });
-
-      test('throws FunnelcakeNotConfiguredException when not available', () {
-        final emptyClient = FunnelcakeApiClient(
-          baseUrl: '',
-          httpClient: mockHttpClient,
-        );
-
-        expect(
-          emptyClient.getTrendingSounds,
-          throwsA(isA<FunnelcakeNotConfiguredException>()),
-        );
-
-        emptyClient.dispose();
-      });
-
-      test('throws FunnelcakeApiException on a non-200 response', () {
-        when(
-          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
-        ).thenAnswer((_) async => http.Response('nope', 503));
-
-        expect(
-          client.getTrendingSounds,
-          throwsA(
-            isA<FunnelcakeApiException>().having(
-              (e) => e.statusCode,
-              'statusCode',
-              503,
-            ),
-          ),
-        );
-      });
-
-      test('throws FunnelcakeTimeoutException on timeout', () {
-        when(
-          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
-        ).thenThrow(TimeoutException('slow'));
-
-        expect(
-          client.getTrendingSounds,
-          throwsA(isA<FunnelcakeTimeoutException>()),
-        );
-      });
-
-      test('wraps an unreadable body in a FunnelcakeException', () {
-        when(
-          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
-        ).thenAnswer((_) async => http.Response('not json', 200));
-
-        expect(
-          client.getTrendingSounds,
-          throwsA(isA<FunnelcakeException>()),
-        );
       });
     });
 
@@ -6375,6 +6557,23 @@ void main() {
           expect(result.nextCursor, equals('opaque-1'));
         },
       );
+
+      test('includes seed_video_id query param when provided', () async {
+        Uri? capturedUri;
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer((invocation) async {
+          capturedUri = invocation.positionalArguments.first as Uri;
+          return http.Response('{"videos":[],"source":"personalized"}', 200);
+        });
+
+        await client.getRecommendations(
+          pubkey: testPubkey,
+          seedVideoId: 'seed-vid-123',
+        );
+
+        expect(capturedUri?.queryParameters['seed_video_id'], 'seed-vid-123');
+      });
     }); // end group('getRecommendations')
 
     group('getBulkProfiles', () {

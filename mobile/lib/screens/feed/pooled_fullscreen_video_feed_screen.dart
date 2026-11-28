@@ -43,6 +43,7 @@ import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/feed_tuning/feed_tuning_swipe_overlay.dart';
 import 'package:openvine/widgets/nav_rounded_shell.dart';
+import 'package:openvine/widgets/screen_frame_trace_scope.dart';
 import 'package:openvine/widgets/video_feed_item/feed_comments_panel.dart';
 import 'package:openvine/widgets/video_feed_item/feed_immersive_chrome.dart';
 import 'package:openvine/widgets/video_feed_item/feed_videos.dart';
@@ -101,6 +102,7 @@ class PooledFullscreenVideoFeedArgs {
     this.autoOpenComments = false,
     this.onPageChanged,
     this.tileOrigin,
+    this.isAddYoursSeries = false,
   });
 
   /// The feed to display, resolved via [feedRepository].
@@ -131,6 +133,9 @@ class PooledFullscreenVideoFeedArgs {
 
   /// Additional context for the traffic source (e.g., hashtag name).
   final String? sourceDetail;
+
+  /// See [PooledFullscreenVideoFeedScreen.isAddYoursSeries].
+  final bool isAddYoursSeries;
 
   /// Whether to open the comments sheet immediately after the first frame.
   ///
@@ -209,7 +214,9 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
     this.onPageChanged,
     this.onActiveVideoChanged,
     this.dmReplyContext,
+    this.fromMessage = false,
     this.onBack,
+    this.isAddYoursSeries = false,
     super.key,
   });
 
@@ -228,9 +235,18 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
   final ViewTrafficSource trafficSource;
   final String? sourceDetail;
 
+  /// Whether the feed is the series an Add yours collects, opened from its
+  /// sticker: each answer carries the same sticker, and one only the player
+  /// draws, which only some may answer, is left out here and shown in the
+  /// other feeds.
+  final bool isAddYoursSeries;
+
   /// Present when the reel was opened from a DM thread — drives the in-player
   /// reply/reaction bar. Null on feed/profile opens.
   final DmReplyContext? dmReplyContext;
+
+  /// Whether the first clip was opened from a private message.
+  final bool fromMessage;
 
   /// When true, opens the comments sheet immediately after the first frame.
   ///
@@ -260,10 +276,15 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (ref.watch(adaptiveClassicsEnabledProvider)) {
-      if (source case ClassicVinesViewSource(anchor: final anchor?)) {
-        return ClassicsPlaybackPage(anchor: anchor, screen: this);
-      }
+    if (source case ClassicVinesViewSource(
+      anchor: final anchor?,
+      :final archiveSeed,
+    )) {
+      return _SelectedClassicRoute(
+        anchor: anchor,
+        archiveSeed: archiveSeed,
+        screen: this,
+      );
     }
     final mediaCache = kIsWeb ? null : ref.read(mediaCacheProvider);
     final blossomAuthService = ref.read(blossomAuthServiceProvider);
@@ -315,7 +336,7 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
         .read(analyticsServiceProvider)
         .recordRecommendationInteraction(feedback);
 
-    return MultiBlocProvider(
+    final feed = MultiBlocProvider(
       providers: [
         BlocProvider(
           create: (_) => FullscreenFeedBloc(
@@ -350,12 +371,17 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
         sponsorName: sponsorName,
         trafficSource: trafficSource,
         sourceDetail: sourceDetail,
+        isAddYoursSeries: isAddYoursSeries,
         autoOpenComments: autoOpenComments,
         focusCommentId: focusCommentId,
         onPageChanged: onPageChanged,
         onActiveVideoChanged: onActiveVideoChanged,
         dmReplyContext: dmReplyContext,
-        loadMoreOnEndSwipe: source is SingleVideoViewSource,
+        fromMessage: fromMessage,
+        loadMoreOnEndSwipe:
+            source is SingleVideoViewSource ||
+            source is HashtagViewSource ||
+            source is ClassicVinesViewSource,
         initialVideoKey: switch (source) {
           SingleVideoViewSource(:final video) => video.feedDedupKey,
           _ => null,
@@ -363,7 +389,50 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
         onBack: onBack,
       ),
     );
+    // Not around the classics page above, whose own feed lands here.
+    return ScreenFrameTraceScope(screen: .fullscreenFeed, child: feed);
   }
+}
+
+/// Chooses a selected classic's playback mode once, when the route opens.
+///
+/// Watching the account gate instead rebuilt the route into the other mode
+/// whenever Keycast's answer changed, which restarted playback at the tapped
+/// classic. An adaptive route that loses eligibility moves its own queue to
+/// the archive ([ClassicsPlaybackPage]); an archive route stays on the archive
+/// until the viewer opens another classic.
+class _SelectedClassicRoute extends ConsumerStatefulWidget {
+  const _SelectedClassicRoute({
+    required this.anchor,
+    required this.archiveSeed,
+    required this.screen,
+  });
+
+  final VideoEvent anchor;
+  final List<VideoEvent> archiveSeed;
+  final PooledFullscreenVideoFeedScreen screen;
+
+  @override
+  ConsumerState<_SelectedClassicRoute> createState() =>
+      _SelectedClassicRouteState();
+}
+
+class _SelectedClassicRouteState extends ConsumerState<_SelectedClassicRoute> {
+  late final bool _adaptive;
+
+  @override
+  void initState() {
+    super.initState();
+    _adaptive = ref.read(adaptiveClassicsEnabledProvider);
+  }
+
+  @override
+  Widget build(BuildContext context) => ClassicsPlaybackPage(
+    anchor: widget.anchor,
+    archiveSeed: widget.archiveSeed,
+    screen: widget.screen,
+    adaptive: _adaptive,
+  );
 }
 
 /// Content widget for the fullscreen video feed.
@@ -384,9 +453,11 @@ class FullscreenFeedContent extends ConsumerStatefulWidget {
     this.onPageChanged,
     this.onActiveVideoChanged,
     this.dmReplyContext,
+    this.fromMessage = false,
     this.initialVideoKey,
     this.loadMoreOnEndSwipe = false,
     this.onBack,
+    this.isAddYoursSeries = false,
     super.key,
   });
 
@@ -401,6 +472,9 @@ class FullscreenFeedContent extends ConsumerStatefulWidget {
 
   /// Additional context for the traffic source (e.g., hashtag name).
   final String? sourceDetail;
+
+  /// See [PooledFullscreenVideoFeedScreen.isAddYoursSeries].
+  final bool isAddYoursSeries;
 
   /// When true, opens the comments sheet immediately after the first frame.
   ///
@@ -420,14 +494,16 @@ class FullscreenFeedContent extends ConsumerStatefulWidget {
   /// reply/reaction bar in the body footer.
   final DmReplyContext? dmReplyContext;
 
+  /// Whether the first clip was opened from a private message.
+  final bool fromMessage;
+
   /// Logical identity of the opened video, for DM controls and attribution.
   final String? initialVideoKey;
 
-  /// Whether this feed continues the opened video into For You discovery.
+  /// Whether a swipe past the last video requests another page.
   ///
-  /// Another swipe past the end then retries discovery when no new page was
-  /// playable yet, and every video other than [initialVideoKey] is
-  /// attributed to For You.
+  /// Each new swipe retries when a page added no playable video. With an
+  /// [initialVideoKey], every other video is attributed to For You.
   final bool loadMoreOnEndSwipe;
 
   /// Overrides the app-bar back action when the feed is embedded as a parent
@@ -450,7 +526,7 @@ class _FullscreenFeedContentState extends ConsumerState<FullscreenFeedContent>
 
   /// Whether the inline comment composer is focused.
   bool _inlineComposerFocused = false;
-  bool _requestedDiscoveryForDrag = false;
+  bool _requestedPageForDrag = false;
 
   /// Whether one of THIS screen's own bottom composers (inline comment or DM
   /// reply) currently holds focus. Drives `resizeToAvoidBottomInset`: we only
@@ -566,7 +642,7 @@ class _FullscreenFeedContentState extends ConsumerState<FullscreenFeedContent>
     );
   }
 
-  bool _onDiscoveryScroll(ScrollNotification notification) {
+  bool _onEndSwipe(ScrollNotification notification) {
     if (!widget.loadMoreOnEndSwipe ||
         notification.depth != 0 ||
         notification.metrics.axis != Axis.vertical) {
@@ -574,34 +650,32 @@ class _FullscreenFeedContentState extends ConsumerState<FullscreenFeedContent>
     }
     if (notification is ScrollStartNotification ||
         notification is ScrollEndNotification) {
-      _requestedDiscoveryForDrag = false;
+      _requestedPageForDrag = false;
     }
     // Clamping physics reports an overscroll; bouncing physics reports a
     // scroll update beyond the end. Only user drags request another page.
-    final swipingPastEnd = switch (notification) {
-      OverscrollNotification(:final overscroll, :final dragDetails) =>
-        dragDetails != null && overscroll > 0,
-      ScrollUpdateNotification(:final scrollDelta, :final dragDetails) =>
-        dragDetails != null &&
-            (scrollDelta ?? 0) > 0 &&
-            notification.metrics.pixels > notification.metrics.maxScrollExtent,
-      _ => false,
-    };
-    final state = context.read<FullscreenFeedBloc>().state;
-    if (swipingPastEnd &&
-        !_requestedDiscoveryForDrag &&
-        state.canLoadMore &&
-        !state.isLoadingMore &&
-        state.currentIndex == state.videos.length - 1) {
-      _requestedDiscoveryForDrag = true;
-      _triggerLoadMore();
+    if (isFeedEndSwipe(notification) && !_requestedPageForDrag) {
+      _requestedPageForDrag = _requestAtForwardBoundary();
     }
     return false;
   }
 
+  bool _requestAtForwardBoundary() {
+    final state = context.read<FullscreenFeedBloc>().state;
+    if (!state.canLoadMore ||
+        state.isLoadingMore ||
+        state.currentIndex != state.videos.length - 1) {
+      return false;
+    }
+    _triggerLoadMore();
+    return true;
+  }
+
   ViewTrafficSource _trafficSourceForVideo(VideoEvent video) {
+    final initialVideoKey = widget.initialVideoKey;
     if (widget.loadMoreOnEndSwipe &&
-        video.feedDedupKey != widget.initialVideoKey) {
+        initialVideoKey != null &&
+        video.feedDedupKey != initialVideoKey) {
       return ViewTrafficSource.discoveryForYou;
     }
     return widget.trafficSource;
@@ -1036,7 +1110,7 @@ class _FullscreenFeedContentState extends ConsumerState<FullscreenFeedContent>
                                         child: _MaybeRoundFeedBottom(
                                           roundCorners: showCommentBar,
                                           child: NotificationListener<ScrollNotification>(
-                                            onNotification: _onDiscoveryScroll,
+                                            onNotification: _onEndSwipe,
                                             child: MediaQuery.removePadding(
                                               context: context,
                                               removeBottom: true,
@@ -1058,15 +1132,27 @@ class _FullscreenFeedContentState extends ConsumerState<FullscreenFeedContent>
                                                     widget.loadMoreOnEndSwipe
                                                     ? const AlwaysScrollableScrollPhysics()
                                                     : null,
+                                                onForwardBoundary:
+                                                    widget.loadMoreOnEndSwipe &&
+                                                        state.canLoadMore &&
+                                                        !state.isLoadingMore
+                                                    ? _requestAtForwardBoundary
+                                                    : null,
                                                 hasMore: state.canLoadMore,
                                                 isLoadingMore:
                                                     state.isLoadingMore,
                                                 trafficSource:
                                                     widget.trafficSource,
+                                                messageVideoKey:
+                                                    widget.fromMessage
+                                                    ? widget.initialVideoKey
+                                                    : null,
                                                 trafficSourceForVideo:
                                                     _trafficSourceForVideo,
                                                 sourceDetail:
                                                     widget.sourceDetail,
+                                                isAddYoursSeries:
+                                                    widget.isAddYoursSeries,
                                                 onActiveVideoChanged: (video, index) {
                                                   ref
                                                       .read(

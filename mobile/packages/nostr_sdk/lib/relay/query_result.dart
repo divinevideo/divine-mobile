@@ -70,10 +70,12 @@ class QueryResult {
     required this.events,
     required this.endedBy,
     this.answeredNetworkRelayCount = 0,
+    this.unsentNetworkRelayCount = 0,
     this.unansweredRelayCount = 0,
     this.rateLimitedRelayCount = 0,
     this.closedRelayReasons = const {},
     this.possiblyCapped = false,
+    this.hasCapEvidence = false,
     this.confirmedExhaustive = false,
   });
 
@@ -99,6 +101,11 @@ class QueryResult {
   /// Number of non-cache relays that sent `EOSE`, including relays with no
   /// matching events.
   final int answeredNetworkRelayCount;
+
+  /// Number of readable non-cache relays that could not take the `REQ`
+  /// and sent neither matching events nor a terminal frame for it.
+  /// [endedBy] describes the relays that took part.
+  final int unsentNetworkRelayCount;
 
   /// Number of participating relays, cache relays included, that sent no
   /// terminal frame and could still have answered: those serving the query on
@@ -140,6 +147,11 @@ class QueryResult {
   /// Can be `true` even when [isComplete] is also `true`: a relay can answer
   /// fully within its own cap and still call that "done".
   final bool possiblyCapped;
+
+  /// Whether the read hit a known limit or saw other evidence of a cap, as
+  /// described by [possiblyCapped]. A matching event from a relay with an
+  /// unknown limit is insufficient on its own.
+  final bool hasCapEvidence;
 
   /// `true` when every relay that answered explicitly confirmed it had no
   /// further matching events (a NIP-67 `finish` hint), rather than merely

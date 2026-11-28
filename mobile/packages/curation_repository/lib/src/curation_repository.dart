@@ -121,10 +121,10 @@ class CurationRepository {
       for (final v in allVideos)
         if (v.addressableId != null) v.id: v.addressableId!,
     };
-    final likeCounts = await _likesRepository.getLikeCounts(
+    final likeCounts = (await _likesRepository.getLikeCounts(
       videoIds,
       addressableIds: addressableIds.isEmpty ? null : addressableIds,
-    );
+    )).counts;
 
     final sortedByReactions = List<VideoEvent>.from(allVideos)
       ..sort((a, b) {

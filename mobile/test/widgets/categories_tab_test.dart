@@ -17,6 +17,8 @@ import 'package:openvine/screens/category_gallery_screen.dart';
 import 'package:openvine/widgets/categories/category_glyph.dart';
 import 'package:openvine/widgets/categories_tab.dart';
 
+import '../helpers/large_screen_layout.dart';
+
 class _MockCategoriesRepository extends Mock implements CategoriesRepository {}
 
 void main() {
@@ -117,6 +119,63 @@ void main() {
 
       expect(animalsTopLeft.dy, lessThan(styleTopLeft.dy));
       expect(styleTopLeft.dy, lessThan(technologyTopLeft.dy));
+    });
+
+    group('on a wide window', () {
+      const loaded = CategoriesState(
+        categoriesStatus: CategoriesStatus.loaded,
+        categories: [
+          VideoCategory(name: 'animals', videoCount: 1500),
+          VideoCategory(name: 'fashion', videoCount: 1200),
+          VideoCategory(name: 'technology', videoCount: 300),
+        ],
+      );
+
+      Future<void> pumpWide(
+        WidgetTester tester, {
+        required bool largeScreenLayout,
+      }) async {
+        setTestWindowSize(tester, 1000);
+        await tester.pumpWidget(
+          largeScreenLayoutApp(
+            enabled: largeScreenLayout,
+            home: Scaffold(
+              body: CategoriesDiscoveryView(
+                state: loaded,
+                onCategoryTap: (_) {},
+                onRetry: () {},
+              ),
+            ),
+          ),
+        );
+      }
+
+      testWidgets('lays the tiles side by side with the large-screen layouts', (
+        tester,
+      ) async {
+        await pumpWide(tester, largeScreenLayout: true);
+
+        // 1000 pt less the side padding crosses two breakpoints: one row of
+        // three tiles.
+        final animals = tester.getTopLeft(find.text('Animals'));
+        final style = tester.getTopLeft(find.text('Style'));
+        final technology = tester.getTopLeft(find.text('Technology'));
+        expect([style.dy, technology.dy], everyElement(equals(animals.dy)));
+        expect(style.dx, greaterThan(animals.dx));
+        expect(technology.dx, greaterThan(style.dx));
+      });
+
+      testWidgets('keeps one full-width tile per row with the flag off', (
+        tester,
+      ) async {
+        await pumpWide(tester, largeScreenLayout: false);
+
+        expect(find.byType(GridView), findsNothing);
+        final animals = tester.getTopLeft(find.text('Animals'));
+        final style = tester.getTopLeft(find.text('Style'));
+        expect(style.dx, equals(animals.dx));
+        expect(style.dy, greaterThan(animals.dy));
+      });
     });
 
     testWidgets('exposes stable category tile identifiers', (tester) async {

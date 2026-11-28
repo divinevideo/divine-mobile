@@ -111,6 +111,22 @@ void main() {
         'https://blossom.example/audio.aac',
       );
     });
+
+    test('leaves an address whose path names an audio root', () {
+      // A received draft could otherwise name a file of the recipient's.
+      for (final address in [
+        'https://cdn.example/voice_over_recordings/take.m4a',
+        'http:/voice_over_recordings/take.m4a',
+        'asset://voice_over_recordings/take.m4a',
+      ]) {
+        expect(resolveAudioPath(address, _newDocs), address);
+      }
+    });
+
+    test('leaves a path that climbs back out of its audio root', () {
+      const path = 'voice_over_recordings/../../Library/take.m4a';
+      expect(resolveAudioPath(path, _newDocs), path);
+    });
   });
 
   group('audio path rewriting in persisted maps', () {

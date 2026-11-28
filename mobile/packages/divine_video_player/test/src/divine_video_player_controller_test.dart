@@ -65,7 +65,10 @@ void main() {
   /// The event channel mock is set up inside the 'create' handler so that
   /// it is in place before [initialize] subscribes to
   /// `receiveBroadcastStream()`.
-  Future<void> initController({bool? playbackTelemetrySupported}) async {
+  Future<void> initController({
+    bool? playbackTelemetrySupported,
+    int? textureId,
+  }) async {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
           const MethodChannel('divine_video_player'),
@@ -90,9 +93,10 @@ void main() {
                     EventChannel('divine_video_player/player_$id/events'),
                     _TestStreamHandler(eventController),
                   );
-              if (playbackTelemetrySupported != null) {
+              if (playbackTelemetrySupported != null || textureId != null) {
                 return {
-                  'playbackTelemetrySupported': playbackTelemetrySupported,
+                  'playbackTelemetrySupported': ?playbackTelemetrySupported,
+                  'textureId': ?textureId,
                 };
               }
             }
@@ -393,6 +397,48 @@ void main() {
 
         expect(controller.usesLinuxBackend, isTrue);
         expect(fakeLinuxBackend.initializeCalls, 1);
+      });
+
+      test(
+        'plays through the native player on Windows and renders a texture '
+        'without useTexture',
+        () async {
+          debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+          addTearDown(() => debugDefaultTargetPlatformOverride = null);
+          final networkUri = Uri.https('example.com', '/video.mp4');
+          final fileUri = Uri.file(r'C:\synthetic\local.mp4', windows: true);
+          final clips = [
+            VideoClip.network(networkUri.toString()),
+            VideoClip.file(fileUri.toFilePath(windows: true)),
+          ];
+
+          await initController(textureId: 7);
+          await controller.setClips(clips);
+          await controller.play();
+
+          expect(controller.usesLinuxBackend, isFalse);
+          expect(controller.textureId, 7);
+          expect(globalCalls.first.method, 'create');
+          expect(
+            playerCalls.map((call) => call.method),
+            containsAllInOrder(['setClips', 'play']),
+          );
+          final sent = playerCalls.firstWhere(
+            (call) => call.method == 'setClips',
+          );
+          expect(
+            ((sent.arguments as Map)['clips'] as List).map(
+              (clip) => (clip as Map)['uri'],
+            ),
+            [networkUri.toString(), r'C:\synthetic\local.mp4'],
+          );
+        },
+      );
+
+      test('ignores a texture id it did not ask for off Windows', () async {
+        await initController(textureId: 7);
+
+        expect(controller.textureId, isNull);
       });
     });
 
@@ -1099,6 +1145,53 @@ void main() {
         },
       );
 
+      test(
+        'completes firstFrameRendered with false on Windows when the media '
+        'fails',
+        () async {
+          debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+          addTearDown(() => debugDefaultTargetPlatformOverride = null);
+          final rendered = controller.firstFrameRendered;
+
+          eventController.add({
+            'status': 'error',
+            'errorCode': 'decoder_error',
+          });
+          await pumpEventQueue();
+
+          expect(await rendered, isFalse);
+        },
+      );
+
+      test(
+        'completes firstFrameRendered with false on Windows when stopped',
+        () async {
+          debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+          addTearDown(() => debugDefaultTargetPlatformOverride = null);
+          final rendered = controller.firstFrameRendered;
+
+          await controller.stop();
+
+          expect(await rendered, isFalse);
+        },
+      );
+
+      test(
+        'leaves firstFrameRendered pending after an error elsewhere',
+        () async {
+          var completed = false;
+          unawaited(
+            controller.firstFrameRendered.then((_) => completed = true),
+          );
+
+          eventController.add({'status': 'error'});
+          await pumpEventQueue();
+
+          expect(controller.state.hasError, isTrue);
+          expect(completed, isFalse);
+        },
+      );
+
       test('ignores non-Map events', () async {
         eventController.add(<Object?, Object?>{});
         await Future<void>.delayed(Duration.zero);
@@ -1339,6 +1432,32 @@ void main() {
         expect(globalCalls, isEmpty);
       });
 
+      test('disposeAll releases the native players on Windows', () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+        addTearDown(() => debugDefaultTargetPlatformOverride = null);
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(
+              const MethodChannel('divine_video_player'),
+              (call) async {
+                globalCalls.add(call);
+                return null;
+              },
+            );
+        addTearDown(
+          () => TestDefaultBinaryMessengerBinding
+              .instance
+              .defaultBinaryMessenger
+              .setMockMethodCallHandler(
+                const MethodChannel('divine_video_player'),
+                null,
+              ),
+        );
+
+        await DivineVideoPlayerController.disposeAll();
+
+        expect(globalCalls.map((call) => call.method), ['disposeAll']);
+      });
+
       test('configureCache is a no-op on Linux', () async {
         debugDefaultTargetPlatformOverride = TargetPlatform.linux;
         addTearDown(
@@ -1432,6 +1551,8 @@ class _ControllerFakeLinuxBackend implements LinuxVideoPlayerBackend {
   int? lastAudioTrackIndex;
   double? lastAudioTrackVolume;
   double? lastVolume;
+  int playCalls = 0;
+  Duration? lastSeekPosition;
   late void Function(DivineVideoPlayerState state) _onStateChanged;
 
   @override
@@ -1459,13 +1580,17 @@ class _ControllerFakeLinuxBackend implements LinuxVideoPlayerBackend {
   Future<void> pause() async {}
 
   @override
-  Future<void> play() async {}
+  Future<void> play() async {
+    playCalls++;
+  }
 
   @override
   Future<void> removeAllAudioTracks() async {}
 
   @override
-  Future<void> seekTo(Duration position) async {}
+  Future<void> seekTo(Duration position) async {
+    lastSeekPosition = position;
+  }
 
   @override
   Future<void> setAudioTrackVolume(int index, double volume) async {

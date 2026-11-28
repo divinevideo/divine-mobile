@@ -12,16 +12,22 @@ import pro_video_editor
 /// shade the cloth beside them. The cloth shows between the stitches, with a
 /// hole at every corner where the needle went through.
 ///
-/// Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1: how
-/// far the picture turns into embroidery).
+/// Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how far
+/// the picture turns into embroidery), `size` (0.5–3: how large the stitches
+/// are, as a share of the default) and `color` (the cloth's colour, as an ARGB
+/// integer).
 final class CrossStitchVideoEffect: ShaderVideoEffect {
   /// The id the Dart `CustomVideoEffect` names.
   static let id = "divine.crossStitch"
 
   private let intensity: Double
+  private let stitch: Double
+  private let cloth: [Double]
 
   init(params: [String: Any]) {
     intensity = Self.readIntensity(params)
+    stitch = Self.readNumber(params, "size", fallback: 1, in: 0.5...3)
+    cloth = Self.readColor(params, "color", fallback: 0xFFF0_EBDB)
     super.init(function: Self.function, source: Self.source)
   }
 
@@ -34,7 +40,7 @@ final class CrossStitchVideoEffect: ShaderVideoEffect {
   }
 
   override func values(effectTimeUs: Int64) -> [Double]? {
-    intensity > 0 ? [intensity] : nil
+    intensity > 0 ? [intensity] + [stitch] + cloth : nil
   }
 
   static let function = "divineCrossStitch"
@@ -56,10 +62,13 @@ final class CrossStitchVideoEffect: ShaderVideoEffect {
     ) {
       if (gid.x >= target.get_width() || gid.y >= target.get_height()) return;
       Frame f = frameOf(u);
-      float intensity = u[3].x;
+      float2 uSize = f.size;
+      float uIntensity = u[3].x;
+      float uStitch = u[3].y;
+      float3 uCloth = float3(u[3].z, u[3].w, u[4].x);
       float2 p = pixelOf(u, gid, target.get_height());
-      float s = min(f.size.x, f.size.y);
-      float c = max(6.0, s / 36.0);
+      float s = min(uSize.x, uSize.y);
+      float c = max(6.0, s / 36.0 * uStitch);
       float2 cell = floor(p / c);
       float2 middle = (cell + 0.5) * c;
       float3 ink = 0.25 * (tap(frame, f, middle + float2(-0.25, -0.25) * c) + tap(frame, f, middle + float2(0.25, -0.25) * c) +
@@ -81,10 +90,10 @@ final class CrossStitchVideoEffect: ShaderVideoEffect {
       float beside = max(1.0 - smoothstep(w, w + 0.08, under), 1.0 - smoothstep(w, w + 0.08, over));
       float2 hole = inCell - floor(inCell + 0.5);
       float holes = smoothstep(0.04, 0.09, length(hole));
-      float3 cloth = float3(0.94, 0.92, 0.86) * (0.7 + 0.3 * holes) * (1.0 - 0.25 * beside * inside);
+      float3 cloth = uCloth * (0.7 + 0.3 * holes) * (1.0 - 0.25 * beside * inside);
       float3 stitch = mix(cloth, floss * underTwist * underRound, underMask);
       stitch = mix(stitch, floss * overTwist * overRound * 1.05, overMask);
-      target.write(float4(mix(tap(frame, f, p), clamp(stitch, 0.0, 1.0), intensity), 1.0), gid);
+      target.write(float4(mix(tap(frame, f, p), clamp(stitch, 0.0, 1.0), uIntensity), 1.0), gid);
     }
     """
 }

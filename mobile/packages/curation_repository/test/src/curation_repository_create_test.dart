@@ -48,7 +48,7 @@ void main() {
       when(() => mockVideoEventCache.discoveryVideos).thenReturn([]);
       when(
         () => mockLikesRepository.getLikeCounts(any()),
-      ).thenAnswer((_) async => {});
+      ).thenAnswer((_) async => const LikeCounts(counts: {}));
       when(
         () => mockNostrService.subscribe(any()),
       ).thenAnswer((_) => const Stream<Event>.empty());

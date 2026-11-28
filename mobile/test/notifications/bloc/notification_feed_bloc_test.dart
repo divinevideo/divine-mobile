@@ -8,6 +8,7 @@
 
 import 'dart:async';
 
+import 'package:analytics/analytics.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
@@ -21,6 +22,7 @@ import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/app_badge_service.dart';
 
 import '../../helpers/recording_consumption_analytics.dart';
+import '../../helpers/screen_load_recorder.dart';
 
 class _MockNotificationRepository extends Mock
     implements NotificationRepository {}
@@ -1568,6 +1570,100 @@ void main() {
           ),
         ],
       );
+    });
+
+    group('load telemetry', () {
+      late ScreenLoadRecorder recorder;
+
+      setUp(() => recorder = ScreenLoadRecorder());
+
+      NotificationFeedBloc createTimedBloc() => NotificationFeedBloc(
+        notificationRepository: mockNotificationRepo,
+        followRepository: mockFollowRepo,
+        appBadgeClearer: mockAppBadgeClearer,
+        consumptionAnalytics: ConsumptionAnalyticsTracker(
+          analytics: () => analytics,
+        ),
+        loadTelemetry: recorder.telemetry(AnalyticsSurface.notifications),
+      );
+
+      /// Holds the first refresh open, so a test controls what shows first.
+      Completer<NotificationPage> holdRefresh() {
+        final refresh = Completer<NotificationPage>();
+        when(
+          () => mockNotificationRepo.refreshFeed(any()),
+        ).thenAnswer((_) => refresh.future);
+        addTearDown(() {
+          if (!refresh.isCompleted) refresh.complete(NotificationPage.empty);
+        });
+        return refresh;
+      }
+
+      test('completes when the first notifications show, before the refresh '
+          'returns', () async {
+        holdRefresh();
+        final bloc = createTimedBloc();
+        addTearDown(bloc.close);
+
+        bloc.add(NotificationFeedStarted());
+        await pumpEventQueue();
+        expect(recorder.loads, isEmpty);
+
+        snapshotController.add(
+          NotificationPage(
+            items: [_videoNotif(), _actorNotif()],
+            unreadCount: 2,
+            hasMore: true,
+          ),
+        );
+        await pumpEventQueue();
+
+        expect(recorder.results, [SurfaceLoadResult.success]);
+        expect(
+          recorder.loads.single,
+          allOf(
+            containsPair(AnalyticsParam.itemCount, 2),
+            containsPair(AnalyticsParam.hasMore, 1),
+          ),
+        );
+      });
+
+      test('reports empty once the first refresh found nothing', () async {
+        final bloc = createTimedBloc();
+        addTearDown(bloc.close);
+
+        bloc.add(NotificationFeedStarted());
+        await pumpEventQueue();
+
+        expect(recorder.results, [SurfaceLoadResult.empty]);
+      });
+
+      test('reports failure when the first refresh fails with nothing '
+          'cached', () async {
+        when(
+          () => mockNotificationRepo.refreshFeed(any()),
+        ).thenThrow(Exception('timeout'));
+        final bloc = createTimedBloc();
+        addTearDown(bloc.close);
+
+        bloc.add(NotificationFeedStarted());
+        await pumpEventQueue();
+
+        expect(bloc.state.status, NotificationFeedStatus.failure);
+        expect(recorder.results, [SurfaceLoadResult.failure]);
+      });
+
+      test('reports dismissed when closed before anything showed', () async {
+        holdRefresh();
+        final bloc = createTimedBloc();
+
+        bloc.add(NotificationFeedStarted());
+        await pumpEventQueue();
+        await bloc.close();
+        await pumpEventQueue();
+
+        expect(recorder.results, [SurfaceLoadResult.dismissed]);
+      });
     });
   });
 }

@@ -108,6 +108,46 @@ void main() {
     );
 
     test(
+      "union keeps both copies' preserved tags, and sealed ones sealed",
+      () {
+        final local = row(name: 'Local', public: false, seconds: 1).copyWith(
+          preservedTags: const [
+            ['L', 'video.divine'],
+          ],
+          preservedPrivateTags: const [
+            ['p', foreign],
+          ],
+        );
+        final relay = row(name: 'Relay', public: true, eventId: plaintext)
+            .copyWith(
+              preservedTags: const [
+                ['L', 'video.divine'],
+                ['series', 'true'],
+                ['p', foreign],
+              ],
+              preservedPrivateTags: const [
+                ['word', 'secret'],
+              ],
+            );
+
+        final merged = CuratedListConverter.mergeUnpublished(
+          local,
+          relay,
+          mergedAt: origin,
+        );
+
+        expect(merged.preservedTags, [
+          ['L', 'video.divine'],
+          ['series', 'true'],
+        ]);
+        expect(merged.preservedPrivateTags, [
+          ['p', foreign],
+          ['word', 'secret'],
+        ]);
+      },
+    );
+
+    test(
       'a decoded public source without an identity cannot invent a deletion ID',
       () {
         final merged = CuratedListConverter.mergeUnpublished(

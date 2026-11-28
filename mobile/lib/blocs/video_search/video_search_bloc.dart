@@ -2,11 +2,13 @@
 // ABOUTME: Delegates search to the repository layer via a progressive stream.
 // ABOUTME: Supports pagination via VideoSearchLoadMore for infinite scroll.
 
+import 'package:analytics/analytics.dart';
 import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart';
 import 'package:openvine/constants/search_constants.dart';
+import 'package:openvine/observability/screen_load_telemetry.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:stream_transform/stream_transform.dart';
 import 'package:videos_repository/videos_repository.dart';
@@ -41,9 +43,12 @@ EventTransformer<E> _debounceRestartable<E>() {
 /// After the initial search, [VideoSearchLoadMore] fetches additional
 /// pages from the API for infinite scroll.
 class VideoSearchBloc extends Bloc<VideoSearchEvent, VideoSearchState> {
-  VideoSearchBloc({required VideosRepository videosRepository})
-    : _videosRepository = videosRepository,
-      super(const VideoSearchState()) {
+  VideoSearchBloc({
+    required VideosRepository videosRepository,
+    ScreenLoadTelemetry? loadTelemetry,
+  }) : _videosRepository = videosRepository,
+       _loadTelemetry = loadTelemetry,
+       super(const VideoSearchState()) {
     on<VideoSearchQueryChanged>(
       _onQueryChanged,
       transformer: _debounceRestartable(),
@@ -58,6 +63,9 @@ class VideoSearchBloc extends Bloc<VideoSearchEvent, VideoSearchState> {
   }
 
   final VideosRepository _videosRepository;
+
+  /// Times each search until its results show; null where unmeasured.
+  final ScreenLoadTelemetry? _loadTelemetry;
   int _searchSessionId = 0;
 
   Future<void> _onQueryChanged(
@@ -85,6 +93,7 @@ class VideoSearchBloc extends Bloc<VideoSearchEvent, VideoSearchState> {
       sort: state.sort,
       emit: emit,
       sessionId: _beginSearchSession(),
+      loadEntryPoint: ScreenLoadEntryPoint.query,
     );
   }
 
@@ -105,12 +114,21 @@ class VideoSearchBloc extends Bloc<VideoSearchEvent, VideoSearchState> {
     );
   }
 
+  /// Runs a search. A [loadEntryPoint] times it until its results show; a
+  /// re-run the user did not ask for, after a block, passes none.
   Future<void> _search({
     required String query,
     required VideoSearchSort sort,
     required Emitter<VideoSearchState> emit,
     required int sessionId,
+    String? loadEntryPoint,
   }) async {
+    if (loadEntryPoint != null) {
+      _loadTelemetry?.start(
+        entryPoint: loadEntryPoint,
+        params: {AnalyticsParam.sortMode: sort.name},
+      );
+    }
     emit(
       state.copyWith(
         status: VideoSearchStatus.searching,
@@ -184,6 +202,7 @@ class VideoSearchBloc extends Bloc<VideoSearchEvent, VideoSearchState> {
       sort: event.sort,
       emit: emit,
       sessionId: _beginSearchSession(),
+      loadEntryPoint: ScreenLoadEntryPoint.sortChange,
     );
   }
 
@@ -260,6 +279,42 @@ class VideoSearchBloc extends Bloc<VideoSearchEvent, VideoSearchState> {
   void _onCleared(VideoSearchCleared event, Emitter<VideoSearchState> emit) {
     _invalidateSearchSession();
     emit(const VideoSearchState());
+  }
+
+  /// Completes a timed search once the results grid, its empty state or its
+  /// error shows. Results stream in from several sources, so the first one
+  /// to land completes it; a query cleared first is dismissed.
+  @override
+  void onChange(Change<VideoSearchState> change) {
+    super.onChange(change);
+    final telemetry = _loadTelemetry;
+    if (telemetry == null || !telemetry.isTiming) return;
+    final next = change.nextState;
+    switch (next.status) {
+      case VideoSearchStatus.searching:
+        // Until this search's first results land, the grid keeps showing the
+        // previous query's, which is the same list.
+        if (next.videos.isEmpty ||
+            identical(next.videos, change.currentState.videos)) {
+          return;
+        }
+        telemetry.completeLoaded(itemCount: next.videos.length);
+      case VideoSearchStatus.success:
+        telemetry.completeLoaded(
+          itemCount: next.videos.length,
+          hasMore: next.hasMore,
+        );
+      case VideoSearchStatus.failure:
+        telemetry.completeFailure();
+      case VideoSearchStatus.initial:
+        telemetry.dismiss();
+    }
+  }
+
+  @override
+  Future<void> close() {
+    _loadTelemetry?.dismiss();
+    return super.close();
   }
 
   int _beginSearchSession() => ++_searchSessionId;

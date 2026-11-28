@@ -1,9 +1,12 @@
 // ABOUTME: Pins that an upper-case hex route id reaches REST lowercased.
 // ABOUTME: The first-party API is case sensitive, so the original case 404s.
 
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:videos_repository/videos_repository.dart';
@@ -59,6 +62,43 @@ void main() {
 
     VideosRepository build() =>
         VideosRepository(nostrClient: nostr, funnelcakeApiClient: funnelcake);
+
+    test(
+      'two cards share one lookup and play before slow stats resolve',
+      () async {
+        final stats = Completer<BulkVideoStatsResponse>();
+        when(
+          () => funnelcake.getBulkVideoStats(any()),
+        ).thenAnswer((_) => stats.future);
+        final repository = build();
+        final card = repository.fetchVideoWithStatsForRouteId(
+          _eventId,
+          expectedAuthor: _pubkey,
+        );
+        final second = repository.fetchVideoWithStatsForRouteId(
+          _eventId,
+          expectedAuthor: _pubkey,
+        );
+        expect(identical(card, second), isTrue);
+        final playable = await repository.pendingPlayableRoute(
+          _eventId,
+          expectedAuthor: _pubkey,
+        );
+        expect(playable?.id, _eventId);
+        expect(stats.isCompleted, isFalse);
+        expect(
+          repository.pendingPlayableRoute(_eventId, expectedAuthor: 'a' * 64),
+          isNull,
+        );
+        verify(() => funnelcake.getVideoEvent(_eventId)).called(1);
+        stats.completeError(const FunnelcakeException('no stats'));
+        expect((await card)?.id, _eventId);
+        expect(
+          repository.pendingPlayableRoute(_eventId, expectedAuthor: _pubkey),
+          isNull,
+        );
+      },
+    );
 
     test('lowercases an upper-case hex id before the REST lookup', () async {
       final upper = _eventId.toUpperCase();

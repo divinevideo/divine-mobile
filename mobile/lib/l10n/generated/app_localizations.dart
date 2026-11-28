@@ -139,6 +139,30 @@ abstract class AppLocalizations {
     Locale('zh'),
   ];
 
+  /// Asks before switching to a known account to open its direct message.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch to {account} to open this message?'**
+  String dmNotificationSwitchAccountPrompt(String account);
+
+  /// Account preference for generic direct-message push alerts.
+  ///
+  /// In en, this message translates to:
+  /// **'Direct messages'**
+  String get notificationSettingsDirectMessages;
+
+  /// Direct-message notification setting. Keep both the sender and message private in the notification.
+  ///
+  /// In en, this message translates to:
+  /// **'Show a private alert without the sender’s name or message.'**
+  String get notificationSettingsDirectMessagesSubtitle;
+
+  /// Generic fallback when a tapped private message cannot be opened.
+  ///
+  /// In en, this message translates to:
+  /// **'This message is unavailable.'**
+  String get dmNotificationMessageUnavailable;
+
   /// Header of the Developer Options section that recovers clips the app can no longer show.
   ///
   /// In en, this message translates to:
@@ -559,10 +583,10 @@ abstract class AppLocalizations {
   /// **'Share usage data'**
   String get privacySettingsShareUsage;
 
-  /// Supporting copy under the analytics consent switch. Second sentence is load-bearing: turning the switch off also discards analytics still queued on the device.
+  /// Supporting copy under the analytics consent switch. Second sentence is load-bearing: turning the switch off also discards analytics still queued on the device. Third sentence is load-bearing too: crash reporting stays on whichever way the switch is set, so the copy must not suggest it stops.
   ///
   /// In en, this message translates to:
-  /// **'Helps us see what people actually use. Switch it off and queued data is deleted.'**
+  /// **'Helps us see what people actually use. Switch it off and queued data is deleted. Crash reports are still sent so we can fix bugs.'**
   String get privacySettingsShareUsageSubtitle;
 
   /// Snackbar shown when the analytics consent switch could not be saved. Both failure directions settle as opted out, so the second sentence is true either way.
@@ -3115,41 +3139,11 @@ abstract class AppLocalizations {
   /// **'Share video'**
   String get shareVideoLabel;
 
-  /// No description provided for @sharePostSharedWith.
-  ///
-  /// In en, this message translates to:
-  /// **'Post shared with {recipientName}'**
-  String sharePostSharedWith(String recipientName);
-
-  /// Snackbar after sharing a video to two or more people at once. Only used for count >= 2.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, one{Post shared with {count} person} other{Post shared with {count} people}}'**
-  String sharePostSharedWithCount(int count);
-
-  /// One line of the snackbar after sharing a video: the send to this person failed for now but is queued, and the app keeps retrying it in the background. Shown on its own line, possibly after a 'Post shared with' line.
-  ///
-  /// In en, this message translates to:
-  /// **'Still trying to send to {recipientName}'**
-  String shareStillTryingToSendTo(String recipientName);
-
-  /// Plural form of shareStillTryingToSendTo, for two or more people whose sends are queued and retrying in the background. Only used for count >= 2.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, one{Still trying to send to {count} person} other{Still trying to send to {count} people}}'**
-  String shareStillTryingToSendToCount(int count);
-
-  /// One line of the snackbar after sharing a video: this person will not get it, because the send was refused (for example, an account nobody reads anymore) and will not be retried. Shown on its own line, possibly after a 'Post shared with' line.
+  /// One line naming a person who will not get the shared video: the send was refused or stopped (for example, an account nobody reads anymore) and will not be retried. Shown in the share sheet or the delivery banner, possibly beside other recipients' lines.
   ///
   /// In en, this message translates to:
   /// **'Couldn\'t send to {recipientName}'**
   String shareCouldNotSendTo(String recipientName);
-
-  /// Plural form of shareCouldNotSendTo, for two or more people who will not get the shared video. Only used for count >= 2.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, one{Couldn\'t send to {count} person} other{Couldn\'t send to {count} people}}'**
-  String shareCouldNotSendToCount(int count);
 
   /// No description provided for @shareFailedToSend.
   ///
@@ -3211,6 +3205,24 @@ abstract class AppLocalizations {
   /// **'Find\npeople'**
   String get shareFindPeopleMultiline;
 
+  /// A queued shared video had a failed recipient delivery attempt and may be retried.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t send yet'**
+  String get shareDeliveryFailed;
+
+  /// The default relay accepted the share but the recipient inbox could not be read.
+  ///
+  /// In en, this message translates to:
+  /// **'Will send when {name} is reachable'**
+  String shareDeliveryHeld(String name);
+
+  /// A named recipient and the delivery state of their private share.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} — {status}'**
+  String shareDeliveryForRecipient(String name, String status);
+
   /// No description provided for @shareSent.
   ///
   /// In en, this message translates to:
@@ -3222,6 +3234,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Selected {name}'**
   String shareSelectedRecipientAnnouncement(String name);
+
+  /// Button that sends a video directly to one share-sheet recipient.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get shareRecipientSend;
+
+  /// Screen reader label for the button that sends a video to this recipient.
+  ///
+  /// In en, this message translates to:
+  /// **'Send to {name}'**
+  String shareRecipientSendTo(String name);
 
   /// No description provided for @shareMessageHint.
   ///
@@ -3582,6 +3606,34 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add yours'**
   String get videoStickerAddYoursButton;
+
+  /// Shown on an Add yours sticker, beside the latest answers' thumbnails, to a viewer who may not join it: a tap opens the answers in a feed. Short: it fits beside three thumbnails.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch the series'**
+  String get videoStickerAddYoursWatchSeries;
+
+  /// Screen reader label of an Add yours sticker shown to a viewer who may not join it; a tap opens its answers. {prompt} is what the sticker prompts its answers to show.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch the series: {prompt}'**
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt);
+
+  /// On the chip shown on a video that is an episode of a series, after the series name: which episode this is and how many the series has, such as 'Ep 4 of 12'; episode and total are already formatted numbers. Kept short: Ep abbreviates Episode.
+  ///
+  /// In en, this message translates to:
+  /// **'Ep {episode} of {total}'**
+  String videoSeriesChipEpisode(String episode, String total);
+
+  /// Screen reader label of the series chip on a video that is an episode of a series; a tap opens the series at this episode. {seriesName} is the series' title; episode and total are already formatted numbers.
+  ///
+  /// In en, this message translates to:
+  /// **'Series {seriesName}, episode {episode} of {total}'**
+  String videoSeriesChipSemanticLabel(
+    String seriesName,
+    String episode,
+    String total,
+  );
 
   /// On an Add yours sticker in the player: how many people answered its prompt with a video.
   ///
@@ -5767,6 +5819,12 @@ abstract class AppLocalizations {
   /// **'Signing in here will hide those drafts and clips'**
   String get authRecoveryOtherAccountWarning;
 
+  /// Welcome-screen action that opens the curated Classics player without signing in.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch Classics as a guest'**
+  String get authWatchClassicsAsGuest;
+
   /// No description provided for @authTermsPrefix.
   ///
   /// In en, this message translates to:
@@ -6853,6 +6911,12 @@ abstract class AppLocalizations {
   /// **'Couldn\'t start the remix. Try again.'**
   String get remixStartFailed;
 
+  /// Error when saving the account-wide remix setting fails, including a failed profile read before publishing.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t update your remix setting. Try again.'**
+  String get remixSettingSaveFailed;
+
   /// Settings switch title: when off, nobody else can use the signed-in creator's videos as clips.
   ///
   /// In en, this message translates to:
@@ -7531,6 +7595,12 @@ abstract class AppLocalizations {
   /// **'The relay wouldn\'t accept the update. Try again in a moment.'**
   String get videoUpdateErrorPublishRejected;
 
+  /// Shown when saving video details fails because this device's edit and another device's edit together go over the hashtag or collaborator limit. Saving the same edit again fails the same way; reopening the video loads the other device's changes.
+  ///
+  /// In en, this message translates to:
+  /// **'This video changed on another device and now has too many tags or collaborators. Open it again and remove some.'**
+  String get videoUpdateErrorConcurrentEditsOverLimit;
+
   /// No description provided for @videoUpdateErrorGeneric.
   ///
   /// In en, this message translates to:
@@ -7698,6 +7768,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Try a different search term'**
   String get soundsNoSoundsFoundDescription;
+
+  /// Screen-reader announcement when a search in the sound picker has answered, saying how many sounds the list now shows.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No sounds found} =1{{count} sound found} other{{count} sounds found}}'**
+  String soundsSearchResultCount(int count);
 
   /// No description provided for @soundsSavedToLibrary.
   ///
@@ -9709,7 +9785,7 @@ abstract class AppLocalizations {
   /// **'View source'**
   String get soundViewSource;
 
-  /// Shown after the licence in a sound's credit on a video when the licence (such as CC BY) asks to say that the sound was changed: the video uses an excerpt, mixed into its own audio. Lowercase, a past participle describing the sound.
+  /// Shown after the licence in a sound's credit when the licence (such as CC BY) asks to say that the sound was changed: on a video, which uses an excerpt mixed into its own audio, and on a sound's page, when its publisher changed the recording before sharing it. Lowercase, a past participle describing the sound.
   ///
   /// In en, this message translates to:
   /// **'edited'**
@@ -10758,6 +10834,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Invitation sent'**
   String get inboxCollabInviteSentStatus;
+
+  /// Inbox row summary for a shared video. Any personal note follows on the next line.
+  ///
+  /// In en, this message translates to:
+  /// **'Shared a video'**
+  String get inboxSharedVideoPreview;
 
   /// Substituted for the legacy NIP-04 plaintext invite copy when shown as the most-recent-message preview in the DM conversation list. The plaintext copy ('Open Divine to review and accept') is misleading inside Divine.
   ///
@@ -12067,6 +12149,90 @@ abstract class AppLocalizations {
   /// **'Duplicate'**
   String get libraryDraftActionDuplicate;
 
+  /// Draft options menu action that renders the draft into one clip in the Clips library. The draft itself is kept.
+  ///
+  /// In en, this message translates to:
+  /// **'Convert to clip'**
+  String get libraryDraftActionConvertToClip;
+
+  /// Shown over the library while a draft is rendered into a clip.
+  ///
+  /// In en, this message translates to:
+  /// **'Converting to clip...'**
+  String get libraryDraftConvertingToClip;
+
+  /// Snackbar after a draft was rendered into a new clip in the Clips library.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft converted to a clip'**
+  String get libraryDraftConvertedToClipSnackbar;
+
+  /// Snackbar when rendering a draft into a clip failed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to convert draft'**
+  String get libraryDraftConvertToClipFailedSnackbar;
+
+  /// Snackbar when a draft's text and stickers could not be prepared for the clip render.
+  ///
+  /// In en, this message translates to:
+  /// **'The text and stickers on this draft couldn’t be prepared. Open it in the editor, then try again.'**
+  String get libraryDraftConvertOverlaysUnavailable;
+
+  /// No description provided for @libraryDraftActionShare.
+  ///
+  /// In en, this message translates to:
+  /// **'Share draft'**
+  String get libraryDraftActionShare;
+
+  /// Confirmation before sending an editable draft project in a one-to-one DM.
+  ///
+  /// In en, this message translates to:
+  /// **'Send an editable draft to {name}?'**
+  String libraryDraftShareConfirm(String name);
+
+  /// No description provided for @libraryDraftShareNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'You’re sharing the original clips and edit history. They can see what you cut, edit their copy, post it, or send it back.'**
+  String get libraryDraftShareNotice;
+
+  /// No description provided for @libraryDraftShareFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t send the draft.'**
+  String get libraryDraftShareFailed;
+
+  /// No description provided for @libraryDraftShareTooLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'The draft is too large to send.'**
+  String get libraryDraftShareTooLarge;
+
+  /// No description provided for @dmSharedDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Shared draft'**
+  String get dmSharedDraft;
+
+  /// No description provided for @dmOpenDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Import and edit'**
+  String get dmOpenDraft;
+
+  /// No description provided for @dmDraftImportFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t import the draft.'**
+  String get dmDraftImportFailed;
+
+  /// No description provided for @libraryDraftSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft sent'**
+  String get libraryDraftSent;
+
   /// No description provided for @libraryDraftActionDelete.
   ///
   /// In en, this message translates to:
@@ -13107,6 +13273,18 @@ abstract class AppLocalizations {
     String displayName,
     String messageText,
   );
+
+  /// Sentence under a group message request's card, in place of messageRequestWantsToMessageYou, which names one person. {messageText} is messageRequestMessageCount, for example '3 messages'. 'They' means the group's members.
+  ///
+  /// In en, this message translates to:
+  /// **'This group wants to message you, they\'ve sent {messageText}.'**
+  String messageRequestGroupWantsToMessageYou(String messageText);
+
+  /// Heading above the list of people in a group message request, shown before the user accepts it. Each row below it is one member and opens their profile.
+  ///
+  /// In en, this message translates to:
+  /// **'In this group'**
+  String get messageRequestGroupMembersHeading;
 
   /// Error shown when the signed-in account changed between confirming a deletion and executing it; nothing was deleted.
   ///
@@ -15983,6 +16161,36 @@ abstract class AppLocalizations {
   /// **'Spin Blur'**
   String get videoEditorEffectSpinBlur;
 
+  /// Name of a video effect for heavy music: on each hit a ring of pressure races from the centre to the edges, bending the picture like a lens, while the picture punches in and rattles.
+  ///
+  /// In en, this message translates to:
+  /// **'Shockwave'**
+  String get videoEditorEffectShockwave;
+
+  /// Name of a video effect for heavy music, named after a bass loudspeaker: on each hit the middle of the picture bulges out like a speaker cone and springs back.
+  ///
+  /// In en, this message translates to:
+  /// **'Subwoofer'**
+  String get videoEditorEffectSubwoofer;
+
+  /// Name of a video effect for heavy music: on each hit a white-hot blast bursts in the middle and spreads as a glowing ring of liquid that bends the picture like water. It flashes.
+  ///
+  /// In en, this message translates to:
+  /// **'Plasma'**
+  String get videoEditorEffectPlasma;
+
+  /// Name of a video effect for heavy music: on each hit a red-hot blast bursts in the middle and spreads as a red ring crackling with arcs of energy. It flashes.
+  ///
+  /// In en, this message translates to:
+  /// **'Energy Wave'**
+  String get videoEditorEffectEnergyWave;
+
+  /// Name of a video effect for heavy music: on each hit a billow of grey smoke bursts from the middle and is pushed out past the edges of the picture.
+  ///
+  /// In en, this message translates to:
+  /// **'Smoke Burst'**
+  String get videoEditorEffectSmokeBurst;
+
   /// Name of a video effect: the picture looks like a printed comic book, with flat colours, halftone dots and ink outlines.
   ///
   /// In en, this message translates to:
@@ -16373,12 +16581,6 @@ abstract class AppLocalizations {
   /// **'Tints'**
   String get videoEditorFilterCategoryTints;
 
-  /// Header of the expandable card in the video effects editor that holds the settings of the Drops effect.
-  ///
-  /// In en, this message translates to:
-  /// **'Adjust drops'**
-  String get videoEditorDropsSettingsTitle;
-
   /// Slider label in the Drops effect settings: how many glass drops float over the video (1 to 5).
   ///
   /// In en, this message translates to:
@@ -16462,6 +16664,390 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add music or turn a clip\'s sound on'**
   String get videoEditorEffectsOnBeatNoSound;
+
+  /// Label and tooltip of the button under the intensity slider of the video effects editor that shows the picked effect's settings in place of the effects picker.
+  ///
+  /// In en, this message translates to:
+  /// **'Effect settings'**
+  String get videoEditorEffectSettingsOpen;
+
+  /// Title over the settings of the picked video effect, which replace the effects picker; effect is the effect's name, for example Shockwave.
+  ///
+  /// In en, this message translates to:
+  /// **'{effect} settings'**
+  String videoEditorEffectSettingsTitle(String effect);
+
+  /// A length of time in seconds next to a slider in a video effect's settings, for example 0.8 s. {seconds} is already formatted for the locale.
+  ///
+  /// In en, this message translates to:
+  /// **'{seconds} s'**
+  String videoEditorEffectSeconds(String seconds);
+
+  /// Label of the slider that sets how long one hit of a video effect such as the shockwave lasts.
+  ///
+  /// In en, this message translates to:
+  /// **'Duration'**
+  String get videoEditorEffectHitDuration;
+
+  /// Label of the switch that makes a video effect such as the shockwave hit again and again, rather than once.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat'**
+  String get videoEditorEffectHitRepeat;
+
+  /// Line under the repeat switch while it is off: the effect hits once, at the start of its bar on the editor timeline.
+  ///
+  /// In en, this message translates to:
+  /// **'Once, where the effect starts on the timeline'**
+  String get videoEditorEffectHitOnce;
+
+  /// Label of the slider that sets how long it takes until a repeating video effect such as the shockwave hits again.
+  ///
+  /// In en, this message translates to:
+  /// **'Interval'**
+  String get videoEditorEffectHitInterval;
+
+  /// Title over the settings that change how a video effect looks, such as where a shockwave hits and how far it spreads, or how many drops there are and how large.
+  ///
+  /// In en, this message translates to:
+  /// **'Look'**
+  String get videoEditorEffectLookTitle;
+
+  /// Label of the slider that moves where a video effect such as the shockwave hits from left to right.
+  ///
+  /// In en, this message translates to:
+  /// **'Horizontal position'**
+  String get videoEditorEffectHitHorizontal;
+
+  /// Label of the slider that moves where a video effect such as the shockwave hits from top to bottom.
+  ///
+  /// In en, this message translates to:
+  /// **'Vertical position'**
+  String get videoEditorEffectHitVertical;
+
+  /// Label of the slider that sets how far a video effect such as the shockwave spreads across the picture.
+  ///
+  /// In en, this message translates to:
+  /// **'Reach'**
+  String get videoEditorEffectHitReach;
+
+  /// Label of the slider that sets how hard the picture rattles when a video effect such as the shockwave hits.
+  ///
+  /// In en, this message translates to:
+  /// **'Shake'**
+  String get videoEditorEffectHitShake;
+
+  /// Label of the slider that sets how far the picture zooms in for a moment when a video effect such as the shockwave hits.
+  ///
+  /// In en, this message translates to:
+  /// **'Zoom punch'**
+  String get videoEditorEffectHitPunch;
+
+  /// Button that puts the look settings of a video effect such as the shockwave back to their defaults.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset look'**
+  String get videoEditorEffectLookReset;
+
+  /// Title over the settings that change when and how often a video effect such as the shockwave hits: how long a hit lasts, whether it repeats and how often.
+  ///
+  /// In en, this message translates to:
+  /// **'Timing'**
+  String get videoEditorEffectTimingTitle;
+
+  /// Button under the timing settings of a video effect that puts them all back to their defaults.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset timing'**
+  String get videoEditorEffectTimingReset;
+
+  /// Title over the settings that change how a video effect moves, such as how fast a tunnel zooms and whether it zooms in or out.
+  ///
+  /// In en, this message translates to:
+  /// **'Movement'**
+  String get videoEditorEffectMotionTitle;
+
+  /// Button under the movement settings of a video effect that puts them all back to their defaults.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset movement'**
+  String get videoEditorEffectMotionReset;
+
+  /// Slider label in a video effect's settings: where the sharp band of the tilt-shift effect lies on the picture.
+  ///
+  /// In en, this message translates to:
+  /// **'Focus'**
+  String get videoEditorEffectSettingFocus;
+
+  /// Slider label in a video effect's settings: how wide something in the effect is, such as the sharp band of tilt-shift or the ribs of fluted glass.
+  ///
+  /// In en, this message translates to:
+  /// **'Width'**
+  String get videoEditorEffectSettingWidth;
+
+  /// Label over a row of options in a video effect's settings: which way the effect runs, turns or zooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Direction'**
+  String get videoEditorEffectSettingDirection;
+
+  /// Option in a video effect's settings: the effect's band runs from side to side.
+  ///
+  /// In en, this message translates to:
+  /// **'Horizontal'**
+  String get videoEditorEffectSettingHorizontal;
+
+  /// Option in a video effect's settings: the effect's band runs from top to bottom.
+  ///
+  /// In en, this message translates to:
+  /// **'Vertical'**
+  String get videoEditorEffectSettingVertical;
+
+  /// Option in a video effect's settings: the swirl turns the picture clockwise.
+  ///
+  /// In en, this message translates to:
+  /// **'Clockwise'**
+  String get videoEditorEffectSettingClockwise;
+
+  /// Option in a video effect's settings: the swirl turns the picture counterclockwise.
+  ///
+  /// In en, this message translates to:
+  /// **'Counterclockwise'**
+  String get videoEditorEffectSettingAnticlockwise;
+
+  /// Option in a video effect's settings: the tunnel zooms into its copies of the picture.
+  ///
+  /// In en, this message translates to:
+  /// **'Zoom in'**
+  String get videoEditorEffectSettingZoomIn;
+
+  /// Option in a video effect's settings: the tunnel zooms out of its copies of the picture.
+  ///
+  /// In en, this message translates to:
+  /// **'Zoom out'**
+  String get videoEditorEffectSettingZoomOut;
+
+  /// Slider label in a video effect's settings: how far apart the ripple's rings are.
+  ///
+  /// In en, this message translates to:
+  /// **'Spacing'**
+  String get videoEditorEffectSettingSpacing;
+
+  /// Slider label in a video effect's settings: how far the fluted glass's ribs turn from upright, in degrees.
+  ///
+  /// In en, this message translates to:
+  /// **'Angle'**
+  String get videoEditorEffectSettingAngle;
+
+  /// Slider label in a video effect's settings: turns the colours of the effect's light around the colour wheel.
+  ///
+  /// In en, this message translates to:
+  /// **'Hue'**
+  String get videoEditorEffectSettingHue;
+
+  /// Slider label in a video effect's settings: how long the effect's rays or streaks of light are.
+  ///
+  /// In en, this message translates to:
+  /// **'Length'**
+  String get videoEditorEffectSettingLength;
+
+  /// Slider label in a video effect's settings: how easily the effect reacts, for example how bright a light must be before it streaks.
+  ///
+  /// In en, this message translates to:
+  /// **'Sensitivity'**
+  String get videoEditorEffectSettingSensitivity;
+
+  /// Slider label in a video effect's settings: where on the picture the effect lies, such as the prism's rainbow.
+  ///
+  /// In en, this message translates to:
+  /// **'Position'**
+  String get videoEditorEffectSettingPosition;
+
+  /// Slider label in a video effect's settings: how strongly the wind blows the falling particles sideways, left or right.
+  ///
+  /// In en, this message translates to:
+  /// **'Wind'**
+  String get videoEditorEffectSettingWind;
+
+  /// Slider label in a video effect's settings: how large the comic effect's printed dots are.
+  ///
+  /// In en, this message translates to:
+  /// **'Dot size'**
+  String get videoEditorEffectSettingDotSize;
+
+  /// Slider label in a video effect's settings: how strong or wide the drawn outlines are, such as the comic effect's ink or the lead between stained glass panes.
+  ///
+  /// In en, this message translates to:
+  /// **'Outline'**
+  String get videoEditorEffectSettingOutline;
+
+  /// Slider label in a video effect's settings: how many shades or colour steps the effect uses.
+  ///
+  /// In en, this message translates to:
+  /// **'Levels'**
+  String get videoEditorEffectSettingLevels;
+
+  /// Slider label in a video effect's settings: how large the 8-bit effect's pixels are.
+  ///
+  /// In en, this message translates to:
+  /// **'Pixel size'**
+  String get videoEditorEffectSettingPixelSize;
+
+  /// Slider label in a video effect's settings: how far the effect's colour layers are shifted apart, as in 3D glasses or a misprinted riso print.
+  ///
+  /// In en, this message translates to:
+  /// **'Offset'**
+  String get videoEditorEffectSettingOffset;
+
+  /// Slider label in a video effect's settings: how large the painting effects' brush strokes are.
+  ///
+  /// In en, this message translates to:
+  /// **'Brush size'**
+  String get videoEditorEffectSettingBrushSize;
+
+  /// Slider label in a video effect's settings: how close together the effect's lines are, such as the pencil sketch's hatching.
+  ///
+  /// In en, this message translates to:
+  /// **'Density'**
+  String get videoEditorEffectSettingDensity;
+
+  /// Slider label in a video effect's settings: how much grainy noise the effect adds, such as night vision's.
+  ///
+  /// In en, this message translates to:
+  /// **'Grain'**
+  String get videoEditorEffectSettingGrain;
+
+  /// Slider label in a video effect's settings: how many copies of the picture the pop art effect lines up along each side.
+  ///
+  /// In en, this message translates to:
+  /// **'Grid'**
+  String get videoEditorEffectSettingGrid;
+
+  /// Slider label in a video effect's settings: how many layers of paper the paper cut effect stacks.
+  ///
+  /// In en, this message translates to:
+  /// **'Layers'**
+  String get videoEditorEffectSettingLayers;
+
+  /// Slider label in a video effect's settings: how deep the shadows between the paper cut effect's layers are.
+  ///
+  /// In en, this message translates to:
+  /// **'Shadow'**
+  String get videoEditorEffectSettingShadow;
+
+  /// Label of a colour picker in the riso print effect's settings: the colour of the first of its two inks.
+  ///
+  /// In en, this message translates to:
+  /// **'First ink'**
+  String get videoEditorEffectSettingFirstInk;
+
+  /// Label of a colour picker in the riso print effect's settings: the colour of the second of its two inks.
+  ///
+  /// In en, this message translates to:
+  /// **'Second ink'**
+  String get videoEditorEffectSettingSecondInk;
+
+  /// Label over a row of options in a video effect's settings: whether the effect keeps the picture's own colours or draws in one colour.
+  ///
+  /// In en, this message translates to:
+  /// **'Colors'**
+  String get videoEditorEffectSettingColors;
+
+  /// Option in a video effect's settings: the effect keeps the picture's own colours.
+  ///
+  /// In en, this message translates to:
+  /// **'Original'**
+  String get videoEditorEffectSettingOriginalColors;
+
+  /// Option in a video effect's settings: the effect draws in one colour the user picks.
+  ///
+  /// In en, this message translates to:
+  /// **'Single color'**
+  String get videoEditorEffectSettingSingleColor;
+
+  /// Slider label in a video effect's settings: how far behind the present the earlier frames the effect shows lie, such as the time split's colour layers.
+  ///
+  /// In en, this message translates to:
+  /// **'Delay'**
+  String get videoEditorEffectSettingDelay;
+
+  /// Option in a video effect's settings: going down the picture leads further back in time.
+  ///
+  /// In en, this message translates to:
+  /// **'Down'**
+  String get videoEditorEffectSettingDown;
+
+  /// Option in a video effect's settings: going up the picture leads further back in time.
+  ///
+  /// In en, this message translates to:
+  /// **'Up'**
+  String get videoEditorEffectSettingUp;
+
+  /// Option in a video effect's settings: going right across the picture leads further back in time.
+  ///
+  /// In en, this message translates to:
+  /// **'Right'**
+  String get videoEditorEffectSettingRight;
+
+  /// Option in a video effect's settings: going left across the picture leads further back in time.
+  ///
+  /// In en, this message translates to:
+  /// **'Left'**
+  String get videoEditorEffectSettingLeft;
+
+  /// Slider label in a video effect's settings: how often the effect's bursts, such as a glitch's, come.
+  ///
+  /// In en, this message translates to:
+  /// **'Frequency'**
+  String get videoEditorEffectSettingFrequency;
+
+  /// Slider label in a video effect's settings: how far the picture or its colours jump, as in a glitch or a shake.
+  ///
+  /// In en, this message translates to:
+  /// **'Distance'**
+  String get videoEditorEffectSettingDistance;
+
+  /// Slider label in a video effect's settings: how strong the thin horizontal lines of an old screen or tape are.
+  ///
+  /// In en, this message translates to:
+  /// **'Scanlines'**
+  String get videoEditorEffectSettingScanlines;
+
+  /// Slider label in a video effect's settings: how coarse the effect's grain is.
+  ///
+  /// In en, this message translates to:
+  /// **'Grain size'**
+  String get videoEditorEffectSettingGrainSize;
+
+  /// Slider label in a video effect's settings: how brown and old the old film effect makes the picture look.
+  ///
+  /// In en, this message translates to:
+  /// **'Sepia'**
+  String get videoEditorEffectSettingSepia;
+
+  /// Slider label in a video effect's settings: how much the old film effect's brightness flickers.
+  ///
+  /// In en, this message translates to:
+  /// **'Flicker'**
+  String get videoEditorEffectSettingFlicker;
+
+  /// Slider label in a video effect's settings: how dark the corners of the picture get.
+  ///
+  /// In en, this message translates to:
+  /// **'Vignette'**
+  String get videoEditorEffectSettingVignette;
+
+  /// Slider label in a video effect's settings: how often the effect's pulse or flash repeats.
+  ///
+  /// In en, this message translates to:
+  /// **'Tempo'**
+  String get videoEditorEffectSettingTempo;
+
+  /// Slider label in a video effect's settings: how tall the wave effect's waves are.
+  ///
+  /// In en, this message translates to:
+  /// **'Wavelength'**
+  String get videoEditorEffectSettingWavelength;
 
   /// Name of a video effect on the timeline, and what screen readers announce for it, when the effect fires on the beat of the music. {effect} is the effect's name, for example 'Zoom Pulse on the beat'. Keep it short.
   ///
@@ -19757,6 +20343,12 @@ abstract class AppLocalizations {
   /// **'Use'**
   String get videoEditorAudioUseSound;
 
+  /// Screen-reader hint on the cover and title of the picked sound's card in the video editor's sound picker, and the screen-reader action (also reached by a long press) on each sound row that has a page, which imported files and catalog songs whose licence forbids changes do not. Opens the sound's page with its creator, licence and source, where it can be chosen for the video.
+  ///
+  /// In en, this message translates to:
+  /// **'Open sound details'**
+  String get videoEditorAudioOpenSoundDetails;
+
   /// Subtitle on a saved sound whose imported audio file is no longer on the device, in the video editor's sound picker and in My Sounds in the Library. The entry stays listed but cannot be selected or played, because attaching it would put a dead source on the draft. It deliberately stops short of telling the user to remove the entry: removal publishes a tombstone that deletes it on every synced device, where the file may still be present.
   ///
   /// In en, this message translates to:
@@ -19810,6 +20402,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'My Sounds'**
   String get videoEditorAudioCategoryMySounds;
+
+  /// Tab in the sound picker that lists songs from a music catalog: the most played ones, or the matches of a search by title or artist. Shown only in an internal experiment.
+  ///
+  /// In en, this message translates to:
+  /// **'Songs'**
+  String get videoEditorAudioCategorySongs;
 
   /// Filter chip in the sound picker that narrows the lists to sound effects (booms, laughs, meme lines), as opposed to music. Translate as sound effects, not visual effects.
   ///
@@ -20206,6 +20804,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Shows who replied to this video with a video. Viewers tap it to watch the replies.'**
   String get videoEditorSocialStickerRepliesNote;
+
+  /// Heading over the choice of who may answer an Add yours or replies sticker with a video.
+  ///
+  /// In en, this message translates to:
+  /// **'Who can answer'**
+  String get videoEditorSocialStickerAudienceTitle;
+
+  /// Choice: anyone may answer the sticker. The default; the sticker is drawn into the video.
+  ///
+  /// In en, this message translates to:
+  /// **'Everyone'**
+  String get videoEditorSocialStickerAudienceEveryone;
+
+  /// Choice: only the people the creator follows may answer the sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Friends'**
+  String get videoEditorSocialStickerAudienceFollowing;
+
+  /// Choice: only the creator may answer the sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Only me'**
+  String get videoEditorSocialStickerAudienceCreator;
+
+  /// Help line under the choice when only people the creator follows may join an Add yours. The sticker is then left out of the video and shows to everyone else once someone joined.
+  ///
+  /// In en, this message translates to:
+  /// **'Only people you follow can join in. Everyone else sees the sticker once someone has.'**
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote;
+
+  /// Help line under the choice when the replies sticker shows only the video replies of people the creator follows. It says what the sticker shows, not who can post a video reply: older app versions and other clients can still post one. The sticker is left out of the video and shows to everyone else once one of those people replied.
+  ///
+  /// In en, this message translates to:
+  /// **'The sticker shows only video replies from people you follow. Everyone else sees it once one of them has replied.'**
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote;
+
+  /// Help line under the choice when only the creator may join their own Add yours. Nobody else sees the sticker until the creator joined.
+  ///
+  /// In en, this message translates to:
+  /// **'Only you can join in. Nobody else sees the sticker until you do.'**
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote;
+
+  /// Help line under the choice when the replies sticker shows only the creator's own video replies. It says what the sticker shows, not who can post a video reply: older app versions and other clients can still post one. Nobody else sees the sticker until the creator replied.
+  ///
+  /// In en, this message translates to:
+  /// **'The sticker shows only your own video replies. Nobody else sees it until you have replied.'**
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote;
 
   /// Line beside the outlined box shown while the creator moves a poll, quiz, slider, question, Add yours or replies sticker: the sticker can only stand inside it, clear of the feed's buttons and caption.
   ///
@@ -23049,6 +23695,48 @@ abstract class AppLocalizations {
   /// **'Protected-minor override cleared'**
   String get devOptionsProtectedMinorClearedToast;
 
+  /// Developer options section heading for forcing whether this account has Divine Confirmation, for testing.
+  ///
+  /// In en, this message translates to:
+  /// **'Divine Confirmation access'**
+  String get devOptionsConfirmationAccessTitle;
+
+  /// Developer options choice that uses the verifier's real answer for whether this account has Divine Confirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Real answer'**
+  String get devOptionsConfirmationAccessReal;
+
+  /// Developer options choice that makes the app act as if this account has Divine Confirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Has Confirmation'**
+  String get devOptionsConfirmationAccessHas;
+
+  /// Developer options choice that makes the app act as if this account doesn't have Divine Confirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Doesn\'t have Confirmation'**
+  String get devOptionsConfirmationAccessHasNot;
+
+  /// Developer options choice that makes the app act as if it couldn't find out whether this account has Divine Confirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t check'**
+  String get devOptionsConfirmationAccessUnknown;
+
+  /// Developer options switch that makes the app act as if the verifier requires Divine Confirmation for linking by signing in, for testing.
+  ///
+  /// In en, this message translates to:
+  /// **'Act as if Confirmation is required'**
+  String get devOptionsConfirmationRequirementSimulatedTitle;
+
+  /// Supporting text under the developer options switch that simulates the Divine Confirmation requirement. It names the two other settings needed to see the offer, and says the verifier still approves sign-ins: the switch changes what the app shows, not what the verifier allows.
+  ///
+  /// In en, this message translates to:
+  /// **'Treats signing in as needing Confirmation even when the verifier doesn\'t. Needs the Confirmation Sign-in flag; choose \"Doesn\'t have Confirmation\" above to see the offer. The verifier still approves sign-ins.'**
+  String get devOptionsConfirmationRequirementSimulatedSubtitle;
+
   /// Semantics label for the button that opens the recorder to create a video reply in comments.
   ///
   /// In en, this message translates to:
@@ -24735,6 +25423,108 @@ abstract class AppLocalizations {
   /// **'Account changed'**
   String get verifyStatusAccountChanged;
 
+  /// Pill on an account linked by signing in that doesn't count because its owner doesn't have Divine Confirmation right now. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs Confirmation'**
+  String get verifyStatusNeedsConfirmation;
+
+  /// App bar title and headline of the Divine Confirmation screen. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Divine Confirmation'**
+  String get verifyConfirmationTitle;
+
+  /// Short pitch under the headline of the Divine Confirmation screen. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Divine Confirmation lets you link your accounts on other platforms by signing in to them.'**
+  String get verifyConfirmationHeroBody;
+
+  /// Heading of the list of what Divine Confirmation includes. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'What\'s included'**
+  String get verifyConfirmationIncludedTitle;
+
+  /// List item on the Divine Confirmation screen: linking accounts by signing in. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Link accounts by signing in'**
+  String get verifyConfirmationIncludedSignIn;
+
+  /// Label of the disabled buy button on the Divine Confirmation screen, shown because it cannot be bought yet. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Coming soon'**
+  String get verifyConfirmationComingSoon;
+
+  /// Small print at the bottom of the Divine Confirmation screen. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Details will appear here when Divine Confirmation is ready.'**
+  String get verifyConfirmationSmallPrint;
+
+  /// Shown in place of a button that would buy Divine Confirmation when this build cannot be billed by a store: on the Divine Confirmation screen, on the link-an-account screen, in the sheet shown when a sign-in link is refused for Divine Confirmation, and under a linked account on the verify dashboard in place of the Renew Confirmation button. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Divine Confirmation is available in the App Store and Google Play versions of Divine.'**
+  String get verifyConfirmationStoreOnly;
+
+  /// Screen reader label for the disabled buy button on the Divine Confirmation screen. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Divine Confirmation, coming soon, unavailable'**
+  String get verifyConfirmationBuySemantic;
+
+  /// Screen reader label for the disabled restore link on the Divine Confirmation screen. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore purchases, unavailable'**
+  String get verifyConfirmationRestoreSemantic;
+
+  /// Title of the card on the link-an-account screen that takes the place of the sign-in button when linking by signing in needs Divine Confirmation and the person doesn't have it. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Link by signing in'**
+  String get verifyConfirmationCardTitle;
+
+  /// Body of the card on the link-an-account screen that takes the place of the sign-in button when linking by signing in needs Divine Confirmation and the person doesn't have it. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'One-tap linking is part of Divine Confirmation.'**
+  String get verifyConfirmationCardBody;
+
+  /// Button that opens the Divine Confirmation screen, on the link-an-account screen and in the sheet shown when a sign-in link is refused for Divine Confirmation. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Get Divine Confirmation'**
+  String get verifyGetConfirmation;
+
+  /// Heading of the proof-post section of the link-an-account screen, used in place of the usual heading while the Divine Confirmation card replaces the sign-in button, to say a proof post still links the account without it. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Proof posts are always available'**
+  String get verifyProofAlwaysAvailable;
+
+  /// Title of the sheet shown when the verification service refuses a sign-in link because linking by signing in needs Divine Confirmation, which the person doesn't have. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Linking by signing in needs Divine Confirmation'**
+  String get verifyConfirmationSheetTitle;
+
+  /// Text under the title of the sheet shown when a sign-in link is refused for Divine Confirmation. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'You can still link this account with a proof post.'**
+  String get verifyConfirmationSheetSubtitle;
+
+  /// Button in the sheet shown when a sign-in link is refused for Divine Confirmation. Drops the sign-in and goes to the proof-post section of the link-an-account screen. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Use a proof post'**
+  String get verifyConfirmationSheetUseProof;
+
   /// Screen reader label for the button that removes a linked account.
   ///
   /// In en, this message translates to:
@@ -24777,11 +25567,35 @@ abstract class AppLocalizations {
   /// **'Link your {platform} account'**
   String verifyLinkSemanticLabel(String platform);
 
+  /// Screen reader label for a row that opens the flow for linking one platform, when linking it by signing in needs Divine Confirmation the user lacks. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Link your {platform} account. Signing in needs Divine Confirmation'**
+  String verifyLinkNeedsConfirmationSemanticLabel(String platform);
+
   /// Small marker on platforms that can be linked by signing in, without posting a proof.
   ///
   /// In en, this message translates to:
   /// **'One tap'**
   String get verifyOneTapBadge;
+
+  /// Small marker on a platform that can be linked by signing in, when that needs Divine Confirmation the person does not have. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'One tap with Confirmation'**
+  String get verifyOneTapWithConfirmationBadge;
+
+  /// Button on a linked account that needs Divine Confirmation to count as verified. Opens the Divine Confirmation screen. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Renew Confirmation'**
+  String get verifyRenewConfirmation;
+
+  /// Screen reader label for the button that opens the Divine Confirmation screen from a linked account that needs it. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Renew Divine Confirmation to restore {platform} account {identity}'**
+  String verifyRenewConfirmationSemanticLabel(String platform, String identity);
 
   /// Notice under the sign-in explainer on the connect screen, saying how long a sign-in link lasts. Shown only when the verifier reports a lifetime for that platform; platforms whose links last until unlinked omit it, so the notice is not shown there.
   ///
@@ -24950,6 +25764,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Verified, but no relay took the update. Try again.'**
   String get verifyErrorPublishFailed;
+
+  /// Error shown when the verification service refused a sign-in link because linking by signing in needs Divine Confirmation, which the person doesn't have. A proof post can still link the account. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Linking by signing in needs Divine Confirmation. You can still link with a proof post.'**
+  String get verifyErrorConfirmationRequired;
+
+  /// Error shown when the verification service couldn't check Divine Confirmation while confirming a sign-in link. The sign-in is kept, so the person can try linking again later. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t check Divine Confirmation right now. Try again in a few minutes.'**
+  String get verifyErrorConfirmationUnavailable;
+
+  /// Error shown when a sign-in link is refused for Divine Confirmation right after the app read that the person has it, as happens just after buying it. The sign-in is kept to try again. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'This can take a minute after buying. Try again shortly.'**
+  String get verifyErrorConfirmationPending;
 
   /// Error shown when the platform's one-tap sign-in has no credentials configured on the verification service, so only the proof-post route works.
   ///
@@ -25368,7 +26200,7 @@ abstract class AppLocalizations {
   /// No description provided for @changeEmailSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'We\'ll email a confirmation link to your new address and to the one on your account. Your email changes once you confirm from both.'**
+  /// **'We\'ll send a link to your new address. If there\'s already an email on your account, we\'ll send a link there too.'**
   String get changeEmailSubtitle;
 
   /// Shows the email address currently on the account.
@@ -25404,25 +26236,25 @@ abstract class AppLocalizations {
   /// No description provided for @changeEmailSubmit.
   ///
   /// In en, this message translates to:
-  /// **'Send confirmation links'**
+  /// **'Request confirmation'**
   String get changeEmailSubmit;
 
   /// No description provided for @changeEmailSentTitle.
   ///
   /// In en, this message translates to:
-  /// **'Two links are on their way'**
+  /// **'Check your email'**
   String get changeEmailSentTitle;
 
   /// Confirmation copy after an email change was requested; {email} is the new address.
   ///
   /// In en, this message translates to:
-  /// **'Confirm from {email} and from the address on your account. Your email switches once both are done.'**
+  /// **'Open the link at {email}. If there\'s already an email on your account, open the link there too.'**
   String changeEmailSentMessage(String email);
 
   /// No description provided for @changeEmailSentExpiry.
   ///
   /// In en, this message translates to:
-  /// **'The links stop working after 24 hours.'**
+  /// **'Each link expires after 24 hours.'**
   String get changeEmailSentExpiry;
 
   /// No description provided for @changeEmailSentDone.
@@ -25869,6 +26701,18 @@ abstract class AppLocalizations {
   /// **'Update'**
   String get updateAction;
 
+  /// Button opening an official contest after its native announcement description.
+  ///
+  /// In en, this message translates to:
+  /// **'View contest'**
+  String get announcementViewContest;
+
+  /// Safe destination when a campaign points to a missing, ended, or disabled featured feed.
+  ///
+  /// In en, this message translates to:
+  /// **'This featured feed is no longer available.'**
+  String get featuredFeedUnavailable;
+
   /// Heading before highlights for an available app update.
   ///
   /// In en, this message translates to:
@@ -26132,6 +26976,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Support, legal information, and app details'**
   String get settingsHelpAboutSubtitle;
+
+  /// Settings row title that opens an invite link to the official Divine Discord server.
+  ///
+  /// In en, this message translates to:
+  /// **'Join our Discord server'**
+  String get settingsDiscordTitle;
+
+  /// Settings row subtitle explaining that the Discord server is where to talk to the Divine team and community.
+  ///
+  /// In en, this message translates to:
+  /// **'Talk to the Divine team and community'**
+  String get settingsDiscordSubtitle;
+
+  /// Error snackbar shown when the official Divine Discord invite link could not be launched.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open Discord'**
+  String get settingsDiscordOpenError;
 
   /// Loop total in a list's stats line. 'formatted' is the compact figure shown (e.g. 89.4B); 'count' is the same total as a number and only selects the plural form.
   ///
@@ -28224,6 +29086,198 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Videos from {badgeName}'**
   String badgeDiscoveryVideosLabel(String badgeName);
+
+  /// macOS menu bar: title of the Edit menu, as in other Mac apps.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get menuBarEdit;
+
+  /// macOS menu bar: Edit menu item that undoes the last text edit.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get menuBarUndo;
+
+  /// macOS menu bar: Edit menu item that redoes the last undone text edit.
+  ///
+  /// In en, this message translates to:
+  /// **'Redo'**
+  String get menuBarRedo;
+
+  /// macOS menu bar: Edit menu item that cuts the selected text.
+  ///
+  /// In en, this message translates to:
+  /// **'Cut'**
+  String get menuBarCut;
+
+  /// macOS menu bar: Edit menu item that copies the selected text.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get menuBarCopy;
+
+  /// macOS menu bar: Edit menu item that pastes text.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste'**
+  String get menuBarPaste;
+
+  /// macOS menu bar: Edit menu item that selects all text in the focused field.
+  ///
+  /// In en, this message translates to:
+  /// **'Select All'**
+  String get menuBarSelectAll;
+
+  /// macOS menu bar: title of the View menu, which holds Enter Full Screen.
+  ///
+  /// In en, this message translates to:
+  /// **'View'**
+  String get menuBarView;
+
+  /// macOS menu bar: title of the menu with the video feed commands (previous, next, play/pause, mute, back).
+  ///
+  /// In en, this message translates to:
+  /// **'Video'**
+  String get menuBarVideo;
+
+  /// macOS menu bar: Video menu item that moves the feed to the previous video (Up arrow).
+  ///
+  /// In en, this message translates to:
+  /// **'Previous Video'**
+  String get menuBarPreviousVideo;
+
+  /// macOS menu bar: Video menu item that moves the feed to the next video (Down arrow).
+  ///
+  /// In en, this message translates to:
+  /// **'Next Video'**
+  String get menuBarNextVideo;
+
+  /// macOS menu bar: Video menu item that plays or pauses the current video (Space).
+  ///
+  /// In en, this message translates to:
+  /// **'Play/Pause'**
+  String get menuBarPlayPause;
+
+  /// macOS menu bar: Video menu item that mutes feed playback (M). Shown while sound is on.
+  ///
+  /// In en, this message translates to:
+  /// **'Mute'**
+  String get menuBarMute;
+
+  /// macOS menu bar: Video menu item that turns feed sound back on (M). Shown while muted.
+  ///
+  /// In en, this message translates to:
+  /// **'Unmute'**
+  String get menuBarUnmute;
+
+  /// macOS menu bar: title of the Window menu, as in other Mac apps.
+  ///
+  /// In en, this message translates to:
+  /// **'Window'**
+  String get menuBarWindow;
+
+  /// macOS menu bar: title of the Help menu, as in other Mac apps.
+  ///
+  /// In en, this message translates to:
+  /// **'Help'**
+  String get menuBarHelp;
+
+  /// Label on the own-profile pill and title of the prompt asking an account that signed up without confirming its email to click the confirmation link.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm your email'**
+  String get emailConfirmationTitle;
+
+  /// Body of the own-profile prompt for an account whose email is not confirmed yet.
+  ///
+  /// In en, this message translates to:
+  /// **'We sent a link to {email}. Tap it to unlock DMs and make sure you can always get back into your account.'**
+  String emailConfirmationProfileSubtitle(String email);
+
+  /// Button that asks Divine to send the email confirmation link again.
+  ///
+  /// In en, this message translates to:
+  /// **'Resend email'**
+  String get emailConfirmationResendButton;
+
+  /// Pop-up shown after signing up, and on later launches, while the account's email is not confirmed yet.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re in! Check {email} to confirm your account.'**
+  String emailConfirmationNotice(String email);
+
+  /// Pop-up after a new email confirmation link was requested.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirmation requested. Check your inbox.'**
+  String get emailConfirmationResendSent;
+
+  /// Pop-up when requesting a new email confirmation link failed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t send that one. Try again in a bit.'**
+  String get emailConfirmationResendFailed;
+
+  /// Title shown in place of direct messages while the account's email is not confirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm your email to start messaging'**
+  String get emailConfirmationMessagesTitle;
+
+  /// Body shown in place of direct messages while the account's email is not confirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the link we sent to {email}. Then DMs are all yours.'**
+  String emailConfirmationMessagesBody(String email);
+
+  /// Instructions when an account must confirm its email but the app has not learned its address yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Check your inbox for the confirmation link.'**
+  String get emailConfirmationCheckInbox;
+
+  /// Pop-up when a signed-in account opens its email confirmation link in the app.
+  ///
+  /// In en, this message translates to:
+  /// **'Email confirmed. DMs are unlocked.'**
+  String get emailConfirmationDone;
+
+  /// Pop-up after a confirmation link opened in the app, when the signed-in account is not known to be the one it confirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Email confirmed.'**
+  String get emailConfirmationLinkConfirmed;
+
+  /// Own-profile pill and prompt title for an email/password account that no longer has an email (another person confirmed the address it had claimed).
+  ///
+  /// In en, this message translates to:
+  /// **'Add an email'**
+  String get emailConfirmationAddEmailTitle;
+
+  /// Body of the own-profile prompt for an email/password account with no email.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account has no email right now. Add one so you can always get back in.'**
+  String get emailConfirmationAddEmailSubtitle;
+
+  /// Button opening the change-email screen from the add-an-email prompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Add email'**
+  String get emailConfirmationAddEmailButton;
+
+  /// Pop-up when an account that has not confirmed its email tries to send a direct message, for example from the share sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm your email to send messages.'**
+  String get emailConfirmationSendBlocked;
+
+  /// Pop-up when an account that has not confirmed its email hits the hourly limit on posts, comments or reports.
+  ///
+  /// In en, this message translates to:
+  /// **'That\'s the hourly limit for new accounts. Confirm your email to lift it.'**
+  String get emailConfirmationCapReached;
 }
 
 class _AppLocalizationsDelegate

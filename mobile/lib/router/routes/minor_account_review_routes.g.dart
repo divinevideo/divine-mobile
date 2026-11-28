@@ -56,10 +56,15 @@ RouteBase get $minorAccountReviewRouteData => GoRouteData.$route(
 
 mixin $MinorAccountReviewRouteData on GoRouteData {
   static MinorAccountReviewRouteData _fromState(GoRouterState state) =>
-      const MinorAccountReviewRouteData();
+      MinorAccountReviewRouteData(dmTap: state.uri.queryParameters['dmTap']);
+
+  MinorAccountReviewRouteData get _self => this as MinorAccountReviewRouteData;
 
   @override
-  String get location => GoRouteData.$location('/account-review');
+  String get location => GoRouteData.$location(
+    '/account-review',
+    queryParams: {if (_self.dmTap != null) 'dmTap': _self.dmTap},
+  );
 
   @override
   void go(BuildContext context) => context.go(location);

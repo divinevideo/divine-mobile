@@ -10,6 +10,21 @@ class AppLocalizationsTr extends AppLocalizations {
   AppLocalizationsTr([String locale = 'tr']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'Bu mesajı açmak için $account hesabına geçilsin mi?';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'Özel mesajlar';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'Gönderenin adını veya mesaj içeriğini göstermeden bildirim gönder.';
+
+  @override
+  String get dmNotificationMessageUnavailable => 'Bu mesaj kullanılamıyor.';
+
+  @override
   String get devOptionsClipRecovery => 'Klip kurtarma';
 
   @override
@@ -254,7 +269,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get privacySettingsShareUsageSubtitle =>
-      'İnsanların gerçekte neyi kullandığını görmemize yardımcı olur. Kapatırsan bu cihazda sırada bekleyen veriler silinir.';
+      'İnsanların gerçekte neyi kullandığını görmemize yardımcı olur. Kapatırsan bu cihazda sırada bekleyen veriler silinir. Hataları düzeltebilmemiz için çökme raporları gönderilmeye devam eder.';
 
   @override
   String get privacySettingsSaveFailed =>
@@ -1757,51 +1772,8 @@ class AppLocalizationsTr extends AppLocalizations {
   String get shareVideoLabel => 'Videoyu paylaş';
 
   @override
-  String sharePostSharedWith(String recipientName) {
-    return 'Gönderi $recipientName ile paylaşıldı';
-  }
-
-  @override
-  String sharePostSharedWithCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Gönderi $count kişiyle paylaşıldı',
-      one: 'Gönderi $count kişiyle paylaşıldı',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String shareStillTryingToSendTo(String recipientName) {
-    return 'Hâlâ gönderilmeye çalışılıyor: $recipientName';
-  }
-
-  @override
-  String shareStillTryingToSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Hâlâ $count kişiye gönderilmeye çalışılıyor',
-      one: 'Hâlâ $count kişiye gönderilmeye çalışılıyor',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String shareCouldNotSendTo(String recipientName) {
     return 'Gönderilemedi: $recipientName';
-  }
-
-  @override
-  String shareCouldNotSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count kişiye gönderilemedi',
-      one: '$count kişiye gönderilemedi',
-    );
-    return '$_temp0';
   }
 
   @override
@@ -1836,11 +1808,32 @@ class AppLocalizationsTr extends AppLocalizations {
   String get shareFindPeopleMultiline => 'Kişi\nbul';
 
   @override
+  String get shareDeliveryFailed => 'Henüz gönderilemedi';
+
+  @override
+  String shareDeliveryHeld(String name) {
+    return '$name erişilebilir olduğunda gönderilecek';
+  }
+
+  @override
+  String shareDeliveryForRecipient(String name, String status) {
+    return '$name — $status';
+  }
+
+  @override
   String get shareSent => 'Gönderildi';
 
   @override
   String shareSelectedRecipientAnnouncement(String name) {
     return '$name seçildi';
+  }
+
+  @override
+  String get shareRecipientSend => 'Gönder';
+
+  @override
+  String shareRecipientSendTo(String name) {
+    return '$name adlı kişiye gönder';
   }
 
   @override
@@ -2064,6 +2057,28 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get videoStickerAddYoursButton => 'Sıra sende';
+
+  @override
+  String get videoStickerAddYoursWatchSeries => 'Seriyi izle';
+
+  @override
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'Seriyi izle: $prompt';
+  }
+
+  @override
+  String videoSeriesChipEpisode(String episode, String total) {
+    return '$episode. bölüm / $total';
+  }
+
+  @override
+  String videoSeriesChipSemanticLabel(
+    String seriesName,
+    String episode,
+    String total,
+  ) {
+    return '$seriesName serisi, $episode. bölüm / $total';
+  }
 
   @override
   String videoStickerAddYoursJoined(int count) {
@@ -3393,6 +3408,9 @@ class AppLocalizationsTr extends AppLocalizations {
       'Buradan giriş yaparsan o taslaklar ve klipler gizlenir';
 
   @override
+  String get authWatchClassicsAsGuest => 'Klasikleri misafir olarak izle';
+
+  @override
   String get authTermsPrefix =>
       'Aşağıdaki seçeneklerden birini seçerek en az 16 yaşında olduğunu (ya da ';
 
@@ -4025,6 +4043,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get remixStartFailed => 'Remiks başlatılamadı. Tekrar dene.';
 
   @override
+  String get remixSettingSaveFailed =>
+      'Remiks ayarın güncellenemedi. Tekrar dene.';
+
+  @override
   String get remixSettingAllowTitle =>
       'Başkalarının videolarımı remikslemesine izin ver';
 
@@ -4433,6 +4455,10 @@ class AppLocalizationsTr extends AppLocalizations {
       'Relay değişikliği kabul etmedi. Birazdan tekrar dene.';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      'Bu video başka bir cihazda değişti ve artık çok fazla etiketi ya da işbirlikçisi var. Tekrar aç ve birkaçını kaldır.';
+
+  @override
   String get videoUpdateErrorGeneric => 'Bu video güncellenemedi. Tekrar dene.';
 
   @override
@@ -4523,6 +4549,18 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get soundsNoSoundsFoundDescription => 'Farklı bir arama terimi dene';
+
+  @override
+  String soundsSearchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ses bulundu',
+      one: '$count ses bulundu',
+      zero: 'Hiç ses bulunamadı',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get soundsSavedToLibrary => 'Seslere kaydedildi';
@@ -6288,6 +6326,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get inboxCollabInviteSentStatus => 'Davet gönderildi';
 
   @override
+  String get inboxSharedVideoPreview => 'Bir video paylaştı';
+
+  @override
   String get inboxConversationCollabInvitePreview => 'İşbirliği daveti';
 
   @override
@@ -7093,6 +7134,54 @@ class AppLocalizationsTr extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'Çoğalt';
 
   @override
+  String get libraryDraftActionConvertToClip => 'Klibe dönüştür';
+
+  @override
+  String get libraryDraftConvertingToClip => 'Klibe dönüştürülüyor...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar => 'Taslak klibe dönüştürüldü';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar =>
+      'Taslak dönüştürülemedi';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'Bu taslaktaki yazı ve çıkartmalar hazırlanamadı. Düzenleyicide aç ve tekrar dene.';
+
+  @override
+  String get libraryDraftActionShare => 'Taslağı paylaş';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return '$name adlı hesaba düzenlenebilir taslak gönderilsin mi?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'Orijinal klipleri ve düzenleme geçmişini paylaşıyorsun. Alıcı kestiğin kısımları görebilir, kendi kopyasını düzenleyebilir, paylaşabilir veya sana geri gönderebilir.';
+
+  @override
+  String get libraryDraftShareFailed => 'Taslak gönderilemedi.';
+
+  @override
+  String get libraryDraftShareTooLarge =>
+      'Taslak gönderilemeyecek kadar büyük.';
+
+  @override
+  String get dmSharedDraft => 'Paylaşılan taslak';
+
+  @override
+  String get dmOpenDraft => 'İçe aktar ve düzenle';
+
+  @override
+  String get dmDraftImportFailed => 'Taslak içe aktarılamadı.';
+
+  @override
+  String get libraryDraftSent => 'Taslak gönderildi';
+
+  @override
   String get libraryDraftActionDelete => 'Taslağı sil';
 
   @override
@@ -7719,6 +7808,14 @@ class AppLocalizationsTr extends AppLocalizations {
   ) {
     return '$displayName sana mesaj göndermek istiyor, $messageText gönderdi.';
   }
+
+  @override
+  String messageRequestGroupWantsToMessageYou(String messageText) {
+    return 'Bu grup sana mesaj göndermek istiyor, $messageText gönderdiler.';
+  }
+
+  @override
+  String get messageRequestGroupMembersHeading => 'Bu grupta';
 
   @override
   String get deleteAccountAccountChanged =>
@@ -9442,6 +9539,21 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorEffectSpinBlur => 'Dönme Bulanıklığı';
 
   @override
+  String get videoEditorEffectShockwave => 'Şok Dalgası';
+
+  @override
+  String get videoEditorEffectSubwoofer => 'Subwoofer';
+
+  @override
+  String get videoEditorEffectPlasma => 'Plazma';
+
+  @override
+  String get videoEditorEffectEnergyWave => 'Enerji Dalgası';
+
+  @override
+  String get videoEditorEffectSmokeBurst => 'Duman Patlaması';
+
+  @override
   String get videoEditorEffectComic => 'Çizgi Roman';
 
   @override
@@ -9637,9 +9749,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorFilterCategoryTints => 'Tonlar';
 
   @override
-  String get videoEditorDropsSettingsTitle => 'Damlaları ayarla';
-
-  @override
   String get videoEditorDropsCountLabel => 'Sayı';
 
   @override
@@ -9685,6 +9794,203 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get videoEditorEffectsOnBeatNoSound =>
       'Müzik ekle ya da bir klibin sesini aç';
+
+  @override
+  String get videoEditorEffectSettingsOpen => 'Efekt ayarları';
+
+  @override
+  String videoEditorEffectSettingsTitle(String effect) {
+    return 'Ayarlar: $effect';
+  }
+
+  @override
+  String videoEditorEffectSeconds(String seconds) {
+    return '$seconds sn';
+  }
+
+  @override
+  String get videoEditorEffectHitDuration => 'Süre';
+
+  @override
+  String get videoEditorEffectHitRepeat => 'Tekrarla';
+
+  @override
+  String get videoEditorEffectHitOnce =>
+      'Bir kez, efektin zaman çizelgesinde başladığı yerde';
+
+  @override
+  String get videoEditorEffectHitInterval => 'Aralık';
+
+  @override
+  String get videoEditorEffectLookTitle => 'Görünüm';
+
+  @override
+  String get videoEditorEffectHitHorizontal => 'Yatay konum';
+
+  @override
+  String get videoEditorEffectHitVertical => 'Dikey konum';
+
+  @override
+  String get videoEditorEffectHitReach => 'Menzil';
+
+  @override
+  String get videoEditorEffectHitShake => 'Sarsıntı';
+
+  @override
+  String get videoEditorEffectHitPunch => 'Zoom darbesi';
+
+  @override
+  String get videoEditorEffectLookReset => 'Görünümü sıfırla';
+
+  @override
+  String get videoEditorEffectTimingTitle => 'Zamanlama';
+
+  @override
+  String get videoEditorEffectTimingReset => 'Zamanlamayı sıfırla';
+
+  @override
+  String get videoEditorEffectMotionTitle => 'Hareket';
+
+  @override
+  String get videoEditorEffectMotionReset => 'Hareketi sıfırla';
+
+  @override
+  String get videoEditorEffectSettingFocus => 'Odak';
+
+  @override
+  String get videoEditorEffectSettingWidth => 'Genişlik';
+
+  @override
+  String get videoEditorEffectSettingDirection => 'Yön';
+
+  @override
+  String get videoEditorEffectSettingHorizontal => 'Yatay';
+
+  @override
+  String get videoEditorEffectSettingVertical => 'Dikey';
+
+  @override
+  String get videoEditorEffectSettingClockwise => 'Saat yönünde';
+
+  @override
+  String get videoEditorEffectSettingAnticlockwise => 'Saat yönünün tersine';
+
+  @override
+  String get videoEditorEffectSettingZoomIn => 'Yakınlaştır';
+
+  @override
+  String get videoEditorEffectSettingZoomOut => 'Uzaklaştır';
+
+  @override
+  String get videoEditorEffectSettingSpacing => 'Aralık';
+
+  @override
+  String get videoEditorEffectSettingAngle => 'Açı';
+
+  @override
+  String get videoEditorEffectSettingHue => 'Ton';
+
+  @override
+  String get videoEditorEffectSettingLength => 'Uzunluk';
+
+  @override
+  String get videoEditorEffectSettingSensitivity => 'Hassasiyet';
+
+  @override
+  String get videoEditorEffectSettingPosition => 'Konum';
+
+  @override
+  String get videoEditorEffectSettingWind => 'Rüzgâr';
+
+  @override
+  String get videoEditorEffectSettingDotSize => 'Nokta boyutu';
+
+  @override
+  String get videoEditorEffectSettingOutline => 'Kontur';
+
+  @override
+  String get videoEditorEffectSettingLevels => 'Seviyeler';
+
+  @override
+  String get videoEditorEffectSettingPixelSize => 'Piksel boyutu';
+
+  @override
+  String get videoEditorEffectSettingOffset => 'Kayma';
+
+  @override
+  String get videoEditorEffectSettingBrushSize => 'Fırça boyutu';
+
+  @override
+  String get videoEditorEffectSettingDensity => 'Yoğunluk';
+
+  @override
+  String get videoEditorEffectSettingGrain => 'Gren';
+
+  @override
+  String get videoEditorEffectSettingGrid => 'Izgara';
+
+  @override
+  String get videoEditorEffectSettingLayers => 'Katmanlar';
+
+  @override
+  String get videoEditorEffectSettingShadow => 'Gölge';
+
+  @override
+  String get videoEditorEffectSettingFirstInk => 'Birinci mürekkep';
+
+  @override
+  String get videoEditorEffectSettingSecondInk => 'İkinci mürekkep';
+
+  @override
+  String get videoEditorEffectSettingColors => 'Renkler';
+
+  @override
+  String get videoEditorEffectSettingOriginalColors => 'Orijinal';
+
+  @override
+  String get videoEditorEffectSettingSingleColor => 'Tek renk';
+
+  @override
+  String get videoEditorEffectSettingDelay => 'Gecikme';
+
+  @override
+  String get videoEditorEffectSettingDown => 'Aşağı';
+
+  @override
+  String get videoEditorEffectSettingUp => 'Yukarı';
+
+  @override
+  String get videoEditorEffectSettingRight => 'Sağa';
+
+  @override
+  String get videoEditorEffectSettingLeft => 'Sola';
+
+  @override
+  String get videoEditorEffectSettingFrequency => 'Sıklık';
+
+  @override
+  String get videoEditorEffectSettingDistance => 'Mesafe';
+
+  @override
+  String get videoEditorEffectSettingScanlines => 'Tarama çizgileri';
+
+  @override
+  String get videoEditorEffectSettingGrainSize => 'Gren boyutu';
+
+  @override
+  String get videoEditorEffectSettingSepia => 'Sepya';
+
+  @override
+  String get videoEditorEffectSettingFlicker => 'Titreme';
+
+  @override
+  String get videoEditorEffectSettingVignette => 'Vinyet';
+
+  @override
+  String get videoEditorEffectSettingTempo => 'Tempo';
+
+  @override
+  String get videoEditorEffectSettingWavelength => 'Dalga boyu';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {
@@ -11524,6 +11830,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorAudioUseSound => 'Kullan';
 
   @override
+  String get videoEditorAudioOpenSoundDetails => 'Ses ayrıntılarını aç';
+
+  @override
   String get videoEditorAudioFileMissing => 'Ses dosyası artık cihazda yok';
 
   @override
@@ -11551,6 +11860,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get videoEditorAudioCategoryMySounds => 'Seslerim';
+
+  @override
+  String get videoEditorAudioCategorySongs => 'Songs';
 
   @override
   String get videoEditorAudioFilterEffects => 'Efektler';
@@ -11772,6 +12084,34 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get videoEditorSocialStickerRepliesNote =>
       'Bu videoya videoyla yanıt verenleri gösterir. İzleyenler dokunup yanıtları izler.';
+
+  @override
+  String get videoEditorSocialStickerAudienceTitle => 'Kimler yanıt verebilir';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => 'Herkes';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => 'Arkadaşlar';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => 'Yalnızca ben';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      'Yalnızca takip ettiğin kişiler katılabilir. Diğer herkes, biri katıldığında çıkartmayı görür.';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      'Çıkartma yalnızca takip ettiğin kişilerin video yanıtlarını gösterir. Diğer herkes, onlardan biri yanıt verdiğinde çıkartmayı görür.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      'Yalnızca sen katılabilirsin. Sen katılana kadar çıkartmayı başka kimse görmez.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      'Çıkartma yalnızca senin video yanıtlarını gösterir. Sen yanıt verene kadar çıkartmayı başka kimse görmez.';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>
@@ -13571,6 +13911,29 @@ class AppLocalizationsTr extends AppLocalizations {
       'Korunan-reşit olmayan geçersiz kılması temizlendi';
 
   @override
+  String get devOptionsConfirmationAccessTitle => 'Divine Confirmation access';
+
+  @override
+  String get devOptionsConfirmationAccessReal => 'Real answer';
+
+  @override
+  String get devOptionsConfirmationAccessHas => 'Has Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessHasNot => 'Doesn\'t have Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessUnknown => 'Couldn\'t check';
+
+  @override
+  String get devOptionsConfirmationRequirementSimulatedTitle =>
+      'Act as if Confirmation is required';
+
+  @override
+  String get devOptionsConfirmationRequirementSimulatedSubtitle =>
+      'Treats signing in as needing Confirmation even when the verifier doesn\'t. Needs the Confirmation Sign-in flag; choose \"Doesn\'t have Confirmation\" above to see the offer. The verifier still approves sign-ins.';
+
+  @override
   String get commentsRecordVideoButtonLabel => 'Video yorum kaydet';
 
   @override
@@ -14630,6 +14993,65 @@ class AppLocalizationsTr extends AppLocalizations {
   String get verifyStatusAccountChanged => 'Account changed';
 
   @override
+  String get verifyStatusNeedsConfirmation => 'Needs Confirmation';
+
+  @override
+  String get verifyConfirmationTitle => 'Divine Confirmation';
+
+  @override
+  String get verifyConfirmationHeroBody =>
+      'Divine Confirmation lets you link your accounts on other platforms by signing in to them.';
+
+  @override
+  String get verifyConfirmationIncludedTitle => 'What\'s included';
+
+  @override
+  String get verifyConfirmationIncludedSignIn => 'Link accounts by signing in';
+
+  @override
+  String get verifyConfirmationComingSoon => 'Coming soon';
+
+  @override
+  String get verifyConfirmationSmallPrint =>
+      'Details will appear here when Divine Confirmation is ready.';
+
+  @override
+  String get verifyConfirmationStoreOnly =>
+      'Divine Confirmation is available in the App Store and Google Play versions of Divine.';
+
+  @override
+  String get verifyConfirmationBuySemantic =>
+      'Divine Confirmation, coming soon, unavailable';
+
+  @override
+  String get verifyConfirmationRestoreSemantic =>
+      'Restore purchases, unavailable';
+
+  @override
+  String get verifyConfirmationCardTitle => 'Link by signing in';
+
+  @override
+  String get verifyConfirmationCardBody =>
+      'One-tap linking is part of Divine Confirmation.';
+
+  @override
+  String get verifyGetConfirmation => 'Get Divine Confirmation';
+
+  @override
+  String get verifyProofAlwaysAvailable => 'Proof posts are always available';
+
+  @override
+  String get verifyConfirmationSheetTitle =>
+      'Linking by signing in needs Divine Confirmation';
+
+  @override
+  String get verifyConfirmationSheetSubtitle =>
+      'You can still link this account with a proof post.';
+
+  @override
+  String get verifyConfirmationSheetUseProof => 'Use a proof post';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return '$platform hesabı $identity bağlantısını kaldır';
   }
@@ -14661,7 +15083,26 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String verifyLinkNeedsConfirmationSemanticLabel(String platform) {
+    return 'Link your $platform account. Signing in needs Divine Confirmation';
+  }
+
+  @override
   String get verifyOneTapBadge => 'Tek dokunuş';
+
+  @override
+  String get verifyOneTapWithConfirmationBadge => 'One tap with Confirmation';
+
+  @override
+  String get verifyRenewConfirmation => 'Renew Confirmation';
+
+  @override
+  String verifyRenewConfirmationSemanticLabel(
+    String platform,
+    String identity,
+  ) {
+    return 'Renew Divine Confirmation to restore $platform account $identity';
+  }
 
   @override
   String verifyConnectSignInLifetime(int days) {
@@ -14773,6 +15214,18 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get verifyErrorPublishFailed =>
       'Doğrulandı ama hiçbir röle güncellemeyi kabul etmedi. Tekrar dene.';
+
+  @override
+  String get verifyErrorConfirmationRequired =>
+      'Linking by signing in needs Divine Confirmation. You can still link with a proof post.';
+
+  @override
+  String get verifyErrorConfirmationUnavailable =>
+      'Couldn\'t check Divine Confirmation right now. Try again in a few minutes.';
+
+  @override
+  String get verifyErrorConfirmationPending =>
+      'This can take a minute after buying. Try again shortly.';
 
   @override
   String get verifyErrorOauthUnavailable =>
@@ -15061,7 +15514,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get changeEmailSubtitle =>
-      'Yeni adresine ve hesabındaki adrese birer onay bağlantısı yolluyoruz. E-postan ikisini de onaylayınca değişir.';
+      'Yeni e-posta adresine bir bağlantı göndereceğiz. Hesabında zaten bir e-posta adresi varsa oraya da bağlantı göndereceğiz.';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -15081,19 +15534,19 @@ class AppLocalizationsTr extends AppLocalizations {
   String get changeEmailWrongPassword => 'Bu senin şifren değil.';
 
   @override
-  String get changeEmailSubmit => 'Onay bağlantılarını gönder';
+  String get changeEmailSubmit => 'Onay iste';
 
   @override
-  String get changeEmailSentTitle => 'İki bağlantı yolda';
+  String get changeEmailSentTitle => 'E-postanı kontrol et';
 
   @override
   String changeEmailSentMessage(String email) {
-    return '$email adresinden ve hesabındaki adresten onayla. İkisi de bitince e-postan değişir.';
+    return '$email adresine gelen bağlantıyı aç. Hesabında zaten bir e-posta adresi varsa oraya gelen bağlantıyı da aç.';
   }
 
   @override
   String get changeEmailSentExpiry =>
-      'Bağlantılar 24 saat sonra geçersiz olur.';
+      'Her bağlantının süresi 24 saat sonra dolar.';
 
   @override
   String get changeEmailSentDone => 'Anladım';
@@ -15376,6 +15829,13 @@ class AppLocalizationsTr extends AppLocalizations {
   String get updateAction => 'Güncelle';
 
   @override
+  String get announcementViewContest => 'Yarışmayı görüntüle';
+
+  @override
+  String get featuredFeedUnavailable =>
+      'Bu öne çıkan akış artık kullanılamıyor.';
+
+  @override
   String updateNewIn(String version) {
     return '$version sürümündeki yenilikler:';
   }
@@ -15524,6 +15984,16 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get settingsHelpAboutSubtitle =>
       'Destek, yasal bilgiler ve uygulama ayrıntıları';
+
+  @override
+  String get settingsDiscordTitle => 'Discord sunucumuza katıl';
+
+  @override
+  String get settingsDiscordSubtitle =>
+      'Divine ekibi ve topluluğuyla sohbet et';
+
+  @override
+  String get settingsDiscordOpenError => 'Discord açılamadı';
 
   @override
   String listLoopsCount(int count, String formatted) {
@@ -16801,4 +17271,114 @@ class AppLocalizationsTr extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return '$badgeName videoları';
   }
+
+  @override
+  String get menuBarEdit => 'Düzen';
+
+  @override
+  String get menuBarUndo => 'Geri al';
+
+  @override
+  String get menuBarRedo => 'Yinele';
+
+  @override
+  String get menuBarCut => 'Kes';
+
+  @override
+  String get menuBarCopy => 'Kopyala';
+
+  @override
+  String get menuBarPaste => 'Yapıştır';
+
+  @override
+  String get menuBarSelectAll => 'Tümünü seç';
+
+  @override
+  String get menuBarView => 'Görüntü';
+
+  @override
+  String get menuBarVideo => 'Video';
+
+  @override
+  String get menuBarPreviousVideo => 'Önceki video';
+
+  @override
+  String get menuBarNextVideo => 'Sonraki video';
+
+  @override
+  String get menuBarPlayPause => 'Oynat/duraklat';
+
+  @override
+  String get menuBarMute => 'Sessize al';
+
+  @override
+  String get menuBarUnmute => 'Sesi aç';
+
+  @override
+  String get menuBarWindow => 'Pencere';
+
+  @override
+  String get menuBarHelp => 'Yardım';
+
+  @override
+  String get emailConfirmationTitle => 'E-postanı doğrula';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return '$email adresine bir bağlantı gönderdik. Mesajların kilidini açmak ve hesabına her zaman geri dönebilmek için bağlantıya dokun.';
+  }
+
+  @override
+  String get emailConfirmationResendButton => 'E-postayı Tekrar Gönder';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return 'İçeridesin! Hesabını doğrulamak için $email adresini kontrol et.';
+  }
+
+  @override
+  String get emailConfirmationResendSent =>
+      'Onay istendi. Gelen kutunu kontrol et.';
+
+  @override
+  String get emailConfirmationResendFailed =>
+      'Gönderemedik. Biraz sonra tekrar dene.';
+
+  @override
+  String get emailConfirmationMessagesTitle =>
+      'Mesajlaşmaya başlamak için e-postanı doğrula';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return '$email adresine gönderdiğimiz bağlantıya dokun. Sonra mesajlar tamamen senin.';
+  }
+
+  @override
+  String get emailConfirmationCheckInbox =>
+      'Onay bağlantısı için gelen kutuna bak.';
+
+  @override
+  String get emailConfirmationDone =>
+      'E-posta doğrulandı. Mesajların kilidi açıldı.';
+
+  @override
+  String get emailConfirmationLinkConfirmed => 'E-posta doğrulandı.';
+
+  @override
+  String get emailConfirmationAddEmailTitle => 'E-posta ekle';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      'Hesabında şu anda e-posta yok. Her zaman geri dönebilmek için bir tane ekle.';
+
+  @override
+  String get emailConfirmationAddEmailButton => 'E-posta ekle';
+
+  @override
+  String get emailConfirmationSendBlocked =>
+      'Mesaj göndermek için e-postanı doğrula.';
+
+  @override
+  String get emailConfirmationCapReached =>
+      'Yeni hesaplar için saatlik sınır bu kadar. Sınırı kaldırmak için e-postanı doğrula.';
 }

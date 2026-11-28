@@ -120,6 +120,9 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     private var clipAudioStartRetry: DispatchWorkItem?
     private var clipAudioTakeover: DispatchWorkItem?
     private var timeControlObservation: NSKeyValueObservation?
+    private var waitingReasonObservation: NSKeyValueObservation?
+    private var dataWait = DataWait()
+    private var frozenPicture = FrozenPicture()
 
     /// The local file whose audio is decoded into the loop, with the stretch
     /// of it one lap plays: the clip itself on the direct path, or the
@@ -1214,7 +1217,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                 assetVideoTracks = try await asset.loadTracks(withMediaType: .video)
                 assetAudioTracks = try await asset.loadTracks(withMediaType: .audio)
             } catch {
-                if let preserved = loader?.preservedProxyHTTPFailure(for: error as NSError) {
+                if let preserved = loader?.preservedHTTPFailure(for: error as NSError) {
                     throw preserved
                 }
                 throw error
@@ -2057,7 +2060,16 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                     self.textureOutput?.playbackDidStart()
                 }
                 self.realignClipAudioLoop()
+                // The time observer is silent while a wait holds the clock.
+                self.sendStateUpdate()
             }
+        }
+        // A start-up wait turns from evaluating the buffer to waiting for data
+        // without a time-control change.
+        waitingReasonObservation?.invalidate()
+        waitingReasonObservation = player?.observe(\.reasonForWaitingToPlay, options: [.new]) {
+            [weak self] _, _ in
+            DispatchQueue.main.async { self?.sendStateUpdate() }
         }
     }
 
@@ -2591,18 +2603,23 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             clipIndex = i
         }
 
-        let status: String
-        if currentStatus == "error" || currentStatus == "completed" {
-            status = currentStatus
-        } else if player.rate > 0 {
-            status = "playing"
-        } else if player.currentItem?.isPlaybackBufferEmpty == true {
-            status = "buffering"
-        } else if currentStatus == "ready" && player.rate == 0 {
-            status = "paused"
-        } else {
-            status = currentStatus
-        }
+        // Only a streamed clip can run out of data without AVPlayer waiting.
+        let pictureFrozen = remoteClipLoader != nil && frozenPicture.isFrozen(
+            frame: textureOutput?.shownFrameTime.seconds ?? .nan,
+            clock: currentTime,
+            now: ProcessInfo.processInfo.systemUptime,
+            playing: player.timeControlStatus == .playing
+        )
+        let status = ReportedPlaybackStatus.status(
+            current: currentStatus,
+            rate: player.rate,
+            waitsForData: dataWait.isWaiting(
+                timeControlStatus: player.timeControlStatus,
+                reasonForWaitingToPlay: player.reasonForWaitingToPlay
+            ),
+            pictureFrozen: pictureFrozen,
+            isPlaybackBufferEmpty: player.currentItem?.isPlaybackBufferEmpty == true
+        )
 
         let playing = status == "playing"
         trackPictureStart(playing: playing)
@@ -2659,7 +2676,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         else {
             return error
         }
-        return remoteClipLoader?.preservedProxyHTTPFailure(for: error) ?? error
+        return remoteClipLoader?.preservedHTTPFailure(for: error) ?? error
     }
 
     private func playbackFailureDescription(
@@ -2832,6 +2849,8 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         pendingPrerollObservation = nil
         timeControlObservation?.invalidate()
         timeControlObservation = nil
+        waitingReasonObservation?.invalidate()
+        waitingReasonObservation = nil
         releaseClipAudioLoop()
         remoteClipLoader?.cancel()
         remoteClipLoader = nil

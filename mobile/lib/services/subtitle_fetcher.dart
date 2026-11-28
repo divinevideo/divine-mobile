@@ -4,6 +4,7 @@
 
 import 'dart:convert';
 
+import 'package:crypto/crypto.dart' as crypto;
 import 'package:http/http.dart' as http;
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/filter.dart';
@@ -54,6 +55,7 @@ class SubtitleFetchResult {
     this.status, {
     this.cues = const [],
     this.isMachineTranslated = false,
+    this.ref,
   });
 
   /// Classifies a [body] a source served as a subtitle track:
@@ -88,6 +90,19 @@ class SubtitleFetchResult {
 
   /// True only for a response verified against the translation contract.
   final bool isMachineTranslated;
+
+  /// The `text-track` reference that served [cues], or null when they came
+  /// from embedded content or a generated track. It can be a fallback track
+  /// in another language than the video's first one.
+  final String? ref;
+
+  /// This result, as served by the `text-track` reference [ref].
+  SubtitleFetchResult servedBy(String ref) => SubtitleFetchResult(
+    status,
+    cues: cues,
+    isMachineTranslated: isMachineTranslated,
+    ref: ref,
+  );
 }
 
 Duration _parseRetryAfter(Map<String, String> headers) {
@@ -225,6 +240,24 @@ Future<SubtitleFetchResult?> _fetchTranslation({
   }
 }
 
+/// Whether [embedded] captions are the file [primaryRef] names.
+///
+/// A Blossom ref names its file by SHA-256. The embedded copy can still
+/// contain earlier captions after the video is republished (#11250), so a
+/// mismatch makes readers try the file first. A ref that names no hash
+/// counts as matching.
+bool embeddedCaptionsMatchRef(String embedded, String? primaryRef) {
+  final segments = primaryRef == null
+      ? const <String>[]
+      : Uri.tryParse(primaryRef)?.pathSegments ?? const <String>[];
+  final name = segments.isEmpty ? '' : segments.last.split('.').first;
+  if (!_contentHash.hasMatch(name)) return true;
+  return crypto.sha256.convert(utf8.encode(embedded)).toString() ==
+      name.toLowerCase();
+}
+
+final _contentHash = RegExp(r'^[0-9a-fA-F]{64}$');
+
 /// Resolves subtitle cues with ordered fallback.
 ///
 /// When [lang] and [sha256] are supplied, try a verified translation first.
@@ -234,7 +267,9 @@ Future<SubtitleFetchResult?> _fetchTranslation({
 ///
 /// Original strategy (first source with cues wins): embedded content, then
 /// HTTP/relay refs, then the plain Blossom URL with bounded transcription polling.
-/// [sourcePreference] can place refs before embedded content for the editor.
+/// Embedded content goes after the refs when its hash differs from the first
+/// ref's file hash ([embeddedCaptionsMatchRef]), or when [sourcePreference]
+/// places refs first for the editor.
 ///
 /// A source that resolves to zero cues does not end the chain — the next
 /// source still gets a turn. When no source yields cues, the returned status
@@ -315,7 +350,11 @@ Future<SubtitleFetchResult> fetchSubtitleCues({
     return SubtitleFetchResult.fromBody(textTrackContent);
   }
 
-  if (sourcePreference == SubtitleSourcePreference.embeddedFirst) {
+  final embeddedIsCurrent =
+      textTrackContent == null ||
+      embeddedCaptionsMatchRef(textTrackContent, textTrackRefs.firstOrNull);
+  if (sourcePreference == SubtitleSourcePreference.embeddedFirst &&
+      embeddedIsCurrent) {
     final cues = accept(embedded());
     if (cues != null) return cues;
   }
@@ -325,21 +364,22 @@ Future<SubtitleFetchResult> fetchSubtitleCues({
     final httpUrl = _parseHttpSubtitleUrl(ref);
     if (httpUrl != null) {
       final cues = accept(await _fetchHttp(httpClient, httpUrl, warn: warn));
-      if (cues != null) return cues;
+      if (cues != null) return cues.servedBy(ref);
       continue;
     }
 
     if (nostrClient != null) {
       try {
         final cues = accept(await _fetchRelay(nostrClient, ref));
-        if (cues != null) return cues;
+        if (cues != null) return cues.servedBy(ref);
       } catch (e) {
         warn('Relay VTT fetch failed for $ref: $e');
       }
     }
   }
 
-  if (sourcePreference == SubtitleSourcePreference.refsFirst) {
+  if (sourcePreference == SubtitleSourcePreference.refsFirst ||
+      !embeddedIsCurrent) {
     final cues = accept(embedded());
     if (cues != null) return cues;
   }

@@ -49,8 +49,9 @@ final protectedMinorRepositoryProvider = Provider<ProtectedMinorRepository>((
 ///   answer for a session whose owner cannot be named.
 /// - This only recomputes when auth state changes. An account approved as a
 ///   minor mid-session (no auth-state transition) will not refetch until the
-///   provider is invalidated — call `ref.invalidate(protectedMinorStatusProvider)`
-///   when fresh state is required.
+///   provider is invalidated. When the answer may just have changed, call
+///   `ProtectedMinorRecheck.requireFreshAnswer` rather than invalidating
+///   directly, so the personalization gate waits for the new answer.
 final protectedMinorStatusProvider = FutureProvider<ProtectedMinorStatus>((
   ref,
 ) async {
@@ -146,6 +147,129 @@ final isProtectedMinorProvider = Provider<bool>((ref) {
   // Untrusted / unknown -> last-known persisted value (sticky).
   return store.isProtectedMinorFor(pubkey);
 });
+
+class _AuthSessionResetCounter {
+  int resets = 0;
+}
+
+/// Counts transitions away from [AuthState.authenticated] across the container
+/// lifetime, even when no widget is watching the intermediate frame.
+///
+/// Relies on the same account-switch invariant as [isProtectedMinorProvider]:
+/// every account swap transits a non-authenticated [AuthState].
+final _authSessionResetCounterProvider = Provider<_AuthSessionResetCounter>((
+  ref,
+) {
+  final counter = _AuthSessionResetCounter();
+  final subscription = ref.container.listen<AuthState>(
+    currentAuthStateProvider,
+    (_, next) {
+      if (next != AuthState.authenticated) {
+        counter.resets++;
+      }
+    },
+  );
+  ref.onDispose(subscription.close);
+  return counter;
+});
+
+/// Re-reads the protected-minor status when the answer may just have changed.
+///
+/// [confirmedNotProtectedMinorProvider] keeps an earlier confirmation open
+/// while an ordinary resume refresh reloads, so playback does not flicker. The
+/// minor-account review flow and the developer override reload exactly when an
+/// account may have become protected, so they go through
+/// [requireFreshAnswer] instead, which also closes that gate until Keycast
+/// answers again.
+class ProtectedMinorRecheck extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  /// Invalidates [protectedMinorStatusProvider] and withholds the existing
+  /// confirmation until the reloaded status confirms it again.
+  void requireFreshAnswer() {
+    ref.invalidate(protectedMinorStatusProvider);
+    state++;
+  }
+}
+
+/// See [ProtectedMinorRecheck].
+final protectedMinorRecheckProvider =
+    NotifierProvider<ProtectedMinorRecheck, int>(ProtectedMinorRecheck.new);
+
+typedef _ConfirmationState = ({int resetCount, int rechecks, bool confirmed});
+
+class _ConfirmedNotProtectedMinorNotifier extends Notifier<_ConfirmationState> {
+  @override
+  _ConfirmationState build() {
+    final counter = ref.read(_authSessionResetCounterProvider);
+    final authState = ref.watch(currentAuthStateProvider);
+    final rechecks = ref.watch(protectedMinorRecheckProvider);
+    final live = ref.watch(protectedMinorStatusProvider);
+    final resetCount = counter.resets;
+    if (authState != AuthState.authenticated) {
+      return (resetCount: resetCount, rechecks: rechecks, confirmed: false);
+    }
+    // Fail closed immediately on errors, including Riverpod 3 retry backoffs
+    // where `isLoading` and `hasError` are both true.
+    if (live.hasError) {
+      return (resetCount: resetCount, rechecks: rechecks, confirmed: false);
+    }
+    if (live.isLoading) {
+      // Preserve an in-session confirmation across same-account resume
+      // refreshes (`isRefreshing` carries `isLoading: true` on AsyncData, and
+      // `isReloading` emits AsyncLoading) so active feeds do not flicker or
+      // tear down while Keycast re-validates. Require all four:
+      // 1) sameAuthSession (auth has not left authenticated),
+      // 2) no recheck since (a review-flow reload must answer afresh),
+      // 3) previous.confirmed (previously confirmed while authenticated), and
+      // 4) retainedNotProtected (the status being reloaded is still
+      //    notProtected, catching any unwatched flip to protected/unknown).
+      final previous = stateOrNull;
+      final sameAuthSession =
+          previous != null &&
+          previous.resetCount == resetCount &&
+          previous.rechecks == rechecks;
+      final retainedNotProtected = live.value?.isConfirmedNotProtected ?? false;
+      return (
+        resetCount: resetCount,
+        rechecks: rechecks,
+        confirmed:
+            sameAuthSession && previous.confirmed && retainedNotProtected,
+      );
+    }
+    final trusted = trustedProtectedMinorStatus(
+      authenticated: true,
+      live: live,
+    );
+    return (
+      resetCount: resetCount,
+      rechecks: rechecks,
+      // A reply without an explicit verified_minor is not a confirmation.
+      confirmed: trusted?.isConfirmedNotProtected ?? false,
+    );
+  }
+}
+
+final _confirmedNotProtectedMinorSessionProvider =
+    NotifierProvider<_ConfirmedNotProtectedMinorNotifier, _ConfirmationState>(
+      _ConfirmedNotProtectedMinorNotifier.new,
+    );
+
+/// Whether the current account is freshly confirmed as not a protected minor.
+///
+/// Features that personalize from private viewing data require this positive
+/// signal. Unlike [isProtectedMinorProvider], an unauthenticated session, an
+/// initial loading or failed lookup, an unknown status (for example a
+/// non-OAuth signer session with no Keycast token) and a protected status all
+/// read as `false`, so callers fail closed until an authenticated Keycast
+/// check says otherwise. A same-account resume refresh preserves an existing
+/// in-session confirmation while reloading, and immediately closes if the
+/// refresh resolves protected, unknown, or fails. A
+/// [ProtectedMinorRecheck.requireFreshAnswer] reload does not preserve it.
+final confirmedNotProtectedMinorProvider = Provider<bool>(
+  (ref) => ref.watch(_confirmedNotProtectedMinorSessionProvider).confirmed,
+);
 
 /// Whether a Keycast-backed protected-minor verdict can apply to the current
 /// account. Returns `true` only for OAuth-authenticated accounts and for

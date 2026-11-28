@@ -4,6 +4,7 @@
 // ABOUTME: (event IDs + addressable coordinates).
 
 import 'package:equatable/equatable.dart';
+import 'package:models/src/nip71_video_kinds.dart';
 import 'package:text_sanitizer/text_sanitizer.dart';
 
 /// Ordering options for playlist playback.
@@ -98,6 +99,8 @@ class CuratedList extends Equatable {
     this.thumbnailEventId,
     this.thumbnailUrls = const [],
     this.playOrder = PlayOrder.chronological,
+    this.preservedTags = const [],
+    this.preservedPrivateTags = const [],
   }) : name = sanitizeUtf16(name),
        description = sanitizeUtf16OrNull(description);
 
@@ -138,7 +141,14 @@ class CuratedList extends Equatable {
     playOrder: PlayOrderExtension.fromString(
       json['playOrder'] as String? ?? 'chronological',
     ),
+    preservedTags: _tagsFromJson(json['preservedTags']),
+    preservedPrivateTags: _tagsFromJson(json['preservedPrivateTags']),
   );
+
+  static List<List<String>> _tagsFromJson(Object? json) => [
+    for (final dynamic tag in json as List? ?? const [])
+      List<String>.from(tag as List),
+  ];
 
   /// The list identifier (Nostr d-tag).
   final String id;
@@ -248,6 +258,47 @@ class CuratedList extends Equatable {
   /// How videos should be ordered during playback.
   final PlayOrder playOrder;
 
+  /// Tags of the list's last event that this app does not read, in their
+  /// original order, kept so that republishing the list does not drop them.
+  ///
+  /// These came from the event's public tags: a series marker or a NIP-32
+  /// label another client wrote. The app's own tags are never kept here, and
+  /// neither is another app's `client` tag: the signing path adds Divine's
+  /// unless the user opted out.
+  final List<List<String>> preservedTags;
+
+  /// Every non-video tag in a private list's encrypted content, kept unread,
+  /// including ones named like the app's own. A private list seals them
+  /// again; making the list public publishes them, except the app-named
+  /// ones, which are dropped.
+  final List<List<String>> preservedPrivateTags;
+
+  /// Whether the list is marked as a series (`["series", "true"]`), whose
+  /// videos are episodes in the creator's order.
+  bool get isSeries =>
+      [...preservedTags, ...preservedPrivateTags].any(_isSeriesMarker);
+
+  static bool _isSeriesMarker(List<String> tag) =>
+      tag.length >= 2 && tag[0] == 'series' && tag[1] == 'true';
+
+  /// The episodes of a series in its creator's order: the list's kind-34236
+  /// addresses by the list's own author.
+  ///
+  /// Anything else on the list, such as another creator's video or a video
+  /// referenced by event id, is not an episode. Empty for a list whose author
+  /// is not known yet.
+  List<String> get seriesEpisodes {
+    final owner = pubkey;
+    if (owner == null || owner.isEmpty) return const [];
+    final prefix =
+        '${NIP71VideoKinds.addressableShortVideo}:${owner.toLowerCase()}:';
+    return [
+      for (final reference in videoEventIds)
+        if (reference.length > prefix.length && reference.startsWith(prefix))
+          reference,
+    ];
+  }
+
   /// Creates a copy of this list with the given fields replaced.
   ///
   /// Passing `null` leaves a nullable field unchanged. To null one out, set
@@ -278,6 +329,8 @@ class CuratedList extends Equatable {
     String? thumbnailEventId,
     List<String>? thumbnailUrls,
     PlayOrder? playOrder,
+    List<List<String>>? preservedTags,
+    List<List<String>>? preservedPrivateTags,
   }) => CuratedList(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -305,6 +358,8 @@ class CuratedList extends Equatable {
     thumbnailEventId: thumbnailEventId ?? this.thumbnailEventId,
     thumbnailUrls: thumbnailUrls ?? this.thumbnailUrls,
     playOrder: playOrder ?? this.playOrder,
+    preservedTags: preservedTags ?? this.preservedTags,
+    preservedPrivateTags: preservedPrivateTags ?? this.preservedPrivateTags,
   );
 
   /// Stages a privacy proposal while preserving the last accepted visibility.
@@ -367,6 +422,9 @@ class CuratedList extends Equatable {
     'thumbnailEventId': thumbnailEventId,
     'thumbnailUrls': thumbnailUrls,
     'playOrder': playOrder.value,
+    if (preservedTags.isNotEmpty) 'preservedTags': preservedTags,
+    if (preservedPrivateTags.isNotEmpty)
+      'preservedPrivateTags': preservedPrivateTags,
   };
 
   @override
@@ -392,6 +450,8 @@ class CuratedList extends Equatable {
     thumbnailEventId,
     thumbnailUrls,
     playOrder,
+    preservedTags,
+    preservedPrivateTags,
   ];
 }
 
@@ -496,7 +556,12 @@ class CuratedListEditDraft extends Equatable {
     tags: List.unmodifiable(list.tags),
     thumbnailUrls: List.unmodifiable(list.thumbnailUrls),
     pendingPlaintextEventIds: List.unmodifiable(list.pendingPlaintextEventIds),
+    preservedTags: _unmodifiableTags(list.preservedTags),
+    preservedPrivateTags: _unmodifiableTags(list.preservedPrivateTags),
   );
+
+  static List<List<String>> _unmodifiableTags(List<List<String>> tags) =>
+      List.unmodifiable(tags.map(List<String>.unmodifiable));
 
   /// False for older pending copies whose original delta cannot be proven.
   /// They require explicit discard/adopt rather than replaying a full snapshot.

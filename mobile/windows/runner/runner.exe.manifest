@@ -11,4 +11,12 @@
       <supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}"/>
     </application>
   </compatibility>
+  <!-- The video player's audio effect (equalizer, volume boost), which
+       Windows creates by name inside each player's audio pipeline. -->
+  <file name="divine_video_player_plugin.dll">
+    <activatableClass
+        name="DivineVideoPlayer.AudioShapingEffect"
+        threadingModel="both"
+        xmlns="urn:schemas-microsoft-com:winrt.v1"/>
+  </file>
 </assembly>

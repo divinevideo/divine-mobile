@@ -16,6 +16,7 @@ AudioEvent _createTestAudioEvent({
   String? url,
   String? title,
   String? source,
+  String? creatorName,
   double? duration,
 }) {
   return AudioEvent(
@@ -25,9 +26,34 @@ AudioEvent _createTestAudioEvent({
     url: url ?? 'https://example.com/audio/$id.mp3',
     title: title,
     source: source,
+    creatorName: creatorName,
     duration: duration,
   );
 }
+
+/// A sound from a provider's catalog, which lists it without the length of
+/// the file it plays.
+AudioEvent _createProviderSound() => AudioEvent(
+  id: 'provider_sound',
+  pubkey: AudioEvent.externalProviderMarker,
+  createdAt: 0,
+  url: 'https://example.com/previews/sound.m4a',
+  title: 'Night Drive',
+  source: 'The Example Band',
+  externalSource: AudioExternalSource(
+    provider: 'catalog',
+    providerSoundId: '1',
+    providerName: 'Catalog',
+    license: AudioLicenseMetadata(
+      type: 'preview',
+      name: 'Preview',
+      url: 'https://example.com/terms',
+      allowsCommercialUse: false,
+      allowsDerivatives: false,
+      requiresAttribution: false,
+    ),
+  ),
+);
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -46,6 +72,7 @@ void main() {
       bool isUnavailable = false,
       int? videoCount,
       String? semanticIdentifier,
+      VoidCallback? onShowDetails,
     }) {
       return MaterialApp(
         localizationsDelegates: appLocalizationsDelegates,
@@ -59,6 +86,7 @@ void main() {
             videoCount: videoCount,
             semanticIdentifier: semanticIdentifier,
             onTap: () => tapped = true,
+            onShowDetails: onShowDetails,
           ),
         ),
       );
@@ -231,6 +259,28 @@ void main() {
         expect(find.textContaining('00:01'), findsOneWidget);
       });
 
+      testWidgets('shows no length for a provider sound until it is known', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildWidget(audio: _createProviderSound()));
+        await tester.pumpAndSettle();
+
+        // The row starts with its detail, with no separator before it.
+        expect(find.text('The Example Band'), findsOneWidget);
+        expect(find.textContaining('00:01'), findsNothing);
+      });
+
+      testWidgets('shows the length of a provider sound once it is known', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(audio: _createProviderSound().copyWith(duration: 29)),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('00:29 ∙ The Example Band'), findsOneWidget);
+      });
+
       testWidgets('renders source when available', (tester) async {
         final audio = _createTestAudioEvent(
           duration: 60.0,
@@ -240,6 +290,27 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.textContaining('Artist Name'), findsOneWidget);
+      });
+
+      testWidgets('names the creator of a library sound, not its source link', (
+        tester,
+      ) async {
+        const source =
+            'https://incompetech.com/music/royalty-free/index.html?isrc=1';
+        final audio = _createTestAudioEvent(
+          title: 'Crypto',
+          duration: 60.0,
+          source: source,
+          creatorName: 'Kevin MacLeod (incompetech.com)',
+        );
+        await tester.pumpWidget(buildWidget(audio: audio));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.textContaining('Kevin MacLeod (incompetech.com)'),
+          findsOneWidget,
+        );
+        expect(find.textContaining(source), findsNothing);
       });
 
       testWidgets('renders ListTile', (tester) async {
@@ -360,6 +431,57 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(tapped, isTrue);
+      });
+
+      testWidgets("opens the sound's details on a long press", (tester) async {
+        var opened = false;
+        await tester.pumpWidget(
+          buildWidget(
+            audio: _createTestAudioEvent(title: 'Anthem'),
+            onShowDetails: () => opened = true,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.longPress(find.byType(ListTile));
+        await tester.pumpAndSettle();
+
+        expect(opened, isTrue);
+        expect(tapped, isFalse);
+      });
+
+      // A long press is hard to find with a screen reader, so the row offers
+      // the same as one of its actions.
+      testWidgets("offers the sound's details as a screen-reader action", (
+        tester,
+      ) async {
+        final handle = tester.ensureSemantics();
+        var opened = false;
+        await tester.pumpWidget(
+          buildWidget(
+            audio: _createTestAudioEvent(title: 'Anthem'),
+            onShowDetails: () => opened = true,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final action = CustomSemanticsAction(
+          label: lookupAppLocalizations(
+            const Locale('en'),
+          ).videoEditorAudioOpenSoundDetails,
+        );
+        expect(
+          tester.getSemantics(find.byType(ListTile)),
+          isSemantics(customActions: [action]),
+        );
+
+        tester.semantics.customAction(
+          find.semantics.byLabel(RegExp('Anthem')),
+          action,
+        );
+        expect(opened, isTrue);
+
+        handle.dispose();
       });
     });
 

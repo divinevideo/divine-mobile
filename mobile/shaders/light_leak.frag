@@ -20,6 +20,16 @@ uniform float uIntensity;
 // Seconds since the effect started.
 uniform float uTime;
 
+// How far the light's colours turn around the colour wheel, as the cosine and
+// sine of the angle: (1, 0) keeps them.
+uniform vec2 uHue;
+
+// How large the patches of light are, as a share of the default.
+uniform float uSpread;
+
+// How fast it drifts, as a share of the default; 0 holds it still.
+uniform float uSpeed;
+
 uniform sampler2D uTexture;
 
 out vec4 fragColor;
@@ -27,6 +37,13 @@ out vec4 fragColor;
 vec3 tap(vec2 q) {
   q = clamp(q, vec2(0.5), uSize - 0.5);
   return texture(uTexture, vec2(q.x, uSize.y - q.y) / uSize).rgb;
+}
+
+// c turned around the grey axis of the colour cube by the angle whose cosine
+// and sine hue holds.
+vec3 turnHue(vec3 c, vec2 hue) {
+  vec3 k = vec3(0.57735);
+  return c * hue.x + cross(k, c) * hue.y + k * dot(k, c) * (1.0 - hue.x);
 }
 
 vec3 light(vec2 p, vec2 centre, vec2 reach, vec3 color) {
@@ -38,15 +55,16 @@ void main() {
   vec2 fragCoord = FlutterFragCoord().xy;
   vec2 p = vec2(fragCoord.x, uSize.y - fragCoord.y);
   float l = max(uSize.x, uSize.y);
-  float t = uTime;
+  float t = uTime * uSpeed;
+  float reach = l * uSpread;
   vec3 base = tap(p);
   vec3 glow =
     light(p, uSize * vec2(-0.06 + 0.16 * sin(0.37 * t + 0.4), 0.62 + 0.3 * sin(0.21 * t + 1.1)),
-      l * vec2(0.32, 0.6), vec3(0.95, 0.49, 0.17)) +
+      reach * vec2(0.32, 0.6), vec3(0.95, 0.49, 0.17)) +
     light(p, uSize * vec2(0.45 + 0.4 * sin(0.18 * t + 2.2), 1.04 + 0.08 * sin(0.31 * t + 0.3)),
-      l * vec2(0.55, 0.26), vec3(0.75, 0.21, 0.24)) +
+      reach * vec2(0.55, 0.26), vec3(0.75, 0.21, 0.24)) +
     light(p, uSize * vec2(0.18 + 0.42 * sin(0.27 * t + 4.0), 0.8 + 0.18 * sin(0.47 * t + 2.6)),
-      l * vec2(0.24, 0.24), vec3(0.55, 0.45, 0.28));
-  vec3 leak = clamp(glow * uIntensity, 0.0, 1.0);
+      reach * vec2(0.24, 0.24), vec3(0.55, 0.45, 0.28));
+  vec3 leak = clamp(turnHue(glow, uHue) * uIntensity, 0.0, 1.0);
   fragColor = vec4(1.0 - (1.0 - base) * (1.0 - leak), 1.0);
 }

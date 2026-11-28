@@ -48,9 +48,6 @@ void _keepEverySound(MockSoundsRepository repository) {
   when(() => repository.withoutBlockedAuthors(any())).thenAnswer(
     (invocation) => invocation.positionalArguments.single as List<AudioEvent>,
   );
-  when(() => repository.withoutLibrarySounds(any())).thenAnswer(
-    (invocation) => invocation.positionalArguments.single as List<AudioEvent>,
-  );
 }
 
 class MockSoundLibraryService extends Mock implements SoundLibraryService {}
@@ -337,23 +334,6 @@ void main() {
 
         expect(result.usageCounts, {'used': 4});
         expect(result.hasMore, isFalse);
-      });
-
-      test('leaves out the imported library', () async {
-        final community = createTestAudioEvent(id: 'community');
-        final imported = createTestAudioEvent(id: 'imported');
-        stubPages([
-          [community, imported],
-        ]);
-        when(
-          () => mockRepository.withoutLibrarySounds([community, imported]),
-        ).thenReturn([community]);
-
-        final result = await buildContainer().read(
-          trendingSoundsProvider.future,
-        );
-
-        expect(result.sounds, [community]);
       });
 
       test('drops a newly blocked author from the loaded pages, '
@@ -711,13 +691,14 @@ void main() {
         return container;
       }
 
-      /// A full page of the ranking, of which the relays returned [sounds].
-      RankedSounds rankedPage(List<AudioEvent> sounds, {int? ranked}) => (
-        sounds: sounds,
-        usageCounts: {
-          for (var i = 0; i < (ranked ?? SoundsRepository.popularPageSize); i++)
-            i < sounds.length ? sounds[i].id : 'ranked-$i': i,
-        },
+      /// A page of the ranking holding [sounds], each used once.
+      SoundIndexPage rankedPage(
+        List<AudioEvent> sounds, {
+        String? nextCursor,
+      }) => indexPage(
+        sounds,
+        usageCounts: {for (final sound in sounds) sound.id: 1},
+        nextCursor: nextCursor,
       );
 
       test('loads further down the ranking as it is scrolled', () async {
@@ -726,12 +707,12 @@ void main() {
         final second = createTestAudioEvent(id: 'second');
         when(
           () => mockRepository.fetchPopularSounds(
-            offset: any(named: 'offset'),
+            cursor: any(named: 'cursor'),
           ),
         ).thenAnswer(
-          (invocation) async => switch (invocation.namedArguments[#offset]) {
-            50 => rankedPage([again, second]),
-            _ => rankedPage([first, again]),
+          (invocation) async => switch (invocation.namedArguments[#cursor]) {
+            null => rankedPage([first, again], nextCursor: 'o:50'),
+            _ => rankedPage([again, second]),
           },
         );
         final container = buildContainer();
@@ -748,25 +729,28 @@ void main() {
           [second],
         ]);
         expect(result.usageCounts['second'], 1);
+        expect(result.hasMore, isFalse);
         // The ranking moved, so a sound from the first page came round again.
-        verify(() => mockRepository.fetchPopularSounds(offset: 50)).called(1);
+        verify(
+          () => mockRepository.fetchPopularSounds(cursor: 'o:50'),
+        ).called(1);
       });
 
       test('pages on from the top after the list started over', () async {
         final first = createTestAudioEvent(id: 'first');
         final second = createTestAudioEvent(id: 'second');
-        final stalePage = Completer<RankedSounds>();
+        final stalePage = Completer<SoundIndexPage>();
         var call = 0;
         when(
           () => mockRepository.fetchPopularSounds(
-            offset: any(named: 'offset'),
+            cursor: any(named: 'cursor'),
           ),
         ).thenAnswer((invocation) {
           // The first loadMore, overtaken by the rebuild below.
           if (call++ == 1) return stalePage.future;
-          return Future.value(switch (invocation.namedArguments[#offset]) {
-            50 => rankedPage([second]),
-            _ => rankedPage([first]),
+          return Future.value(switch (invocation.namedArguments[#cursor]) {
+            null => rankedPage([first], nextCursor: 'o:50'),
+            _ => rankedPage([second], nextCursor: 'o:100'),
           });
         });
         final container = buildContainer();
@@ -780,7 +764,7 @@ void main() {
         final stale = container.read(popularSoundsProvider.notifier).loadMore();
         container.invalidate(popularSoundsProvider);
         await container.read(popularSoundsProvider.future);
-        stalePage.complete(rankedPage([second]));
+        stalePage.complete(rankedPage([second], nextCursor: 'o:100'));
         await stale;
         await container.read(popularSoundsProvider.notifier).loadMore();
 
@@ -788,23 +772,9 @@ void main() {
           [first],
           [second],
         ]);
-        verify(() => mockRepository.fetchPopularSounds(offset: 50)).called(2);
-      });
-
-      test('ends where the ranking does', () async {
-        final last = createTestAudioEvent(id: 'last');
-        when(
-          () => mockRepository.fetchPopularSounds(
-            offset: any(named: 'offset'),
-          ),
-        ).thenAnswer((_) async => rankedPage([last], ranked: 3));
-
-        final result = await buildContainer().read(
-          popularSoundsProvider.future,
-        );
-
-        expect(result.sounds, [last]);
-        expect(result.hasMore, isFalse);
+        verify(
+          () => mockRepository.fetchPopularSounds(cursor: 'o:50'),
+        ).called(2);
       });
     });
 
@@ -1312,8 +1282,8 @@ void main() {
         final again = createTestAudioEvent(id: 'again');
         final next = createTestAudioEvent(id: 'next');
         when(
-          () => mockRepository.fetchPopularSoundsOfKind(
-            SoundKind.effect,
+          () => mockRepository.fetchPopularSounds(
+            kind: SoundKind.effect,
             cursor: any(named: 'cursor'),
           ),
         ).thenAnswer(
@@ -1341,8 +1311,8 @@ void main() {
         ]);
         expect(result.hasMore, isFalse);
         verify(
-          () => mockRepository.fetchPopularSoundsOfKind(
-            SoundKind.effect,
+          () => mockRepository.fetchPopularSounds(
+            kind: SoundKind.effect,
             cursor: 'o:50',
           ),
         ).called(1);
@@ -1582,20 +1552,6 @@ void main() {
         ).called(1);
       });
 
-      test('leaves out the imported library of a followed account', () async {
-        final followed = createTestAudioEvent(id: 'followed-sound');
-        final imported = createTestAudioEvent(id: 'imported');
-        stubCreatorSounds((_) async => [followed, imported]);
-        when(
-          () => mockRepository.withoutLibrarySounds([followed, imported]),
-        ).thenReturn([followed]);
-
-        final container = buildContainer(const ['alice']);
-
-        final result = await container.read(forYouSoundsProvider.future);
-        expect(result.sounds, [followed]);
-      });
-
       test(
         "leaves out Divine's own sounds, which the picker lists already",
         () async {
@@ -1753,6 +1709,9 @@ void main() {
         _keepEverySound(mockRepository);
         when(() => mockRepository.initialize()).thenAnswer((_) async {});
         when(() => mockRepository.dispose()).thenAnswer((_) async {});
+        when(
+          () => mockRepository.sourceVideosFromIndex(any()),
+        ).thenReturn(const {});
 
         final container = ProviderContainer(
           overrides: [
@@ -1764,6 +1723,134 @@ void main() {
         addTearDown(container.dispose);
         return container;
       }
+
+      group('with the source videos Funnelcake sent', () {
+        final sentVideo = Event.fromJson({
+          'id': 'f' * 64,
+          'pubkey': authorA,
+          'created_at': 1704067200,
+          'kind': 34236,
+          'tags': [
+            ['d', 'clip-a'],
+          ],
+          'content': '',
+          'sig': 'c' * 128,
+        });
+
+        setUp(() => registerFallbackValue(sentVideo));
+
+        test('overlapping lists wait for the reuse policy before showing a '
+            'cover', () async {
+          final sounds = soundsFrom(const [verticalReference]);
+          final container = buildContainer(sounds);
+          final policyRequested = Completer<void>();
+          final policies = Completer<Map<String, AudioReusePolicy>>();
+          when(
+            () => mockRepository.sourceVideosFromIndex(any()),
+          ).thenReturn({verticalReference: sentVideo});
+          when(
+            () => videosRepository.visibleVideoFromEvent(
+              sentVideo,
+              includeFeedShape: false,
+            ),
+          ).thenReturn(sourceVideo(authorA, 'clip-a'));
+          when(
+            () => videosRepository.refreshAudioReusePolicies(any()),
+          ).thenAnswer((_) {
+            if (!policyRequested.isCompleted) policyRequested.complete();
+            return policies.future;
+          });
+
+          final trending = container.read(trendingSoundCoversProvider.future);
+          await policyRequested.future;
+          final saved = container.read(
+            savedSoundSourcesProvider(SoundSourceReferences(sounds)).future,
+          );
+          policies.complete({
+            verticalReference: const AudioReusePolicy(allowAudioReuse: false),
+          });
+
+          expect(await trending, {verticalReference: null});
+          expect(await saved, {verticalReference: null});
+        });
+
+        test('takes them and asks the relays only about the rest', () async {
+          final container = buildContainer(
+            soundsFrom(const [
+              verticalReference,
+              normalReference,
+              deletedReference,
+            ]),
+          );
+          when(
+            () => mockRepository.sourceVideosFromIndex(any()),
+          ).thenReturn({verticalReference: sentVideo, deletedReference: null});
+          when(
+            () => videosRepository.visibleVideoFromEvent(
+              any(),
+              includeFeedShape: any(named: 'includeFeedShape'),
+            ),
+          ).thenReturn(sourceVideo(authorA, 'clip-a'));
+          stubBothSourceVideos();
+
+          final covers = await container.read(
+            trendingSoundCoversProvider.future,
+          );
+
+          expect(covers, {
+            verticalReference: const SoundCover(
+              imageUrl: 'https://example.com/clip-a.jpg',
+            ),
+            normalReference: const SoundCover(
+              imageUrl: 'https://example.com/clip-b.jpg',
+            ),
+            deletedReference: null,
+          });
+          verify(
+            () => videosRepository.visibleVideoFromEvent(
+              sentVideo,
+              includeFeedShape: false,
+            ),
+          ).called(1);
+          final asked = verify(
+            () => videosRepository.getVideosFromRelaysByAddressableIds(
+              captureAny(),
+              includeFeedShape: false,
+            ),
+          ).captured;
+          expect(asked, [
+            [normalReference],
+          ]);
+        });
+
+        test('marks one this viewer may not see as gone, without asking '
+            'the relays', () async {
+          final container = buildContainer(
+            soundsFrom(const [verticalReference]),
+          );
+          when(
+            () => mockRepository.sourceVideosFromIndex(any()),
+          ).thenReturn({verticalReference: sentVideo});
+          when(
+            () => videosRepository.visibleVideoFromEvent(
+              any(),
+              includeFeedShape: any(named: 'includeFeedShape'),
+            ),
+          ).thenReturn(null);
+
+          final covers = await container.read(
+            trendingSoundCoversProvider.future,
+          );
+
+          expect(covers, {verticalReference: null});
+          verifyNever(
+            () => videosRepository.getVideosFromRelaysByAddressableIds(
+              any(),
+              includeFeedShape: any(named: 'includeFeedShape'),
+            ),
+          );
+        });
+      });
 
       test(
         'maps each sound to its source video through one lookup',

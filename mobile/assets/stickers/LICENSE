@@ -1,5 +1,9 @@
-Sticker emoji graphics are from OpenMoji (https://openmoji.org/).
+The SVG sticker graphics in this folder are from OpenMoji (https://openmoji.org/).
 Licensed under Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0).
 https://creativecommons.org/licenses/by-sa/4.0/
 
 OpenMoji is designed by students of the HfG Schwäbisch Gmünd and contributors.
+
+The video editor no longer offers these stickers. They stay bundled so that
+drafts made with them still show them. The stickers the editor offers now are
+in assets/divine_stickers/, under their own licence.

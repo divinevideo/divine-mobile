@@ -14,6 +14,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' show UserProfile;
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
 import 'package:openvine/blocs/locale/locale_cubit.dart';
+import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
@@ -35,6 +36,7 @@ import 'package:openvine/screens/apps/apps_permissions_screen.dart';
 import 'package:openvine/screens/badges/badges_screen.dart';
 import 'package:openvine/screens/developer_options_screen.dart';
 import 'package:openvine/screens/settings/account_status_screen.dart';
+import 'package:openvine/screens/settings/monetization_links_settings_screen.dart';
 import 'package:openvine/screens/settings/settings_categories_screen.dart';
 import 'package:openvine/screens/settings/settings_screen.dart';
 import 'package:openvine/screens/settings/supporter_screen.dart';
@@ -45,9 +47,11 @@ import 'package:openvine/services/supporter_repository.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
 import '../helpers/go_router.dart';
 import '../helpers/scroll.dart';
+import '../helpers/url_launcher_test_double.dart';
 
 class _MockAuthService extends Mock implements AuthService {}
 
@@ -755,6 +759,66 @@ void main() {
       await tester.pump();
     });
 
+    testWidgets('tapping Creator Support opens the support links settings', (
+      tester,
+    ) async {
+      when(() => mockAuthService.isRegistered).thenReturn(false);
+      when(() => mockAuthService.userRelays).thenReturn([]);
+      final mockGoRouter = MockGoRouter();
+      when(() => mockGoRouter.push(any())).thenAnswer((_) async => null);
+
+      await tester.pumpWidget(
+        buildSubject(
+          goRouter: mockGoRouter,
+          child: const CreatingSettingsScreen(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final scrollable = find.byType(Scrollable);
+      await scrollUntilTappable(
+        tester,
+        find.text(l10n.monetizationSettingsTitle),
+        200,
+        scrollable: scrollable,
+      );
+      await tester.tap(find.text(l10n.monetizationSettingsTitle));
+      await tester.pumpAndSettle();
+
+      verify(
+        () => mockGoRouter.push(MonetizationLinksSettingsScreen.path),
+      ).called(1);
+
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
+    });
+
+    testWidgets('hides Creator Support when signed out', (tester) async {
+      when(() => mockAuthService.isRegistered).thenReturn(false);
+      when(() => mockAuthService.userRelays).thenReturn([]);
+
+      await tester.pumpWidget(
+        buildSubject(
+          authState: AuthState.unauthenticated,
+          child: const CreatingSettingsScreen(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final scrollable = find.byType(Scrollable);
+      await scrollUntilTappable(
+        tester,
+        find.text(l10n.settingsBadgesTitle),
+        200,
+        scrollable: scrollable,
+      );
+      expect(find.text(l10n.settingsBadgesTitle), findsOneWidget);
+      expect(find.text(l10n.monetizationSettingsTitle), findsNothing);
+
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
+    });
+
     testWidgets('renders Secure Your Account tile for anonymous users', (
       tester,
     ) async {
@@ -1283,6 +1347,119 @@ void main() {
         await tester.pumpAndSettle();
 
         verify(() => mockGoRouter.push(AccountStatusScreen.path)).called(1);
+
+        await tester.pumpWidget(const SizedBox());
+        await tester.pump();
+      });
+    });
+
+    group('Discord invite tile', () {
+      testWidgets('renders title and subtitle and launches invite URL', (
+        tester,
+      ) async {
+        final originalPlatform = UrlLauncherPlatform.instance;
+        final launcher = UrlLauncherTestDouble();
+        UrlLauncherPlatform.instance = launcher;
+        addTearDown(() => UrlLauncherPlatform.instance = originalPlatform);
+
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+
+        final scrollable = find.byType(Scrollable);
+        await scrollUntilTappable(
+          tester,
+          find.text(l10n.settingsDiscordTitle),
+          200,
+          scrollable: scrollable,
+        );
+
+        expect(find.text(l10n.settingsDiscordTitle), findsOneWidget);
+        expect(find.text(l10n.settingsDiscordSubtitle), findsOneWidget);
+
+        await tester.tap(find.text(l10n.settingsDiscordTitle));
+        await tester.pumpAndSettle();
+
+        expect(launcher.launched, hasLength(1));
+        expect(launcher.launched.single.url, AppConstants.discordInviteUrl);
+        expect(launcher.launched.single.useExternalApplication, isTrue);
+        expect(find.byType(SnackBar), findsNothing);
+
+        await tester.pumpWidget(const SizedBox());
+        await tester.pump();
+      });
+
+      testWidgets('shows error snackbar when invite link cannot open', (
+        tester,
+      ) async {
+        final originalPlatform = UrlLauncherPlatform.instance;
+        final launcher = UrlLauncherTestDouble(launchResult: false);
+        UrlLauncherPlatform.instance = launcher;
+        addTearDown(() => UrlLauncherPlatform.instance = originalPlatform);
+
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+
+        final scrollable = find.byType(Scrollable);
+        await scrollUntilTappable(
+          tester,
+          find.text(l10n.settingsDiscordTitle),
+          200,
+          scrollable: scrollable,
+        );
+
+        await tester.tap(find.text(l10n.settingsDiscordTitle));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.settingsDiscordOpenError), findsOneWidget);
+
+        await tester.pumpWidget(const SizedBox());
+        await tester.pump();
+      });
+
+      testWidgets('shows error snackbar when launching invite link throws', (
+        tester,
+      ) async {
+        final originalPlatform = UrlLauncherPlatform.instance;
+        final launcher = UrlLauncherTestDouble(
+          launchError: Exception('launch failed'),
+        );
+        UrlLauncherPlatform.instance = launcher;
+        addTearDown(() => UrlLauncherPlatform.instance = originalPlatform);
+
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+
+        final scrollable = find.byType(Scrollable);
+        await scrollUntilTappable(
+          tester,
+          find.text(l10n.settingsDiscordTitle),
+          200,
+          scrollable: scrollable,
+        );
+
+        await tester.tap(find.text(l10n.settingsDiscordTitle));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.settingsDiscordOpenError), findsOneWidget);
+
+        await tester.pumpWidget(const SizedBox());
+        await tester.pump();
+      });
+
+      testWidgets('is hidden on account-only settings view', (tester) async {
+        // Tall surface so the entire lazy ListView is laid out through the
+        // bottom version row; otherwise absence of a lower row proves nothing.
+        await tester.binding.setSurfaceSize(const Size(900, 2400));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+
+        stubAccountDestinationAuth();
+        await tester.pumpWidget(
+          buildSubject(child: const SettingsScreen(accountOnly: true)),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.nostrSettingsDeleteAccount), findsOneWidget);
+        expect(find.text(l10n.settingsDiscordTitle), findsNothing);
 
         await tester.pumpWidget(const SizedBox());
         await tester.pump();

@@ -1,14 +1,17 @@
-// ABOUTME: Pins that videoEventPublisherProvider is not rebuilt when the
-// ABOUTME: sync repository resolves, reopening the #6018 duplicate-publish
-// ABOUTME: window its in-flight-publish coalescer closed.
+// ABOUTME: Pins how videoEventPublisherProvider wires the dependencies that
+// ABOUTME: resolve or rebuild at runtime: the sync repository must not rebuild
+// ABOUTME: it (#6018), and a videos-repository rebuild must not strand a
+// ABOUTME: publish already in flight on the instance it replaced (#11250).
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:creator_sync/creator_sync.dart';
 import 'package:db_client/db_client.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/models/environment_config.dart';
 import 'package:openvine/providers/auth_providers.dart';
@@ -53,53 +56,20 @@ class _MockNip98AuthService extends Mock implements Nip98AuthService {}
 
 class _MockSoundSyncRepository extends Mock implements SoundSyncRepository {}
 
+const _ownerPubkey =
+    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+
 void main() {
   group('videoEventPublisherProvider sync-repository wiring (#6018)', () {
     test(
       'the publisher instance is identical across a sync-repository '
       'resolution',
       () {
-        final mockDatabase = _MockAppDatabase();
-        when(
-          () => mockDatabase.profileStatsDao,
-        ).thenReturn(_MockProfileStatsDao());
-
         final container = ProviderContainer(
-          overrides: [
-            uploadManagerProvider.overrideWith((_) => _MockUploadManager()),
-            nostrServiceProvider.overrideWithValue(_MockNostrClient()),
-            authServiceProvider.overrideWith((_) => _MockAuthService()),
-            personalEventCacheServiceProvider.overrideWith(
-              (_) => _MockPersonalEventCacheService(),
-            ),
-            videoEventServiceProvider.overrideWith(
-              (_) => _MockVideoEventService(),
-            ),
-            blossomUploadServiceProvider.overrideWith(
-              (_) => _MockBlossomUploadService(),
-            ),
-            profileRepositoryProvider.overrideWith((_) => null),
-            databaseProvider.overrideWithValue(mockDatabase),
-            savedSoundsServiceProvider.overrideWith(
-              (_) => _MockSavedSoundsService(),
-            ),
-            videosRepositoryProvider.overrideWith(
-              (_) => _MockVideosRepository(),
-            ),
-            currentEnvironmentProvider.overrideWithValue(
-              const EnvironmentConfig(environment: AppEnvironment.staging),
-            ),
-            nip98AuthServiceProvider.overrideWith(
-              (_) => _MockNip98AuthService(),
-            ),
-            // Stand-in for soundSyncRepositoryValueProvider: the real
-            // provider resolves asynchronously (a vault-key relay round
-            // trip), strictly later than every other dependency above,
-            // which are all already resolved once auth is ready.
-            soundSyncRepositoryValueProvider.overrideWith(
-              (ref) => ref.watch(_syncRepositorySelector),
-            ),
-          ],
+          overrides: _publisherOverrides(
+            authService: _MockAuthService(),
+            videosRepository: (_) => _MockVideosRepository(),
+          ),
         );
         addTearDown(container.dispose);
 
@@ -128,10 +98,116 @@ void main() {
       },
     );
   });
+
+  group('videoEventPublisherProvider videos-repository wiring (#11250)', () {
+    test(
+      'a publisher replaced by a repository rebuild still reads the newest '
+      'revision for a republish already in flight',
+      () async {
+        final firstRepository = _MockVideosRepository();
+        when(
+          () => firstRepository.fetchLatestVideoRevision(
+            any(),
+            notOlderThan: any(named: 'notOlderThan'),
+          ),
+        ).thenAnswer((_) async => const LatestVideoRevisionAbsent());
+        final authService = _MockAuthService();
+        when(() => authService.currentPublicKeyHex).thenReturn(_ownerPubkey);
+
+        final container = ProviderContainer(
+          overrides: [
+            ..._publisherOverrides(
+              authService: authService,
+              videosRepository: (ref) => ref.watch(_videosRepositorySelector),
+            ),
+            _videosRepositorySelector.overrideWith((_) => firstRepository),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        final inFlight = container.read(videoEventPublisherProvider);
+        // A content-filter or auth change rebuilds the repository, which
+        // rebuilds the publisher provider and disposes the instance a save
+        // that already started still holds.
+        container.read(_videosRepositorySelector.notifier).state =
+            _MockVideosRepository();
+        expect(
+          identical(container.read(videoEventPublisherProvider), inFlight),
+          isFalse,
+        );
+
+        await expectLater(
+          inFlight.republishWithSubtitles(
+            existingEvent: VideoEvent(
+              id: 'video-id',
+              pubkey: _ownerPubkey,
+              createdAt: 1,
+              content: '',
+              timestamp: DateTime.fromMillisecondsSinceEpoch(0),
+              vineId: 'clip',
+              addressableDTag: 'clip',
+            ),
+            textTrackRef: 'https://media.divine.video/${'b' * 64}',
+          ),
+          completion(isNull),
+        );
+        verify(
+          () => firstRepository.fetchLatestVideoRevision(
+            any(),
+            notOlderThan: any(named: 'notOlderThan'),
+          ),
+        ).called(1);
+      },
+    );
+  });
+}
+
+/// The publisher's dependencies, with [authService] and [videosRepository]
+/// supplied by the test and the sync repository read from
+/// [_syncRepositorySelector].
+List<Override> _publisherOverrides({
+  required AuthService authService,
+  required VideosRepository Function(Ref ref) videosRepository,
+}) {
+  final mockDatabase = _MockAppDatabase();
+  when(() => mockDatabase.profileStatsDao).thenReturn(_MockProfileStatsDao());
+  return [
+    uploadManagerProvider.overrideWith((_) => _MockUploadManager()),
+    nostrServiceProvider.overrideWithValue(_MockNostrClient()),
+    authServiceProvider.overrideWith((_) => authService),
+    personalEventCacheServiceProvider.overrideWith(
+      (_) => _MockPersonalEventCacheService(),
+    ),
+    videoEventServiceProvider.overrideWith((_) => _MockVideoEventService()),
+    blossomUploadServiceProvider.overrideWith(
+      (_) => _MockBlossomUploadService(),
+    ),
+    profileRepositoryProvider.overrideWith((_) => null),
+    databaseProvider.overrideWithValue(mockDatabase),
+    savedSoundsServiceProvider.overrideWith((_) => _MockSavedSoundsService()),
+    videosRepositoryProvider.overrideWith(videosRepository),
+    currentEnvironmentProvider.overrideWithValue(
+      const EnvironmentConfig(environment: AppEnvironment.staging),
+    ),
+    nip98AuthServiceProvider.overrideWith((_) => _MockNip98AuthService()),
+    // Stand-in for soundSyncRepositoryValueProvider: the real provider
+    // resolves asynchronously (a vault-key relay round trip), strictly later
+    // than every other dependency above, which are all already resolved once
+    // auth is ready.
+    soundSyncRepositoryValueProvider.overrideWith(
+      (ref) => ref.watch(_syncRepositorySelector),
+    ),
+  ];
 }
 
 /// Stand-in for the value `soundSyncRepositoryValueProvider` resolves to
 /// once the vault key is available.
 final _syncRepositorySelector = StateProvider<SoundSyncRepository?>(
   (_) => null,
+);
+
+/// Stand-in for the repository `videosRepositoryProvider` builds, which it
+/// rebuilds when content filters or auth change.
+final _videosRepositorySelector = StateProvider<VideosRepository>(
+  (_) => _MockVideosRepository(),
 );

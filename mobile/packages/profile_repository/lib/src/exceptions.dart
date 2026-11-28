@@ -10,13 +10,32 @@ class ProfileRepositoryException implements Exception {
   String toString() => 'ProfileRepositoryException: $message';
 }
 
-/// Thrown when publishing a profile to Nostr relays fails.
+/// Thrown when a profile could not be published to Nostr relays.
 class ProfilePublishFailedException extends ProfileRepositoryException {
   /// Creates a profile publish failed exception with an optional [message].
   const ProfilePublishFailedException(super.message);
 
   @override
   String toString() => 'ProfilePublishFailedException: $message';
+}
+
+/// Thrown before publishing when the current profile cannot safely seed a save.
+///
+/// This remains a [ProfilePublishFailedException] for callers that retry the
+/// whole save without distinguishing which phase failed.
+class ProfilePublishSeedUnavailableException
+    extends ProfilePublishFailedException {
+  /// Creates an exception for a save deferred during seed resolution.
+  const ProfilePublishSeedUnavailableException(super.message);
+
+  @override
+  String toString() => 'ProfilePublishSeedUnavailableException: $message';
+}
+
+/// Thrown when a caller cancels a save before publication starts.
+class ProfileSaveCancelledException extends ProfileRepositoryException {
+  /// Creates a profile save cancellation exception.
+  const ProfileSaveCancelledException();
 }
 
 /// Thrown when profile publish fails because no relays are connected.

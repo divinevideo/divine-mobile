@@ -12,6 +12,7 @@ import 'package:models/models.dart';
 import 'package:openvine/generated/product_analytics.dart';
 import 'package:openvine/models/view_traffic_source.dart';
 import 'package:openvine/services/background_activity_manager.dart';
+import 'package:openvine/services/performance_monitoring_service.dart';
 import 'package:openvine/services/product_event_queue.dart';
 import 'package:openvine/services/view_event_publisher.dart';
 import 'package:openvine/services/view_event_retry_service.dart';
@@ -36,6 +37,7 @@ class AnalyticsService implements BackgroundAwareService {
     ViewEventRetryService? viewEventRetryService,
     ProductEventQueue? productEventQueue,
     AnalyticsCollectionControl? analyticsCollectionControl,
+    PerformanceConsentControl? performanceConsentControl,
     String? Function()? currentUserPubkey,
     String Function()? anonymousId,
     String Function()? sessionId,
@@ -51,6 +53,7 @@ class AnalyticsService implements BackgroundAwareService {
        _viewEventRetryService = viewEventRetryService,
        _productEventQueue = productEventQueue,
        _analyticsCollectionControl = analyticsCollectionControl,
+       _performanceConsentControl = performanceConsentControl,
        _currentUserPubkey = currentUserPubkey,
        _anonymousIdOverride = anonymousId,
        _sessionIdOverride = sessionId,
@@ -97,6 +100,12 @@ class AnalyticsService implements BackgroundAwareService {
   /// only place that covers every one of them, including any added later.
   final AnalyticsCollectionControl? _analyticsCollectionControl;
 
+  /// Firebase Performance, which the same switch governs (#11398).
+  ///
+  /// Gated separately from [_analyticsCollectionControl]: Performance has its
+  /// own SDK flag, and turning Analytics collection off does not touch it.
+  final PerformanceConsentControl? _performanceConsentControl;
+
   final String? Function()? _currentUserPubkey;
   final String Function()? _anonymousIdOverride;
   final String Function()? _sessionIdOverride;
@@ -114,6 +123,16 @@ class AnalyticsService implements BackgroundAwareService {
   final bool _disableNostrPublishing;
 
   static const String _analyticsEnabledKey = 'analytics_enabled';
+
+  /// The consent decision stored on this device.
+  ///
+  /// For collectors that start before this service has initialized. An absent
+  /// value counts as consent, as it does in [initialize]; a value that is not
+  /// a bool fails closed, as a failed read does there.
+  static bool storedAnalyticsConsent(SharedPreferences preferences) {
+    final stored = preferences.get(_analyticsEnabledKey);
+    return stored == null || stored == true;
+  }
 
   bool _analyticsEnabled = true; // Default to enabled
   bool _isInitialized = false;
@@ -204,7 +223,7 @@ class AnalyticsService implements BackgroundAwareService {
     try {
       // Load analytics preference from storage
       final prefs = await SharedPreferences.getInstance();
-      final storedConsent = prefs.getBool(_analyticsEnabledKey) ?? true;
+      final storedConsent = storedAnalyticsConsent(prefs);
       _isInitialized = true;
       // Stored opt-out takes the same withdrawal path a live toggle does, so
       // rows persisted before the preference loaded (or by a build that
@@ -333,6 +352,7 @@ class AnalyticsService implements BackgroundAwareService {
     _productEventQueue?.setSendingEnabled(_productAnalyticsEnabled && enabled);
     _viewEventRetryService?.setPublishingEnabled(enabled);
     await _applyFirebaseAnalyticsConsent(enabled: enabled);
+    await _applyPerformanceConsent(enabled: enabled);
 
     if (!enabled) {
       _productAnalyticsUtm.clear();
@@ -360,6 +380,20 @@ class AnalyticsService implements BackgroundAwareService {
     } catch (error) {
       Log.warning(
         'Failed to apply analytics consent to Firebase: $error',
+        name: 'AnalyticsService',
+        category: LogCategory.system,
+      );
+    }
+  }
+
+  Future<void> _applyPerformanceConsent({required bool enabled}) async {
+    final control = _performanceConsentControl;
+    if (control == null) return;
+    try {
+      await control.setAnalyticsConsent(enabled: enabled);
+    } catch (error) {
+      Log.warning(
+        'Failed to apply analytics consent to Firebase Performance: $error',
         name: 'AnalyticsService',
         category: LogCategory.system,
       );
@@ -512,11 +546,14 @@ class AnalyticsService implements BackgroundAwareService {
     ),
   );
 
-  /// Records a confirmed engagement or share intent without raw target pubkeys.
+  /// Records confirmed engagements without raw target pubkeys.
   Future<String?> recordEngagement({
     required ProductAnalyticsV2EngagementAction action,
     String? contentId,
   }) async {
+    // This queue signs engagement events as the current account. A share
+    // intent cannot travel in that envelope, even with its clip ID omitted.
+    if (action == ProductAnalyticsV2EngagementAction.shareTapped) return null;
     if (!_consumptionAnalyticsEnabled) return null;
     if (contentId != null &&
         (contentId.length != 64 ||

@@ -464,11 +464,19 @@ class _ProfileAvatarWithPendingActions extends StatelessWidget {
         return state != null && !state.isSupporter && state.isConfirmedInactive;
       },
     );
+    final isEmailUnconfirmed = context.select<EmailConfirmationCubit?, bool>(
+      (cubit) => cubit?.state.isUnconfirmed ?? false,
+    );
+    final isEmailMissing = context.select<EmailConfirmationCubit?, bool>(
+      (cubit) => cubit?.state.hasNoEmail ?? false,
+    );
     final pendingActions =
         ProfileActionType.pending(
           isOwnProfile: isOwnProfile,
           isAccountEnforced: isAccountEnforced,
           isAnonymous: isAnonymous,
+          isEmailUnconfirmed: isEmailUnconfirmed,
+          isEmailMissing: isEmailMissing,
           hasAnyProfileInfo: hasAnyProfileInfo,
           canBecomeSupporter: isConfirmedNonSupporter,
         ).where((action) {
@@ -478,6 +486,8 @@ class _ProfileAvatarWithPendingActions extends StatelessWidget {
             ProfileActionType.becomeSupporter =>
               !supporterPromptDismissal.isDismissed(),
             ProfileActionType.accountRestricted ||
+            ProfileActionType.confirmEmail ||
+            ProfileActionType.addEmail ||
             ProfileActionType.completeProfile => true,
           };
         }).toList();
@@ -694,6 +704,14 @@ class _ProfileActionLabel extends StatelessWidget {
         DivineIconName.warning,
         context.l10n.profileAccountRestricted,
       ),
+      ProfileActionType.confirmEmail => (
+        DivineIconName.envelopeSimple,
+        context.l10n.emailConfirmationTitle,
+      ),
+      ProfileActionType.addEmail => (
+        DivineIconName.envelopeSimplePlus,
+        context.l10n.emailConfirmationAddEmailTitle,
+      ),
       ProfileActionType.secureAccount => (
         DivineIconName.lockSimple,
         context.l10n.profileSecureYourAccount,
@@ -712,6 +730,8 @@ class _ProfileActionLabel extends StatelessWidget {
     final chip = switch (action) {
       ProfileActionType.accountRestricted =>
         context.vineColors.accentChipOrange,
+      ProfileActionType.confirmEmail ||
+      ProfileActionType.addEmail ||
       ProfileActionType.secureAccount ||
       ProfileActionType.completeProfile => context.vineColors.accentChipYellow,
       // A brand fill, the same in both appearances, paired as on primary

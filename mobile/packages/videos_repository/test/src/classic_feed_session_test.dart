@@ -26,6 +26,32 @@ HomeFeedResult _page(List<int> ids, {String? cursor = 'next'}) =>
 
 void main() {
   group('ClassicFeedSession', () {
+    test('keeps the active slot and filters a republished Classic', () async {
+      final original = _video(1).copyWith(addressableDTag: 'classic');
+      final next = _video(2);
+      final edited = original.copyWith(id: _id(3), eventCreatedAt: 2);
+      final hidden = edited.copyWith(id: _id(4), eventCreatedAt: 3);
+      final session = ClassicFeedSession(
+        initialVideos: [original, next],
+        filter: (videos) =>
+            videos.where((video) => video.id != hidden.id).toList(),
+        loadPage: (_) async => _page([]),
+      );
+      addTearDown(session.dispose);
+
+      session
+        ..activate(1)
+        ..replaceVideoRevision(edited)
+        ..replaceVideoRevision(original)
+        ..replaceVideoRevision(edited.copyWith(id: _id(5)));
+      expect(session.state.videos, [edited, next]);
+      expect(session.state.currentIndex, 1);
+
+      session.replaceVideoRevision(hidden);
+      expect(session.state.videos, [next]);
+      expect(session.state.currentIndex, 0);
+    });
+
     test(
       'one-shot sweep filters preserve identity and allow later recovery',
       () async {
@@ -71,6 +97,60 @@ void main() {
         expect(resumed.videos.map((video) => video.id), [2, 3].map(_id));
         expect(session.state.videos, resumed.videos);
         expect(reads, 1);
+      },
+    );
+
+    test(
+      'filters unavailable incoming videos while keeping the playing prefix',
+      () async {
+        final unavailable = <String>{};
+        final session = ClassicFeedSession(
+          isUnavailable: unavailable.contains,
+          loadPage: (request) async => request.cursor == null
+              ? HomeFeedResult(
+                  videos: [1, 2, 3, 4].map(_video).toList(),
+                  paginationCursor: 'next',
+                  hasMore: true,
+                )
+              : _page([5, 6], cursor: null),
+        );
+        addTearDown(session.dispose);
+
+        await session.loadInitial();
+        session.activate(1);
+        unavailable.addAll([1, 2, 4, 6].map(_id));
+        await session.loadMore();
+
+        expect(session.state.videos.map((v) => v.id), [1, 2, 3, 5].map(_id));
+        expect(session.state.currentIndex, 1);
+
+        await session.loadInitial(refresh: true);
+
+        expect(session.state.videos.map((v) => v.id), [_id(3)]);
+        expect(session.state.currentIndex, 0);
+      },
+    );
+
+    test(
+      'a republished revision keeps unavailable videos through the playing '
+      'slot',
+      () {
+        final unavailable = <String>{};
+        final republishable = _video(3).copyWith(addressableDTag: 'classic');
+        final edited = republishable.copyWith(id: _id(7), eventCreatedAt: 2);
+        final session = ClassicFeedSession(
+          initialVideos: [_video(1), _video(2), republishable],
+          isUnavailable: unavailable.contains,
+          loadPage: (_) async => _page([]),
+        );
+        addTearDown(session.dispose);
+
+        session.activate(1);
+        unavailable.add(_id(1));
+        session.replaceVideoRevision(edited);
+
+        expect(session.state.videos, [_video(1), _video(2), edited]);
+        expect(session.state.currentIndex, 1);
       },
     );
 
@@ -637,6 +717,198 @@ void main() {
 
         expect(requests, hasLength(2));
         expect(requests.last.cursor, isNull);
+      });
+    });
+
+    group('revokePersonalization', () {
+      HomeFeedResult archivePage(List<int> ids, {String? cursor = 'offset'}) =>
+          HomeFeedResult(
+            videos: ids.map(_video).toList(),
+            paginationCursor: cursor,
+            hasMore: cursor != null,
+          );
+
+      test(
+        'keeps reached videos, drops unplayed ones, and reads the next page '
+        'without personal context',
+        () async {
+          final requests = <ClassicRecommendationsRequest>[];
+          late final ClassicFeedSession session;
+          session = ClassicFeedSession(
+            initialVideos: [_video(1)],
+            loadPage: (request) async {
+              requests.add(request);
+              return session.personalizationRevoked
+                  ? archivePage([7, 8])
+                  : _page([2, 3, 4], cursor: 'adaptive');
+            },
+          );
+          addTearDown(session.dispose);
+          await session.loadInitial();
+          session.activate(1);
+          await session.settled;
+          final adaptiveRequests = requests.length;
+          expect(session.state.videos.map((v) => v.id), [1, 2, 3, 4].map(_id));
+
+          session.revokePersonalization();
+
+          expect(session.personalizationRevoked, isTrue);
+          expect(session.state.videos.map((v) => v.id), [1, 2].map(_id));
+          expect(session.state.currentIndex, 1);
+          expect(session.state.cursor, isNull);
+          expect(session.state.hasMore, isTrue);
+
+          await session.settled;
+          expect(requests, hasLength(adaptiveRequests + 1));
+          final archiveRequest = requests.last;
+          expect(archiveRequest.cursor, isNull);
+          expect(archiveRequest.recentInteractions, isEmpty);
+          expect(archiveRequest.recentVideoIds, isEmpty);
+          expect(archiveRequest.anchorVideoId, isNull);
+          expect(
+            session.state.videos.map((v) => v.id),
+            [1, 2, 7, 8].map(_id),
+          );
+          expect(session.state.currentIndex, 1);
+          expect(session.state.cursor, 'offset');
+        },
+      );
+
+      test('removes the playing video when content rules reject it', () async {
+        final hidden = <String>{};
+        final session = ClassicFeedSession(
+          initialVideos: [_video(1)],
+          filter: (videos) =>
+              videos.where((video) => !hidden.contains(video.id)).toList(),
+          loadPage: (_) async => _page([2, 3], cursor: null),
+        );
+        addTearDown(session.dispose);
+        await session.loadInitial();
+        session.activate(1);
+        await session.settled;
+
+        hidden.add(_id(2));
+        session.revokePersonalization();
+
+        expect(session.state.videos.map((v) => v.id), [_id(1)]);
+      });
+
+      test('discards an adaptive page that was in flight', () async {
+        final pending = Completer<HomeFeedResult>();
+        final requests = <ClassicRecommendationsRequest>[];
+        final session = ClassicFeedSession(
+          initialVideos: [_video(1)],
+          loadPage: (request) {
+            requests.add(request);
+            return requests.length == 1
+                ? pending.future
+                : Future.value(archivePage([7], cursor: null));
+          },
+        );
+        addTearDown(session.dispose);
+        unawaited(session.loadInitial());
+
+        session.revokePersonalization();
+        pending.complete(_page([2, 3]));
+        await session.settled;
+
+        expect(session.state.videos.map((v) => v.id), [1, 7].map(_id));
+        expect(requests.last.anchorVideoId, isNull);
+      });
+
+      test('keeps the archive cursor when privacy context changes', () async {
+        final requests = <ClassicRecommendationsRequest>[];
+        final session = ClassicFeedSession(
+          initialVideos: [_video(1)],
+          loadPage: (request) async {
+            requests.add(request);
+            return requests.length == 1
+                ? _page([2, 3], cursor: 'adaptive')
+                : archivePage([7, 8]);
+          },
+        );
+        addTearDown(session.dispose);
+        await session.loadInitial();
+        session.revokePersonalization();
+        await session.settled;
+        final afterRevocation = requests.length;
+        expect(session.state.cursor, 'offset');
+
+        session
+          ..recordInteraction(
+            ClassicFeedInteraction(
+              videoId: _id(7),
+              signal: ClassicFeedSignal.positive,
+            ),
+          )
+          ..activate(1)
+          ..resetContext();
+        await session.settled;
+
+        expect(requests, hasLength(afterRevocation));
+        expect(session.state.cursor, 'offset');
+      });
+
+      test(
+        'a page reporting recommendations does not resume adaptation',
+        () async {
+          final requests = <ClassicRecommendationsRequest>[];
+          final session = ClassicFeedSession(
+            initialVideos: [_video(1)],
+            loadPage: (request) async {
+              requests.add(request);
+              return _page([requests.length + 10]);
+            },
+          );
+          addTearDown(session.dispose);
+          await session.loadInitial();
+          session.revokePersonalization();
+          await session.settled;
+          session.activate(1);
+          await session.settled;
+
+          expect(requests, hasLength(2));
+          expect(requests.last.anchorVideoId, isNull);
+        },
+      );
+
+      test('is a no-op when repeated, unstarted, or disposed', () async {
+        final requests = <ClassicRecommendationsRequest>[];
+        final unstarted = ClassicFeedSession(
+          initialVideos: [_video(1)],
+          loadPage: (request) async {
+            requests.add(request);
+            return archivePage([2]);
+          },
+        );
+        addTearDown(unstarted.dispose);
+        unstarted
+          ..revokePersonalization()
+          ..revokePersonalization();
+        await unstarted.settled;
+        expect(requests, isEmpty);
+        expect(unstarted.state.videos.map((v) => v.id), [_id(1)]);
+
+        final empty = ClassicFeedSession(
+          loadPage: (request) async {
+            requests.add(request);
+            return archivePage([2]);
+          },
+        )..revokePersonalization();
+        addTearDown(empty.dispose);
+        expect(empty.state.videos, isEmpty);
+        expect(empty.personalizationRevoked, isTrue);
+
+        final disposed = ClassicFeedSession(
+          loadPage: (request) async {
+            requests.add(request);
+            return archivePage([2]);
+          },
+        );
+        await disposed.dispose();
+        disposed.revokePersonalization();
+        expect(disposed.personalizationRevoked, isFalse);
+        expect(requests, isEmpty);
       });
     });
 

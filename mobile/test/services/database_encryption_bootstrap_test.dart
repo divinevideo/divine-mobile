@@ -433,10 +433,12 @@ void main() {
         });
 
         test('leaves macOS trusting an empty read, as before', () async {
-          // macOS answers the probe too (12+), but its key stays on the
-          // `unlocked` class and a wrong `false` there would fail every fresh
-          // install closed for good.
+          // macOS answers the probe too (12+), but a wrong `false` there
+          // would fail every fresh install closed for good.
           debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+          when(() => storage.mOptions).thenReturn(
+            const MacOsOptions(useDataProtectionKeyChain: false),
+          );
           when(
             () => storage.isCupertinoProtectedDataAvailable(),
           ).thenAnswer((_) async => false);
@@ -1668,6 +1670,239 @@ void main() {
     });
   });
 
+  group('Mac App Store upgrade from the iPad app', () {
+    const duplicateItem = -25299;
+    final existingKey = 'ab' * 32;
+    late _MockSecureStorage storage;
+    late Map<String, (String, String)> items;
+
+    String accessibility(Invocation call) =>
+        (call.namedArguments[#mOptions] as MacOsOptions?)
+            ?.toMap()['accessibility'] ??
+        'unlocked';
+
+    setUp(() {
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      storage = _MockSecureStorage();
+      items = {};
+      when(() => storage.mOptions).thenReturn(MacOsOptions.defaultOptions);
+      when(
+        () => storage.read(
+          key: any(named: 'key'),
+          mOptions: any(named: 'mOptions'),
+        ),
+      ).thenAnswer((call) async {
+        final item = items[call.namedArguments[#key]];
+        return item?.$1 == accessibility(call) ? item?.$2 : null;
+      });
+      when(
+        () => storage.containsKey(
+          key: any(named: 'key'),
+          mOptions: any(named: 'mOptions'),
+        ),
+      ).thenAnswer(
+        (call) async =>
+            items[call.namedArguments[#key]]?.$1 == accessibility(call),
+      );
+      when(
+        () => storage.write(
+          key: any(named: 'key'),
+          value: any(named: 'value'),
+          mOptions: any(named: 'mOptions'),
+        ),
+      ).thenAnswer((call) async {
+        final slot = call.namedArguments[#key] as String;
+        final item = items[slot];
+        if (item != null && item.$1 != accessibility(call)) {
+          throw PlatformException(
+            code: 'Unexpected security result code',
+            details: duplicateItem,
+          );
+        }
+        items[slot] = (
+          accessibility(call),
+          call.namedArguments[#value] as String,
+        );
+      });
+      when(
+        () => storage.delete(
+          key: any(named: 'key'),
+          iOptions: any(named: 'iOptions'),
+          mOptions: any(named: 'mOptions'),
+        ),
+      ).thenAnswer((call) async {
+        final slot = call.namedArguments[#key] as String;
+        if (items[slot]?.$1 == accessibility(call)) items.remove(slot);
+      });
+    });
+
+    tearDown(() => debugDefaultTargetPlatformOverride = null);
+
+    DatabaseEncryptionBootstrap bootstrap({
+      bool keyDecrypts = true,
+      bool hasAlternateDatabase = false,
+      CipherMigrationOutcome outcome = CipherMigrationOutcome.alreadyEncrypted,
+      Future<void> Function()? deleteDatabase,
+    }) => DatabaseEncryptionBootstrap(
+      secureStorage: storage,
+      ensureRuntime: () async {},
+      isCipherAvailable: () => true,
+      migrate: (_) async => outcome,
+      canOpenEncryptedDatabase: (key) async =>
+          keyDecrypts && key == existingKey,
+      salvageDatabase: (_) async => false,
+      encryptedKeyMatches: (_) async => false,
+      hasAlternateDatabase: () async => hasAlternateDatabase,
+      deleteDatabase: deleteDatabase ?? () async => fail('Database was reset'),
+    );
+
+    test('opens the existing database with the iPad app key', () async {
+      items[dbCipherKeyStorageKey] = ('first_unlock', existingKey);
+
+      expect(await bootstrap().resolveCipherKey(), existingKey);
+      expect(items, {dbCipherKeyStorageKey: ('first_unlock', existingKey)});
+      verifyNever(
+        () => storage.write(
+          key: any(named: 'key'),
+          value: any(named: 'value'),
+          mOptions: any(named: 'mOptions'),
+        ),
+      );
+    });
+
+    test('fails closed when the iPad key cannot be read', () async {
+      items[dbCipherKeyStorageKey] = ('first_unlock', existingKey);
+      when(
+        () => storage.read(
+          key: any(named: 'key'),
+          mOptions: any(named: 'mOptions', that: isNotNull),
+        ),
+      ).thenThrow(
+        PlatformException(
+          code: 'Unexpected security result code',
+          details: -25308,
+        ),
+      );
+
+      await expectLater(
+        bootstrap().resolveCipherKey(),
+        throwsA(isA<DatabaseCipherStorageUnavailableException>()),
+      );
+      expect(items, {dbCipherKeyStorageKey: ('first_unlock', existingKey)});
+    });
+
+    test('keeps using a key created by the native Mac app', () async {
+      items[dbCipherKeyStorageKey] = ('unlocked', existingKey);
+
+      expect(await bootstrap().resolveCipherKey(), existingKey);
+      expect(items, {dbCipherKeyStorageKey: ('unlocked', existingKey)});
+    });
+
+    test('creates a new key in the Mac default class', () async {
+      final key = await bootstrap(
+        outcome: CipherMigrationOutcome.noDatabase,
+      ).resolveCipherKey();
+
+      expect(items, {dbCipherKeyStorageKey: ('unlocked', key)});
+    });
+
+    test(
+      'restores a key from an interrupted iPad accessibility update',
+      () async {
+        items[dbCipherKeyAccessibilityBackupStorageKey] = (
+          'first_unlock',
+          existingKey,
+        );
+
+        expect(await bootstrap().resolveCipherKey(), existingKey);
+        expect(items, {dbCipherKeyStorageKey: ('unlocked', existingKey)});
+      },
+    );
+
+    test('adopts the key an earlier iPad build left in the v2 slot', () async {
+      items[dbCipherKeyV2StorageKey] = (
+        'first_unlock_this_device',
+        existingKey,
+      );
+
+      expect(await bootstrap().resolveCipherKey(), existingKey);
+      expect(items, {dbCipherKeyStorageKey: ('unlocked', existingKey)});
+    });
+
+    test(
+      'rotates a key that cannot decrypt the database in its own class',
+      () async {
+        items[dbCipherKeyStorageKey] = ('first_unlock', existingKey);
+        var reset = false;
+
+        final replacement = await bootstrap(
+          keyDecrypts: false,
+          deleteDatabase: () async => reset = true,
+        ).resolveCipherKey();
+
+        expect(replacement, isNot(existingKey));
+        expect(items, {dbCipherKeyStorageKey: ('first_unlock', replacement)});
+        expect(reset, isTrue);
+      },
+    );
+
+    test('clears iPad recovery copies before writing a new key', () async {
+      items.addAll({
+        dbCipherKeyStorageKey: ('first_unlock', existingKey),
+        dbCipherKeyAccessibilityBackupStorageKey: ('first_unlock', existingKey),
+        dbCipherKeyV2StorageKey: ('first_unlock_this_device', 'cd' * 32),
+      });
+
+      final replacement = await bootstrap(
+        keyDecrypts: false,
+        deleteDatabase: () async {},
+      ).resolveCipherKey();
+
+      expect(items, {dbCipherKeyStorageKey: ('first_unlock', replacement)});
+    });
+
+    test(
+      'preserves a key that could still open the other Mac database',
+      () async {
+        items[dbCipherKeyStorageKey] = ('first_unlock', existingKey);
+
+        await expectLater(
+          bootstrap(
+            keyDecrypts: false,
+            hasAlternateDatabase: true,
+          ).resolveCipherKey(),
+          throwsA(isA<DatabaseCipherStorageUnavailableException>()),
+        );
+        expect(items, {dbCipherKeyStorageKey: ('first_unlock', existingKey)});
+        verifyNever(
+          () => storage.write(
+            key: any(named: 'key'),
+            value: any(named: 'value'),
+            mOptions: any(named: 'mOptions'),
+          ),
+        );
+      },
+    );
+
+    test('removes iPad database keys during an explicit key reset', () async {
+      items.addAll({
+        dbCipherKeyStorageKey: ('first_unlock', existingKey),
+        dbCipherKeyAccessibilityBackupStorageKey: ('first_unlock', existingKey),
+        dbCipherKeyV2StorageKey: ('first_unlock_this_device', existingKey),
+        'auth_key': ('first_unlock', 'keep'),
+      });
+
+      await resetEncryptedDatabaseCache(
+        secureStorage: storage,
+        legacySecureStorage: storage,
+        hasAlternateDatabase: () async => false,
+        deleteDatabase: () async {},
+      );
+
+      expect(items, {'auth_key': ('first_unlock', 'keep')});
+    });
+  });
+
   group('resetEncryptedDatabaseCache', () {
     late _MockSecureStorage storage;
     late Map<String, String> store;
@@ -1718,6 +1953,30 @@ void main() {
         expect(store, isNot(contains(dbCipherKeyStorageKey)));
         expect(store['auth_key'], equals('must-stay'));
         expect(reset, isTrue);
+      },
+    );
+
+    test(
+      'retains the cipher key while backing up a coexisting database',
+      () async {
+        final primary = store[dbCipherKeyStorageKey];
+        final legacyPrimary = legacyStore[dbCipherKeyStorageKey];
+        expect(primary, isNotNull);
+        expect(legacyPrimary, isNotNull);
+        var backedUp = false;
+
+        await resetEncryptedDatabaseCache(
+          secureStorage: storage,
+          legacySecureStorage: legacyStorage,
+          hasAlternateDatabase: () async => true,
+          deleteDatabase: () async => backedUp = true,
+        );
+
+        expect(backedUp, isTrue);
+        expect(store[dbCipherKeyStorageKey], primary);
+        expect(legacyStore[dbCipherKeyStorageKey], legacyPrimary);
+        verifyNever(() => storage.delete(key: any(named: 'key')));
+        verifyNever(() => legacyStorage.delete(key: any(named: 'key')));
       },
     );
 

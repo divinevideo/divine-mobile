@@ -162,6 +162,7 @@ void main() {
       // no registered Scaffold silently queues SnackBars instead of showing
       // them. Opt in when the test asserts on one.
       bool wrapInScaffold = false,
+      VoidCallback? onLeaveMessages,
     }) {
       if (state != null) {
         whenListen(
@@ -208,10 +209,10 @@ void main() {
       );
 
       final baseInbox = textScaler == null
-          ? const InboxView()
+          ? InboxView(onLeaveMessages: onLeaveMessages)
           : MediaQuery(
               data: MediaQueryData(textScaler: textScaler),
-              child: const InboxView(),
+              child: InboxView(onLeaveMessages: onLeaveMessages),
             );
       final inbox = wrapInScaffold ? Scaffold(body: baseInbox) : baseInbox;
 
@@ -245,6 +246,20 @@ void main() {
     }
 
     group('renders', () {
+      testWidgets(
+        'deliberately leaving the Messages pane cancels its pending tap',
+        (tester) async {
+          var exits = 0;
+          await tester.pumpWidget(buildSubject(onLeaveMessages: () => exits++));
+          await tester.pump();
+          await tester.tap(find.text('Messages').first);
+          await tester.pump();
+          await tester.tap(find.text('Notifications').first);
+          await tester.pump();
+          expect(exits, 1);
+        },
+      );
+
       testWidgets('renders $InboxSegmentedToggle', (tester) async {
         await tester.pumpWidget(buildSubject());
         await tester.pump();
@@ -522,6 +537,7 @@ void main() {
               lastMessageContent: null,
               lastMessageTimestamp: null,
               lastMessageSenderPubkey: null,
+              lastMessageIsVideoShare: false,
               hasUnread: false,
             ),
           },

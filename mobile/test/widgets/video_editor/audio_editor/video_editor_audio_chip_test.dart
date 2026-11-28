@@ -18,6 +18,7 @@ AudioEvent _createTestAudioEvent({
   String? url,
   String? title,
   String? source,
+  String? creatorName,
   double? duration,
 }) {
   return AudioEvent(
@@ -27,6 +28,7 @@ AudioEvent _createTestAudioEvent({
     url: url ?? 'https://example.com/audio/$id.mp3',
     title: title,
     source: source,
+    creatorName: creatorName,
     duration: duration ?? 5.0,
   );
 }
@@ -155,6 +157,22 @@ void main() {
         // Both title and source should be rendered in rich text
         expect(find.textContaining('Cool Track'), findsOneWidget);
         expect(find.textContaining('Artist Name'), findsOneWidget);
+      });
+
+      testWidgets('names the creator of a library sound, not its source link', (
+        tester,
+      ) async {
+        const source = 'https://example.com/sounds/crypto';
+        final sound = _createTestAudioEvent(
+          title: 'Crypto',
+          source: source,
+          creatorName: 'Kevin MacLeod',
+        );
+        await tester.pumpWidget(buildWidget(selectedSound: sound));
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('Kevin MacLeod'), findsOneWidget);
+        expect(find.textContaining(source), findsNothing);
       });
 
       testWidgets('shows audio bars when sound selected', (tester) async {

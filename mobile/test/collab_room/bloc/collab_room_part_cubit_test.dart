@@ -18,9 +18,9 @@ const _author =
 const _sam = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
 const _roomId = '0123456789abcdef0123456789abcdef';
 
-const CollabRoomUpload _upload = (
-  url: 'https://media.example/part',
-  metadata: DmFileMetadata(
+const CollabRoomUpload _upload = CollabRoomUpload(
+  fileUrl: 'https://media.example/part',
+  fileMetadata: DmFileMetadata(
     fileType: 'video/mp4',
     encryptionAlgorithm: 'aes-gcm',
     decryptionKey: 'key',

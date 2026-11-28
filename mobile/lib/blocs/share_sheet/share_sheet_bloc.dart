@@ -2,16 +2,21 @@
 // ABOUTME: Manages contact loading, recipient selection, video sharing,
 // ABOUTME: and one-shot actions (copy link, share via)
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:bloc_concurrency/bloc_concurrency.dart';
+import 'package:dm_repository/dm_repository.dart'
+    show ShareSessionEndedException;
 import 'package:equatable/equatable.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
 import 'package:openvine/blocs/close_guard.dart';
+import 'package:openvine/blocs/share_delivery/share_delivery_cubit.dart';
 import 'package:openvine/blocs/share_sheet/reportable_sites.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/observability/reportable_error.dart';
@@ -44,6 +49,9 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
     required FollowRepository followRepository,
     required UserRankingSignalsLoader rankingSignalsLoader,
     required String currentUserPubkey,
+    required bool Function() isOwnerCurrent,
+    this.onQueued,
+    Stream<void>? eligibilityChanges,
     BaseCacheManager? cacheManager,
   }) : _video = video,
        _videoSharingService = videoSharingService,
@@ -51,8 +59,33 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
        _followRepository = followRepository,
        _rankingSignalsLoader = rankingSignalsLoader,
        _currentUserPubkey = currentUserPubkey,
-       _cacheManager = cacheManager,
-       super(const ShareSheetState()) {
+       _isOwnerCurrent = isOwnerCurrent,
+       super(
+         ShareSheetState(
+           contacts: [
+             for (final user in videoSharingService.recentlySharedWith)
+               if (!pubkeysEqual(user.pubkey, currentUserPubkey) &&
+                   !isRetiredModerationAccount(user.pubkey) &&
+                   rankingSignalsLoader.isEligible(user.pubkey))
+                 user,
+           ],
+         ),
+       ) {
+    on<ShareSheetOwnerChanged>((_, emit) => emit(_expiredState()));
+    on<ShareSheetEligibilityChanged>((event, emit) {
+      if (!_checkOwner()) return;
+      emit(
+        state.copyWith(
+          disabledPubkeys: _disabled(state.contacts, state.unavailablePubkeys),
+        ),
+      );
+    });
+    _eligibility = eligibilityChanges?.listen((_) {
+      addIfOpen(const ShareSheetEligibilityChanged());
+    });
+    on<ShareSheetThumbnailPrepared>(
+      (event, emit) => emit(state.copyWith(readyThumbnailPath: event.path)),
+    );
     on<ShareSheetContactsLoadRequested>(_onContactsLoadRequested);
     on<ShareSheetRecipientToggled>(_onRecipientToggled);
     on<ShareSheetSendRequested>(_onSendRequested, transformer: droppable());
@@ -64,7 +97,47 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
       _onShareViaRequested,
       transformer: droppable(),
     );
+    final thumbnail = video.effectiveThumbnailUrl;
+    if (!kIsWeb && cacheManager != null && thumbnail != null) {
+      unawaited(_prepareCachedThumbnail(cacheManager, thumbnail));
+    }
   }
+
+  StreamSubscription<void>? _eligibility;
+
+  @override
+  Future<void> close() async {
+    await _eligibility?.cancel();
+    return super.close();
+  }
+
+  /// Whether the account that opened the sheet has gone, now or before.
+  bool get _ownerLost => state.ownerExpired || !_isOwnerCurrent();
+
+  /// An empty state that latches the owner as gone and closes the sheet.
+  ShareSheetState _expiredState() => ShareSheetState(
+    ownerExpired: true,
+    actionResult: ShareSheetAccountChanged(),
+  );
+
+  /// Whether work may continue for the sheet's owner; emits the expired
+  /// state when it may not.
+  bool _checkOwner() {
+    if (isClosed) return false;
+    if (!_ownerLost) return true;
+    emitIfOpen(_expiredState());
+    return false;
+  }
+
+  /// Contacts that cannot be picked: ineligible now, or [unavailable].
+  Set<String> _disabled(
+    Iterable<ShareableUser> contacts,
+    Set<String> unavailable,
+  ) => {
+    for (final contact in contacts)
+      if (!_rankingSignalsLoader.isEligible(contact.pubkey)) contact.pubkey,
+    ...unavailable,
+  };
 
   final VideoEvent _video;
   final VideoSharingService _videoSharingService;
@@ -72,7 +145,35 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
   final FollowRepository _followRepository;
   final UserRankingSignalsLoader _rankingSignalsLoader;
   final String _currentUserPubkey;
-  final BaseCacheManager? _cacheManager;
+  final bool Function() _isOwnerCurrent;
+  final void Function(ShareSheetEnqueueResult)? onQueued;
+  // A local lookup may still be pending when Share via is tapped. In that
+  // case the platform receives the link alone. Never fetch remote media here.
+  // The image cache can evict the file while the sheet is open; the platform
+  // then gets the link alone rather than a path to nothing.
+  String? _existingThumbnailPath() {
+    final path = state.readyThumbnailPath;
+    return path != null && File(path).existsSync() ? path : null;
+  }
+
+  Future<void> _prepareCachedThumbnail(
+    BaseCacheManager cacheManager,
+    String thumbnail,
+  ) async {
+    try {
+      final file = (await cacheManager.getFileFromCache(thumbnail))?.file;
+      if (file == null ||
+          !RegExp(
+            r'\.(jpe?g|png|webp|gif)$',
+            caseSensitive: false,
+          ).hasMatch(file.path)) {
+        return;
+      }
+      addIfOpen(ShareSheetThumbnailPrepared(file.path));
+    } catch (_) {
+      // Cache cleanup or a failed file lookup leaves the attachment optional.
+    }
+  }
 
   void _addUnexpectedError(
     Object error,
@@ -100,9 +201,31 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
       // contact list written by another Nostr client can self-follow, and
       // recents accumulate whoever a share was sent to. Retired moderation
       // accounts refuse sends, so they cannot be offered as recipients either.
+      try {
+        await _videoSharingService.warmRecents(_currentUserPubkey);
+      } on Object catch (error, stackTrace) {
+        // A local storage read: the sheet goes on without recents, and the
+        // observer still reports a programming error the read surfaced.
+        addError(error, stackTrace);
+      }
+      if (!_checkOwner()) return;
       var recentUsers = _videoSharingService.recentlySharedWith
           .where((user) => _isSupportedRecipient(user.pubkey))
           .toList();
+      final visibleKeys = state.contacts.map((u) => u.pubkey).toSet();
+      final newlyWarm = recentUsers
+          .where(
+            (u) =>
+                u.hasVisibleIdentity &&
+                _rankingSignalsLoader.isEligible(u.pubkey) &&
+                visibleKeys.add(u.pubkey),
+          )
+          .toList();
+      if (newlyWarm.isNotEmpty) {
+        emitIfOpen(
+          state.copyWith(contacts: [...state.contacts, ...newlyWarm]),
+        );
+      }
       final followList = _followRepository.followingPubkeys
           .where(_isSupportedRecipient)
           .toSet();
@@ -129,7 +252,7 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
           stackTrace,
         );
       }
-      if (isClosed) return;
+      if (!_checkOwner()) return;
       final snapshot = signals;
       if (snapshot != null) {
         recentUsers = recentUsers
@@ -173,46 +296,37 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
             ShareableUser.fromProfile(pubkey, null),
       ];
 
-      List<ShareableUser> mergeVisibleContacts(List<ShareableUser> base) {
+      List<ShareableUser> mergeVisibleContacts(
+        List<ShareableUser> base, {
+        bool finished = false,
+      }) {
         final updates = {
           for (final contact in base)
-            if (snapshot != null ||
-                _rankingSignalsLoader.isEligible(contact.pubkey))
+            if (_rankingSignalsLoader.isEligible(contact.pubkey))
               contact.pubkey: contact,
         };
-        final loadedPubkeys = {...recentPubkeys, ...remainingPubkeys};
-        return [
-          // Preserve the first visible order, including recipients selected
-          // while the cache read or hydration was in flight. Identity-less
-          // misses disappear after hydration; a miss that hydration identifies
-          // keeps its place, and only rows not shown before append.
+        final merged = [
           for (final contact in state.contacts)
-            if (_isSupportedRecipient(contact.pubkey) &&
-                !excludedPubkeys.contains(contact.pubkey) &&
-                (snapshot != null ||
-                    _rankingSignalsLoader.isEligible(contact.pubkey)))
-              if (updates.remove(contact.pubkey) case final updated?)
-                updated
-              else if (!loadedPubkeys.contains(contact.pubkey) &&
-                  contact.hasVisibleIdentity)
-                contact,
+            updates.remove(contact.pubkey) ?? contact,
           ...updates.values,
         ];
+        // Removing an unresolved slot ahead of a visible person would move
+        // that person's Send button. Only trailing empty slots can disappear.
+        if (finished) {
+          while (merged.isNotEmpty && !merged.last.hasVisibleIdentity) {
+            merged.removeLast();
+          }
+        }
+        return merged;
       }
 
-      // Cache-first: one batched Drift read already covers what the visible
-      // row needs, so the sheet renders now instead of shimmering through
-      // the network batch. Recents already carry their display data
-      // snapshotted at last-send time. Staleness is session-bounded:
-      // VideoSharingService._recentlySharedWith is in-memory only and resets
-      // to empty on app restart, so a stale avatar or name is visible at most
-      // within the same session until the user shares with that contact
-      // again. See #5391.
+      // Read identities in one local batch before hydrating misses.
       final cached = remainingPubkeys.isEmpty
           ? const <UserProfile>[]
           : await _profileRepository.getCachedProfiles(
               pubkeys: remainingPubkeys,
             );
+      if (!_checkOwner()) return;
       final cachedByPubkey = {
         for (final profile in cached)
           if (identifiedContact(profile.pubkey, profile) != null)
@@ -237,10 +351,13 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
         includeMisses: true,
       );
 
+      final visible = mergeVisibleContacts(cacheFirstContacts);
       if (!emitIfOpen(
         state.copyWith(
           status: ShareSheetStatus.ready,
-          contacts: mergeVisibleContacts(cacheFirstContacts),
+          contacts: visible,
+          disabledPubkeys: _disabled(visible, excludedPubkeys),
+          unavailablePubkeys: excludedPubkeys,
           clearActionResult: true,
         ),
       )) {
@@ -266,17 +383,24 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
         final profiles = await _profileRepository.fetchBatchProfiles(
           pubkeys: cacheMisses,
         );
-        if (isClosed) return;
+        if (!_checkOwner()) return;
 
         final hydrated = buildContacts(
           {...cachedByPubkey, ...profiles},
           includeMisses: false,
         );
-        final merged = mergeVisibleContacts(hydrated);
+        final merged = mergeVisibleContacts(hydrated, finished: true);
+        final unavailable = {
+          ...excludedPubkeys,
+          for (final contact in merged)
+            if (!contact.hasVisibleIdentity) contact.pubkey,
+        };
         emitIfOpen(
           state.copyWith(
             status: ShareSheetStatus.ready,
             contacts: merged,
+            disabledPubkeys: _disabled(merged, unavailable),
+            unavailablePubkeys: unavailable,
             clearActionResult: true,
           ),
         );
@@ -293,6 +417,7 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
         );
       }
     } catch (e, stackTrace) {
+      if (!_checkOwner()) return;
       _addUnexpectedError(
         e,
         stackTrace,
@@ -306,8 +431,8 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
       emitIfOpen(
         state.copyWith(
           status: ShareSheetStatus.ready,
-          contacts: [],
-          clearActionResult: true,
+          contacts: state.contacts,
+          disabledPubkeys: _disabled(state.contacts, state.unavailablePubkeys),
         ),
       );
     }
@@ -332,27 +457,38 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
     final recipient = event.recipient;
     // Find People already leaves these out (#8351, #9711). Refused here too,
     // so no caller can select one.
-    if (!_isSupportedRecipient(recipient.pubkey)) return;
+    if (!_checkOwner() || state.isSending) return;
+    final alreadyPicked = state.attemptedRecipients.any(
+      (r) => r.pubkey == recipient.pubkey,
+    );
+    if (!alreadyPicked &&
+        (!_isSupportedRecipient(recipient.pubkey) ||
+            !_rankingSignalsLoader.isEligible(recipient.pubkey) ||
+            state.disabledPubkeys.contains(recipient.pubkey))) {
+      return;
+    }
 
-    final updatedSelection = state.isSelected(recipient)
+    final updatedSelection = alreadyPicked
         ? [
-            for (final r in state.selectedRecipients)
+            for (final r in state.attemptedRecipients)
               if (r.pubkey != recipient.pubkey) r,
           ]
-        : [...state.selectedRecipients, recipient];
+        : [...state.attemptedRecipients, recipient];
 
     // Find People can pick someone who isn't in the contacts row yet —
-    // prepend them so the selected contact is visible when the picker closes.
+    // append them so existing contacts retain their positions.
     // Keep every existing contact in its current relative order.
     final inContacts = state.contacts.any((c) => c.pubkey == recipient.pubkey);
     final updatedContacts = inContacts
         ? state.contacts
-        : [recipient, ...state.contacts];
+        : [...state.contacts, recipient];
 
     emit(
       state.copyWith(
         selectedRecipients: updatedSelection,
         contacts: updatedContacts,
+        refusedRecipients: const [],
+        sendFailed: false,
         clearActionResult: true,
       ),
     );
@@ -366,89 +502,95 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
     ShareSheetSendRequested event,
     Emitter<ShareSheetState> emit,
   ) async {
-    if (state.selectedRecipients.isEmpty || state.isSending) return;
+    final only = event.only;
+    if (only != null &&
+        (state.attemptedRecipients.isNotEmpty ||
+            (event.message?.trim().isNotEmpty ?? false))) {
+      return;
+    }
+    final recipients = only == null ? state.attemptedRecipients : [only];
+    if (recipients.isEmpty || state.isSending) return;
+    if (_ownerLost) {
+      emit(state.copyWith(actionResult: ShareSheetAccountChanged()));
+      return;
+    }
 
     // Wait only for local validation and durable enqueue. Relay discovery,
     // publishing and retries belong to the repository after the sheet closes.
-    emit(state.copyWith(isSending: true, clearActionResult: true));
+    emit(
+      state.copyWith(
+        isSending: true,
+        refusedRecipients: const [],
+        sendFailed: false,
+        clearActionResult: true,
+      ),
+    );
 
     try {
-      final recipients = state.selectedRecipients;
       final message = event.message?.trim();
 
       // Fans out one DM per recipient (each gets its own gift wrap).
-      final results = await _videoSharingService.shareVideoWithMultipleUsers(
-        video: _video,
-        recipientPubkeys: [for (final r in recipients) r.pubkey],
-        personalMessage: message?.isEmpty == true ? null : message,
-      );
-
-      if (isClosed) return;
-
-      final sent = <ShareableUser>[];
-      final retrying = <ShareableUser>[];
-      final notSent = <ShareableUser>[];
-      for (final r in recipients) {
-        switch (results[r.pubkey]?.delivery) {
-          case ShareDelivery.sent:
-            sent.add(r);
-          case ShareDelivery.retrying:
-            retrying.add(r);
-          case ShareDelivery.notSent || null:
-            notSent.add(r);
-        }
-      }
-
-      // Non-null for every selectable row — both pickers resolve the name
-      // through `dmPeerDisplayName` before selection. The generated fallback
-      // is the naming chain's own floor for a peer with no profile, and unlike
-      // a bare 'user' it is neither English nor a second answer to "who is
-      // this".
-      List<String> namesOf(List<ShareableUser> users) => [
-        for (final r in users)
-          r.displayName ?? UserProfile.defaultDisplayNameFor(r.pubkey),
+      final eligible = [
+        for (final recipient in recipients)
+          if (_isSupportedRecipient(recipient.pubkey) &&
+              !state.disabledPubkeys.contains(recipient.pubkey) &&
+              _rankingSignalsLoader.isEligible(recipient.pubkey))
+            recipient.pubkey,
       ];
+      final results = eligible.isEmpty
+          ? const <String, ShareResult>{}
+          : await _videoSharingService.shareVideoWithMultipleUsers(
+              video: _video,
+              recipientPubkeys: eligible,
+              personalMessage: message?.isEmpty == true ? null : message,
+            );
 
-      // The send is dismiss-and-forget, so the selection is always cleared.
-      // A queued recipient is replayed by OutgoingDmRetryService with the
-      // SAME rumor id; re-sending from the sheet would mint a NEW one the
-      // receiver can't dedup, delivering twice. A refused recipient was never
-      // queued and a re-send is refused again. Neither is kept selected; the
-      // result names both instead (#8672).
-      if (retrying.isEmpty && notSent.isEmpty) {
-        final single = recipients.length == 1 ? sent.single : null;
-        emit(
-          state.copyWith(
-            isSending: false,
-            selectedRecipients: const [],
-            actionResult: ShareSheetSendSuccess(
-              recipientNames: namesOf(sent),
-              recipientPubkey: single?.pubkey,
-              conversationId: single == null
-                  ? null
-                  : results[single.pubkey]?.conversationId,
+      if (_ownerLost) {
+        if (!isClosed && !emit.isDone) {
+          emit(
+            state.copyWith(
+              isSending: false,
+              actionResult: ShareSheetAccountChanged(),
             ),
-          ),
-        );
-      } else {
-        Log.warning(
-          'Share incomplete: ${sent.length} sent, ${retrying.length} queued '
-          'for background retry, ${notSent.length} not sent',
-          name: 'ShareSheetBloc',
-          category: LogCategory.ui,
-        );
-        emit(
-          state.copyWith(
-            isSending: false,
-            selectedRecipients: const [],
-            actionResult: ShareSheetSendIncomplete(
-              sentNames: namesOf(sent),
-              retryingNames: namesOf(retrying),
-              notSentNames: namesOf(notSent),
-            ),
-          ),
-        );
+          );
+        }
+        return;
       }
+      final result = ShareSheetEnqueueResult(_currentUserPubkey, [
+        for (final r in recipients)
+          (
+            pubkey: r.pubkey,
+            name: r.displayName ?? UserProfile.defaultDisplayNameFor(r.pubkey),
+            outcome:
+                results[r.pubkey.trim().toLowerCase()] ??
+                const ShareResult.failure(ShareRefusal.unavailable),
+          ),
+      ]);
+      final noneQueued = result.noneQueued;
+      // The durable commit can outlive this sheet. Hand it to the account's
+      // app-shell tracker even if its route and emitter have already closed.
+      if (!noneQueued) onQueued?.call(result);
+      if (isClosed || emit.isDone) return;
+      emit(
+        state.copyWith(
+          isSending: false,
+          // A queued row dismisses the sheet; the draft is kept only when
+          // nothing was queued.
+          selectedRecipients: noneQueued ? recipients : const [],
+          refusedRecipients: noneQueued ? result.recipients : const [],
+          actionResult: result,
+        ),
+      );
+    } on ShareSessionEndedException catch (e, stackTrace) {
+      // Expected when the account changes mid-send; nothing was queued.
+      addError(e, stackTrace);
+      Log.info(
+        'Share not queued: the session ended first',
+        name: 'ShareSheetBloc',
+        category: LogCategory.ui,
+      );
+      if (isClosed) return;
+      _emitSendFailure(emit);
     } catch (e, stackTrace) {
       _addUnexpectedError(
         e,
@@ -461,28 +603,36 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
         category: LogCategory.ui,
       );
       if (isClosed) return;
-      emit(
-        state.copyWith(
-          isSending: false,
-          selectedRecipients: const [],
-          actionResult: ShareSheetSendFailure(),
-        ),
-      );
+      _emitSendFailure(emit);
     }
+  }
+
+  /// Ends a send that threw: a lost owner closes the sheet, otherwise the
+  /// failure stays on screen until the selection changes or a send starts.
+  void _emitSendFailure(Emitter<ShareSheetState> emit) {
+    final ownerLost = _ownerLost;
+    emit(
+      state.copyWith(
+        isSending: false,
+        sendFailed: !ownerLost,
+        actionResult: ownerLost
+            ? ShareSheetAccountChanged()
+            : ShareSheetSendFailure(),
+      ),
+    );
   }
 
   // --------------------------------------------------------------------------
   // Copy / Share actions (BLoC generates data, UI handles platform calls)
   // --------------------------------------------------------------------------
 
-  Future<void> _onCopyLinkRequested(
+  void _onCopyLinkRequested(
     ShareSheetCopyLinkRequested event,
     Emitter<ShareSheetState> emit,
-  ) async {
+  ) {
     try {
       final canonical = _videoSharingService.generateShareUrl(_video);
-      final url = await _videoSharingService.shortenExternalUrl(canonical);
-      if (isClosed || emit.isDone) return;
+      final url = _videoSharingService.cachedShortUrl(canonical) ?? canonical;
       emit(
         state.copyWith(
           actionResult: ShareSheetCopiedToClipboard(
@@ -502,55 +652,25 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
         name: 'ShareSheetBloc',
         category: LogCategory.ui,
       );
-      if (isClosed || emit.isDone) return;
       emit(state.copyWith(actionResult: ShareSheetActionFailure()));
     }
   }
 
-  Future<void> _onShareViaRequested(
+  void _onShareViaRequested(
     ShareSheetShareViaRequested event,
     Emitter<ShareSheetState> emit,
-  ) async {
+  ) {
     try {
       final shareData = _videoSharingService.generateShareData(_video);
-      final shareUrl = await _videoSharingService.shortenExternalUrl(
-        shareData.shareUrl,
-      );
-      if (isClosed || emit.isDone) return;
-
-      // Download thumbnail if available and a cache manager was provided.
-      // Copy to a temp file with a .jpg extension so iOS recognises it as
-      // an image rather than a generic document.
-      String? thumbnailPath;
-      final thumbUrl = shareData.thumbnailUrl;
-      if (thumbUrl != null && _cacheManager != null) {
-        try {
-          final file = await _cacheManager
-              .getSingleFile(thumbUrl)
-              .timeout(const Duration(seconds: 5));
-          final tmpDir = Directory.systemTemp;
-          final tmpFile = File('${tmpDir.path}/divine_share_thumb.jpg');
-          await file.copy(tmpFile.path);
-          thumbnailPath = tmpFile.path;
-        } catch (e) {
-          // Intentional silent fallback (no addError): sharing proceeds
-          // without a thumbnail attachment. No caller-visible failure —
-          // the share sheet still opens with the URL + title.
-          Log.warning(
-            'Thumbnail download failed, sharing without image: $e',
-            name: 'ShareSheetBloc',
-            category: LogCategory.ui,
-          );
-        }
-      }
-
-      if (isClosed || emit.isDone) return;
+      final shareUrl =
+          _videoSharingService.cachedShortUrl(shareData.shareUrl) ??
+          shareData.shareUrl;
       final title = shareData.title;
       emit(
         state.copyWith(
           actionResult: ShareSheetShareViaTriggered(
             shareUrl: shareUrl,
-            thumbnailPath: thumbnailPath,
+            thumbnailPath: _existingThumbnailPath(),
             title: title,
             subject: title,
           ),
@@ -567,7 +687,6 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
         name: 'ShareSheetBloc',
         category: LogCategory.ui,
       );
-      if (isClosed || emit.isDone) return;
       emit(state.copyWith(actionResult: ShareSheetActionFailure()));
     }
   }

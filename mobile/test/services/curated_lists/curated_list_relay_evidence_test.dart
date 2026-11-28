@@ -223,6 +223,82 @@ void main() {
     );
 
     test(
+      'a sealed non-video item decodes, an unknown record stays opaque',
+      () async {
+        final incoming = await event();
+        await evidence.observe(incoming);
+        expect(
+          evidence.decoded(
+            incoming,
+            const UnsealedItemTags.unsealed(
+              [
+                ['e', _video],
+                ['future', 'item'],
+              ],
+              hasCompleteItemSnapshot: true,
+            ),
+          ),
+          isFalse,
+        );
+        expect(
+          evidence.decoded(
+            incoming,
+            const UnsealedItemTags.unsealed(
+              [
+                ['e', _video],
+                ['p', _video],
+              ],
+              hasCompleteItemSnapshot: true,
+            ),
+          ),
+          isTrue,
+        );
+      },
+    );
+
+    for (final isPrivate in [false, true]) {
+      test(
+        'decodes a preserved non-video address (private=$isPrivate)',
+        () async {
+          final items = [
+            ['e', _video],
+            ['a', '30023:$owner:article:slug', 'wss://example.com'],
+          ];
+          final incoming = isPrivate
+              ? await event(plaintext: jsonEncode(items))
+              : Event(
+                  owner,
+                  30005,
+                  [
+                    ['d', _id],
+                    ['title', 'Public collection'],
+                    ...items,
+                  ],
+                  '',
+                  createdAt: 1700000000,
+                );
+          if (!isPrivate) await signer.signEvent(incoming);
+          expect(await evidence.observe(incoming), isTrue);
+          expect(
+            evidence.decoded(
+              incoming,
+              isPrivate
+                  ? UnsealedItemTags.unsealed(
+                      items,
+                      hasCompleteItemSnapshot: true,
+                    )
+                  : const UnsealedItemTags.notSealed(),
+            ),
+            isTrue,
+          );
+          expect(evidence.allows(list()), isFalse);
+          await evidence.reconciled([incoming]);
+          expect(evidence.allows(list()), isTrue);
+        },
+      );
+    }
+
+    test(
       'older and empty readbacks cannot retire a newer opaque revision',
       () async {
         final older = await event();

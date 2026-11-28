@@ -1,5 +1,6 @@
 // ABOUTME: Cubit polling the featured Explore tab configuration.
-// ABOUTME: Repository owns caching and gating; this owns cadence and lifecycle.
+// ABOUTME: Repository owns caching and eligibility; this owns cadence,
+// ABOUTME: expiry and lookup status.
 
 import 'dart:async';
 
@@ -7,31 +8,61 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:openvine/repositories/featured_tabs_repository.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 part 'featured_tabs_state.dart';
+
+/// Eligibility to see featured content reserved for verified adults.
+///
+/// Every value but [adult] keeps that content hidden.
+enum FeaturedTabAudience {
+  /// Auth or 18+ verification is still being checked.
+  loading,
+
+  /// The 18+ verification check failed.
+  failed,
+
+  /// Signed out, or signed in without 18+ verification.
+  unverified,
+
+  /// Signed in with 18+ verification.
+  adult;
+
+  bool get gatesAdultContent => this != adult;
+}
 
 /// Keeps the featured Explore tab in sync with its server configuration.
 ///
 /// Polls at the server-supplied cadence and refetches on app foreground so a
-/// backend kill switch takes effect without an app update. Eligibility and
-/// cache staleness are the repository's job — this cubit only decides *when*
-/// to ask and republishes the answer.
+/// backend kill switch takes effect without an app update. The repository
+/// decides eligibility and staleness; this cubit decides when to ask, drops a
+/// held tab as soon as the audience or its window rules it out, and tells a
+/// failed lookup apart from a confirmed absence.
 class FeaturedTabsCubit extends Cubit<FeaturedTabsState> {
   /// Creates the cubit over [repository].
   ///
-  /// [gateAgeRestrictedContent] is read at each refresh rather than captured
-  /// once, so an age-up or account switch is reflected on the next poll.
+  /// [audience] is read at each refresh so the decision follows verification
+  /// and account changes.
   FeaturedTabsCubit({
     required FeaturedTabsRepository repository,
-    required bool Function() gateAgeRestrictedContent,
+    required FeaturedTabAudience Function() audience,
+    this.requiredFeaturedFeedId,
+    DateTime Function()? now,
   }) : _repository = repository,
-       _gateAgeRestrictedContent = gateAgeRestrictedContent,
+       _audience = audience,
+       _now = now ?? DateTime.now,
        super(const FeaturedTabsState());
 
   final FeaturedTabsRepository _repository;
-  final bool Function() _gateAgeRestrictedContent;
+  final FeaturedTabAudience Function() _audience;
+  final DateTime Function() _now;
+
+  /// Feed required by a campaign destination, or null for normal Explore.
+  final String? requiredFeaturedFeedId;
 
   Timer? _pollTimer;
+  Timer? _expiryTimer;
 
   /// Sequence number of the newest started refresh.
   ///
@@ -41,32 +72,114 @@ class FeaturedTabsCubit extends Cubit<FeaturedTabsState> {
 
   /// Fetches the configuration and reschedules the poll timer.
   ///
-  /// Safe to call repeatedly; the UI calls it on mount and on app foreground.
-  ///
-  /// Three callers can overlap — the poll timer, the foreground listener, and
-  /// the minor-status listener — so a slower earlier request must not publish
-  /// after a faster later one. Without that ordering the kill switch is
-  /// defeatable: a request issued before the kill can land after the refresh
-  /// that resolved the tab away and put it back on screen until the next poll.
-  /// Only the newest generation may emit.
+  /// Safe to call repeatedly. Refreshes overlap — the poll and expiry timers
+  /// and the foreground and audience listeners — so a slower earlier request
+  /// must not publish after a faster later one. Without that ordering the kill
+  /// switch is defeatable: a request issued before the kill can land after the
+  /// refresh that resolved the tab away and put it back on screen until the
+  /// next poll. Only the newest generation, read for an unchanged audience,
+  /// publishes its result.
   Future<void> refresh() async {
     if (isClosed) return;
     final generation = ++_refreshGeneration;
-    emit(state.copyWith(status: FeaturedTabsStatus.loading));
+    final audience = _audience();
+    final previousTab = state.tab;
+    final hadConfirmedAbsence =
+        state.status == FeaturedTabsStatus.resolved &&
+        state.tab == null &&
+        state.resolvedFor == audience;
+    if (!hadConfirmedAbsence) {
+      emit(
+        state.copyWith(
+          status: FeaturedTabsStatus.loading,
+          clearTab:
+              (previousTab != null &&
+                  !featuredTabPassesAudience(
+                    previousTab,
+                    gateAgeRestrictedContent: audience.gatesAdultContent,
+                  )) ||
+              previousTab?.endsAt?.isAfter(_now()) == false,
+        ),
+      );
+    }
 
     final snapshot = await _repository.refresh(
-      gateAgeRestrictedContent: _gateAgeRestrictedContent(),
+      gateAgeRestrictedContent: audience.gatesAdultContent,
+      requiredFeaturedFeedId: requiredFeaturedFeedId,
     );
-    if (isClosed || generation != _refreshGeneration) return;
+    if (isClosed ||
+        generation != _refreshGeneration ||
+        _audience() != audience) {
+      return;
+    }
 
+    final tab = snapshot.tab;
+    final status = switch ((
+      tab,
+      snapshot.hasResolvedCatalog,
+      snapshot.hiddenByAudience,
+      audience,
+    )) {
+      (FeaturedTabConfig(), _, _, _) => FeaturedTabsStatus.resolved,
+      (null, false, _, _) when hadConfirmedAbsence =>
+        FeaturedTabsStatus.resolved,
+      (null, false, _, _) => FeaturedTabsStatus.failed,
+      (null, true, false, _) => FeaturedTabsStatus.resolved,
+      (null, true, true, FeaturedTabAudience.loading) =>
+        FeaturedTabsStatus.loading,
+      (null, true, true, FeaturedTabAudience.failed) =>
+        FeaturedTabsStatus.failed,
+      (null, true, true, FeaturedTabAudience.unverified) =>
+        FeaturedTabsStatus.resolved,
+      (null, true, true, FeaturedTabAudience.adult) =>
+        FeaturedTabsStatus.resolved,
+    };
     emit(
       FeaturedTabsState(
-        status: FeaturedTabsStatus.resolved,
-        tab: snapshot.tab,
+        status: status,
+        tab: tab,
         pollInterval: snapshot.pollInterval,
+        resolvedFor: status == FeaturedTabsStatus.resolved
+            ? audience
+            : state.resolvedFor,
       ),
     );
     _schedulePoll(snapshot.pollInterval);
+    _scheduleExpiry(tab);
+  }
+
+  void _scheduleExpiry(FeaturedTabConfig? tab) {
+    if (requiredFeaturedFeedId == null) return;
+    _expiryTimer?.cancel();
+    final endsAt = tab?.endsAt;
+    if (endsAt == null) return;
+    final remaining = endsAt.difference(_now());
+    // Browser timers overflow for long windows; recheck daily, as announcement
+    // expiry does.
+    const maximumDelay = Duration(days: 1);
+    _expiryTimer = Timer(
+      remaining > maximumDelay ? maximumDelay : remaining,
+      () {
+        if (isClosed || state.tab != tab) return;
+        if (_now().isBefore(endsAt)) {
+          _scheduleExpiry(tab);
+          return;
+        }
+        emit(
+          state.copyWith(
+            status: FeaturedTabsStatus.resolved,
+            clearTab: true,
+            resolvedFor: _audience(),
+          ),
+        );
+        runDetached(
+          refresh(),
+          'refresh featured campaign at expiry',
+          logName: 'FeaturedTabsCubit',
+          category: LogCategory.ui,
+        );
+      },
+    );
   }
 
   void _schedulePoll(Duration interval) {
@@ -78,7 +191,7 @@ class FeaturedTabsCubit extends Cubit<FeaturedTabsState> {
   @override
   Future<void> close() {
     _pollTimer?.cancel();
-    _pollTimer = null;
+    _expiryTimer?.cancel();
     return super.close();
   }
 }

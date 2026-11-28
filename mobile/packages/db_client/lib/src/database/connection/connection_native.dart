@@ -1241,7 +1241,9 @@ Map<String, int> _userTableRowCounts(Database db) {
 /// migrates the legacy file on first run after upgrade.
 Future<String> getSharedDatabasePath() async {
   final appSupportDir = await getApplicationSupportDirectory();
-  final newPath = buildSharedDatabasePath(appSupportDir.path);
+  final newPath = Platform.isMacOS
+      ? resolveMacOsSharedDatabasePath(appSupportDir.path)
+      : buildSharedDatabasePath(appSupportDir.path);
 
   // Check cache version and wipe stale database if needed.
   applyDbCacheVersionReset(newPath);
@@ -1546,8 +1548,73 @@ class _LocalOnlyDataQuery {
 ///
 /// Application Support is preferred for sandboxed app data on macOS/iOS.
 @visibleForTesting
-String buildSharedDatabasePath(String basePath) {
-  return p.join(basePath, 'openvine', 'database', 'divine_db.db');
+String buildSharedDatabasePath(String basePath) =>
+    p.join(basePath, 'openvine', 'database', 'divine_db.db');
+
+/// On a native Mac App Store upgrade, the iPad app's database directory can
+/// already exist in the app's sandbox. Keep using it in place so the SQLite
+/// sidecars, interrupted swaps, and backups stay beside the database.
+@visibleForTesting
+String resolveMacOsSharedDatabasePath(String basePath) {
+  final nativePath = buildSharedDatabasePath(basePath);
+  final inheritedPath = _inheritedMacOsDatabasePath(basePath);
+  if (inheritedPath == null) return nativePath;
+
+  final candidates = [nativePath, inheritedPath];
+  for (final path in candidates) {
+    if (File('$path.location').existsSync()) return path;
+  }
+  for (final path in candidates) {
+    if (_macOsDatabaseContainsData(path)) {
+      File('$path.location').createSync();
+      return path;
+    }
+  }
+  return nativePath;
+}
+
+/// Whether another database in the same Mac sandbox could use the shared key.
+Future<bool> hasAlternateMacOsSharedDatabase() async {
+  if (!Platform.isMacOS) return false;
+  final supportDir = await getApplicationSupportDirectory();
+  final inheritedPath = _inheritedMacOsDatabasePath(supportDir.path);
+  if (inheritedPath == null) return false;
+
+  final selected = resolveMacOsSharedDatabasePath(supportDir.path);
+  final alternate = selected == inheritedPath
+      ? buildSharedDatabasePath(supportDir.path)
+      : inheritedPath;
+  return _macOsDatabaseContainsData(alternate);
+}
+
+String? _inheritedMacOsDatabasePath(String basePath) {
+  // path_provider appends the bundle ID on native macOS. Only look above
+  // that suffix inside the app's own sandbox. Outside it, Application
+  // Support is shared by other apps.
+  final supportPath = p.dirname(basePath);
+  final containerPath = p.dirname(p.dirname(p.dirname(supportPath)));
+  final sandboxedBase = p.join(
+    containerPath,
+    'Data',
+    'Library',
+    'Application Support',
+    p.basename(containerPath),
+  );
+  if (basePath != sandboxedBase ||
+      p.basename(p.dirname(containerPath)) != 'Containers') {
+    return null;
+  }
+
+  return buildSharedDatabasePath(supportPath);
+}
+
+bool _macOsDatabaseContainsData(String path) {
+  // A version file or empty SQLite file can be left by an early launch.
+  final database = File(path);
+  return (database.existsSync() && database.lengthSync() > 0) ||
+      File('$path$_migratingSuffix').existsSync() ||
+      File('$path$_salvageSuffix').existsSync() ||
+      hasUnfinishedHotJournalDatabaseRestore(path);
 }
 
 /// Ensures the database parent directory exists before SQLite opens the file.

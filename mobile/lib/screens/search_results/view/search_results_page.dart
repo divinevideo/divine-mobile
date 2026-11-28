@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:analytics/analytics.dart';
 import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -11,6 +12,8 @@ import 'package:openvine/blocs/nostr_id_search/nostr_id_search_cubit.dart';
 import 'package:openvine/blocs/search_results_filter/search_results_filter.dart';
 import 'package:openvine/blocs/user_search/user_search_bloc.dart';
 import 'package:openvine/blocs/video_search/video_search_bloc.dart';
+import 'package:openvine/observability/screen_load_telemetry.dart';
+import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/og_viner_cache_provider.dart';
@@ -22,6 +25,7 @@ import 'package:openvine/screens/search_results/widgets/search_results_app_bar.d
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_search_query.dart';
 import 'package:openvine/widgets/retained_bloc_provider.dart';
+import 'package:openvine/widgets/screen_frame_trace_scope.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -100,13 +104,15 @@ class _SearchResultsPageState extends ConsumerState<SearchResultsPage> {
   @override
   Widget build(BuildContext context) {
     // Query and category belong to the page, including readiness gaps.
-    return BlocProvider(
+    final page = BlocProvider(
       create: (_) => SearchResultsFilterCubit(),
       child: _SearchResultsScope(
         controller: _controller,
         requestFocusOnMount: widget.requestFocusOnMount,
       ),
     );
+    // Above the readiness gate, whose muted tickers are not a route on top.
+    return ScreenFrameTraceScope(screen: .search, child: page);
   }
 }
 
@@ -161,6 +167,11 @@ class _SearchResultsScope extends ConsumerWidget {
                   BlocProvider(
                     create: (_) => VideoSearchBloc(
                       videosRepository: videosRepository,
+                      loadTelemetry: ScreenLoadTelemetry(
+                        tracker: ref.read(surfacePerformanceTrackerProvider),
+                        surface: AnalyticsSurface.searchResults,
+                        entryPoint: ScreenLoadEntryPoint.query,
+                      ),
                     ),
                   ),
                   BlocProvider(
@@ -181,6 +192,7 @@ class _SearchResultsScope extends ConsumerWidget {
                       followRepository: followRepository,
                       rankingSignalsLoader: rankingSignalsLoader,
                       viewerPubkey: owner,
+                      clearResultsOnNewQuery: true,
                       initialState: snapshot,
                     );
                     final query = controller.text.trim();

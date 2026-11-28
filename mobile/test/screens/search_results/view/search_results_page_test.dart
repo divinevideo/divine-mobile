@@ -18,6 +18,7 @@ import 'package:openvine/blocs/search_results_filter/search_results_filter.dart'
 import 'package:openvine/blocs/user_search/user_search_bloc.dart';
 import 'package:openvine/blocs/video_search/video_search_bloc.dart';
 import 'package:openvine/constants/search_constants.dart';
+import 'package:openvine/observability/screen_frame_trace.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/og_viner_cache_provider.dart';
@@ -29,6 +30,7 @@ import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/services/og_viner_cache_service.dart';
 import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
 import 'package:openvine/widgets/og_viner_badge.dart';
+import 'package:openvine/widgets/screen_frame_trace_scope.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:profile_repository/profile_repository.dart';
@@ -440,6 +442,32 @@ void main() {
       );
     });
 
+    testWidgets('traces the page as search while profiles get ready', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        createTestWidget(
+          profileRepositoryOverride: profileRepositoryProvider
+              .overrideWithValue(null),
+        ),
+      );
+      await tester.pump();
+
+      // Above the readiness gate, whose muted tickers are not a route on top.
+      expect(
+        tester
+            .widget<ScreenFrameTraceScope>(find.byType(ScreenFrameTraceScope))
+            .screen,
+        TracedScreen.search,
+      );
+      expect(
+        TickerMode.valuesOf(
+          tester.element(find.byType(ScreenFrameTraceScope)),
+        ).enabled,
+        isTrue,
+      );
+    });
+
     testWidgets(
       'offstage search cannot claim focus before profiles are ready',
       (tester) async {
@@ -577,7 +605,7 @@ void main() {
           ),
         ).thenAnswer((_) async => const <String>[]);
         when(() => mockCuratedListRepository.searchAllLists(any()))
-            .thenAnswer((_) => Stream.value(const <CuratedList>[]));
+            .thenAnswer((_) => Stream.value(const <CuratedListSearchResult>[]));
 
         final first = UserProfile(
           pubkey: 'a' * 64,
@@ -738,7 +766,8 @@ void main() {
       ) async {
         final replacement = _MockCuratedListRepository();
         final replacementProfile = createMockProfileRepository();
-        final pending = StreamController<List<CuratedList>>.broadcast();
+        final pending =
+            StreamController<List<CuratedListSearchResult>>.broadcast();
         addTearDown(pending.close);
         final now = DateTime.utc(2026);
         final row = CuratedList(
@@ -751,7 +780,7 @@ void main() {
           updatedAt: now,
         );
         when(() => mockCuratedListRepository.searchAllLists(any()))
-            .thenAnswer((_) => Stream.value([row]));
+            .thenAnswer((_) => Stream.value([CuratedListSearchResult(row)]));
         when(() => replacement.searchAllLists(any()))
             .thenAnswer((_) => pending.stream);
         when(
@@ -816,7 +845,7 @@ void main() {
           ),
         ];
         expect(
-          oldBloc.state.videoResults.single.thumbnailUrls,
+          oldBloc.state.videoResults.single.list.thumbnailUrls,
           row.thumbnailUrls,
         );
         final category = BlocProvider.of<SearchResultsFilterCubit>(
@@ -865,9 +894,11 @@ void main() {
         verify(() => replacement.searchAllLists('dance')).called(1);
         expect(newBloc.state.query, 'dance');
         expect(newBloc.state.videoResults, isEmpty);
-        pending.add([row.copyWith(thumbnailUrls: const [])]);
+        pending.add([
+          CuratedListSearchResult(row.copyWith(thumbnailUrls: const [])),
+        ]);
         await tester.pump();
-        expect(newBloc.state.videoResults.single.thumbnailUrls, isEmpty);
+        expect(newBloc.state.videoResults.single.list.thumbnailUrls, isEmpty);
 
         container.read(_profileReadinessSelection.notifier).state = 1;
         await tester.pump();
@@ -885,7 +916,7 @@ void main() {
           tester.element(find.byType(SearchResultsView)),
         );
         expect(readyBloc, same(newBloc));
-        expect(readyBloc.state.videoResults.single.thumbnailUrls, isEmpty);
+        expect(readyBloc.state.videoResults.single.list.thumbnailUrls, isEmpty);
         expect(
           BlocProvider.of<SearchResultsFilterCubit>(
             tester.element(find.byType(SearchResultsView)),
@@ -902,10 +933,12 @@ void main() {
         await tester.pump();
         verifyNever(() => replacement.searchAllLists('dance'));
         expect(readyBloc.state.query, 'dance');
-        expect(readyBloc.state.videoResults.single.thumbnailUrls, isEmpty);
-        pending.add([row.copyWith(thumbnailUrls: const [])]);
+        expect(readyBloc.state.videoResults.single.list.thumbnailUrls, isEmpty);
+        pending.add([
+          CuratedListSearchResult(row.copyWith(thumbnailUrls: const [])),
+        ]);
         await tester.pump();
-        expect(readyBloc.state.videoResults.single.thumbnailUrls, isEmpty);
+        expect(readyBloc.state.videoResults.single.list.thumbnailUrls, isEmpty);
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump(const Duration(milliseconds: 350));
         expect(category.isClosed, isTrue);
@@ -916,9 +949,11 @@ void main() {
     testWidgets(
       'current list policy refreshes search without replacing the repository',
       (tester) async {
-        final original = StreamController<List<CuratedList>>.broadcast();
+        final original =
+            StreamController<List<CuratedListSearchResult>>.broadcast();
         addTearDown(original.close);
-        final pending = StreamController<List<CuratedList>>.broadcast();
+        final pending =
+            StreamController<List<CuratedListSearchResult>>.broadcast();
         addTearDown(pending.close);
         final row = CuratedList(
           id: 'dance',
@@ -970,7 +1005,7 @@ void main() {
         await tester.runAsync(() async {});
         await tester.pump();
         var context = tester.element(find.byType(SearchResultsView));
-        original.add([row]);
+        original.add([CuratedListSearchResult(row)]);
         await tester.pump();
         final oldBloc = BlocProvider.of<ListSearchBloc>(context);
         final oldVideoBloc = BlocProvider.of<VideoSearchBloc>(context);
@@ -983,7 +1018,7 @@ void main() {
         category.filterChanged(SearchResultsFilter.lists);
         await tester.pump();
         expect(
-          oldBloc.state.videoResults.single.thumbnailUrls,
+          oldBloc.state.videoResults.single.list.thumbnailUrls,
           row.thumbnailUrls,
         );
         final container = ProviderScope.containerOf(
@@ -1007,7 +1042,7 @@ void main() {
           same(mockCuratedListRepository),
         );
         expect(current.state.videoResults, isEmpty);
-        original.add([row]);
+        original.add([CuratedListSearchResult(row)]);
         await tester.pump();
         expect(current.state.videoResults, isEmpty);
         expect(
@@ -1024,9 +1059,11 @@ void main() {
         await tester.pump();
         verify(() => mockCuratedListRepository.searchAllLists('dance'))
             .called(2);
-        pending.add([row.copyWith(thumbnailUrls: const [])]);
+        pending.add([
+          CuratedListSearchResult(row.copyWith(thumbnailUrls: const [])),
+        ]);
         await tester.pump();
-        expect(current.state.videoResults.single.thumbnailUrls, isEmpty);
+        expect(current.state.videoResults.single.list.thumbnailUrls, isEmpty);
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump(const Duration(milliseconds: 350));
         expect(current.isClosed, isTrue);
@@ -1037,7 +1074,7 @@ void main() {
       'searches people lists alongside video lists without experimental flags',
       (tester) async {
         when(() => mockCuratedListRepository.searchAllLists(any()))
-            .thenAnswer((_) => Stream.value(const <CuratedList>[]));
+            .thenAnswer((_) => Stream.value(const <CuratedListSearchResult>[]));
         when(
           () => mockPeopleListsRepository.searchPublicLists(
             any(),
@@ -1187,6 +1224,62 @@ void main() {
       await tester.pump();
 
       expect(bloc.state.results, [ownProfile]);
+    });
+
+    testWidgets("drops the previous term's people while a new term loads", (
+      tester,
+    ) async {
+      final alice = UserProfile(
+        pubkey: 'a' * 64,
+        displayName: 'Alice',
+        createdAt: DateTime.fromMillisecondsSinceEpoch(1700000000000),
+        eventId: 'event-alice',
+        rawData: const {},
+      );
+      final pendingBob = StreamController<ProgressiveSearchResult>();
+      addTearDown(pendingBob.close);
+      when(
+        () => mockProfileRepository.searchUsersProgressive(
+          query: any(named: 'query'),
+          limit: any(named: 'limit'),
+          offset: any(named: 'offset'),
+          sortBy: any(named: 'sortBy'),
+          hasVideos: any(named: 'hasVideos'),
+          boostPubkeys: any(named: 'boostPubkeys'),
+          cancellationToken: any(named: 'cancellationToken'),
+        ),
+      ).thenAnswer(
+        (invocation) => invocation.namedArguments[#query] == 'alice'
+            ? Stream.value(
+                ProgressiveSearchResult(
+                  profiles: [alice],
+                  sources: const {},
+                  isComplete: true,
+                ),
+              )
+            : pendingBob.stream,
+      );
+
+      await tester.pumpWidget(createTestWidget());
+      final bloc = BlocProvider.of<UserSearchBloc>(
+        tester.element(find.byType(SearchResultsView)),
+      );
+      bloc.add(const UserSearchQueryChanged('alice'));
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump();
+      expect(bloc.state.results, [alice]);
+
+      bloc.add(const UserSearchQueryChanged('bob'));
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump();
+
+      expect(bloc.state.status, UserSearchStatus.loading);
+      expect(bloc.state.query, 'bob');
+      expect(bloc.state.results, isEmpty);
+
+      // Dispose and drain pending debounce timers.
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(milliseconds: 400));
     });
 
     testWidgets('shows a waiting state while the profile repository is null', (
@@ -1339,7 +1432,7 @@ void main() {
       ).thenAnswer((_) async => const <String>[]);
       when(
         () => mockCuratedListRepository.searchAllLists(any()),
-      ).thenAnswer((_) => Stream.value(const <CuratedList>[]));
+      ).thenAnswer((_) => Stream.value(const <CuratedListSearchResult>[]));
       when(
         () => mockPeopleListsRepository.searchPublicLists(any()),
       ).thenAnswer((_) => Stream.value(const <PeopleListSearchResult>[]));

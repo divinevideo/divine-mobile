@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="divine_watch_start_recording">Avvia registrazione</string>
+    <string name="divine_watch_stop_recording">Interrompi registrazione</string>
+    <string name="divine_watch_notification_channel">Telecomando della fotocamera</string>
+</resources>

@@ -3,6 +3,7 @@
 // ABOUTME: plus the app bar and input bar rendering.
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:bloc_test/bloc_test.dart';
@@ -18,6 +19,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
@@ -35,6 +38,7 @@ import 'package:openvine/models/outgoing_video_dm.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/follow_relationship_provider.dart';
 import 'package:openvine/providers/nip05_verification_provider.dart';
+import 'package:openvine/providers/short_link_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/watermark_download_provider.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
@@ -48,6 +52,7 @@ import 'package:openvine/services/auth_service.dart' show AuthState;
 import 'package:openvine/services/dm_video_blur_preference_service.dart';
 import 'package:openvine/services/dm_video_preview_memory.dart';
 import 'package:openvine/services/dm_video_store.dart';
+import 'package:openvine/services/short_link_client.dart';
 import 'package:openvine/services/watermark_download_service.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/profile/more_sheet/more_sheet_content.dart';
@@ -265,6 +270,7 @@ void main() {
       );
 
       final app = testMaterialApp(
+        mockVideoEventService: VisibleTestVideoEventService(),
         mockAuthService: mockAuthService,
         mockNostrService: mockNostrClient,
         mockFollowRepository: followRepository,
@@ -6033,6 +6039,112 @@ void main() {
         expect(find.text(l10n.dmMessageActionCopyVideoUrl), findsOneWidget);
         expect(find.text(l10n.shareSheetSaveVideo), findsOneWidget);
       }
+
+      group('Copy video URL', () {
+        const shortUrl = 'https://divine.video/l/Abc12345';
+        final videoUrl = divineVideoShareUrl(
+          stableId,
+          authorPubkey: currentPubkey,
+          kind: NIP71VideoKinds.addressableShortVideo,
+        );
+        String? copied;
+
+        setUp(() {
+          copied = null;
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+              .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+                if (call.method == 'Clipboard.setData') {
+                  copied = (call.arguments as Map)['text'] as String?;
+                }
+                return null;
+              });
+        });
+
+        tearDown(() {
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+              .setMockMethodCallHandler(SystemChannels.platform, null);
+        });
+
+        ShortLinkClient shortener(
+          Future<http.Response> Function(http.Request request) respond,
+        ) {
+          final transport = MockClient(respond);
+          final client = ShortLinkClient(client: transport);
+          addTearDown(client.close);
+          addTearDown(transport.close);
+          return client;
+        }
+
+        http.Response created(String url) => http.Response(
+          jsonEncode({'code': 'Abc12345', 'short_url': shortUrl, 'url': url}),
+          201,
+        );
+
+        Future<void> copyVideoUrl(
+          WidgetTester tester, {
+          required ShortLinkClient? client,
+        }) async {
+          await tester.pumpWidget(
+            buildSubject(
+              state: ConversationState(
+                status: ConversationStatus.loaded,
+                messages: [
+                  sharedVideoMessage(
+                    senderPubkey: currentPubkey,
+                    content: 'watch this\n$videoUrl',
+                    includeSharedVideoRef: false,
+                  ),
+                ],
+              ),
+              extraOverrides: [
+                shortLinkClientProvider.overrideWithValue(client),
+              ],
+            ),
+          );
+          await tester.pumpAndSettle();
+          await tester.longPress(find.text('watch this'));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.dmMessageActionCopyVideoUrl));
+        }
+
+        testWidgets('copies the shortened link', (tester) async {
+          String? requested;
+          final client = shortener((request) async {
+            requested = (jsonDecode(request.body) as Map)['url'] as String;
+            return created(requested!);
+          });
+
+          await copyVideoUrl(tester, client: client);
+          await tester.pumpAndSettle();
+
+          expect(requested, videoUrl);
+          expect(copied, shortUrl);
+        });
+
+        testWidgets('copies the full link without a shortener', (
+          tester,
+        ) async {
+          await copyVideoUrl(tester, client: null);
+          await tester.pumpAndSettle();
+
+          expect(copied, videoUrl);
+        });
+
+        testWidgets('still copies when the chat closes while shortening', (
+          tester,
+        ) async {
+          final response = Completer<http.Response>();
+          final client = shortener((request) => response.future);
+
+          await copyVideoUrl(tester, client: client);
+          await tester.pump();
+          await tester.pumpWidget(const SizedBox.shrink());
+          response.complete(created(videoUrl));
+          await tester.pumpAndSettle();
+
+          expect(copied, shortUrl);
+        });
+      });
 
       testWidgets('saves a legacy Divine URL share', (tester) async {
         final message = sharedVideoMessage(

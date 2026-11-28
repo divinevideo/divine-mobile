@@ -4,6 +4,8 @@
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:openvine/router/routes/route_extras.dart';
+
 /// Encodes GoRouter `extra` values so that re-reading route state in the same
 /// process returns the original objects.
 ///
@@ -13,12 +15,11 @@ import 'dart:math';
 /// `PooledFullscreenVideoFeedArgs` comes back as `null` and its route falls
 /// back to a degraded screen.
 ///
-/// JSON-native values are stored by value. Any other object is stored as a
-/// stable id in a weak registry, so the encoded state stays JSON-safe for the
-/// platform channel and unchanged across reports, and decoding returns the
-/// same object while it is alive. An unknown id, a record, a non-finite number
-/// or malformed state decodes to `null`, which routes already handle because
-/// `extra` is only a warm-start cache.
+/// JSON-native values and the video-detail privacy flag survive process loss.
+/// Other objects remain in a weak registry. Its opaque references keep repeated
+/// reports stable and preserve warm state while the object is alive. A missing
+/// reference drops the warm state; a saved video detail still carries its
+/// playback privacy flag.
 class RouteExtraCodec extends Codec<Object?, Object?> {
   /// Creates a codec with its own registry.
   RouteExtraCodec() : this._(_RouteExtraRegistry());
@@ -26,6 +27,24 @@ class RouteExtraCodec extends Codec<Object?, Object?> {
   RouteExtraCodec._(_RouteExtraRegistry registry)
     : encoder = _RouteExtraEncoder(registry),
       decoder = _RouteExtraDecoder(registry);
+
+  /// An old video detail entry stored only a weak reference. Its origin cannot
+  /// be recovered once the registry is gone. Keep a live extra when available.
+  static Object? protectLegacyVideoReference(Object? encoded) =>
+      switch (encoded) {
+        {_kindKey: _refKind, _idKey: final String id} => {
+          _kindKey: _videoKind,
+          _idKey: id,
+          _valueKey: true,
+        },
+        _ => encoded,
+      };
+
+  /// Whether playback from this saved detail should omit attributed metrics.
+  static bool hasPrivateVideoOrigin(Object? encoded) =>
+      encoded is Map &&
+      encoded[_kindKey] == _videoKind &&
+      encoded[_valueKey] != false;
 
   @override
   final Converter<Object?, Object?> encoder;
@@ -39,6 +58,7 @@ const _valueKey = 'value';
 const _idKey = 'id';
 const _jsonKind = 'json';
 const _refKind = 'ref';
+const _videoKind = 'videoDetail';
 
 class _RouteExtraRegistry {
   // Route state can outlive this registry: browser history keeps it across a
@@ -77,6 +97,13 @@ class _RouteExtraEncoder extends Converter<Object?, Object?> {
 
   @override
   Object? convert(Object? input) {
+    if (input is VideoDetailRouteExtra) {
+      return {
+        _kindKey: _videoKind,
+        _idKey: _registry.idFor(input),
+        _valueKey: input.fromMessage,
+      };
+    }
     if (_isJsonNative(input)) {
       return {_kindKey: _jsonKind, _valueKey: input};
     }
@@ -107,11 +134,21 @@ class _RouteExtraDecoder extends Converter<Object?, Object?> {
     if (input is! Map) return null;
     return switch (input[_kindKey]) {
       _jsonKind => input[_valueKey],
+      _videoKind => _restoreVideo(input),
       _refKind => switch (input[_idKey]) {
         final String id => _registry.objectFor(id),
         _ => null,
       },
       _ => null,
     };
+  }
+
+  VideoDetailRouteExtra _restoreVideo(Map<Object?, Object?> saved) {
+    final id = saved[_idKey];
+    final live = id is String ? _registry.objectFor(id) : null;
+    if (live is VideoDetailRouteExtra) return live;
+    return VideoDetailRouteExtra(
+      fromMessage: RouteExtraCodec.hasPrivateVideoOrigin(saved),
+    );
   }
 }

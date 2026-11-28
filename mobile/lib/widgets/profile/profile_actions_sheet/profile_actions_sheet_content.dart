@@ -2,13 +2,16 @@
 // ABOUTME: supporter invitation, and animates between their prompts.
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/blocs/email_confirmation/email_confirmation_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/router/routes/auth_routes.dart';
 import 'package:openvine/router/routes/profile_routes.dart';
+import 'package:openvine/router/routes/settings_routes.dart';
 import 'package:openvine/screens/settings/account_status_screen.dart';
 import 'package:openvine/screens/settings/supporter_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -38,6 +41,8 @@ Future<void> showProfileActionsSheet({
   final opensTall = switch (actions.first) {
     ProfileActionType.becomeSupporter => true,
     ProfileActionType.accountRestricted ||
+    ProfileActionType.confirmEmail ||
+    ProfileActionType.addEmail ||
     ProfileActionType.secureAccount ||
     ProfileActionType.completeProfile => false,
   };
@@ -68,9 +73,8 @@ Future<void> showProfileActionsSheet({
 /// Displays a prompt for each pending [ProfileActionType] in order.
 /// When the user taps "Maybe Later", the sheet transitions to the next
 /// action (if any) or dismisses. Tapping the primary button navigates
-/// to the corresponding screen and closes the sheet. The supporter prompt
-/// is the exception: it shows the Supporter screen's content in place, so
-/// the user can join without leaving the sheet.
+/// to the corresponding screen and closes the sheet. Email confirmation
+/// and the supporter prompt also offer actions within the sheet.
 class ProfileActionsSheetContent extends StatefulWidget {
   /// Creates a [ProfileActionsSheetContent].
   ///
@@ -145,6 +149,20 @@ class _ProfileActionsSheetContentState
             onPrimaryTap: () => _openDestination(AccountStatusScreen.path),
             onSecondaryTap: _onMaybeLater,
           ),
+          ProfileActionType.confirmEmail => _ConfirmEmailPrompt(
+            key: key,
+            onMaybeLater: _onMaybeLater,
+          ),
+          ProfileActionType.addEmail => _ActionPrompt(
+            key: key,
+            sticker: DivineStickerName.email,
+            title: l10n.emailConfirmationAddEmailTitle,
+            subtitle: l10n.emailConfirmationAddEmailSubtitle,
+            primaryLabel: l10n.emailConfirmationAddEmailButton,
+            onPrimaryTap: () =>
+                _openDestination(const ChangeEmailRouteData().location),
+            onSecondaryTap: _onMaybeLater,
+          ),
           ProfileActionType.secureAccount => _ActionPrompt(
             key: key,
             sticker: DivineStickerName.skeletonKey,
@@ -176,7 +194,71 @@ class _ProfileActionsSheetContentState
   }
 }
 
-/// Prompt for an action whose primary button opens another screen.
+/// Prompt asking the account to confirm its email, with a resend button.
+///
+/// Shows resend feedback inside the sheet, above the modal barrier.
+class _ConfirmEmailPrompt extends StatefulWidget {
+  const _ConfirmEmailPrompt({required this.onMaybeLater, super.key});
+
+  final VoidCallback onMaybeLater;
+
+  @override
+  State<_ConfirmEmailPrompt> createState() => _ConfirmEmailPromptState();
+}
+
+class _ConfirmEmailPromptState extends State<_ConfirmEmailPrompt> {
+  String? _resendAccount;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final (account, email, resendStatus) = context.select(
+      (EmailConfirmationCubit cubit) =>
+          (cubit.state.account, cubit.state.email, cubit.state.resendStatus),
+    );
+    final outcome = account == _resendAccount ? resendStatus : null;
+    // Confirming in the mail app while this sheet is open clears the action,
+    // so step on to the next one instead of offering a stale resend.
+    return BlocListener<EmailConfirmationCubit, EmailConfirmationState>(
+      listenWhen: (previous, current) =>
+          previous.isUnconfirmed && !current.isUnconfirmed,
+      listener: (_, _) => widget.onMaybeLater(),
+      child: _ActionPrompt(
+        sticker: DivineStickerName.email,
+        title: l10n.emailConfirmationTitle,
+        subtitle: email == null
+            ? l10n.emailConfirmationCheckInbox
+            : l10n.emailConfirmationProfileSubtitle(email),
+        statusMessage: switch (outcome) {
+          EmailConfirmationResendStatus.sent =>
+            l10n.emailConfirmationResendSent,
+          EmailConfirmationResendStatus.failed =>
+            l10n.emailConfirmationResendFailed,
+          _ => null,
+        },
+        primaryLabel: l10n.emailConfirmationResendButton,
+        onPrimaryTap:
+            account == null ||
+                resendStatus == EmailConfirmationResendStatus.sending
+            ? null
+            : () {
+                setState(() => _resendAccount = account);
+                runDetached(
+                  context.read<EmailConfirmationCubit>().resend(
+                    account: account,
+                  ),
+                  'resend confirmation email',
+                  logName: 'ProfileActionsSheetContent',
+                  category: LogCategory.auth,
+                );
+              },
+        onSecondaryTap: widget.onMaybeLater,
+      ),
+    );
+  }
+}
+
+/// Prompt with a primary action and a "Maybe Later" button.
 ///
 /// Displays a sticker illustration, title, subtitle, and primary/secondary
 /// action buttons matching the [VineBottomSheetPrompt] layout pattern.
@@ -188,14 +270,16 @@ class _ActionPrompt extends StatelessWidget {
     required this.primaryLabel,
     required this.onPrimaryTap,
     required this.onSecondaryTap,
+    this.statusMessage,
     super.key,
   });
 
   final DivineStickerName sticker;
   final String title;
   final String subtitle;
+  final String? statusMessage;
   final String primaryLabel;
-  final VoidCallback onPrimaryTap;
+  final VoidCallback? onPrimaryTap;
   final VoidCallback onSecondaryTap;
 
   @override
@@ -227,6 +311,19 @@ class _ActionPrompt extends StatelessWidget {
             ),
             textAlign: TextAlign.center,
           ),
+          if (statusMessage case final message?) ...[
+            const SizedBox(height: 8),
+            Semantics(
+              liveRegion: true,
+              child: Text(
+                message,
+                style: VineTheme.bodyMediumFont(
+                  color: context.vineColors.primaryText,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
           const SizedBox(height: 32),
           DivineButton(
             label: primaryLabel,

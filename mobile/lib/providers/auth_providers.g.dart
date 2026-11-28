@@ -1015,7 +1015,7 @@ final class IdentityClaimsRepositoryProvider
 }
 
 String _$identityClaimsRepositoryHash() =>
-    r'be740fe386e60c1253fa0ceeaa7966e510171019';
+    r'3260691906c1ce0a14932c31e808548e07e0bb82';
 
 /// NIP-98 authentication service
 

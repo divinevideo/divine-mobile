@@ -62,7 +62,9 @@ class EmptyConversation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final avatar = dmPeerAvatar(
+    final avatar = dmConversationAvatar(
+      context,
+      isGroup: isGroup,
       isVanished: false,
       moderation: moderation,
       pictureUrl: imageUrl,
@@ -82,15 +84,7 @@ class EmptyConversation extends StatelessWidget {
                 name: displayName,
                 placeholderSeed: pubkey,
                 size: 96,
-                // Same artwork and precedence as the inbox row, so the card
-                // matches the row it was opened from. An override also stands
-                // in for the picture, so the first member's is never loaded.
-                contentOverride: isGroup
-                    ? DivineIcon(
-                        icon: DivineIconName.users,
-                        color: context.vineColors.primaryText,
-                      )
-                    : avatar.contentOverride,
+                contentOverride: avatar.contentOverride,
               ),
             ),
           ),

@@ -336,4 +336,62 @@ void main() {
       expect(methodCalls, contains('pause'));
     });
   });
+
+  group('buffering', () {
+    // A stalled clip reports buffering and resumes on its own, so it must be
+    // handled as running.
+    Future<void> playThenBuffer(WidgetTester tester) async {
+      playerEvents[0]!.add(<Object?, Object?>{'status': 'playing'});
+      await tester.pump();
+      playerEvents[0]!.add(<Object?, Object?>{'status': 'buffering'});
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+
+    testWidgets('pauses on tap while the clip buffers', (tester) async {
+      await tester.pumpWidget(buildPlayer());
+      await startPlayback(tester);
+      await playThenBuffer(tester);
+
+      methodCalls.clear();
+      await tester.tap(find.byType(VideoCommentPlayer));
+      await tester.pump();
+
+      expect(methodCalls, contains('pause'));
+      expect(methodCalls, isNot(contains('play')));
+    });
+
+    testWidgets('pauses when scrolled offscreen while the clip buffers', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: ListView(
+              children: const [
+                SizedBox(
+                  height: 400,
+                  child: VideoCommentPlayer(
+                    videoUrl: 'https://media.divine.video/comment-video.mp4',
+                  ),
+                ),
+                SizedBox(height: 1200),
+              ],
+            ),
+          ),
+        ),
+      );
+      await startPlayback(tester);
+      await playThenBuffer(tester);
+
+      methodCalls.clear();
+      await tester.drag(find.byType(Scrollable), const Offset(0, -350));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(methodCalls, contains('pause'));
+    });
+  });
 }

@@ -58,12 +58,6 @@ class ConsumptionAnalyticsTracker {
     targetVideoId,
   );
 
-  /// Records share intent when the share action is tapped.
-  Future<void> shareTapped({required String targetVideoId}) => _engagement(
-    ProductAnalyticsV2EngagementAction.shareTapped,
-    targetVideoId,
-  );
-
   /// Records a confirmed follow without a raw followed-account pubkey.
   ///
   /// Video-originated follows include [targetVideoId]; other surfaces omit it.

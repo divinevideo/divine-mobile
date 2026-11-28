@@ -22,6 +22,9 @@ uniform vec2 uSize;
 // How far the picture turns into the X-ray, 0 to 1.
 uniform float uIntensity;
 
+// The colour of the film where it is densest.
+uniform vec3 uFilm;
+
 uniform sampler2D uTexture;
 
 out vec4 fragColor;
@@ -53,6 +56,6 @@ void main() {
   float gy = tl + 2.0 * tc + tr - bl - 2.0 * bc - br;
   float bone = smoothstep(0.1, 0.6, length(vec2(gx, gy)));
   float density = clamp(1.1 * pow(max(1.0 - luma(color), 0.0), 1.6) + 0.5 * bone, 0.0, 1.0);
-  vec3 film = mix(vec3(0.0, 0.02, 0.06), vec3(0.78, 0.9, 1.0), density);
+  vec3 film = mix(vec3(0.0, 0.02, 0.06), uFilm, density);
   fragColor = vec4(mix(color, film, uIntensity), 1.0);
 }

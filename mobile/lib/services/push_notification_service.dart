@@ -4,6 +4,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -18,6 +19,7 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/notification_helpers.dart'
     show NotificationWireValues, localNotificationTapPayload;
 import 'package:openvine/services/notification_service.dart';
+import 'package:openvine/services/push_device_metadata.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Describes whether a push-token registration should be retried.
@@ -44,7 +46,8 @@ enum PushRegistrationResult {
 /// visible to the push service's key pair.
 ///
 /// Event kinds:
-/// - 3079: Registration — encrypted FCM token sent to push service
+/// - 3079: Registration — encrypted FCM token, timezone, campaign target
+///   types and install metadata sent to push service
 /// - 3080: Deregistration — removes device from push service
 /// - 3083: Preferences — encrypted notification kind preferences
 class PushNotificationService {
@@ -72,17 +75,26 @@ class PushNotificationService {
     required EnvironmentConfig environmentConfig,
     required Future<String?> Function() getToken,
     FutureOr<bool> Function()? isCurrent,
+    PushDeviceMetadata? deviceMetadata,
     int Function()? timeZoneOffsetMinutes,
     Future<String?> Function()? timeZoneIdentifier,
+    DateTime Function()? now,
+    Future<int?> Function(String pubkey)? readLastPreferencesCreatedAt,
+    Future<void> Function(String pubkey, int createdAt)?
+    writeLastPreferencesCreatedAt,
   }) : _authService = authService,
        _nostrClient = nostrClient,
        _notificationService = notificationService,
        _environmentConfig = environmentConfig,
        _getToken = getToken,
        _isCurrent = isCurrent,
+       _deviceMetadata = deviceMetadata,
        _timeZoneOffsetMinutes =
            timeZoneOffsetMinutes ?? _deviceTimeZoneOffsetMinutes,
-       _timeZoneIdentifier = timeZoneIdentifier ?? _deviceTimeZoneIdentifier;
+       _timeZoneIdentifier = timeZoneIdentifier ?? _deviceTimeZoneIdentifier,
+       _now = now ?? DateTime.now,
+       _readLastPreferencesCreatedAt = readLastPreferencesCreatedAt,
+       _writeLastPreferencesCreatedAt = writeLastPreferencesCreatedAt;
 
   final AuthService _authService;
   final NostrClient _nostrClient;
@@ -90,8 +102,14 @@ class PushNotificationService {
   final EnvironmentConfig _environmentConfig;
   final Future<String?> Function() _getToken;
   final FutureOr<bool> Function()? _isCurrent;
+  final PushDeviceMetadata? _deviceMetadata;
   final int Function() _timeZoneOffsetMinutes;
   final Future<String?> Function() _timeZoneIdentifier;
+  final DateTime Function() _now;
+  final Future<int?> Function(String pubkey)? _readLastPreferencesCreatedAt;
+  final Future<void> Function(String pubkey, int createdAt)?
+  _writeLastPreferencesCreatedAt;
+  final _lastPreferencesCreatedAt = <String, int>{};
   ({int offset, String? name})? _registeredTimezone;
 
   /// The signed event of each push-control kind that no relay has confirmed
@@ -408,8 +426,22 @@ class PushNotificationService {
     final request = _pushControlRequest(identity, pushServicePubkey, plaintext);
     final unconfirmed = _unconfirmedEvent(pushPreferencesKind, request);
     if (unconfirmed != null) {
-      return _publishPreferencesEvent(unconfirmed, request);
+      return _publishPreferencesEvent(unconfirmed, request, identity.pubkey);
     }
+
+    int? persistedFloor;
+    try {
+      persistedFloor = await _readLastPreferencesCreatedAt?.call(
+        identity.pubkey,
+      );
+    } on Object catch (error) {
+      Log.warning(
+        'Failed to read last preferences timestamp: $error',
+        name: 'PushNotificationService',
+        category: LogCategory.system,
+      );
+    }
+    if (!await _isIdentityCurrent(identity, null)) return false;
 
     final encrypted = await identity.nip44Encrypt(
       pushServicePubkey,
@@ -426,6 +458,23 @@ class PushNotificationService {
       return false;
     }
 
+    final memoryFloor = _lastPreferencesCreatedAt[identity.pubkey];
+    final floor = switch ((memoryFloor, persistedFloor)) {
+      (final a?, final b?) => math.max(a, b),
+      (final a?, null) => a,
+      (null, final b?) => b,
+      (null, null) => null,
+    };
+    final baseCreatedAt = NostrTimestamp.fromDateTime(
+      _now(),
+      driftTolerance: NostrTimestamp.getDriftToleranceForKind(
+        pushPreferencesKind,
+      ),
+    );
+    final createdAt = (floor != null && baseCreatedAt <= floor)
+        ? floor + 1
+        : baseCreatedAt;
+
     final event = await _authService.createAndSignEvent(
       kind: pushPreferencesKind,
       content: encrypted,
@@ -433,6 +482,7 @@ class PushNotificationService {
         ['p', pushServicePubkey],
         ['app', pushAppIdentifier],
       ],
+      createdAt: createdAt,
     );
     if (!await _isIdentityCurrent(identity, null)) return false;
 
@@ -446,12 +496,34 @@ class PushNotificationService {
     }
     if (!await _isIdentityCurrent(identity, null)) return false;
 
-    return _publishPreferencesEvent(event, request);
+    return _publishPreferencesEvent(event, request, identity.pubkey);
   }
 
-  Future<bool> _publishPreferencesEvent(Event event, String request) async {
+  Future<bool> _publishPreferencesEvent(
+    Event event,
+    String request,
+    String pubkey,
+  ) async {
     final outcome = await _publishPushControlEvent(event, 'preferences');
     _keepIfUnconfirmed(pushPreferencesKind, request, event, outcome);
+    if (outcome.confirmed || outcome.noResponseFrom.isNotEmpty) {
+      final previous = _lastPreferencesCreatedAt[pubkey];
+      final updated = previous == null
+          ? event.createdAt
+          : math.max(previous, event.createdAt);
+      _lastPreferencesCreatedAt[pubkey] = updated;
+      if (previous == null || updated > previous) {
+        try {
+          await _writeLastPreferencesCreatedAt?.call(pubkey, updated);
+        } on Object catch (error) {
+          Log.warning(
+            'Failed to persist last preferences timestamp: $error',
+            name: 'PushNotificationService',
+            category: LogCategory.system,
+          );
+        }
+      }
+    }
     return outcome.confirmed;
   }
 
@@ -515,6 +587,9 @@ class PushNotificationService {
       'token': token,
       'timezoneOffsetMinutes': timezone.offset,
       'campaignTargetTypes': NotificationWireValues.campaignTargetTypes,
+      ...?_deviceMetadata?.toJson(),
+      if (_deviceMetadata?.supportsDirectMessageRouting ?? false)
+        'directMessageRouting': true,
       if (timezone.name != null) 'timezone': timezone.name,
     });
     final request = _pushControlRequest(identity, pushServicePubkey, plaintext);

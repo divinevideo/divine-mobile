@@ -155,7 +155,10 @@ Rect videoFrameRect(
 /// A poll, quiz or slider takes votes on its answers, and a question, Add
 /// yours or replies sticker opens what its buttons open; their buttons keep
 /// the pointer from the player. Each reads its poll, or who joined or
-/// replied, only once the video [isActive]. [onVoteStarted] tells the feed a
+/// replied, as soon as the feed builds the video, to be in when the viewer
+/// swipes to it, and keeps it while the video is paused under a sheet; a
+/// poll shows its votes only while the video [isCurrent], and the buttons
+/// take taps only while it [isActive]. [onVoteStarted] tells the feed a
 /// viewer started to vote or tapped one.
 class VideoStickerTapAreas extends StatefulWidget {
   const VideoStickerTapAreas({
@@ -165,6 +168,8 @@ class VideoStickerTapAreas extends StatefulWidget {
     this.onOpen = openVideoSticker,
     this.canSetReminders = !kIsWeb,
     this.isActive = true,
+    this.isCurrent = true,
+    this.isAddYoursSeries = false,
     this.onVoteStarted,
     super.key,
   });
@@ -182,8 +187,19 @@ class VideoStickerTapAreas extends StatefulWidget {
   /// without, a countdown is drawn with its time left and is no button.
   final bool canSetReminders;
 
-  /// Whether the video is the one the feed plays, whose polls are read.
+  /// Whether the video is the one the feed plays, whose stickers take taps.
   final bool isActive;
+
+  /// Whether the video is the feed's current one, also while the feed is
+  /// paused under a sheet or a page: a poll shows its votes only then, so
+  /// they grow in each time the viewer swipes to it.
+  final bool isCurrent;
+
+  /// Whether the feed is the series an Add yours collects, opened from its
+  /// sticker. Every answer carries the same sticker; one only the player
+  /// draws, which only some may answer, is left out there, as the viewer is
+  /// watching the series already. One in the frames is still drawn over.
+  final bool isAddYoursSeries;
 
   /// Called when a viewer starts to vote on a poll, quiz or slider.
   final VoidCallback? onVoteStarted;
@@ -212,7 +228,8 @@ class _VideoStickerTapAreasState extends State<VideoStickerTapAreas> {
   void didUpdateWidget(VideoStickerTapAreas oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller ||
-        oldWidget.video.stickerRegions != widget.video.stickerRegions) {
+        oldWidget.video.stickerRegions != widget.video.stickerRegions ||
+        oldWidget.isAddYoursSeries != widget.isAddYoursSeries) {
       unawaited(_subscription?.cancel());
       _subscribe();
     }
@@ -280,6 +297,9 @@ class _VideoStickerTapAreasState extends State<VideoStickerTapAreas> {
       region.target.isNotEmpty || widget.video.audioEventId != null,
     VideoStickerKind.poll || VideoStickerKind.quiz || VideoStickerKind.slider =>
       region.target.isNotEmpty && SocialStickerData.ofRegion(region) != null,
+    VideoStickerKind.prompt
+        when widget.isAddYoursSeries && region.audience.isRestricted =>
+      false,
     VideoStickerKind.question ||
     VideoStickerKind.prompt ||
     VideoStickerKind.replies => SocialStickerData.ofRegion(region) != null,
@@ -309,6 +329,7 @@ class _VideoStickerTapAreasState extends State<VideoStickerTapAreas> {
                     frame: frame,
                     video: widget.video,
                     isActive: widget.isActive,
+                    isCurrent: widget.isCurrent,
                     onVoteStarted: widget.onVoteStarted,
                   )
                 else
@@ -458,6 +479,7 @@ class _CardStickerArea extends StatelessWidget {
     required this.frame,
     required this.video,
     required this.isActive,
+    required this.isCurrent,
     required this.onVoteStarted,
   });
 
@@ -465,6 +487,7 @@ class _CardStickerArea extends StatelessWidget {
   final Rect frame;
   final VideoEvent video;
   final bool isActive;
+  final bool isCurrent;
   final VoidCallback? onVoteStarted;
 
   @override
@@ -486,6 +509,7 @@ class _CardStickerArea extends StatelessWidget {
                 video: video,
                 data: data,
                 isActive: isActive,
+                isCurrent: isCurrent,
                 onInteraction: onVoteStarted,
               )
             : InteractiveStickerOverlay(

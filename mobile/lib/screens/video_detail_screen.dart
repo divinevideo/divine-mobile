@@ -1,6 +1,7 @@
 // ABOUTME: Screen for viewing a specific video by ID (from deep links)
 // ABOUTME: Fetches video from Nostr and displays it in full-screen player
 
+import 'package:analytics/analytics.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:feed_repository/feed_repository.dart';
 import 'package:flutter/foundation.dart';
@@ -15,6 +16,7 @@ import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/extensions/video_event_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/view_traffic_source.dart';
+import 'package:openvine/observability/screen_load_telemetry.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/feed_viewer_preference_hints.dart';
@@ -29,27 +31,8 @@ import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/takeover_close_button.dart';
 import 'package:openvine/widgets/tv_static_message_screen.dart';
 
-class VideoDetailRouteExtra {
-  const VideoDetailRouteExtra({
-    this.autoOpenComments = false,
-    this.fallbackVideoIds = const [],
-    this.initialVideo,
-    this.dmReplyContext,
-    this.focusCommentId,
-  });
-
-  final bool autoOpenComments;
-  final List<String> fallbackVideoIds;
-  final VideoEvent? initialVideo;
-
-  /// The comment the comments sheet [autoOpenComments] opens scrolls to,
-  /// such as the one a tapped reply sticker replies to.
-  final String? focusCommentId;
-
-  /// Present when the reel was opened from a DM thread — drives the in-player
-  /// reply/reaction bar. Null for feed/profile opens.
-  final DmReplyContext? dmReplyContext;
-}
+export 'package:openvine/router/routes/route_extras.dart'
+    show VideoDetailRouteExtra;
 
 class VideoDetailScreen extends ConsumerWidget {
   /// Route name for this screen.
@@ -80,6 +63,7 @@ class VideoDetailScreen extends ConsumerWidget {
     this.initialVideo,
     this.videoFeedBuilder,
     this.dmReplyContext,
+    this.fromMessage = false,
     this.focusCommentId,
     super.key,
   });
@@ -104,6 +88,9 @@ class VideoDetailScreen extends ConsumerWidget {
   /// in-player reply/reaction bar.
   final DmReplyContext? dmReplyContext;
 
+  /// The user opened this clip from a private message.
+  final bool fromMessage;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return BlocProvider(
@@ -121,6 +108,11 @@ class VideoDetailScreen extends ConsumerWidget {
             .map(
               (statuses) => statuses.values.any((status) => status.isConnected),
             ),
+        loadTelemetry: ScreenLoadTelemetry(
+          tracker: ref.read(surfacePerformanceTrackerProvider),
+          surface: AnalyticsSurface.videoDetail,
+          entryPoint: ScreenLoadEntryPoint.link,
+        ),
       ),
       child: _VideoDetailView(screen: this),
     );
@@ -303,6 +295,7 @@ class _VideoDetailViewState extends ConsumerState<_VideoDetailView> {
               autoOpenComments: screen.autoOpenComments,
               focusCommentId: screen.focusCommentId,
               dmReplyContext: screen.dmReplyContext,
+              fromMessage: screen.fromMessage,
             );
         }
       },

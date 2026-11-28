@@ -4,16 +4,20 @@
 // ABOUTME: BackgroundPublishBloc state coverage, and the sheet-vs-snackbar branch.
 
 import 'dart:async';
-import 'dart:typed_data';
+import 'dart:convert';
 
 import 'package:analytics/analytics.dart';
 import 'package:bloc_test/bloc_test.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
 import 'package:openvine/features/oauth/app_oauth_support.dart';
 import 'package:openvine/features/post_publish/post_publish_experiment.dart';
@@ -28,6 +32,7 @@ import 'package:openvine/providers/crash_reporting_provider.dart';
 import 'package:openvine/providers/crossposting_providers.dart';
 import 'package:openvine/providers/post_publish_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
+import 'package:openvine/providers/short_link_provider.dart';
 import 'package:openvine/repositories/crossposting_repository.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/router/navigator_keys.dart';
@@ -35,6 +40,7 @@ import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:openvine/services/crossposting_api_client.dart';
+import 'package:openvine/services/short_link_client.dart';
 import 'package:openvine/services/video_publish/publish_error_kind.dart';
 import 'package:openvine/services/video_publish/video_publish_service.dart';
 import 'package:openvine/startup/upload_failure_listener.dart' as app;
@@ -157,9 +163,11 @@ Widget _buildHarness({
   PostPublishExperiment? experiment,
   GoRouter? router,
   List<Override> extraOverrides = const [],
+  ShortLinkClient? shortLinkClient,
 }) {
   return ProviderScope(
     overrides: [
+      shortLinkClientProvider.overrideWithValue(shortLinkClient),
       authServiceProvider.overrideWithValue(authService),
       if (experiment != null)
         postPublishExperimentProvider.overrideWithValue(experiment),
@@ -204,6 +212,7 @@ Widget _buildHarnessWithoutAppAncestors({
 }) {
   return ProviderScope(
     overrides: [
+      shortLinkClientProvider.overrideWithValue(null),
       authServiceProvider.overrideWithValue(authService),
       if (crashReporting != null)
         crashReportingServiceProvider.overrideWithValue(crashReporting),
@@ -527,6 +536,89 @@ void main() {
     testWidgets('Share preserves the experiment OS-share behavior', (
       tester,
     ) async {
+      String? sharedText;
+      var creates = 0;
+      const channel = MethodChannel('dev.fluttercommunity.plus/share');
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+            channel,
+            (call) async {
+              sharedText = (call.arguments as Map)['text'] as String?;
+              return '';
+            },
+          );
+      addTearDown(
+        () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, null),
+      );
+      String? requested;
+      final transport = MockClient((request) async {
+        creates++;
+        final url = (jsonDecode(request.body) as Map)['url'] as String;
+        requested = url;
+        return http.Response(
+          jsonEncode({
+            'code': 'Abc12345',
+            'short_url': 'https://divine.video/l/Abc12345',
+            'url': url,
+          }),
+          201,
+        );
+      });
+      addTearDown(transport.close);
+      final shortener = ShortLinkClient(client: transport);
+      addTearDown(shortener.close);
+
+      stubPublishBloc(const BackgroundPublishState());
+      when(() => authService.isAuthenticated).thenReturn(true);
+      when(() => authService.currentPublicKeyHex).thenReturn(_ownHex);
+      final experiment = await _treatmentExperiment('draft-treatment');
+
+      await tester.pumpWidget(
+        _buildHarness(
+          shortLinkClient: shortener,
+          publishBloc: publishBloc,
+          authService: authService,
+          experiment: experiment,
+          router: _routerAt(_ownProfileLocation),
+        ),
+      );
+
+      publishStream.add(_succeededState('draft-treatment'));
+      await tester.pumpAndSettle();
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await tester.tap(find.text(l10n.postPublishConfirmationShare));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.shareSheetMoreActions), findsNothing);
+      expect(creates, 1);
+      // Asserted here, not in the transport: the shortener swallows a throw
+      // from its client and would only report a missing short link.
+      final address = NIP19Tlv.decodeNaddr(
+        Uri.parse(requested!).pathSegments.last,
+      )!;
+      expect(address.author, _ownHex);
+      expect(address.kind, 34236);
+      expect(address.id, _publishedStableId);
+      expect(sharedText, 'https://divine.video/l/Abc12345');
+    });
+
+    testWidgets('a failing OS share does not escape as an unhandled error', (
+      tester,
+    ) async {
+      var shareCalls = 0;
+      const channel = MethodChannel('dev.fluttercommunity.plus/share');
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+            shareCalls++;
+            throw PlatformException(code: 'share-unavailable');
+          });
+      addTearDown(
+        () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, null),
+      );
+
       stubPublishBloc(const BackgroundPublishState());
       when(() => authService.isAuthenticated).thenReturn(true);
       when(() => authService.currentPublicKeyHex).thenReturn(_ownHex);
@@ -548,7 +640,8 @@ void main() {
       await tester.tap(find.text(l10n.postPublishConfirmationShare));
       await tester.pumpAndSettle();
 
-      expect(find.text(l10n.shareSheetMoreActions), findsNothing);
+      expect(shareCalls, 1);
+      expect(tester.takeException(), isNull);
     });
 
     group('crosspost prompt', () {

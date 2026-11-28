@@ -10,6 +10,7 @@ import 'package:models/models.dart'
         ClipSourceCredit,
         VineSound;
 import 'package:openvine/collab_room/collab_room_providers.dart';
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/publishing_ideas/publishing_ideas.dart';
@@ -27,6 +28,8 @@ import 'package:openvine/widgets/video_metadata/video_metadata_expiration_select
 import 'package:openvine/widgets/video_metadata/video_metadata_form_fields.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_inspired_by_input.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_tags_selector.dart';
+
+import 'package:pro_image_editor/pro_image_editor.dart';
 
 import '../../helpers/test_provider_overrides.dart';
 
@@ -445,6 +448,57 @@ void main() {
         ),
         findsOneWidget,
       );
+    });
+
+    testWidgets('audio reuse is locked off by a later restricted track', (
+      tester,
+    ) async {
+      AudioEvent providerSound(bool allowsDerivatives) => AudioEvent(
+        id: 'external_provider_sound_$allowsDerivatives',
+        pubkey: AudioEvent.externalProviderMarker,
+        createdAt: 1700000000,
+        externalSource: AudioExternalSource(
+          provider: 'catalog',
+          providerSoundId: '$allowsDerivatives',
+          providerName: 'Catalog',
+          sourceUrl: 'https://example.com/sound',
+          previewUrl: 'https://example.com/preview.mp3',
+          license: AudioLicenseMetadata(
+            type: 'test',
+            name: 'Test',
+            url: 'https://example.com/terms',
+            allowsCommercialUse: false,
+            allowsDerivatives: allowsDerivatives,
+            requiresAttribution: false,
+          ),
+        ),
+      );
+      await tester.pumpWidget(
+        buildWidget(
+          state: VideoEditorProviderState(
+            allowAudioReuse: true,
+            editorEditingParameters:
+                CompleteParameters.fromMap(<String, dynamic>{}).copyWith(
+                  meta: {
+                    VideoEditorConstants.audioStateHistoryKey: [
+                      providerSound(true).toJson(),
+                      providerSound(false).toJson(),
+                    ],
+                  },
+                ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(VideoMetadataFormFields)),
+      );
+      final tile = tester.widget<DivineSwitchTile>(
+        find.widgetWithText(DivineSwitchTile, l10n.soundAllowRemix),
+      );
+      expect(tile.value, isFalse);
+      expect(tile.onChanged, isNull);
+      expect(tile.subtitle, l10n.soundCreditOnly);
     });
 
     group('clip credits', () {

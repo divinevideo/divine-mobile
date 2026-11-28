@@ -247,11 +247,12 @@ void main() {
         published.add(event);
         recipientWrapTargets[event.id] =
             invocation.namedArguments[#targetRelays] as List<String>?;
+        final attempted = recipientWrapTargets[event.id] ?? const [_poolRelay];
         return PublishOutcome(
           eventId: event.id,
-          acceptedBy: confirmRecipientWraps ? const [_poolRelay] : const [],
+          acceptedBy: confirmRecipientWraps ? attempted : const [],
           rejectedBy: const {},
-          noResponseFrom: confirmRecipientWraps ? const [] : const [_poolRelay],
+          noResponseFrom: confirmRecipientWraps ? const [] : attempted,
         );
       });
       // The sender's own copy.
@@ -427,11 +428,17 @@ void main() {
         'keeps the row for the self-copy when it fails to publish',
         () async {
           final (:rowId, :poolWrap) = await heldSend();
+          final states = repository.watchDeliveryState(
+            ownerPubkey: owner,
+            rumorId: rowId,
+          );
+          expect(await states.first, DmDeliveryState.held);
           inboxes[peerB] = _Inbox.absent;
           selfCopiesPublish = false;
 
           final retried = await repository.recoverFullSend(rumorId: rowId);
 
+          expect(await states.first, DmDeliveryState.accepted);
           expect(retried.success, isTrue);
           expect(wrapsTo(peerB), hasLength(1));
           final row = await outgoingDao.getById(rowId);

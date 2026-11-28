@@ -30,6 +30,7 @@ import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_apps_platform_support.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/nav_rounded_shell.dart';
+import 'package:openvine/widgets/screen_frame_trace_scope.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// The explore screen body. Provided an [ExploreTabsCubit] by [ExploreScreen].
@@ -70,7 +71,7 @@ class _ExploreViewState extends ConsumerState<ExploreView>
   /// Refetches the featured configuration on foreground so a backend kill
   /// switch lands without waiting out the poll interval.
   late final AppLifecycleListener _lifecycleListener;
-  ProviderSubscription<bool>? _featuredTabAgeGateSubscription;
+  ProviderSubscription<FeaturedTabAudience>? _featuredTabAgeGateSubscription;
 
   ExploreTabsCubit get _tabs => context.read<ExploreTabsCubit>();
   ExploreTabsState get _tabsState => _tabs.state;
@@ -135,10 +136,10 @@ class _ExploreViewState extends ConsumerState<ExploreView>
         category: LogCategory.ui,
       ),
     );
-    _featuredTabAgeGateSubscription = ref.listenManual<bool>(
+    _featuredTabAgeGateSubscription = ref.listenManual(
       featuredTabAgeGateProvider,
       (previous, next) {
-        if (previous != null && previous != next) {
+        if (previous != next) {
           runDetached(
             context.read<FeaturedTabsCubit>().refresh(),
             'refresh featured tabs after age gate change',
@@ -149,8 +150,14 @@ class _ExploreViewState extends ConsumerState<ExploreView>
       },
     );
 
-    // Track Explore-specific data load completion from child tabs.
-    _tabs.trackScreenLoad();
+    // Track Explore-specific data load completion from child tabs. A
+    // featured-tab link opens on a tab whose configuration is still loading,
+    // so its launch tab is not known yet.
+    _tabs.trackScreenLoad(
+      initialTabName: _pendingFeaturedSlug != null
+          ? null
+          : _pendingInitialTabName ?? ref.read(exploreTabNameProvider),
+    );
 
     // Load top hashtags for trending navigation
     runDetached(
@@ -282,14 +289,17 @@ class _ExploreViewState extends ConsumerState<ExploreView>
   Widget build(BuildContext context) {
     ref.watch(exploreTabVideoUpdateListenerProvider);
 
-    // Watch tab availability and rebuild the controller when it changes.
+    // Keep Classics in the tab list while its last availability is rechecked.
     final classicsAvailable =
-        ref.watch(classicVinesAvailableProvider).asData?.value ?? false;
+        ref.watch(classicVinesAvailableProvider).value ?? false;
     final forYouAvailable = ref.watch(forYouAvailableProvider);
     final appsAvailable =
         nostrAppsSandboxSupported &&
         ref.watch(isFeatureEnabledProvider(FeatureFlag.integratedApps));
 
+    // The audience listener clears the cubit's tab synchronously. Rebuild in
+    // that same frame rather than waiting for its asynchronous stream event.
+    ref.watch(featuredTabAgeGateProvider);
     final featuredTab = context.select(
       (FeaturedTabsCubit cubit) => cubit.state.tab,
     );
@@ -339,7 +349,7 @@ class _ExploreViewState extends ConsumerState<ExploreView>
       return _buildContent();
     }
 
-    return NavRoundedShell(
+    final grid = NavRoundedShell(
       child: Column(
         children: [
           SafeArea(
@@ -382,6 +392,8 @@ class _ExploreViewState extends ConsumerState<ExploreView>
         ],
       ),
     );
+    // The feed mode above has the fullscreen feed's own trace.
+    return ScreenFrameTraceScope(screen: .explore, child: grid);
   }
 
   void _onTabTap(int index) {

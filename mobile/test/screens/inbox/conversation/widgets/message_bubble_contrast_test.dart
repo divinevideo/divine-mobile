@@ -155,6 +155,7 @@ void main() {
         ) async {
           await tester.pumpWidget(
             testMaterialApp(
+              mockVideoEventService: VisibleTestVideoEventService(),
               theme: theme,
               home: Scaffold(body: SingleChildScrollView(child: bubble)),
               mockNostrService: createMockNostrService(),

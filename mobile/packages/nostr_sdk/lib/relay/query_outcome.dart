@@ -19,10 +19,12 @@ class QueryOutcome {
   const QueryOutcome({
     required this.endedBy,
     this.answeredNetworkRelayCount = 0,
+    this.unsentNetworkRelayCount = 0,
     this.unansweredRelayCount = 0,
     this.rateLimitedRelayCount = 0,
     this.closedRelayReasons = const {},
     this.possiblyCapped = false,
+    this.hasCapEvidence = false,
     this.confirmedExhaustive = false,
     this.relays = const [],
     this.cappedWithoutEvents = const [],
@@ -42,6 +44,10 @@ class QueryOutcome {
   /// [QueryResult.answeredNetworkRelayCount].
   final int answeredNetworkRelayCount;
 
+  /// Readable non-cache relays the query could not reach; see
+  /// [QueryResult.unsentNetworkRelayCount].
+  final int unsentNetworkRelayCount;
+
   /// Number of relays that sent no terminal frame and could still have
   /// answered; see [QueryResult.unansweredRelayCount].
   final int unansweredRelayCount;
@@ -57,6 +63,10 @@ class QueryOutcome {
   /// Whether a relay may have withheld matching events because the query
   /// reached that relay's result-size limit; see [QueryResult.possiblyCapped].
   final bool possiblyCapped;
+
+  /// Whether a relay may have withheld events for a reason beyond an unknown
+  /// result limit; see [QueryResult.hasCapEvidence].
+  final bool hasCapEvidence;
 
   /// Whether every relay that answered confirmed, with a NIP-67 `finish`
   /// hint, that it sent every matching stored event; see

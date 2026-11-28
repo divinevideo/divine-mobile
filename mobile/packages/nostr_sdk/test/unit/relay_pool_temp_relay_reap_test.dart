@@ -76,6 +76,24 @@ void main() {
       );
     });
 
+    test('spares a disconnected temp relay holding a publish it has not '
+        'answered', () async {
+      final pool = buildPool(idleTimeout: Duration.zero);
+      pool.checkAndGenTempRelay('wss://unanswered.example').savePublish(
+        'held-event-id',
+        ['EVENT', <String, dynamic>{}],
+        DateTime.now().add(const Duration(minutes: 1)),
+      );
+
+      pool.sweepIdleTempRelays();
+
+      expect(
+        pool.tempRelayUrls,
+        hasLength(1),
+        reason: 'its next socket sends the publish again (#11446)',
+      );
+    });
+
     test(
       'spares a temp relay whose first connect has not landed yet',
       () async {

@@ -240,8 +240,8 @@ class _Form extends StatelessWidget {
       };
 }
 
-/// What is true after Keycast accepts the request: two links are in flight and
-/// nothing has changed yet.
+/// Confirmation instructions after Keycast accepts an email change request.
+/// Only accounts that already have an address need a second link.
 class _RequestSent extends StatelessWidget {
   const _RequestSent({required this.newEmail});
 

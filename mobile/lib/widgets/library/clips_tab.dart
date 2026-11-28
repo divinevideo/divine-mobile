@@ -11,6 +11,7 @@ import 'package:openvine/extensions/media_query_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/clip_category.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
@@ -583,76 +584,91 @@ class _MasonryLayout extends StatelessWidget {
     final selectionIndexById = <String, int>{
       for (final id in selectedClipIds) id: ++selectionIndex,
     };
-    return PinchZoomGrid(
-      columnCount: columnCount,
-      minColumnCount: ClipGridColumns.min,
-      maxColumnCount: ClipGridColumns.max,
-      backgroundColor: backgroundColor,
-      scrollController: scrollController,
-      onColumnCountChanged: (columns) {
-        context.read<ClipsLibraryBloc>().add(
-          ClipsLibraryGridColumnsChanged(columns),
-        );
-        announceDetached(
-          context,
-          context.l10n.libraryGridSizeColumns(columns),
-          description: 'announce clip grid column count',
-          logName: 'ClipsTab',
-        );
-      },
-      builder: (context, columns, controller) => DragSelectRegion(
-        scrollController: controller,
-        onStarted: (index) => context.read<ClipsLibraryBloc>().add(
-          ClipsLibraryDragSelectionStarted(
-            clips[index],
-            targetAspectRatio: targetAspectRatio,
-            selectionEnabled: selectionEnabled,
-          ),
-        ),
-        onExtended: (index) => context.read<ClipsLibraryBloc>().add(
-          ClipsLibraryDragSelectionExtended(clips[index]),
-        ),
-        onEnded: () => context.read<ClipsLibraryBloc>().add(
-          const ClipsLibraryDragSelectionEnded(),
-        ),
-        child: MasonryGridView.count(
-          controller: controller,
-          padding: .only(
-            top: topPadding,
-            bottom: MediaQuery.viewPaddingOf(context).bottom,
-          ),
-          crossAxisCount: columns,
-          mainAxisSpacing: 4,
-          crossAxisSpacing: 4,
-          cacheExtent: MediaQuery.sizeOf(context).height * 2,
-          itemCount: clips.length,
-          itemBuilder: (context, index) {
-            final clip = clips[index];
-            final selectionIndex = selectionIndexById[clip.id] ?? -1;
-            final disabled =
-                disabledClipIds.contains(clip.id) ||
-                (targetAspectRatio != null &&
-                    targetAspectRatio != clip.targetAspectRatio.value) ||
-                (selectedIsStopMotion != null &&
-                    clip.isStopMotion != selectedIsStopMotion);
-
-            return DragSelectSlot(
-              index: index,
-              enabled: !disabled,
-              child: VideoClipThumbnailCard(
-                clip: clip,
-                selectionIndex: selectionIndex,
-                showSelectionIndicator: selectionEnabled,
-                showArchivedBadge: markArchivedClips && clip.archivedAt != null,
-                disabled: disabled,
-                onTap: () => onTapClip(clip),
-                // No long press here: it belongs to the drag selection above,
-                // and a handler at this depth would win the arena from it.
-              ),
+    final layout = context.adaptiveLayout;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Wide windows with the large-screen layouts show a column more at
+        // each breakpoint on top of the user's choice, so a pinch moves within
+        // the shifted range while the choice itself is kept in phone terms.
+        final extraColumns =
+            layout.gridColumns(
+              compact: columnCount,
+              width: constraints.maxWidth,
+            ) -
+            columnCount;
+        return PinchZoomGrid(
+          columnCount: columnCount + extraColumns,
+          minColumnCount: ClipGridColumns.min + extraColumns,
+          maxColumnCount: ClipGridColumns.max + extraColumns,
+          backgroundColor: backgroundColor,
+          scrollController: scrollController,
+          onColumnCountChanged: (columns) {
+            context.read<ClipsLibraryBloc>().add(
+              ClipsLibraryGridColumnsChanged(columns - extraColumns),
+            );
+            announceDetached(
+              context,
+              context.l10n.libraryGridSizeColumns(columns),
+              description: 'announce clip grid column count',
+              logName: 'ClipsTab',
             );
           },
-        ),
-      ),
+          builder: (context, columns, controller) => DragSelectRegion(
+            scrollController: controller,
+            onStarted: (index) => context.read<ClipsLibraryBloc>().add(
+              ClipsLibraryDragSelectionStarted(
+                clips[index],
+                targetAspectRatio: targetAspectRatio,
+                selectionEnabled: selectionEnabled,
+              ),
+            ),
+            onExtended: (index) => context.read<ClipsLibraryBloc>().add(
+              ClipsLibraryDragSelectionExtended(clips[index]),
+            ),
+            onEnded: () => context.read<ClipsLibraryBloc>().add(
+              const ClipsLibraryDragSelectionEnded(),
+            ),
+            child: MasonryGridView.count(
+              controller: controller,
+              padding: .only(
+                top: topPadding,
+                bottom: MediaQuery.viewPaddingOf(context).bottom,
+              ),
+              crossAxisCount: columns,
+              mainAxisSpacing: 4,
+              crossAxisSpacing: 4,
+              cacheExtent: MediaQuery.sizeOf(context).height * 2,
+              itemCount: clips.length,
+              itemBuilder: (context, index) {
+                final clip = clips[index];
+                final selectionIndex = selectionIndexById[clip.id] ?? -1;
+                final disabled =
+                    disabledClipIds.contains(clip.id) ||
+                    (targetAspectRatio != null &&
+                        targetAspectRatio != clip.targetAspectRatio.value) ||
+                    (selectedIsStopMotion != null &&
+                        clip.isStopMotion != selectedIsStopMotion);
+
+                return DragSelectSlot(
+                  index: index,
+                  enabled: !disabled,
+                  child: VideoClipThumbnailCard(
+                    clip: clip,
+                    selectionIndex: selectionIndex,
+                    showSelectionIndicator: selectionEnabled,
+                    showArchivedBadge:
+                        markArchivedClips && clip.archivedAt != null,
+                    disabled: disabled,
+                    onTap: () => onTapClip(clip),
+                    // No long press here: it belongs to the drag selection above,
+                    // and a handler at this depth would win the arena from it.
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      },
     );
   }
 }

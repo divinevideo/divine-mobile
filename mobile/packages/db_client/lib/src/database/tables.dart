@@ -918,11 +918,20 @@ class DirectMessages extends Table {
   /// turn out to advertise no inbox, and wraps the retraction again only once
   /// their inbox is found.
   ///
+  /// Under the sender's own hex pubkey, never a recipient, the record names
+  /// the sender's own copy once one lands (#10016), so a retry publishes no
+  /// other.
+  ///
   /// Lives as long as the rumor it was recorded for: cleared when the
   /// retraction is confirmed or a different kind-5 replaces it, and kept,
   /// like the rumor, by a blocked one.
   TextColumn get heldDeletionWraps =>
       text().nullable().named('held_deletion_wraps')();
+
+  /// Environment where this installation observed recipient-route acceptance.
+  /// History sync never sets this, even for the sender's own gift wrap.
+  /// `''` means accepted while no environment was set.
+  TextColumn get recipientAcceptedEnvironment => text().nullable()();
 
   /// Owner-scoped so the same immutable rumor id can be represented once per
   /// local account. NIP-17 seals one rumor per group message and NIP-59 wraps
@@ -1146,6 +1155,9 @@ class Conversations extends Table {
   TextColumn get lastMessageContent =>
       text().nullable().named('last_message_content')();
 
+  /// Exact local message behind the preview, when known.
+  TextColumn get lastMessageId => text().nullable()();
+
   /// Unix timestamp of the last message.
   IntColumn get lastMessageTimestamp =>
       integer().nullable().named('last_message_timestamp')();
@@ -1308,9 +1320,8 @@ class PersonalReposts extends Table {
 ///   Before #6986 every follow/unfollow appended a full 42.5 KiB kind-3 row
 ///   that was never evicted.
 /// * Everything else is durable and trimmed to the newest rows per owner. The
-///   load-bearing members are the signed-but-unpublished video event that
-///   "Try Again" reuses, and the raw tags `sourceOriginalVideoTags` recovers
-///   before a metadata edit.
+///   load-bearing member is the signed-but-unpublished video event that
+///   "Try Again" reuses.
 @TableIndex.sql(
   'CREATE INDEX IF NOT EXISTS idx_personal_events_pubkey_kind_created_at '
   'ON personal_events (pubkey, kind, created_at DESC)',
@@ -1512,6 +1523,18 @@ class OutgoingDms extends Table {
   /// pool did accept while the recipient's inbox was unreadable (#10012).
   TextColumn get unconfirmedRecipientWrapJson =>
       text().nullable().named('unconfirmed_recipient_wrap_json')();
+
+  /// Suppresses the legacy kind-4 copy on every attempt, including a replay
+  /// after restart.
+  BoolColumn get skipNip04Fallback => boolean()
+      .named('skip_nip04_fallback')
+      .withDefault(const Constant(false))();
+
+  /// Whether the share sheet queued this send. Every attempt, including a
+  /// replay after restart, rechecks that the share sheet would still offer
+  /// the recipient.
+  BoolColumn get isVideoShare =>
+      boolean().named('is_video_share').withDefault(const Constant(false))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -1897,6 +1920,11 @@ class ProcessedGiftWraps extends Table {
   /// to it. Cleanup and lookups treat it as the account's own.
   TextColumn get ownerPubkey =>
       text().withDefault(const Constant('')).named('owner_pubkey')();
+
+  /// Verified inbound rumor referenced by a second wrap for the same message.
+  /// Terminal outcomes without a navigable message keep this NULL.
+  TextColumn get verifiedMessageId =>
+      text().nullable().named('verified_message_id')();
 
   @override
   Set<Column> get primaryKey => {giftWrapId, ownerPubkey};

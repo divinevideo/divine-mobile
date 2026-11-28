@@ -1,8 +1,7 @@
 // ABOUTME: Repository for video operations with Nostr.
 // ABOUTME: Orchestrates NostrClient for fetching and
 // ABOUTME: VideoLocalStorage for caching.
-// ABOUTME: Returns Future<List<VideoEvent>>, not streams -
-// ABOUTME: loading is pagination-based.
+// ABOUTME: Paginates feeds and streams progressively resolved curated lists.
 
 import 'dart:async';
 import 'dart:math';
@@ -16,6 +15,7 @@ import 'package:videos_repository/src/author_feed_result.dart';
 import 'package:videos_repository/src/badge_video_pager.dart';
 import 'package:videos_repository/src/home_feed_result.dart';
 import 'package:videos_repository/src/in_memory_feed_cache.dart';
+import 'package:videos_repository/src/latest_video_revision.dart';
 import 'package:videos_repository/src/popular_videos_page.dart';
 import 'package:videos_repository/src/profile_video_merge.dart';
 import 'package:videos_repository/src/recommendation_session_seed.dart';
@@ -24,6 +24,7 @@ import 'package:videos_repository/src/seen_video_lookup.dart';
 import 'package:videos_repository/src/video_content_filter.dart';
 import 'package:videos_repository/src/video_event_filter.dart';
 import 'package:videos_repository/src/video_local_storage.dart';
+import 'package:videos_repository/src/video_merge_helpers.dart';
 import 'package:videos_repository/src/video_route_lookup_result.dart';
 import 'package:videos_repository/src/video_route_ref.dart';
 import 'package:videos_repository/src/video_search_sort.dart';
@@ -67,14 +68,14 @@ const int _authorFeedHasMoreThreshold = 10;
 /// is covered: the cap bounds the filter, not the feed.
 const int _membersFeedRelayFilterAuthors = 100;
 
-/// How many members the Funnelcake fallback of a members feed can cover, one
-/// videos-by-author call each. A larger list is not answered by the fallback
-/// at all: a feed missing most of its members would pass for the complete
-/// one.
-const int _membersFeedApiAuthorCap = 100;
+/// How many members one Funnelcake by-authors read of a members feed names:
+/// the most the endpoint takes. A larger list is read as one request per two
+/// hundred members.
+const int _membersFeedApiAuthorsPerRequest = 200;
 
-/// How many of the fallback's per-member calls are in flight at once.
-const int _membersFeedApiConcurrency = 20;
+/// The most videos one Funnelcake by-authors read returns, whatever limit it
+/// is asked for.
+const int _membersFeedApiPageLimit = 100;
 
 /// How many events naming one file a file-hash lookup reads. Normally one
 /// post names a file. Relays answer newest first, so the window is wide
@@ -98,6 +99,13 @@ const Duration _relaySearchTimeout = Duration(seconds: 15);
 /// healthy Funnelcake responses while still bounding degraded-service latency.
 const Duration _statsFetchTimeout = Duration(seconds: 3);
 
+/// Bounds Funnelcake's answer in [VideosRepository.fetchLatestVideoRevision].
+///
+/// The read is asked first because it is fast; a hung API must not hold a
+/// video republish for the client's full request timeout before the relays
+/// are asked. A timeout falls through to the relay read like a failure.
+const Duration _latestRevisionFunnelcakeTimeout = Duration(seconds: 3);
+
 /// Bounds the relay freshness check used by manual New-feed refreshes.
 ///
 /// The REST recent feed can lag briefly behind relays due to ingestion and edge
@@ -115,6 +123,8 @@ const Duration _recentRelayRefreshTimeout = Duration(seconds: 3);
 const Duration _routeRelayTimeout = Duration(seconds: 3);
 const String _popularCacheKey = 'popular';
 const String _popularLegacyBeforeCursorPrefix = 'before:';
+const String _recommendedFallbackCursorPrefix = 'recommended-fallback:';
+const String _recommendedPopularCursorPrefix = 'recommended-popular:';
 const String _classicsCacheKey = 'classics';
 const String _classicsOffsetCursorPrefix = 'classic-offset:';
 const Duration _classicsFirstPageCacheTtl = Duration(minutes: 15);
@@ -139,15 +149,28 @@ const int classicsMaxRandomStartOffset = 2000;
 /// that without turning a single fetch into a crawl through the archive.
 const int _classicsMaxPageFetches = 3;
 
+/// Videos a Classics archive fetch must collect before it stops reading
+/// further archive pages: half of the requested [limit].
+///
+/// Every archive page is a full Funnelcake round trip, several seconds when
+/// it misses the CDN, and the archive's unverified rows take 10–45% out of
+/// each page. Waiting for a full [limit] therefore made nearly every first
+/// load read two or three pages one after another. Half a page already
+/// fills more than a screen of the grid and the feed, and scrolling
+/// paginates for the rest.
+int _classicsFillTarget(int limit) => max(1, (limit + 1) ~/ 2);
+
 /// Result of a hashtag REST feed fetch.
 class HashtagFeedVideosResult {
   /// Creates a successful hashtag feed result.
-  const HashtagFeedVideosResult.success(this.videos) : succeeded = true;
+  const HashtagFeedVideosResult.success(this.videos, {this.nextCursor})
+    : succeeded = true;
 
   /// Creates a failed or skipped hashtag feed result.
   const HashtagFeedVideosResult.failure()
     : videos = const [],
-      succeeded = false;
+      succeeded = false,
+      nextCursor = null;
 
   /// Videos returned by the REST feed in display order.
   final List<VideoEvent> videos;
@@ -158,6 +181,9 @@ class HashtagFeedVideosResult {
   /// this to distinguish a real empty feed from a transient failure, timeout,
   /// or unavailable client.
   final bool succeeded;
+
+  /// Opaque continuation for the next ranked page, if available.
+  final String? nextCursor;
 }
 
 String _encodePopularLegacyBeforeCursor(int before) =>
@@ -182,6 +208,50 @@ int? _decodeClassicsOffsetCursor(String? cursor) {
   }
 
   return int.tryParse(cursor.substring(_classicsOffsetCursorPrefix.length));
+}
+
+String _encodeRecommendedFallbackCursor(
+  int? until, {
+  bool recommendationsExhausted = false,
+  String? seedVideoId,
+}) {
+  final prefix = recommendationsExhausted
+      ? _recommendedPopularCursorPrefix
+      : _recommendedFallbackCursorPrefix;
+  final timestamp = until?.toString() ?? '';
+  if (seedVideoId == null || recommendationsExhausted) {
+    return '$prefix$timestamp';
+  }
+  return '$prefix$timestamp:$seedVideoId';
+}
+
+({
+  bool isFallback,
+  bool recommendationsExhausted,
+  int? until,
+  String? seedVideoId,
+})
+_decodeRecommendedFallbackCursor(String? cursor) {
+  final recommendationsExhausted =
+      cursor?.startsWith(_recommendedPopularCursorPrefix) ?? false;
+  final prefix = recommendationsExhausted
+      ? _recommendedPopularCursorPrefix
+      : _recommendedFallbackCursorPrefix;
+  if (cursor == null || !cursor.startsWith(prefix)) {
+    return (
+      isFallback: false,
+      recommendationsExhausted: false,
+      until: null,
+      seedVideoId: null,
+    );
+  }
+  final parts = cursor.substring(prefix.length).split(':');
+  return (
+    isFallback: true,
+    recommendationsExhausted: recommendationsExhausted,
+    until: int.tryParse(parts.first),
+    seedVideoId: parts.length == 2 ? parts.last : null,
+  );
 }
 
 /// Cache-key suffix for the popular feed's viewer preferences.
@@ -225,6 +295,7 @@ class VideosRepository {
     BlockedVideoFilter? blockFilter,
     DeletedVideoFilter? deletedFilter,
     this.removedVideoIds = const Stream<String>.empty(),
+    this.replacedVideos = const Stream<VideoEvent>.empty(),
     VideoContentFilter? contentFilter,
     VideoContentFilter? feedShapeFilter,
     VideoWarningLabelsResolver? warningLabelsResolver,
@@ -233,6 +304,7 @@ class VideosRepository {
     SeenVideoLookup? seenVideoLookup,
     String? Function()? viewerPubkey,
     bool classicRecommendationsEnabled = false,
+    bool Function()? classicRecommendationsAllowed,
     String? Function()? classicViewerPubkey,
     Object? Function()? classicContextKey,
     Random? random,
@@ -248,6 +320,7 @@ class VideosRepository {
        _seenVideoLookup = seenVideoLookup,
        _viewerPubkey = viewerPubkey,
        _classicRecommendationsEnabled = classicRecommendationsEnabled,
+       _classicRecommendationsAllowed = classicRecommendationsAllowed,
        _classicViewerPubkey = classicViewerPubkey,
        _classicContextKey = classicContextKey,
        _random = random ?? Random();
@@ -259,6 +332,10 @@ class VideosRepository {
 
   /// Emits IDs for videos removed by deletion handling.
   final Stream<String> removedVideoIds;
+
+  /// Emits each video its owner republished from this device, so a feed
+  /// holding an older revision can show the new one (#11250).
+  final Stream<VideoEvent> replacedVideos;
 
   final VideoContentFilter? _contentFilter;
   final VideoContentFilter? _feedShapeFilter;
@@ -286,6 +363,12 @@ class VideosRepository {
   Object? _classicBrowsingContext;
   bool _classicBrowsingViewerInitialized = false;
   final bool _classicRecommendationsEnabled;
+
+  /// Per-read account gate for private Classics recommendations, evaluated on
+  /// every read so a status change never requires rebuilding the repository.
+  /// False when a read starts sends it to the archive path; turning false
+  /// mid-read supersedes the read.
+  final bool Function()? _classicRecommendationsAllowed;
   final String? Function()? _classicViewerPubkey;
   final Object? Function()? _classicContextKey;
 
@@ -333,7 +416,7 @@ class VideosRepository {
         if (AId.fromString(id) case final address?
             when (address.kind == EventKind.videoVertical ||
                     address.kind == EventKind.videoHorizontal) &&
-                _hexPubkey.hasMatch(address.pubkey) &&
+                _hex64.hasMatch(address.pubkey) &&
                 address.dTag.isNotEmpty)
           id: address,
     };
@@ -345,7 +428,8 @@ class VideosRepository {
     return Map.fromIterables(addresses.keys, policies);
   }
 
-  static final _hexPubkey = RegExp(r'^[0-9a-fA-F]{64}$');
+  /// 64 hex characters: the shape of a pubkey and of an event id.
+  static final _hex64 = RegExp(r'^[0-9a-fA-F]{64}$');
 
   /// Clears the in-memory feed cache.
   ///
@@ -555,11 +639,7 @@ class VideosRepository {
       } else if (videos.isNotEmpty) {
         seenOnlyPages++;
       }
-      _appendUniqueVideos(
-        visible,
-        unseenVideos,
-        seenVideoKeys: seenVideoKeys,
-      );
+      _appendUniqueVideos(visible, unseenVideos, seenVideoKeys: seenVideoKeys);
       // Trust the server's flag rather than the row count: the client drops
       // malformed rows, and a short page would otherwise end the feed early.
       if (!response.hasMore) break;
@@ -900,20 +980,44 @@ class VideosRepository {
     );
   }
 
-  /// Fetches videos for a specific curated list.
-  ///
-  /// Separates [videoRefs] into event IDs and addressable coordinates,
-  /// fetches both, and returns videos in the ref order (preserving
-  /// the list's ordering).
-  ///
-  /// Returns an empty list if [videoRefs] is empty or no videos are found.
-  Future<List<VideoEvent>> getVideosForList(List<String> videoRefs) async {
-    if (videoRefs.isEmpty) return [];
+  /// The videos a curated list names, in [videoRefs]' order: the last value
+  /// of [watchVideosForList].
+  Future<List<VideoEvent>> getVideosForList(
+    List<String> videoRefs, {
+    bool includeFeedShape = true,
+  }) => watchVideosForList(
+    videoRefs,
+    includeFeedShape: includeFeedShape,
+  ).last;
 
-    // Separate refs by type
+  /// The videos a curated list names, in [videoRefs]' order, each time more
+  /// of them resolve.
+  ///
+  /// Event ids are read from Funnelcake first, a hundred per request, all
+  /// requests at once. The ids it does not return, and every id when it is
+  /// not configured or a request fails, are read as [getVideosByIds] reads
+  /// them, including external NIP-71 video kinds. Funnelcake leaves out
+  /// deleted videos and the older revisions of
+  /// edited ones, and the relays still hold some of those. Coordinates
+  /// (`kind:pubkey:d-tag`) are read as [getVideosByAddressableIds] reads
+  /// them, once Funnelcake has answered.
+  ///
+  /// Funnelcake's videos are emitted as soon as they arrive, when there are
+  /// any and something is left to read. The last value is every video that
+  /// resolved, and it is always emitted, empty when none did. A reference
+  /// that resolves to no video, or to one this viewer's filters hide, is left
+  /// out. [includeFeedShape] works as for [getVideosByIds].
+  ///
+  /// [relayOnly] reads every reference from the relays alone, with no
+  /// Funnelcake read, fallback or counts, for a list whose contents must not
+  /// reach Funnelcake in one request, such as the viewer's own private list.
+  Stream<List<VideoEvent>> watchVideosForList(
+    List<String> videoRefs, {
+    bool includeFeedShape = true,
+    bool relayOnly = false,
+  }) async* {
     final eventIds = <String>[];
     final addressableIds = <String>[];
-
     for (final ref in videoRefs) {
       if (ref.contains(':')) {
         addressableIds.add(ref);
@@ -922,30 +1026,125 @@ class VideosRepository {
       }
     }
 
-    // Fetch both types in parallel
-    final results = await Future.wait([
-      if (eventIds.isNotEmpty) getVideosByIds(eventIds),
-      if (addressableIds.isNotEmpty) getVideosByAddressableIds(addressableIds),
-    ]);
-
-    // Build lookup map: ref → video
     final refToVideo = <String, VideoEvent>{};
-    var resultIndex = 0;
-
-    if (eventIds.isNotEmpty) {
-      for (final video in results[resultIndex]) {
-        refToVideo[video.id] = video;
+    List<VideoEvent> inListOrder() {
+      final byVideoKey = <String, VideoEvent>{};
+      for (final ref in videoRefs) {
+        final video = refToVideo[ref.contains(':') ? ref : ref.toLowerCase()];
+        if (video == null) continue;
+        final existing = byVideoKey[video.feedDedupKey];
+        if (existing == null || isNewerVideoRevision(video, existing)) {
+          byVideoKey[video.feedDedupKey] = video;
+        }
       }
-      resultIndex++;
-    }
-    if (addressableIds.isNotEmpty) {
-      _indexListCoordinates(refToVideo, results[resultIndex]);
+      return byVideoKey.values.toList();
     }
 
-    // Return in ref order, omitting unresolved refs
-    return deduplicateVideosPreservingOrder([
-      for (final ref in videoRefs) ?refToVideo[ref],
+    final fromApi = relayOnly
+        ? (videos: const <VideoEvent>[], answeredIds: const <String>{})
+        : await _listVideosFromApi(
+            eventIds,
+            includeFeedShape: includeFeedShape,
+          );
+    for (final video in fromApi.videos) {
+      refToVideo[video.id.toLowerCase()] = video;
+    }
+    final unanswered = [
+      for (final id in eventIds)
+        if (!fromApi.answeredIds.contains(id.toLowerCase()))
+          if (_hex64.hasMatch(id)) id.toLowerCase() else id,
+    ];
+    if (unanswered.isEmpty && addressableIds.isEmpty) {
+      yield inListOrder();
+      return;
+    }
+    if (fromApi.videos.isNotEmpty) yield inListOrder();
+
+    final results = await Future.wait([
+      if (unanswered.isEmpty)
+        Future.value(const <VideoEvent>[])
+      else
+        _getVideosByIds(
+          unanswered,
+          includeFeedShape: includeFeedShape,
+          permissive: true,
+          hydrateBulkStats: !relayOnly,
+        ),
+      if (addressableIds.isEmpty)
+        Future.value(const <VideoEvent>[])
+      else if (relayOnly)
+        getVideosFromRelaysByAddressableIds(
+          addressableIds,
+          includeFeedShape: includeFeedShape,
+        ).then((read) => read.videos)
+      else
+        getVideosByAddressableIds(
+          addressableIds,
+          includeFeedShape: includeFeedShape,
+        ),
     ]);
+    for (final video in results.first) {
+      refToVideo[video.id.toLowerCase()] = video;
+    }
+    _indexListCoordinates(refToVideo, results.last);
+    yield inListOrder();
+  }
+
+  /// The videos Funnelcake holds for [eventIds], and the lowercased ids it
+  /// answered for, including those whose videos this viewer's filters hide.
+  ///
+  /// A request that fails answers for none of its ids, so the caller reads
+  /// them elsewhere. Ids that are not 64 hex characters are not asked for.
+  Future<({List<VideoEvent> videos, Set<String> answeredIds})>
+  _listVideosFromApi(
+    List<String> eventIds, {
+    required bool includeFeedShape,
+  }) async {
+    final api = _funnelcakeApiClient;
+    final ids = <String>{
+      for (final id in eventIds)
+        if (_hex64.hasMatch(id)) id.toLowerCase(),
+    }.toList();
+    if (ids.isEmpty || api == null || !api.isAvailable) {
+      return (videos: const <VideoEvent>[], answeredIds: const <String>{});
+    }
+
+    const perRequest = FunnelcakeApiClient.maxVideosPerBulkRequest;
+    final answers = await Future.wait([
+      for (var start = 0; start < ids.length; start += perRequest)
+        _bulkVideosOrNull(
+          api,
+          ids.sublist(start, min(start + perRequest, ids.length)),
+        ),
+    ]);
+    final stats = [for (final answer in answers) ...?answer];
+    return (
+      videos: _transformVideoStats(
+        stats,
+        sortByCreatedAt: false,
+        includeFeedShape: includeFeedShape,
+      ),
+      answeredIds: {for (final video in stats) video.id.toLowerCase()},
+    );
+  }
+
+  /// Funnelcake's videos for [eventIds], or `null` when the request fails.
+  Future<List<VideoStats>?> _bulkVideosOrNull(
+    FunnelcakeApiClient api,
+    List<String> eventIds,
+  ) async {
+    try {
+      return await api.getVideosByIds(eventIds);
+    } on Exception catch (error, stackTrace) {
+      Log.warning(
+        'List videos API read failed; reading relays instead',
+        name: 'VideosRepository',
+        category: LogCategory.video,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return null;
+    }
   }
 
   /// Keeps the coordinate a list saved before #10776 as well as the video's
@@ -1248,10 +1447,7 @@ class VideosRepository {
   }
 
   Future<({List<VideoEvent> videos, int? nextBefore})>
-  _fetchVisibleRecentVideosFromRelays({
-    required int limit,
-    int? until,
-  }) async {
+  _fetchVisibleRecentVideosFromRelays({required int limit, int? until}) async {
     var cursor = until;
     final visible = <VideoEvent>[];
     final seenVideoKeys = <String>{};
@@ -1290,7 +1486,8 @@ class VideosRepository {
   /// retried with its cursor instead of mixing unrelated pagination modes.
   ///
   /// Throws:
-  /// - [FunnelcakeException] when [isCurrent] reports the request superseded.
+  /// - [FunnelcakeException] when [isCurrent] reports the request superseded,
+  ///   or `classicRecommendationsAllowed` turns false during the read.
   /// - [FunnelcakeException] when an adaptive continuation fails.
   Future<HomeFeedResult> getClassicRecommendations({
     required ClassicRecommendationsRequest request,
@@ -1311,8 +1508,11 @@ class VideosRepository {
     required bool Function()? isCurrent,
     required bool skipArchiveCache,
   }) async {
-    void checkCurrent() {
-      if (isCurrent != null && !isCurrent()) {
+    bool isAllowed() => _classicRecommendationsAllowed?.call() ?? true;
+
+    void checkCurrent({bool checkAllowed = false}) {
+      if ((isCurrent != null && !isCurrent()) ||
+          (checkAllowed && !isAllowed())) {
         throw const FunnelcakeException('Classics request superseded');
       }
     }
@@ -1325,7 +1525,7 @@ class VideosRepository {
       );
     }
     final api = _funnelcakeApiClient;
-    if (api == null || !api.isAvailable) {
+    if (api == null || !api.isAvailable || !isAllowed()) {
       return _getClassicArchiveVideos(
         limit: request.limit,
         skipCache: skipArchiveCache,
@@ -1338,7 +1538,7 @@ class VideosRepository {
         ? _classicsMaxPageFetches
         : maxSeenOnlyFeedPages;
     for (var page = 0; page < maxPages; page++) {
-      checkCurrent();
+      checkCurrent(checkAllowed: true);
       late final RecommendationsResponse response;
       try {
         response = await api.getClassicRecommendations(
@@ -1346,14 +1546,14 @@ class VideosRepository {
           userPubkey: userPubkey,
         );
       } on FunnelcakeException {
-        checkCurrent();
+        checkCurrent(checkAllowed: true);
         if (request.cursor != null) rethrow;
         return _getClassicArchiveVideos(
           limit: request.limit,
           skipCache: skipArchiveCache,
         );
       }
-      checkCurrent();
+      checkCurrent(checkAllowed: true);
       final videos = _withoutSeenVideos(
         _transformVideoStats(response.videos, sortByCreatedAt: false)
             .where(
@@ -1382,19 +1582,27 @@ class VideosRepository {
   /// Fetches a stable Classics browsing selection.
   ///
   /// The application opts into private recommendations with
-  /// `classicRecommendationsEnabled`.
-  /// Its viewer callback must respect consent.
+  /// `classicRecommendationsEnabled`, and `classicRecommendationsAllowed`
+  /// can keep an individual account on the archive path per read.
+  /// `classicViewerPubkey` must respect consent.
   /// A refresh rotates the browsing seed; cursor pages retain server order.
   /// Older/disabled servers use the bounded, shuffled archive reader below.
   ///
-  /// Throws [FunnelcakeException] when the viewer or privacy context changes
-  /// while the page is read, or when an adaptive continuation fails.
+  /// Throws [FunnelcakeException] when the viewer, the privacy context or the
+  /// `classicRecommendationsAllowed` gate changes while the page is read, or
+  /// when an adaptive continuation fails.
+  ///
+  /// [archiveOnly] keeps a caller's archive session on the archive even when
+  /// the account becomes eligible for recommendations.
   Future<HomeFeedResult> getClassicVideos({
     int limit = _defaultLimit,
     String? cursor,
     bool skipCache = false,
+    bool archiveOnly = false,
   }) async {
-    if (!_classicRecommendationsEnabled) {
+    if (archiveOnly ||
+        !_classicRecommendationsEnabled ||
+        !(_classicRecommendationsAllowed?.call() ?? true)) {
       return _getClassicArchiveVideos(
         limit: limit,
         cursor: cursor,
@@ -1404,6 +1612,7 @@ class VideosRepository {
     final viewer = _classicViewerPubkey?.call();
     final contextKey = _classicContextKey?.call();
     bool isCurrent() =>
+        (_classicRecommendationsAllowed?.call() ?? true) &&
         viewer == _classicViewerPubkey?.call() &&
         contextKey == _classicContextKey?.call();
     final contextChanged =
@@ -1443,9 +1652,11 @@ class VideosRepository {
   /// sessions do not see the same opening run. The next offset rides in
   /// [HomeFeedResult.paginationCursor], so the home feed paginates this like
   /// the For You feed. Filtering can empty an archive page, so up to
-  /// [_classicsMaxPageFetches] pages are read to fill [limit] rather than
-  /// handing back a page a feed cannot paginate out of. A topped-up page can
-  /// therefore exceed [limit]; the cursor advances past every page actually
+  /// [_classicsMaxPageFetches] pages are read until the fetch holds
+  /// [_classicsFillTarget] videos, rather than handing back a page a feed
+  /// cannot paginate out of. It stops there instead of at a full [limit],
+  /// because each further page is another sequential round trip. A topped-up
+  /// page can exceed [limit]; the cursor advances past every page actually
   /// read, so trimming to [limit] would drop those videos rather than defer
   /// them.
   ///
@@ -1500,17 +1711,18 @@ class VideosRepository {
     var failed = false;
     // Deep-fetch budget: when filtering removes many videos we fetch deeper
     // to avoid short pages (heavy users have seen top 500). Variable page
-    // sizes are fine for continuous feeds; we fetch until we have limit or
-    // we've tried enough pages. _classicsMaxPageFetches covers transport
-    // filtering; seen filtering gets the shared seen-only page budget.
+    // sizes are fine for continuous feeds; we fetch until we hold the fill
+    // target or we've tried enough pages. _classicsMaxPageFetches covers
+    // transport filtering; seen filtering gets the shared seen-only budget.
     final maxFetches = _seenVideoLookup == null
         ? _classicsMaxPageFetches
         : maxSeenOnlyFeedPages;
+    final fillTarget = _classicsFillTarget(limit);
 
     try {
       for (
         var fetch = 0;
-        fetch < maxFetches && collected.length < limit && !exhausted;
+        fetch < maxFetches && collected.length < fillTarget && !exhausted;
         fetch++
       ) {
         final stats = await _funnelcakeApiClient.getClassicVines(
@@ -1524,8 +1736,7 @@ class VideosRepository {
         );
 
         // Apply seen filtering per-page: drop recently-seen when lookup
-        // available (inventory is unlimited, so dropping is safe), but only
-        // if we have not already filled limit via filtered results.
+        // available (inventory is unlimited, so dropping is safe).
         final filteredPage = _withoutSeenVideos(
           pageVideos.where((video) => video.countsAsArchiveVine).toList(),
         );
@@ -1938,6 +2149,19 @@ class VideosRepository {
     bool cacheResults = false,
     bool hydrateBulkStats = true,
     bool includeFeedShape = true,
+  }) => _getVideosByIds(
+    eventIds,
+    cacheResults: cacheResults,
+    hydrateBulkStats: hydrateBulkStats,
+    includeFeedShape: includeFeedShape,
+  );
+
+  Future<List<VideoEvent>> _getVideosByIds(
+    List<String> eventIds, {
+    required bool includeFeedShape,
+    bool cacheResults = false,
+    bool hydrateBulkStats = true,
+    bool permissive = false,
   }) async {
     if (eventIds.isEmpty) return [];
 
@@ -1960,7 +2184,9 @@ class VideosRepository {
     if (missingIds.isNotEmpty) {
       final filter = Filter(
         ids: missingIds,
-        kinds: NIP71VideoKinds.getAllVideoKinds(),
+        kinds: permissive
+            ? NIP71VideoKinds.getAllAcceptableVideoKinds()
+            : NIP71VideoKinds.getAllVideoKinds(),
       );
 
       final relayEvents = await _nostrClient.queryEvents([filter]);
@@ -1981,6 +2207,7 @@ class VideosRepository {
 
       final video = _tryParseAndFilter(
         event,
+        permissive: permissive,
         includeFeedShape: includeFeedShape,
       );
       if (video != null) videos.add(video);
@@ -2092,6 +2319,20 @@ class VideosRepository {
     }
   }
 
+  /// [event] as the video this viewer may see, or `null` when it is no
+  /// video or this viewer's blocks, deletions or content filters leave it
+  /// out: the rules [getVideosFromRelaysByAddressableIds] applies to what
+  /// the relays return, for a video event another source handed over.
+  /// [includeFeedShape] works as for [getVideosByAddressableIds].
+  VideoEvent? visibleVideoFromEvent(
+    Event event, {
+    bool includeFeedShape = true,
+  }) => _tryParseAndFilter(
+    event,
+    permissive: true,
+    includeFeedShape: includeFeedShape,
+  );
+
   /// The videos at [addressableIds] as the relays alone hold them, in that
   /// order, and whether every relay answered in full.
   ///
@@ -2127,6 +2368,189 @@ class VideosRepository {
       complete: reads.every((read) => read.isComplete),
     );
   }
+
+  /// The revision of the video [addressableId] (`kind:pubkey:d-tag`) that
+  /// Divine's REST API returns, or the newest a relay returns when the API
+  /// has none as new as [notOlderThan], for a caller about to replace it. A
+  /// Funnelcake answer that is not older than [notOlderThan], the revision
+  /// the caller opened, or any answer when it is null, is returned without
+  /// asking any relay, so a newer revision it has not indexed, or never
+  /// stored, is not seen.
+  ///
+  /// Asks Funnelcake first, since it answers faster than the relays, and
+  /// waits at most [_latestRevisionFunnelcakeTimeout] for it. Its d-tag
+  /// lookup is not scoped by author, so its event counts only when it is at
+  /// the exact address and validly signed. Without such an answer, when the
+  /// request fails or times out, or when its revision predates
+  /// [notOlderThan], it reads the relays without the local cache and takes
+  /// the newest valid revision any of them returned, or Funnelcake's older
+  /// one when none is newer. A slow or silent relay does not block the
+  /// answer: the relay read is a fallback, not a gate that needs every relay.
+  /// [LatestVideoRevisionAbsent] means no relay returned a revision and
+  /// either that read completed or Funnelcake answered that it holds none,
+  /// which is also how it reports a deleted video;
+  /// [LatestVideoRevisionUnknown] means neither held.
+  ///
+  /// Throws [ArgumentError] when [addressableId] is not a Kind 34235 or
+  /// 34236 address.
+  Future<LatestVideoRevision> fetchLatestVideoRevision(
+    String addressableId, {
+    VideoRevisionFloor? notOlderThan,
+  }) async {
+    final address = AId.fromString(addressableId);
+    if (address == null ||
+        !NIP71VideoKinds.isAddressableVideoKind(address.kind)) {
+      throw ArgumentError.value(
+        addressableId,
+        'addressableId',
+        'is not a video address',
+      );
+    }
+    final (:revision, :saysMissing) = await _latestVideoRevisionFromFunnelcake(
+      address,
+    );
+    if (revision != null) {
+      if (notOlderThan == null || !_predates(revision, notOlderThan)) {
+        Log.info(
+          'Newest revision of ${address.toAString()} from Funnelcake: '
+          '${revision.id}',
+          name: 'VideosRepository',
+          category: LogCategory.video,
+        );
+        return LatestVideoRevisionFound(revision);
+      }
+      Log.info(
+        'Funnelcake answered ${address.toAString()} with ${revision.id}, '
+        'which predates ${notOlderThan.id}; asking the relays',
+        name: 'VideosRepository',
+        category: LogCategory.video,
+      );
+    }
+
+    final read = await _nostrClient.readEvents([
+      Filter(
+        kinds: [address.kind],
+        authors: [address.pubkey],
+        d: [address.dTag],
+      ),
+    ], useCache: false);
+    // A Funnelcake revision older than the floor still competes, so a live
+    // video never reads as absent, which callers treat as a deletion.
+    var newest = revision;
+    var relayRevisions = 0;
+    for (final event in read.events) {
+      if (!_isSignedRevisionAt(event, address)) continue;
+      relayRevisions++;
+      if (newest == null ||
+          event.createdAt > newest.createdAt ||
+          (event.createdAt == newest.createdAt &&
+              event.id.compareTo(newest.id) < 0)) {
+        newest = event;
+      }
+    }
+    if (newest != null) {
+      Log.info(
+        identical(newest, revision)
+            ? 'Newest revision of ${address.toAString()} is still '
+                  "Funnelcake's ${newest.id}: no relay returned a newer one "
+                  '(relay revisions: $relayRevisions, read '
+                  '${read.endedBy.name})'
+            : 'Newest revision of ${address.toAString()} from the relays: '
+                  '${newest.id} (read ${read.endedBy.name})',
+        name: 'VideosRepository',
+        category: LogCategory.video,
+      );
+      return LatestVideoRevisionFound(newest);
+    }
+    // Funnelcake's lookup hides deleted videos, so its 404 is how a deletion
+    // reads. With no relay revision either, a held copy must not be built on
+    // just because one relay did not finish: that would bring it back.
+    final absent = read.isComplete || saysMissing;
+    Log.info(
+      'No revision of ${address.toAString()} was read, so it is '
+      '${absent ? 'absent' : 'unknown'}: Funnelcake '
+      '${saysMissing ? 'answered that it holds none' : 'gave none'}, and '
+      'the relay read ended by ${read.endedBy.name}',
+      name: 'VideosRepository',
+      category: LogCategory.video,
+    );
+    return absent
+        ? const LatestVideoRevisionAbsent()
+        : const LatestVideoRevisionUnknown();
+  }
+
+  /// What Funnelcake answers at [address]: its signed `revision` there, or
+  /// `saysMissing` when it answered that it holds none (a 404). Neither when
+  /// it is not configured, fails, does not answer within
+  /// [_latestRevisionFunnelcakeTimeout], or returns an event that is not a
+  /// signed revision at exactly [address].
+  Future<({Event? revision, bool saysMissing})>
+  _latestVideoRevisionFromFunnelcake(AId address) async {
+    final client = _funnelcakeApiClient;
+    if (client == null || !client.isAvailable) {
+      return (revision: null, saysMissing: false);
+    }
+    try {
+      final event = await client
+          .getVideoEvent(address.dTag)
+          .timeout(_latestRevisionFunnelcakeTimeout);
+      if (event == null) return (revision: null, saysMissing: true);
+      if (_isSignedRevisionAt(event, address)) {
+        return (revision: event, saysMissing: false);
+      }
+      // The d-tag lookup is not scoped by author, so another author's video
+      // is expected; a revision at this address that fails the id or
+      // signature check points at Funnelcake itself.
+      final atAddress =
+          event.kind == address.kind &&
+          event.pubkey == address.pubkey &&
+          event.dTagValue == address.dTag;
+      final message =
+          'Funnelcake answered ${address.toAString()} with ${event.id} by '
+          '${pubkeyForLogs(event.pubkey)}, which is not a signed revision '
+          'there; asking the relays';
+      if (atAddress) {
+        Log.warning(
+          message,
+          name: 'VideosRepository',
+          category: LogCategory.video,
+        );
+      } else {
+        Log.info(
+          message,
+          name: 'VideosRepository',
+          category: LogCategory.video,
+        );
+      }
+    } on Exception catch (error, stackTrace) {
+      Log.warning(
+        'Funnelcake could not answer the newest revision of '
+        '${address.toAString()}; asking the relays',
+        name: 'VideosRepository',
+        category: LogCategory.video,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+    return (revision: null, saysMissing: false);
+  }
+
+  /// Whether [event] is older than [floor] under NIP-01 ordering: an earlier
+  /// `created_at`, or the same one and a higher id.
+  static bool _predates(Event event, VideoRevisionFloor floor) =>
+      event.createdAt < floor.createdAt ||
+      (event.createdAt == floor.createdAt && event.id.compareTo(floor.id) > 0);
+
+  /// Whether [event] is a revision at exactly [address] with a valid id and
+  /// a signature by its author, as `NostrClient.readCurrentVersion` counts
+  /// one. A d-tag lookup can match another author's video, and a relay
+  /// admits an event whose any `d` tag matches.
+  static bool _isSignedRevisionAt(Event event, AId address) =>
+      event.kind == address.kind &&
+      event.pubkey == address.pubkey &&
+      event.dTagValue == address.dTag &&
+      event.isValid &&
+      (event.hasVerifiedSignature || event.isSigned);
 
   /// The video addresses among [addressableIds], in their order: Kind 34236
   /// and the Kind 34235 addressable normal videos other clients publish.
@@ -2275,9 +2699,11 @@ class VideosRepository {
   ///
   /// By default, sorts by creation time (newest first). Set [sortByCreatedAt]
   /// to false to preserve the API's original order (e.g., trending sort).
+  /// [includeFeedShape] works as for [getVideosByIds].
   List<VideoEvent> _transformVideoStats(
     List<VideoStats> videoStatsList, {
     bool sortByCreatedAt = true,
+    bool includeFeedShape = true,
   }) {
     final videos = <VideoEvent>[];
 
@@ -2299,7 +2725,10 @@ class VideosRepository {
       // Skip expired videos (NIP-40)
       if (video.isExpired) continue;
 
-      final processed = _applyContentPreferences(video);
+      final processed = _applyContentPreferences(
+        video,
+        includeFeedShape: includeFeedShape,
+      );
       if (processed != null) {
         videos.add(processed);
       }
@@ -2773,15 +3202,19 @@ class VideosRepository {
   /// Fetches one ranked page, including classic videos already ranked by the
   /// endpoint. A separate classics query must not gate visible results.
   /// Results pass through the shared block, transport and content filters.
-  /// Nonempty pages are cached for one minute for immediate re-entry and
-  /// grid-to-player navigation. Call [clearInMemoryFeedCache] for refresh.
-  /// Cached reads reapply current visibility policy.
+  ///
+  /// Leave [cursor] null for the first page, then pass the previous result's
+  /// [HashtagFeedVideosResult.nextCursor] to fetch the next one. Only a
+  /// nonempty first page is cached, with its cursor, for one minute; later
+  /// pages always come from the API. Cached reads reapply current visibility
+  /// policy. Call [clearInMemoryFeedCache] for refresh.
   ///
   /// Returns a failed result when [hashtag] is blank, the API client is
   /// unavailable, or the fetch fails or exceeds [timeout] — the REST feed
   /// is a fast-path enrichment; callers keep their relay source/cache.
   Future<HashtagFeedVideosResult> getHashtagFeedVideos({
     required String hashtag,
+    String? cursor,
     Duration timeout = const Duration(seconds: 5),
   }) async {
     final trimmed = hashtag.trim();
@@ -2791,21 +3224,22 @@ class VideosRepository {
     }
 
     final cacheKey = 'hashtag:${trimmed.toLowerCase()}';
-    final cached = _inMemoryFeedCache?.get(cacheKey);
+    final cached = cursor == null ? _inMemoryFeedCache?.get(cacheKey) : null;
     if (cached != null) {
       return HashtagFeedVideosResult.success(
         applyContentPreferences(
           cached.videos.where((video) => !video.isExpired).toList(),
         ),
+        nextCursor: cached.paginationCursor,
       );
     }
 
     try {
-      final videos = await getVideosByHashtag(
-        hashtag: trimmed,
-        limit: 50,
-      ).timeout(timeout);
-      if (videos.isNotEmpty && _inMemoryFeedCache != null) {
+      final page = await _funnelcakeApiClient
+          .getVideosByHashtagPage(hashtag: trimmed, cursor: cursor)
+          .timeout(timeout);
+      final videos = _transformVideoStats(page.videos, sortByCreatedAt: false);
+      if (cursor == null && videos.isNotEmpty && _inMemoryFeedCache != null) {
         _cachedHashtagKeys
           ..remove(cacheKey)
           ..add(cacheKey);
@@ -2816,11 +3250,17 @@ class VideosRepository {
         }
         _inMemoryFeedCache.set(
           cacheKey,
-          HomeFeedResult(videos: List.unmodifiable(videos)),
+          HomeFeedResult(
+            videos: List.unmodifiable(videos),
+            paginationCursor: page.nextCursor,
+          ),
           ttl: const Duration(minutes: 1),
         );
       }
-      return HashtagFeedVideosResult.success(videos);
+      return HashtagFeedVideosResult.success(
+        videos,
+        nextCursor: page.nextCursor,
+      );
     } on Exception catch (e, stackTrace) {
       Log.error(
         'getHashtagFeedVideos failed for "#$trimmed"',
@@ -2994,27 +3434,6 @@ class VideosRepository {
     return _transformVideoStats(stats, sortByCreatedAt: false);
   }
 
-  /// Fetches videos for a specific hashtag.
-  ///
-  /// Returns empty list if Funnelcake API is unavailable.
-  ///
-  /// Throws [FunnelcakeException] subtypes on API errors.
-  Future<List<VideoEvent>> getVideosByHashtag({
-    required String hashtag,
-    int limit = 20,
-    int? before,
-  }) async {
-    if (_funnelcakeApiClient == null || !_funnelcakeApiClient.isAvailable) {
-      return [];
-    }
-    final stats = await _funnelcakeApiClient.getVideosByHashtag(
-      hashtag: hashtag,
-      limit: limit,
-      before: before,
-    );
-    return _transformVideoStats(stats, sortByCreatedAt: false);
-  }
-
   /// Fetches classic videos (pre-Nostr) for a specific hashtag.
   ///
   /// Returns empty list if Funnelcake API is unavailable.
@@ -3115,83 +3534,232 @@ class VideosRepository {
     return videos;
   }
 
-  /// Fetches the newest videos published by any of [authorPubkeys], newest
-  /// first, at most [limit].
+  /// The newest videos published by any of [authorPubkeys], newest first, at
+  /// most [limit]: the last value of [watchVideosByAuthors].
   ///
-  /// This is the feed behind a people list. A relay filter over every member
-  /// — one per [_membersFeedRelayFilterAuthors] members, read in parallel —
-  /// answers "what did these people post lately" in one round trip, hydrated
-  /// with Funnelcake counts when the API is up. No member is left out for
-  /// being past the filter size. Funnelcake has no multi-author endpoint, so
-  /// it is the fallback rather than the first source: when the relay read
-  /// fails and the API is available, a list of up to
-  /// [_membersFeedApiAuthorCap] members is paged one videos-by-author call
-  /// each and merged. A member the API does not know contributes nothing;
-  /// the other members' pages still show. A larger list gets the relay
-  /// failure instead of a fallback feed missing most of its members.
-  ///
-  /// A read that reached no relay, ran out of time, or settled before every
-  /// relay answered counts as a failure even though the relay layer reports
-  /// it as an empty list. Those answers are the same value as a genuinely
-  /// empty one and mean the opposite, and taking them at face value leaves a
-  /// caller rendering "no videos" for a network failure, with nothing to
-  /// retry because nothing threw. The partial case is the common one: the
-  /// public relays answer this filter at once with nothing, while the Divine
-  /// relay holding the videos is still busy. An empty answer that every relay
-  /// did give is returned as the empty list it is.
-  ///
-  /// [until] bounds the read to videos no newer than that Unix timestamp, on
-  /// both paths, so a feed can page backwards from its oldest video. A relay
-  /// treats the bound as inclusive, so that video can come back again; the
-  /// caller drops the repeat.
-  ///
-  /// Returns an empty list when [authorPubkeys] is empty.
-  ///
-  /// Throws:
-  ///
-  /// * the relay error, unchanged, when there is no Funnelcake client to
-  ///   fall back to, or the list has more members than the fallback covers —
-  ///   an empty result would read as "these people have no videos" for what
-  ///   is a network failure.
-  /// * [RelayReadUnavailableException] when the read answered with nothing
-  ///   because it could not be completed and the fallback does not run.
-  /// * [FunnelcakeException] when the fallback fails as well, for any reason
-  ///   other than a member the API does not know.
+  /// Throws as [watchVideosByAuthors] does.
   Future<List<VideoEvent>> getVideosByAuthors({
     required List<String> authorPubkeys,
     int limit = _defaultLimit,
     int? until,
-  }) async {
-    if (authorPubkeys.isEmpty) return const [];
+  }) => watchVideosByAuthors(
+    authorPubkeys: authorPubkeys,
+    limit: limit,
+    until: until,
+  ).last;
+
+  /// The newest videos published by any of [authorPubkeys], newest first, at
+  /// most [limit], each time more of them arrive.
+  ///
+  /// This is the feed behind a people list. Funnelcake and the relays are
+  /// read at the same time. Funnelcake's videos are emitted as soon as they
+  /// arrive: one by-authors read per [_membersFeedApiAuthorsPerRequest]
+  /// members, merged newest first. Its rows carry engagement counts, so they
+  /// need no hydration.
+  ///
+  /// The relay read then completes the feed, because Funnelcake's index
+  /// misses members who post only to relays it does not index, and a new
+  /// video until it catches up a minute or two later. It is one filter per
+  /// [_membersFeedRelayFilterAuthors] members, read in parallel, so no member
+  /// is left out for being past the filter size. A relay video Funnelcake did
+  /// not return is hydrated with Funnelcake counts when the API is up; a
+  /// newer revision of one it did return replaces it and keeps its counts.
+  /// The merge is emitted when it adds or replaces a video.
+  ///
+  /// A relay read that reached no relay, ran out of time, or settled before
+  /// every relay answered counts as a failure even though the relay layer
+  /// reports it as an empty list. Those answers are the same value as a
+  /// genuinely empty one and mean the opposite, and taking them at face value
+  /// leaves a caller rendering "no videos" for a network failure, with
+  /// nothing to retry because nothing threw. The partial case is the common
+  /// one: the public relays answer this filter at once with nothing, while
+  /// the Divine relay holding the videos is still busy. An empty answer that
+  /// every relay did give is taken as the empty answer it is.
+  ///
+  /// When Funnelcake answered and the relay read then fails, Funnelcake's
+  /// answer stands: it is a real answer, and when it is empty, members who
+  /// have not posted yet are the usual reason.
+  ///
+  /// [until] bounds the read to videos no newer than that Unix timestamp, on
+  /// both sources, so a feed can page backwards from its oldest video. The
+  /// bound is inclusive, so that video can come back again; the caller drops
+  /// the repeat.
+  ///
+  /// The last value is the whole answer, and it is always emitted: empty
+  /// when [authorPubkeys] is empty or no member has a video.
+  ///
+  /// Throws, before emitting anything, when the relays were the last source
+  /// left (Funnelcake is not configured, or its read failed):
+  ///
+  /// * the relay error, unchanged — an empty result would read as "these
+  ///   people have no videos" for what is a network failure.
+  /// * [RelayReadUnavailableException] when the relay read answered with
+  ///   nothing because it could not be completed.
+  Stream<List<VideoEvent>> watchVideosByAuthors({
+    required List<String> authorPubkeys,
+    int limit = _defaultLimit,
+    int? until,
+  }) async* {
+    if (authorPubkeys.isEmpty) {
+      yield const [];
+      return;
+    }
+
+    // Read alongside Funnelcake. Ignored so that a failure is not reported
+    // as unhandled when the listener cancels before it is awaited; the await
+    // below still receives it.
+    final relayRead = _videosByAuthorsFromRelays(
+      authorPubkeys,
+      limit: limit,
+      until: until,
+    )..ignore();
+
+    List<VideoEvent>? fromApi;
+    final api = _funnelcakeApiClient;
+    if (api != null && api.isAvailable) {
+      try {
+        fromApi = await _videosByAuthorsFromApi(
+          api,
+          authorPubkeys,
+          limit: limit,
+          until: until,
+        );
+      } on Exception catch (error, stackTrace) {
+        Log.warning(
+          'Members feed API read failed; reading relays alone',
+          name: 'VideosRepository',
+          category: LogCategory.video,
+          error: error,
+          stackTrace: stackTrace,
+        );
+      }
+    }
+    if (fromApi != null && fromApi.isNotEmpty) yield fromApi;
 
     final List<Event> events;
     try {
-      events = await _videosByAuthorsFromRelays(
-        authorPubkeys,
-        limit: limit,
-        until: until,
+      events = await relayRead;
+    } on Exception catch (error, stackTrace) {
+      if (fromApi == null) rethrow;
+      Log.warning(
+        'Members feed relay read failed; keeping the API answer',
+        name: 'VideosRepository',
+        category: LogCategory.video,
+        error: error,
+        stackTrace: stackTrace,
       );
-    } on Exception {
-      final api = _funnelcakeApiClient;
-      if (api == null || !api.isAvailable) rethrow;
-      // A list the fallback cannot cover in full surfaces the relay failure
-      // instead: a feed missing most of its members would pass for the
-      // complete one.
-      if (authorPubkeys.length > _membersFeedApiAuthorCap) rethrow;
-      return _videosByAuthorsFromApi(
-        api,
-        authorPubkeys,
-        limit: limit,
-        until: until,
-      );
+      if (fromApi.isEmpty) yield fromApi;
+      return;
     }
 
-    final videos = <VideoEvent>[];
-    _appendUniqueVideos(
-      videos,
-      await _hydrateVideosWithBulkStats(_transformAndFilter(events)),
-      seenVideoKeys: <String>{},
+    final merged = await _withMembersFeedRelayVideos(
+      fromApi ?? const [],
+      _transformAndFilter(events),
+      limit: limit,
     );
+    if (merged != null) {
+      yield merged;
+    } else if (fromApi == null || fromApi.isEmpty) {
+      yield const [];
+    }
+  }
+
+  /// [apiVideos] with the [relayVideos] they lack, newest first, at most
+  /// [limit], or `null` when the relays add or replace nothing.
+  ///
+  /// A relay video Funnelcake did not return is hydrated with Funnelcake
+  /// counts. A newer revision of one it did return replaces it and keeps its
+  /// counts, as [mergeRepublishedVideo] carries them.
+  Future<List<VideoEvent>?> _withMembersFeedRelayVideos(
+    List<VideoEvent> apiVideos,
+    List<VideoEvent> relayVideos, {
+    required int limit,
+  }) async {
+    final merged = {for (final video in apiVideos) video.feedDedupKey: video};
+    final relayOnlyKeys = <String>{};
+    var changed = false;
+    for (final video in relayVideos) {
+      final key = video.feedDedupKey;
+      final existing = merged[key];
+      if (existing == null) {
+        merged[key] = video;
+        relayOnlyKeys.add(key);
+        changed = true;
+      } else if (isNewerVideoRevision(video, existing)) {
+        merged[key] = mergeRepublishedVideo(existing, video);
+        changed = true;
+      }
+    }
+    if (!changed) return null;
+
+    final hydrated = await _hydrateVideosWithBulkStats([
+      for (final key in relayOnlyKeys) merged[key]!,
+    ]);
+    for (final video in hydrated) {
+      merged[video.feedDedupKey] = video;
+    }
+    return (merged.values.toList()
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt)))
+        .take(limit)
+        .toList();
+  }
+
+  /// Every member's newest videos from Funnelcake: one by-authors read per
+  /// [_membersFeedApiAuthorsPerRequest] members, merged newest first.
+  ///
+  /// The reads run one after another, as [BadgeVideoPager]'s do, because each
+  /// is its own scan on the server. A group is paged until it has [limit]
+  /// videos or runs out, since one read returns at most
+  /// [_membersFeedApiPageLimit]. A failed read fails the whole feed: one
+  /// missing a group of members would pass for the complete one.
+  ///
+  /// A member that is not a 64-character hex key is left out of the request,
+  /// since Funnelcake rejects the whole read for it and no video can be
+  /// signed by it. Hex is compared lowercased, as Funnelcake stores it.
+  Future<List<VideoEvent>> _videosByAuthorsFromApi(
+    FunnelcakeApiClient api,
+    List<String> authorPubkeys, {
+    required int limit,
+    int? until,
+  }) async {
+    final authors = {
+      for (final pubkey in authorPubkeys)
+        if (_hex64.hasMatch(pubkey)) pubkey.toLowerCase(),
+    }.toList();
+    // The feed pages by publication time. Funnelcake's default sort and
+    // bound use revision time, which can jump ahead when a video is edited.
+    // Funnelcake's `before` is exclusive, and `until` is inclusive.
+    final before = until == null ? null : until + 1;
+    final videos = <VideoEvent>[];
+    final seenVideoKeys = <String>{};
+    for (
+      var start = 0;
+      start < authors.length;
+      start += _membersFeedApiAuthorsPerRequest
+    ) {
+      final group = authors
+          .skip(start)
+          .take(_membersFeedApiAuthorsPerRequest)
+          .toList();
+      var read = 0;
+      while (read < limit) {
+        final page = await api.getVideosByAuthors(
+          authors: group,
+          limit: min(limit - read, _membersFeedApiPageLimit),
+          offset: read,
+          before: before,
+          sort: 'published',
+        );
+        read += page.serverItemCount;
+        _appendUniqueVideos(
+          videos,
+          _transformVideoStats(page.videos),
+          seenVideoKeys: seenVideoKeys,
+        );
+        if (page.hasMore != true || page.serverItemCount == 0) break;
+      }
+    }
+    videos.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return videos.take(limit).toList();
   }
 
@@ -3208,7 +3776,7 @@ class VideosRepository {
   /// without a settled answer — no relay took it, or it timed out. The relay
   /// layer reports those as an empty list, the same value a genuinely empty
   /// answer has, and a feed missing those members' videos would pass for the
-  /// complete one; raising it runs the caller's fallback instead.
+  /// complete one.
   Future<List<Event>> _videosByAuthorsFromRelays(
     List<String> authors, {
     required int limit,
@@ -3220,20 +3788,17 @@ class VideosRepository {
         start < authors.length;
         start += _membersFeedRelayFilterAuthors
       )
-        _nostrClient.queryEventsDetailed(
-          [
-            Filter(
-              kinds: [_videoKind],
-              authors: authors
-                  .skip(start)
-                  .take(_membersFeedRelayFilterAuthors)
-                  .toList(),
-              limit: limit,
-              until: until,
-            ),
-          ],
-          requireAllRelaysSettled: true,
-        ),
+        _nostrClient.queryEventsDetailed([
+          Filter(
+            kinds: [_videoKind],
+            authors: authors
+                .skip(start)
+                .take(_membersFeedRelayFilterAuthors)
+                .toList(),
+            limit: limit,
+            until: until,
+          ),
+        ], requireAllRelaysSettled: true),
     ]);
     final events = <Event>[];
     for (final read in reads) {
@@ -3245,64 +3810,6 @@ class VideosRepository {
       events.addAll(read.events);
     }
     return events;
-  }
-
-  Future<List<VideoEvent>> _videosByAuthorsFromApi(
-    FunnelcakeApiClient api,
-    List<String> authors, {
-    required int limit,
-    int? until,
-  }) async {
-    final pages = <List<VideoStats>>[];
-    for (
-      var start = 0;
-      start < authors.length;
-      start += _membersFeedApiConcurrency
-    ) {
-      pages.addAll(
-        await Future.wait([
-          for (final author
-              in authors.skip(start).take(_membersFeedApiConcurrency))
-            _authorPageOrEmpty(api, author, limit, until),
-        ]),
-      );
-    }
-    final videos = <VideoEvent>[];
-    final seenVideoKeys = <String>{};
-    for (final page in pages) {
-      _appendUniqueVideos(
-        videos,
-        _transformVideoStats(page),
-        seenVideoKeys: seenVideoKeys,
-      );
-    }
-    videos.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    return videos.take(limit).toList();
-  }
-
-  /// One member's page of the API fallback.
-  ///
-  /// A member Funnelcake has never indexed answers 404. That is a member with
-  /// no videos here, not a failed feed: left to propagate it fails the whole
-  /// [Future.wait] and throws away every page that did answer. Any other
-  /// failure still propagates, since a feed missing a member who does post
-  /// would pass for the complete one.
-  Future<List<VideoStats>> _authorPageOrEmpty(
-    FunnelcakeApiClient api,
-    String author,
-    int limit,
-    int? until,
-  ) async {
-    try {
-      final page = await api.getVideosByAuthor(
-        pubkey: author,
-        limit: limit,
-        before: until,
-      );
-      return page.videos;
-    } on FunnelcakeNotFoundException {
-      return const [];
-    }
   }
 
   /// Composes a single author's video feed page (profile feed).
@@ -3643,11 +4150,58 @@ class VideosRepository {
     String routeId, {
     List<String> fallbackRouteIds = const [],
     String? expectedAuthor,
+  }) {
+    if (fallbackRouteIds.isNotEmpty) {
+      return _fetchRouteVideo(routeId, fallbackRouteIds, expectedAuthor);
+    }
+    final key = (routeId, expectedAuthor);
+    final current = _pendingRouteVideos[key];
+    if (current != null) return current.withStats;
+    final playable = Completer<VideoEvent?>();
+    final withStats =
+        _fetchRouteVideo(
+          routeId,
+          fallbackRouteIds,
+          expectedAuthor,
+          onPlayable: playable.complete,
+        ).whenComplete(() {
+          if (!playable.isCompleted) playable.complete(null);
+          _pendingRouteVideos.remove(key);
+        });
+    _pendingRouteVideos[key] = (
+      playable: playable.future,
+      withStats: withStats,
+    );
+    return withStats;
+  }
+
+  final _pendingRouteVideos =
+      <
+        (String, String?),
+        ({
+          Future<VideoEvent?> playable,
+          Future<VideoEvent?> withStats,
+        })
+      >{};
+
+  /// Joins an active canonical card lookup before optional stats hydration.
+  /// Never starts a lookup or returns data from a previous resolver instance.
+  Future<VideoEvent?>? pendingPlayableRoute(
+    String routeId, {
+    String? expectedAuthor,
+  }) => _pendingRouteVideos[(routeId, expectedAuthor)]?.playable;
+
+  Future<VideoEvent?> _fetchRouteVideo(
+    String routeId,
+    List<String> fallbackRouteIds,
+    String? expectedAuthor, {
+    void Function(VideoEvent)? onPlayable,
   }) async {
-    final result = await lookupVideoForRouteId(
+    final result = await _lookupRoute(
       routeId,
       fallbackRouteIds: fallbackRouteIds,
       expectedAuthor: expectedAuthor,
+      onPlayable: onPlayable,
     );
     return result is VideoRouteFound ? result.video : null;
   }
@@ -3667,10 +4221,25 @@ class VideosRepository {
   /// the author an author-named [routeId] (a coordinate or `naddr1`) names.
   /// Any other [expectedAuthor] value is ignored. A candidate that names a
   /// different author is skipped (#10384).
+  ///
+  /// An `naddr1` or `nevent1` is held to its exact identity — kind, author and
+  /// `d` tag, or event id — by [VideoRouteRef.matchesEvent], and an `naddr1`
+  /// skips the any-kind `d`-tag relay lookup.
   Future<VideoRouteLookupResult> lookupVideoForRouteId(
     String routeId, {
     List<String> fallbackRouteIds = const [],
     String? expectedAuthor,
+  }) => _lookupRoute(
+    routeId,
+    fallbackRouteIds: fallbackRouteIds,
+    expectedAuthor: expectedAuthor,
+  );
+
+  Future<VideoRouteLookupResult> _lookupRoute(
+    String routeId, {
+    required List<String> fallbackRouteIds,
+    String? expectedAuthor,
+    void Function(VideoEvent)? onPlayable,
   }) async {
     FunnelcakeException? apiFailure;
     final attempted = <String>{};
@@ -3686,12 +4255,19 @@ class VideosRepository {
     for (final candidateRouteId in [routeId, ...fallbackRouteIds]) {
       if (!attempted.add(candidateRouteId)) continue;
       try {
-        final video = await _fetchVideoWithStatsForSingleRouteId(
+        final video = await _fetchVideoForSingleRouteId(
           candidateRouteId,
           routeAuthor: routeAuthor,
           onContentFiltered: onContentFiltered,
         );
-        if (video != null) return VideoRouteFound(video);
+        if (video != null) {
+          onPlayable?.call(video);
+          final hydrated = await _hydrateVideosWithBulkStats([video]).timeout(
+            _statsFetchTimeout,
+            onTimeout: () => [video],
+          );
+          return VideoRouteFound(hydrated.first);
+        }
       } on FunnelcakeException catch (e) {
         // Keep going: a fallback route is a different query shape (an
         // author-scoped addressable resolves against relays alone) and can
@@ -3718,7 +4294,7 @@ class VideosRepository {
     return const VideoRouteMissing();
   }
 
-  Future<VideoEvent?> _fetchVideoWithStatsForSingleRouteId(
+  Future<VideoEvent?> _fetchVideoForSingleRouteId(
     String routeId, {
     String? routeAuthor,
     void Function(VideoEvent video)? onContentFiltered,
@@ -3785,9 +4361,7 @@ class VideosRepository {
         final byFunnelcake = await _fetchVideoFromRouteApi(
           funnelcakeRouteId,
           expectedPubkey: author,
-          expectedEventId: candidate.stableId == null
-              ? candidate.eventId
-              : null,
+          expectedRoute: candidate,
           permissive: true,
           onContentFiltered: onContentFiltered,
         );
@@ -3829,7 +4403,7 @@ class VideosRepository {
       missed.add('relayAddressable');
     }
 
-    if (candidate.stableId != null) {
+    if (candidate.stableId != null && !candidate.isNaddr) {
       final byStableId = await _fetchVideoByStableIdFromRelay(
         candidate.stableId!,
         author: author,
@@ -3930,8 +4504,10 @@ class VideosRepository {
 
   /// Fetches discovery following an opened video, using For You for now.
   ///
-  /// An opaque [cursor] continues recommendations. A popular fallback without
-  /// a cursor is a terminal page, matching the home For You feed.
+  /// An opaque [cursor] continues recommendations. When recommendations fall
+  /// back to popular videos, a synthetic fallback cursor keeps pagination
+  /// alive so later pages can page popular videos and retry recommendations
+  /// after a temporary fallback.
   ///
   /// Every opened video starts its own discovery, so the first page is always
   /// fetched rather than read from the For You tab's cached first page, which
@@ -3943,12 +4519,14 @@ class VideosRepository {
     required String? userPubkey,
     int limit = _defaultLimit,
     String? cursor,
+    String? seedVideoId,
     List<String> preferredLanguages = const [],
     String? viewerCountry,
   }) => _recommendedVideos(
     userPubkey: userPubkey,
     limit: limit,
     cursor: cursor,
+    seedVideoId: seedVideoId,
     skipCache: false,
     revalidate: false,
     preferredLanguages: preferredLanguages,
@@ -3970,6 +4548,7 @@ class VideosRepository {
     int limit = _defaultLimit,
     int? until,
     String? cursor,
+    String? seedVideoId,
     bool skipCache = false,
     bool revalidate = false,
     List<String> preferredLanguages = const [],
@@ -3979,6 +4558,7 @@ class VideosRepository {
     limit: limit,
     until: until,
     cursor: cursor,
+    seedVideoId: seedVideoId,
     skipCache: skipCache,
     revalidate: revalidate,
     preferredLanguages: preferredLanguages,
@@ -3998,6 +4578,7 @@ class VideosRepository {
     required bool useFirstPageCache,
     int? until,
     String? cursor,
+    String? seedVideoId,
   }) async {
     final effectiveUserPubkey =
         userPubkey ??
@@ -4022,85 +4603,140 @@ class VideosRepository {
       }
     }
 
+    final decodedFallback = _decodeRecommendedFallbackCursor(cursor);
+    final isFallbackContinuation = decodedFallback.isFallback;
+    // The home and discovery feeds share this repository. Keep retry seeds
+    // with the continuation that produced them.
+    final effectiveSeedVideoId = seedVideoId ?? decodedFallback.seedVideoId;
+    final effectiveUntil = isFallbackContinuation
+        ? decodedFallback.until
+        : until;
     final isFirstPage = until == null && cursor == null;
     final requestSeed = skipCache && isFirstPage
         ? generateRecommendationSessionSeed()
         : _recommendationSessionSeed;
 
-    if (effectiveUserPubkey == null ||
+    if (decodedFallback.recommendationsExhausted ||
+        effectiveUserPubkey == null ||
         _funnelcakeApiClient == null ||
         !_funnelcakeApiClient.isAvailable) {
       return _popularVideosInsteadOfRecommendations(
-        reason: 'recommendations unavailable',
+        reason: decodedFallback.recommendationsExhausted
+            ? 'recommendation session exhausted'
+            : 'recommendations unavailable',
         limit: limit,
-        until: until,
-        skipCache: skipCache,
+        until: effectiveUntil,
+        skipCache: skipCache || isFallbackContinuation,
         revalidate: revalidate,
         preferredLanguages: preferredLanguages,
         viewerCountry: viewerCountry,
+        recommendationsExhausted: decodedFallback.recommendationsExhausted,
+        seedVideoId: effectiveSeedVideoId,
       );
     }
 
-    final recommendationCursor = cursor ?? until?.toString();
-    late final RecommendationsResponse response;
+    // Fallback continuation retries recommendations with a fresh cursor first
+    // so the feed recovers personalized ranking once a transient failure
+    // clears. If recommendations fail or return nothing unseen, continue the
+    // popular stream from `effectiveUntil`.
+    final recommendationCursor = isFallbackContinuation
+        ? null
+        : (cursor ?? until?.toString());
+    late final HomeFeedResult result;
     try {
-      response = await _fetchRecommendationsPage(
+      final response = await _fetchRecommendationsPage(
         pubkey: effectiveUserPubkey,
         limit: limit,
         cursor: recommendationCursor,
         seed: requestSeed,
+        seedVideoId: effectiveSeedVideoId,
+        preferredLanguages: preferredLanguages,
+        viewerCountry: viewerCountry,
+      );
+      result = await _buildRecommendedVideosResult(
+        response: response,
+        pubkey: effectiveUserPubkey,
+        limit: limit,
+        requestSeed: requestSeed,
+        recommendationCursor: recommendationCursor,
+        seedVideoId: effectiveSeedVideoId,
         preferredLanguages: preferredLanguages,
         viewerCountry: viewerCountry,
       );
     } on FunnelcakeException catch (e) {
-      if (recommendationCursor != null) rethrow;
+      final isInvalidCursor =
+          recommendationCursor != null &&
+          e is FunnelcakeApiException &&
+          e.statusCode == 400;
+      if (recommendationCursor != null && !isInvalidCursor) rethrow;
       return _popularVideosInsteadOfRecommendations(
-        reason: 'first page failed: $e',
+        reason: isInvalidCursor
+            ? 'cursor rejected (400): $e'
+            : isFallbackContinuation
+            ? 'recommendations retry failed: $e'
+            : 'first page failed: $e',
         limit: limit,
-        until: until,
-        skipCache: skipCache,
+        until: effectiveUntil,
+        skipCache: skipCache || isFallbackContinuation || isInvalidCursor,
         revalidate: revalidate,
         preferredLanguages: preferredLanguages,
         viewerCountry: viewerCountry,
+        seedVideoId: effectiveSeedVideoId,
       );
     }
-
-    final result = await _buildRecommendedVideosResult(
-      response: response,
-      pubkey: effectiveUserPubkey,
-      limit: limit,
-      requestSeed: requestSeed,
-      recommendationCursor: recommendationCursor,
-      preferredLanguages: preferredLanguages,
-      viewerCountry: viewerCountry,
-    );
 
     if (result.videos.isEmpty) {
       return _popularVideosInsteadOfRecommendations(
         reason: 'no recommendations survived filtering',
         limit: limit,
-        until: until,
-        skipCache: skipCache,
+        until: effectiveUntil,
+        skipCache: skipCache || isFallbackContinuation,
         revalidate: revalidate,
         preferredLanguages: preferredLanguages,
         viewerCountry: viewerCountry,
+        seedVideoId: effectiveSeedVideoId,
       );
     }
 
+    final isTerminalPage =
+        result.hasMore != true || result.paginationCursor == null;
     if (isFirstPage) {
       _recommendationSessionSeed = requestSeed;
     }
+
+    // Even if an older server reports a terminal page with no next cursor,
+    // keep For You paginated via a fallback continuation cursor so the viewer
+    // never hits a dead end.
+    final continuousResult = !isTerminalPage
+        ? result
+        : HomeFeedResult(
+            videos: result.videos,
+            videoListSources: result.videoListSources,
+            listOnlyVideoIds: result.listOnlyVideoIds,
+            consumedItemCount: result.consumedItemCount,
+            nextCursor: result.nextCursor,
+            // Keep the last recommendation batch and continue the popular
+            // stream at its saved position. Restarting would replay page one.
+            paginationCursor: _encodeRecommendedFallbackCursor(
+              effectiveUntil,
+              recommendationsExhausted: true,
+            ),
+            hasMore: true,
+            recommendationPageCount: result.recommendationPageCount,
+            followingPageCount: result.followingPageCount,
+          );
+
     if (useFirstPageCache && until == null && cursor == null) {
-      _inMemoryFeedCache?.set(cacheKey, result);
+      _inMemoryFeedCache?.set(cacheKey, continuousResult);
     }
-    return result;
+    return continuousResult;
   }
 
   /// Serves popular videos when the For You feed cannot be personalized.
   ///
-  /// The returned [HomeFeedResult] is indistinguishable from a recommendation
-  /// result at the call site, so the substitution is logged here — otherwise
-  /// nothing records that a viewer saw popular videos under the For You tab.
+  /// Returns a synthetic fallback cursor so For You stays paginated: the next
+  /// `loadMore` continues by timestamp and can retry recommendations if the
+  /// recommendation session has not already been exhausted.
   Future<HomeFeedResult> _popularVideosInsteadOfRecommendations({
     required String reason,
     required int limit,
@@ -4109,23 +4745,77 @@ class VideosRepository {
     required bool revalidate,
     required List<String> preferredLanguages,
     required String? viewerCountry,
+    bool recommendationsExhausted = false,
+    String? seedVideoId,
   }) async {
     Log.warning(
       'For You falling back to popular videos: $reason',
       name: 'VideosRepository',
       category: LogCategory.video,
     );
-    final popular = await getPopularVideos(
-      limit: limit,
-      until: until,
-      // This legacy, no-variant popular call has no heavier refresh
-      // semantics, so revalidation bypasses its cache like manual refresh.
-      skipCache: skipCache || revalidate,
-      preferredLanguages: preferredLanguages,
-      viewerCountry: viewerCountry,
-    );
     await _seenVideoLookup?.ensureInitialized();
-    return HomeFeedResult(videos: _withoutSeenVideos(popular));
+
+    final collected = <VideoEvent>[];
+    final seenVideoKeys = <String>{};
+    var pageUntil = until;
+    int? nextUntil;
+    var pageCount = 0;
+
+    while (true) {
+      pageCount++;
+      final popular = await getPopularVideos(
+        limit: limit,
+        until: pageUntil,
+        // This legacy, no-variant popular call has no heavier refresh
+        // semantics, so revalidation bypasses its cache like manual refresh.
+        skipCache: skipCache || revalidate || pageUntil != null,
+        preferredLanguages: preferredLanguages,
+        viewerCountry: viewerCountry,
+      );
+      if (popular.isEmpty) {
+        nextUntil = null;
+        break;
+      }
+
+      // Funnelcake switches from ranking to recency on timestamp requests.
+      // Start that walk at the catalog head, since every ranked item could
+      // be an archive clip. Subsequent pages advance on their own timestamps.
+      final oldest = popular.map((video) => video.createdAt).reduce(min);
+      final candidateNextUntil = pageUntil == null
+          ? DateTime.now().millisecondsSinceEpoch ~/ 1000 + 1
+          // Funnelcake's before bound is exclusive. Only subtract a second
+          // when a page from an inclusive source failed to move the cursor.
+          : oldest < pageUntil
+          ? oldest
+          : pageUntil - 1;
+      nextUntil = candidateNextUntil > 0 ? candidateNextUntil : null;
+
+      _appendUniqueVideos(
+        collected,
+        _withoutSeenVideos(popular),
+        seenVideoKeys: seenVideoKeys,
+      );
+
+      if (collected.isNotEmpty ||
+          _seenVideoLookup == null ||
+          pageCount >= maxSeenOnlyFeedPages ||
+          nextUntil == null) {
+        break;
+      }
+      pageUntil = nextUntil;
+    }
+
+    return HomeFeedResult(
+      videos: collected,
+      paginationCursor: nextUntil == null
+          ? null
+          : _encodeRecommendedFallbackCursor(
+              nextUntil,
+              recommendationsExhausted: recommendationsExhausted,
+              seedVideoId: collected.lastOrNull?.id ?? seedVideoId,
+            ),
+      hasMore: nextUntil != null,
+    );
   }
 
   Future<RecommendationsResponse> _fetchRecommendationsPage({
@@ -4135,26 +4825,16 @@ class VideosRepository {
     required String seed,
     required List<String> preferredLanguages,
     required String? viewerCountry,
-  }) {
-    if (cursor == null) {
-      return _funnelcakeApiClient!.getRecommendations(
-        pubkey: pubkey,
-        limit: limit,
-        seed: seed,
-        preferredLanguages: preferredLanguages,
-        viewerCountry: viewerCountry,
-      );
-    }
-
-    return _funnelcakeApiClient!.getRecommendations(
-      pubkey: pubkey,
-      limit: limit,
-      cursor: cursor,
-      seed: seed,
-      preferredLanguages: preferredLanguages,
-      viewerCountry: viewerCountry,
-    );
-  }
+    String? seedVideoId,
+  }) => _funnelcakeApiClient!.getRecommendations(
+    pubkey: pubkey,
+    limit: limit,
+    cursor: cursor,
+    seed: seed,
+    seedVideoId: seedVideoId,
+    preferredLanguages: preferredLanguages,
+    viewerCountry: viewerCountry,
+  );
 
   Future<HomeFeedResult> _buildRecommendedVideosResult({
     required RecommendationsResponse response,
@@ -4164,6 +4844,7 @@ class VideosRepository {
     required String? recommendationCursor,
     required List<String> preferredLanguages,
     required String? viewerCountry,
+    String? seedVideoId,
   }) async {
     await _seenVideoLookup?.ensureInitialized();
 
@@ -4203,6 +4884,7 @@ class VideosRepository {
         limit: limit,
         cursor: fetchedCursor,
         seed: requestSeed,
+        seedVideoId: seedVideoId,
         preferredLanguages: preferredLanguages,
         viewerCountry: viewerCountry,
       );
@@ -4321,14 +5003,33 @@ class VideosRepository {
       );
     }
 
-    if (author != null) {
-      candidates.removeWhere((event) => event.pubkey != author);
-    }
+    candidates.removeWhere((event) {
+      if (author != null && event.pubkey != author) return true;
+      if (candidate.matchesEvent(event)) return false;
+      _logRouteIdentityMismatch('cached', event, candidate);
+      return true;
+    });
 
     if (candidates.isEmpty) return null;
-    return _parseAndHydrateFirstRouteVideo(
+    return _parseFirstRouteVideo(
       candidates,
       onContentFiltered: onContentFiltered,
+    );
+  }
+
+  /// Logs a result [VideoRouteRef.matchesEvent] rejected, so a kind alias or
+  /// an impostor `d` tag does not read as a route that found nothing.
+  void _logRouteIdentityMismatch(
+    String source,
+    Event event,
+    VideoRouteRef route,
+  ) {
+    Log.info(
+      'Route lookup rejected the $source event ${event.id} (kind '
+      '${event.kind}, author ${pubkeyForLogs(event.pubkey)}): it does not '
+      'match ${route.addressableId ?? route.eventId}',
+      name: 'VideosRepository',
+      category: LogCategory.video,
     );
   }
 
@@ -4348,7 +5049,7 @@ class VideosRepository {
           ),
         ])
         .timeout(_routeRelayTimeout, onTimeout: () => const <Event>[]);
-    return _parseAndHydrateFirstRouteVideo(
+    return _parseFirstRouteVideo(
       events,
       onContentFiltered: onContentFiltered,
     );
@@ -4379,7 +5080,7 @@ class VideosRepository {
           ),
         ])
         .timeout(_routeRelayTimeout, onTimeout: () => const <Event>[]);
-    return _parseAndHydrateFirstRouteVideo(
+    return _parseFirstRouteVideo(
       events,
       onContentFiltered: onContentFiltered,
     );
@@ -4424,7 +5125,7 @@ class VideosRepository {
           ),
         ])
         .timeout(_routeRelayTimeout, onTimeout: () => const <Event>[]);
-    return _parseAndHydrateFirstRouteVideo(
+    return _parseFirstRouteVideo(
       events,
       onContentFiltered: onContentFiltered,
     );
@@ -4433,7 +5134,7 @@ class VideosRepository {
   Future<VideoEvent?> _fetchVideoFromRouteApi(
     String routeId, {
     String? expectedPubkey,
-    String? expectedEventId,
+    VideoRouteRef? expectedRoute,
     bool permissive = false,
     void Function(VideoEvent video)? onContentFiltered,
   }) async {
@@ -4442,13 +5143,14 @@ class VideosRepository {
     }
 
     final event = await _funnelcakeApiClient.getVideoEvent(routeId);
-    if (event == null ||
-        (expectedEventId != null && event.id != expectedEventId)) {
-      return null;
-    }
+    if (event == null) return null;
     // Checked before content filtering, so another author's filtered video
     // is not reported back as this route's hidden video.
     if (expectedPubkey != null && event.pubkey != expectedPubkey) return null;
+    if (expectedRoute != null && !expectedRoute.matchesEvent(event)) {
+      _logRouteIdentityMismatch('REST', event, expectedRoute);
+      return null;
+    }
 
     final video = _tryParseAndFilter(
       event,
@@ -4457,19 +5159,16 @@ class VideosRepository {
       includeFeedShape: false,
       onContentFiltered: onContentFiltered,
     );
-    if (video == null) return null;
-
-    return _hydrateFirstRouteVideo([video]);
+    return video;
   }
 
-  Future<VideoEvent?> _parseAndHydrateFirstRouteVideo(
+  VideoEvent? _parseFirstRouteVideo(
     List<Event> events, {
     void Function(VideoEvent video)? onContentFiltered,
-  }) async {
+  }) {
     if (events.isEmpty) return null;
 
     events.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    final videos = <VideoEvent>[];
     for (final event in events) {
       final video = _tryParseAndFilter(
         event,
@@ -4478,20 +5177,9 @@ class VideosRepository {
         includeFeedShape: false,
         onContentFiltered: onContentFiltered,
       );
-      if (video != null) {
-        videos.add(video);
-      }
+      if (video != null) return video;
     }
 
-    return _hydrateFirstRouteVideo(videos);
-  }
-
-  Future<VideoEvent?> _hydrateFirstRouteVideo(List<VideoEvent> videos) async {
-    if (videos.isEmpty) return null;
-
-    final hydrated = await _hydrateVideosWithBulkStats(
-      videos,
-    ).timeout(_statsFetchTimeout, onTimeout: () => videos);
-    return hydrated.firstOrNull;
+    return null;
   }
 }

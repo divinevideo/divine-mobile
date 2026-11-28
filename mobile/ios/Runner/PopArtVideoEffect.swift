@@ -10,17 +10,20 @@ import pro_video_editor
 /// keeps the edges from crawling as the picture moves, and each tone takes
 /// that copy's colour.
 ///
-/// Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1: how
-/// far the copies turn into the print). The grid shows at any intensity
-/// above zero, so at zero the picture is left as it is.
+/// Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how far
+/// the copies turn into the print), `grid` (1–4: how many copies line up along
+/// each side). The grid shows at any intensity above zero, so at zero the
+/// picture is left as it is.
 final class PopArtVideoEffect: ShaderVideoEffect {
   /// The id the Dart `CustomVideoEffect` names.
   static let id = "divine.popArt"
 
   private let intensity: Double
+  private let grid: Double
 
   init(params: [String: Any]) {
     intensity = Self.readIntensity(params)
+    grid = Self.readNumber(params, "grid", fallback: 2, in: 1...4).rounded()
     super.init(function: Self.function, source: Self.source)
   }
 
@@ -33,7 +36,7 @@ final class PopArtVideoEffect: ShaderVideoEffect {
   }
 
   override func values(effectTimeUs: Int64) -> [Double]? {
-    intensity > 0 ? [intensity] : nil
+    intensity > 0 ? [intensity] + [grid] : nil
   }
 
   static let function = "divinePopArt"
@@ -47,6 +50,7 @@ final class PopArtVideoEffect: ShaderVideoEffect {
       return dot(c, float3(0.299, 0.587, 0.114));
     }
 
+    // The colour of copy `i` among `a`, `b`, `c` and `d`.
     static float3 pick(float i, float3 a, float3 b, float3 c, float3 d) {
       return mix(mix(a, b, step(0.5, i)), mix(c, d, step(2.5, i)), step(1.5, i));
     }
@@ -59,15 +63,18 @@ final class PopArtVideoEffect: ShaderVideoEffect {
     ) {
       if (gid.x >= target.get_width() || gid.y >= target.get_height()) return;
       Frame f = frameOf(u);
-      float intensity = u[3].x;
+      float2 uSize = f.size;
+      float uIntensity = u[3].x;
+      float uGrid = u[3].y;
       float2 p = pixelOf(u, gid, target.get_height());
-      float2 halfSize = 0.5 * f.size;
-      float2 quadrant = step(halfSize, p);
-      float2 local = mix(p, (p - halfSize * quadrant) * 2.0, step(0.0001, intensity));
+      float2 tile = uSize / uGrid;
+      float2 quadrant = min(floor(p / tile), uGrid - 1.0);
+      float2 local = mix(p, (p - tile * quadrant) * uGrid, step(0.0001, uIntensity));
       float3 copy = tap(frame, f, local);
       float l = luma(copy);
       float level = smoothstep(0.28, 0.32, l) + smoothstep(0.58, 0.62, l);
       float i = quadrant.x + 2.0 * quadrant.y;
+      i -= 4.0 * floor(i / 4.0);
       float3 dark = pick(i, float3(0.1, 0.1, 0.35), float3(0.3, 0.05, 0.4), float3(0.55, 0.0, 0.1),
         float3(0.0, 0.25, 0.3));
       float3 mid = pick(i, float3(1.0, 0.2, 0.6), float3(1.0, 0.5, 0.1), float3(0.45, 0.85, 0.2),
@@ -75,7 +82,7 @@ final class PopArtVideoEffect: ShaderVideoEffect {
       float3 light = pick(i, float3(1.0, 0.9, 0.2), float3(0.3, 0.9, 1.0), float3(1.0, 0.75, 0.85),
         float3(0.8, 0.7, 1.0));
       float3 print = mix(mix(dark, mid, clamp(level, 0.0, 1.0)), light, clamp(level - 1.0, 0.0, 1.0));
-      target.write(float4(mix(copy, print, intensity), 1.0), gid);
+      target.write(float4(mix(copy, print, uIntensity), 1.0), gid);
     }
     """
 }

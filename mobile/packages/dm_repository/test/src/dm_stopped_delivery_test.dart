@@ -202,6 +202,21 @@ void main() {
             ? deletionWrap(rumor, recipient)
             : messageWrap(rumor, recipient);
       });
+      // A group publishes the sender's one copy after its members (#10016).
+      when(
+        () => messageService.publishSelfWrap(
+          rumorEvent: any(named: 'rumorEvent'),
+          targetRelays: any(named: 'targetRelays'),
+          prebuiltSelfWrap: any(named: 'prebuiltSelfWrap'),
+        ),
+      ).thenAnswer((invocation) async {
+        final rumor = invocation.namedArguments[#rumorEvent] as Event;
+        return NIP17SendResult.success(
+          rumorEventId: rumor.id,
+          messageEventId: rumor.id,
+          recipientPubkey: _owner,
+        );
+      });
 
       repository = DmRepository(
         nostrClient: nostrClient,
@@ -1026,6 +1041,16 @@ void main() {
             ),
           ),
         };
+        // The batch's one own copy does not land either (#10016).
+        when(
+          () => messageService.publishSelfWrap(
+            rumorEvent: any(named: 'rumorEvent'),
+            targetRelays: any(named: 'targetRelays'),
+            prebuiltSelfWrap: any(named: 'prebuiltSelfWrap'),
+          ),
+        ).thenAnswer(
+          (_) async => const NIP17SendResult.failure('own copy not published'),
+        );
         final results = await repository.sendGroupMessage(
           recipientPubkeys: [_memberA, _memberB, _memberC],
           content: 'dinner at eight',
@@ -1191,6 +1216,8 @@ void main() {
 
       test('recoverSelfWrap refuses it and publishes nothing', () async {
         final sent = await stoppedRow();
+        // The send above published the batch's one own copy (#10016).
+        clearInteractions(messageService);
 
         await expectLater(
           repository.recoverSelfWrap(rumorId: sent.rowForB),

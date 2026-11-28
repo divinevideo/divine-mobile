@@ -152,8 +152,20 @@ Future<void> _reach(WidgetTester tester, Finder target) async {
 }
 
 void _noMembershipWrites() {
-  verifyNever(() => _service.addVideoToList(any(), any()));
-  verifyNever(() => _service.removeVideoFromList(any(), any()));
+  verifyNever(
+    () => _service.addVideoToList(
+      any(),
+      any(),
+      allowSeries: any(named: 'allowSeries'),
+    ),
+  );
+  verifyNever(
+    () => _service.removeVideoFromList(
+      any(),
+      any(),
+      allowSeries: any(named: 'allowSeries'),
+    ),
+  );
 }
 
 void main() {

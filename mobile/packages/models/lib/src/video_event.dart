@@ -6,6 +6,7 @@
 import 'dart:convert';
 
 import 'package:meta/meta.dart';
+import 'package:models/src/caption_text_track.dart';
 import 'package:models/src/nip71_video_kinds.dart';
 import 'package:models/src/sound_credit.dart';
 import 'package:models/src/video_attribution.dart';
@@ -18,6 +19,11 @@ import 'package:text_sanitizer/text_sanitizer.dart';
 /// page of a link sticker: `["r", <url>, "link"]`. An unmarked `r` tag is
 /// read as one of the video's own media URLs.
 const String videoLinkTagMarker = 'link';
+
+/// The marker on the `a` tag that names the series a video is an episode of:
+/// `["a", "30005:<creator pubkey>:<series d-tag>", "", "series"]`. Other `a`
+/// tags on a video credit or reply to something else.
+const String videoSeriesTagMarker = 'series';
 
 String? _usableThumbnailUrl(Object? value) {
   final url = value?.toString();
@@ -283,7 +289,11 @@ class VideoEvent {
     this.archiveAudioReuseEnabled = false,
     this.eventKind,
     this.sourceRelay,
+    String? seriesCoordinate,
   }) : linkUrls = linkUrls ?? linkUrlsFromTags(nostrEventTags),
+       seriesCoordinate =
+           _ownSeriesCoordinate(seriesCoordinate, authorPubkey: pubkey) ??
+           _seriesCoordinateFromTags(nostrEventTags, authorPubkey: pubkey),
        stickerRegions =
            stickerRegions ?? VideoStickerRegion.fromTags(nostrEventTags),
        content = sanitizeUtf16(content),
@@ -413,6 +423,7 @@ class VideoEvent {
       moderationLabels: stringList(json['moderationLabels']),
       eventKind: optInt(json['eventKind']),
       sourceRelay: json['sourceRelay'] as String?,
+      seriesCoordinate: json['seriesCoordinate'] as String?,
       proofSummary: json['proofSummary'] == null
           ? null
           : ProofVerificationSummary.fromJson(
@@ -724,6 +735,9 @@ class VideoEvent {
           // Subtitle/caption track reference
           // Format: ['text-track', '<coords-or-url>', '<relay>', 'captions',
           //          '<lang>']
+          // Playback falls back through these refs in order, so a chapters
+          // or metadata track must not become one.
+          if (!isCaptionTextTrackType(tag.length > 3 ? tag[3] : null)) break;
           if (tagValue.isNotEmpty) {
             textTrackRefsLocal.add(tagValue);
           }
@@ -1075,6 +1089,52 @@ class VideoEvent {
   ///
   /// Kept as its own field for the same reason as [linkUrls].
   final List<VideoStickerRegion> stickerRegions;
+
+  /// The address of the series this video says it is an episode of,
+  /// `30005:<creator pubkey>:<series d-tag>`, or null when it names none.
+  ///
+  /// A usable address passed in wins, as an API row whose tags were left out
+  /// must pass one; otherwise it is read from the `a` tag marked
+  /// [videoSeriesTagMarker]. It is kept as its own field for the same reason
+  /// as [linkUrls]. Only a well-formed address of a list by the video's own
+  /// author counts. Whether that list exists, is marked as a series and holds
+  /// this video is left to whoever shows the series.
+  final String? seriesCoordinate;
+
+  static final _seriesListAddress = RegExp(
+    r'^30005:([0-9a-f]{64}):.+$',
+    dotAll: true,
+  );
+
+  /// [coordinate] if it is a well-formed series address by [authorPubkey].
+  static String? _ownSeriesCoordinate(
+    String? coordinate, {
+    required String authorPubkey,
+  }) {
+    if (coordinate == null) return null;
+    final match = _seriesListAddress.firstMatch(coordinate);
+    if (match == null || match[1] != authorPubkey.toLowerCase()) return null;
+    return coordinate;
+  }
+
+  /// The first address in [tags] marked [videoSeriesTagMarker] that is a
+  /// well-formed series address by [authorPubkey].
+  static String? _seriesCoordinateFromTags(
+    List<List<String>> tags, {
+    required String authorPubkey,
+  }) {
+    for (final tag in tags) {
+      if (tag.length < 4 || tag[0] != 'a' || tag[3] != videoSeriesTagMarker) {
+        continue;
+      }
+      final coordinate = _ownSeriesCoordinate(
+        tag[1],
+        authorPubkey: authorPubkey,
+      );
+      if (coordinate != null) return coordinate;
+    }
+    return null;
+  }
 
   /// The web pages [tags] link to: each `r` tag marked [videoLinkTagMarker],
   /// in order and once.
@@ -1984,6 +2044,7 @@ class VideoEvent {
     bool? archiveAudioReuseEnabled,
     int? eventKind,
     String? sourceRelay,
+    String? seriesCoordinate,
   }) => VideoEvent(
     id: id ?? this.id,
     pubkey: pubkey ?? this.pubkey,
@@ -2044,10 +2105,13 @@ class VideoEvent {
     inspiredByPubkeys: inspiredByPubkeys ?? this.inspiredByPubkeys,
     clipSourceCredits: clipSourceCredits ?? this.clipSourceCredits,
     nostrEventTags: nostrEventTags ?? this.nostrEventTags,
-    // New tags carry their own links.
+    // New tags carry their own links, stickers and series.
     linkUrls: linkUrls ?? (nostrEventTags == null ? this.linkUrls : null),
     stickerRegions:
         stickerRegions ?? (nostrEventTags == null ? this.stickerRegions : null),
+    seriesCoordinate:
+        seriesCoordinate ??
+        (nostrEventTags == null ? this.seriesCoordinate : null),
     textTrackRef: textTrackRef ?? this.textTrackRef,
     textTrackRefs: textTrackRefs ?? this.textTrackRefs,
     textTrackLang: textTrackLang ?? this.textTrackLang,
@@ -2160,6 +2224,7 @@ class VideoEvent {
     'archiveAudioReuseEnabled': archiveAudioReuseEnabled,
     'eventKind': eventKind,
     'sourceRelay': sourceRelay,
+    'seriesCoordinate': seriesCoordinate,
   };
 
   /// Create a VideoEvent instance representing a repost

@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -14,6 +15,7 @@ import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/feature_flags/services/build_configuration.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/large_screen_orientation_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/router/fade_upwards_page.dart';
 import 'package:openvine/ui/adaptive_layout.dart';
@@ -23,6 +25,7 @@ const _duoInnerPortrait = Size(669, 951);
 const _duoInnerLandscape = Size(951, 669);
 const _phone = Size(402, 874);
 const _duoOuter = Size(466, 678);
+const _tabletLandscape = Size(1280, 800);
 
 void main() {
   group(AdaptiveLayout, () {
@@ -134,24 +137,43 @@ void main() {
       });
 
       test("keeps a grid's own large-window count with the flag off", () {
-        const layout = AdaptiveLayout(enabled: false, size: Size.zero);
+        const phone = AdaptiveLayout(enabled: false, size: Size(599, 900));
+        const tablet = AdaptiveLayout(enabled: false, size: Size(1300, 900));
 
         expect(
-          layout.gridColumns(
-            compact: 2,
-            width: 599,
-            largeColumnsWithoutFlag: 3,
-          ),
+          phone.gridColumns(compact: 2, width: 599, largeColumnsWithoutFlag: 3),
           equals(2),
         );
         expect(
-          layout.gridColumns(
+          tablet.gridColumns(
             compact: 2,
             width: 1300,
             largeColumnsWithoutFlag: 3,
           ),
           equals(3),
         );
+      });
+
+      test('reads the window, not the grid, with the flag off', () {
+        // A 600 pt tablet whose grid is padded below 600 kept its tablet
+        // count before the flag existed.
+        const layout = AdaptiveLayout(enabled: false, size: Size(600, 960));
+
+        expect(
+          layout.gridColumns(
+            compact: 2,
+            width: 592,
+            largeColumnsWithoutFlag: 3,
+          ),
+          equals(3),
+        );
+      });
+
+      test("reads the grid's own width with the flag on", () {
+        // The side navigation leaves a 1440 pt window's grid under 1200.
+        const layout = AdaptiveLayout(enabled: true, size: Size(1440, 900));
+
+        expect(layout.gridColumns(compact: 2, width: 1150), equals(4));
       });
 
       test('ignores the flag-off count with the flag on', () {
@@ -216,18 +238,28 @@ void main() {
       WidgetTester tester, {
       required bool enabled,
       required Size size,
+      bool ignoresOrientationLock = false,
+      Size? display,
       Widget child = const SizedBox.shrink(),
     }) async {
       tester.view.physicalSize = size;
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
+      if (display != null) {
+        tester.view.display.size = display;
+        tester.view.display.devicePixelRatio = 1;
+        addTearDown(tester.view.display.reset);
+      }
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             isFeatureEnabledProvider(
               FeatureFlag.largeScreenLayout,
             ).overrideWithValue(enabled),
+            ignoresOrientationLockOnLargeScreensProvider.overrideWithValue(
+              ignoresOrientationLock,
+            ),
           ],
           child: MediaQuery(
             data: MediaQueryData(size: size),
@@ -274,16 +306,200 @@ void main() {
         expect(layout.size, equals(_duoInnerLandscape));
         expect(layout.isWideLandscape, isTrue);
       });
+
+      testWidgets(
+        'turns the layouts on with the flag off on a large display that '
+        'ignores the portrait lock',
+        (tester) async {
+          late AdaptiveLayout layout;
+          await pumpScope(
+            tester,
+            enabled: false,
+            size: _tabletLandscape,
+            ignoresOrientationLock: true,
+            display: _tabletLandscape,
+            child: Builder(
+              builder: (context) {
+                layout = context.adaptiveLayout;
+                return const SizedBox.shrink();
+              },
+            ),
+          );
+
+          expect(layout.enabled, isTrue);
+          expect(layout.isWideLandscape, isTrue);
+        },
+      );
+
+      testWidgets(
+        'turns the layouts on for a narrow window on a large display that '
+        'ignores the portrait lock',
+        (tester) async {
+          late AdaptiveLayout layout;
+          await pumpScope(
+            tester,
+            enabled: false,
+            size: _phone,
+            ignoresOrientationLock: true,
+            display: _tabletLandscape,
+            child: Builder(
+              builder: (context) {
+                layout = context.adaptiveLayout;
+                return const SizedBox.shrink();
+              },
+            ),
+          );
+
+          expect(layout.enabled, isTrue);
+        },
+      );
+
+      testWidgets(
+        'keeps the layouts off on a phone that ignores the portrait lock',
+        (tester) async {
+          late AdaptiveLayout layout;
+          await pumpScope(
+            tester,
+            enabled: false,
+            size: _phone,
+            ignoresOrientationLock: true,
+            display: _phone,
+            child: Builder(
+              builder: (context) {
+                layout = context.adaptiveLayout;
+                return const SizedBox.shrink();
+              },
+            ),
+          );
+
+          expect(layout.enabled, isFalse);
+        },
+      );
+
+      testWidgets(
+        'keeps the layouts off with the flag off where the portrait lock '
+        'holds',
+        (tester) async {
+          late AdaptiveLayout layout;
+          await pumpScope(
+            tester,
+            enabled: false,
+            size: _tabletLandscape,
+            display: _tabletLandscape,
+            child: Builder(
+              builder: (context) {
+                layout = context.adaptiveLayout;
+                return const SizedBox.shrink();
+              },
+            ),
+          );
+
+          expect(layout.enabled, isFalse);
+        },
+      );
     });
 
     group('orientation', () {
-      testWidgets('leaves startup portrait lock alone with the flag off', (
-        tester,
-      ) async {
-        await pumpScope(tester, enabled: false, size: _duoInnerPortrait);
+      testWidgets(
+        'asks for portrait on a large Android window with the flag off',
+        (tester) async {
+          // The activity lets a large screen rotate from launch while the
+          // layouts are on by default, so turning them off has to take it
+          // back.
+          await pumpScope(tester, enabled: false, size: _duoInnerPortrait);
 
-        expect(orientationCalls, isEmpty);
-      });
+          expect(orientationCalls, [
+            ['DeviceOrientation.portraitUp'],
+          ]);
+        },
+      );
+
+      testWidgets(
+        "leaves a phone in the activity's portrait with the flag off",
+        (tester) async {
+          await pumpScope(tester, enabled: false, size: _phone);
+
+          expect(orientationCalls, isEmpty);
+        },
+      );
+
+      testWidgets(
+        "leaves a large iPad window to the app delegate's mask with the flag "
+        'off',
+        (tester) async {
+          await pumpScope(tester, enabled: false, size: _duoInnerPortrait);
+
+          expect(orientationCalls, isEmpty);
+        },
+        variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+      );
+
+      testWidgets(
+        'asks for portrait at startup when only the Android layout is forced',
+        (tester) async {
+          await pumpScope(
+            tester,
+            enabled: false,
+            size: _tabletLandscape,
+            display: _tabletLandscape,
+            ignoresOrientationLock: true,
+          );
+
+          expect(orientationCalls, [
+            ['DeviceOrientation.portraitUp'],
+          ]);
+        },
+        variant: TargetPlatformVariant.only(TargetPlatform.android),
+      );
+
+      testWidgets(
+        'keeps adaptive framing after storing an Android rotation opt-out',
+        (tester) async {
+          SharedPreferences.setMockInitialValues({});
+          final prefs = await SharedPreferences.getInstance();
+          final container = ProviderContainer(
+            overrides: [
+              sharedPreferencesProvider.overrideWithValue(prefs),
+              ignoresOrientationLockOnLargeScreensProvider.overrideWithValue(
+                true,
+              ),
+            ],
+          );
+          addTearDown(container.dispose);
+
+          late AdaptiveLayout layout;
+          await tester.pumpWidget(
+            UncontrolledProviderScope(
+              container: container,
+              child: MediaQuery(
+                data: const MediaQueryData(size: _tabletLandscape),
+                child: AdaptiveLayoutScope(
+                  child: Builder(
+                    builder: (context) {
+                      layout = context.adaptiveLayout;
+                      return const SizedBox.shrink();
+                    },
+                  ),
+                ),
+              ),
+            ),
+          );
+
+          expect(layout.isWideLandscape, isTrue);
+          expect(orientationCalls.single, hasLength(4));
+
+          await container
+              .read(featureFlagServiceProvider)
+              .setFlag(FeatureFlag.largeScreenLayout, false);
+          await tester.pump();
+
+          expect(prefs.getBool('ff_largeScreenLayout'), isFalse);
+          expect(layout.isWideLandscape, isTrue);
+          expect(orientationCalls, hasLength(2));
+          expect(orientationCalls.last, ['DeviceOrientation.portraitUp']);
+        },
+        variant: TargetPlatformVariant.only(TargetPlatform.android),
+      );
 
       testWidgets('allows rotation on a large screen with the flag on', (
         tester,
@@ -307,10 +523,10 @@ void main() {
         await pumpScope(
           tester,
           enabled: false,
-          size: _duoInnerPortrait,
+          size: _phone,
           child: const PortraitOrientationLock(child: SizedBox.shrink()),
         );
-        await pumpScope(tester, enabled: false, size: _duoInnerPortrait);
+        await pumpScope(tester, enabled: false, size: _phone);
 
         expect(orientationCalls, isEmpty);
       });
@@ -355,19 +571,20 @@ void main() {
       testWidgets(
         'reports the flag to the app delegate on iOS',
         (tester) async {
-          await pumpScope(tester, enabled: true, size: _duoOuter);
-          await pumpScope(tester, enabled: true, size: _duoInnerLandscape);
+          await pumpScope(tester, enabled: false, size: _duoOuter);
           await pumpScope(tester, enabled: false, size: _duoInnerLandscape);
+          await pumpScope(tester, enabled: true, size: _duoInnerLandscape);
 
-          expect(reportedFlags, [true, false]);
+          expect(reportedFlags, [false, true]);
         },
         variant: TargetPlatformVariant.only(TargetPlatform.iOS),
       );
 
       testWidgets(
-        'reports nothing to the app delegate with the flag off',
+        'reports nothing to the app delegate with the flag on, which it '
+        'assumes',
         (tester) async {
-          await pumpScope(tester, enabled: false, size: _duoInnerLandscape);
+          await pumpScope(tester, enabled: true, size: _duoInnerLandscape);
 
           expect(reportedFlags, isEmpty);
         },
@@ -375,7 +592,7 @@ void main() {
       );
 
       testWidgets(
-        'reports a build that turns the flag on by default, with no '
+        'reports a build that turns the flag off by default, with no '
         'override stored',
         (tester) async {
           SharedPreferences.setMockInitialValues({});
@@ -390,7 +607,7 @@ void main() {
               overrides: [
                 sharedPreferencesProvider.overrideWithValue(prefs),
                 buildConfigurationProvider.overrideWithValue(
-                  const _LargeScreenLayoutByDefault(),
+                  const _LargeScreenLayoutOffByDefault(),
                 ),
               ],
               child: const MediaQuery(
@@ -401,7 +618,7 @@ void main() {
           );
 
           expect(prefs.containsKey('ff_largeScreenLayout'), isFalse);
-          expect(reportedFlags, [true]);
+          expect(reportedFlags, [false]);
         },
         variant: TargetPlatformVariant.only(TargetPlatform.iOS),
       );
@@ -881,6 +1098,65 @@ void main() {
       expect(framed.delegatedTransition, same(inner.delegatedTransition));
     });
   });
+
+  group('resolveIgnoresOrientationLockOnLargeScreens', () {
+    late List<String> calls;
+
+    void answerWith(Future<Object?> Function() answer) {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(largeScreenLayoutChannel, (call) {
+            calls.add(call.method);
+            return answer();
+          });
+    }
+
+    setUp(() {
+      calls = [];
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    });
+
+    tearDown(() {
+      debugDefaultTargetPlatformOverride = null;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(largeScreenLayoutChannel, null);
+    });
+
+    test(
+      'returns the Android activity answer when it ignores the lock',
+      () async {
+        answerWith(() async => true);
+
+        expect(await resolveIgnoresOrientationLockOnLargeScreens(), isTrue);
+        expect(calls, equals(['ignoresOrientationLockOnLargeScreens']));
+      },
+    );
+
+    test('returns the Android activity answer when the lock holds', () async {
+      answerWith(() async => false);
+
+      expect(await resolveIgnoresOrientationLockOnLargeScreens(), isFalse);
+      expect(calls, equals(['ignoresOrientationLockOnLargeScreens']));
+    });
+
+    test('returns false without asking outside Android', () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      answerWith(() async => true);
+
+      expect(await resolveIgnoresOrientationLockOnLargeScreens(), isFalse);
+      expect(calls, isEmpty);
+    });
+
+    test('returns false when the activity fails to answer', () async {
+      answerWith(() async => throw PlatformException(code: 'unavailable'));
+
+      expect(await resolveIgnoresOrientationLockOnLargeScreens(), isFalse);
+      expect(calls, equals(['ignoresOrientationLockOnLargeScreens']));
+    });
+
+    test('returns false when the activity has no such channel', () async {
+      expect(await resolveIgnoresOrientationLockOnLargeScreens(), isFalse);
+    });
+  });
 }
 
 /// Counts its taps, to tell a kept state from a fresh one.
@@ -905,12 +1181,12 @@ class _CounterState extends State<_Counter> {
   );
 }
 
-/// A build that turns the large-screen layouts on by default, as
-/// `FF_LARGE_SCREEN_LAYOUT=true` does.
-class _LargeScreenLayoutByDefault extends BuildConfiguration {
-  const _LargeScreenLayoutByDefault();
+/// A build that turns the large-screen layouts off by default, as
+/// `FF_LARGE_SCREEN_LAYOUT=false` does.
+class _LargeScreenLayoutOffByDefault extends BuildConfiguration {
+  const _LargeScreenLayoutOffByDefault();
 
   @override
   bool getDefault(FeatureFlag flag) =>
-      flag == FeatureFlag.largeScreenLayout || super.getDefault(flag);
+      flag != FeatureFlag.largeScreenLayout && super.getDefault(flag);
 }

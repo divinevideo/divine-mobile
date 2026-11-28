@@ -179,7 +179,7 @@ void main() {
       registerFallbackValue(RelayAddSource.automatic);
       registerFallbackValue(RelayRemoveSource.user);
       registerFallbackValue(const Duration(seconds: 10));
-      registerFallbackValue(const CountResponse(count: 0));
+      registerFallbackValue(const CountResponse(isComplete: true, count: 0));
     });
 
     setUp(() {
@@ -6262,7 +6262,7 @@ void main() {
         final filters = [
           Filter(kinds: [EventKind.textNote], authors: [testPublicKey]),
         ];
-        const countResponse = CountResponse(count: 42);
+        const countResponse = CountResponse(isComplete: true, count: 42);
 
         when(
           () => mockNostr.countEvents(
@@ -6285,7 +6285,11 @@ void main() {
         final filters = [
           Filter(kinds: [EventKind.textNote]),
         ];
-        const countResponse = CountResponse(count: 1000, approximate: true);
+        const countResponse = CountResponse(
+          isComplete: true,
+          count: 1000,
+          approximate: true,
+        );
 
         when(
           () => mockNostr.countEvents(
@@ -6308,7 +6312,10 @@ void main() {
         final filters = [
           Filter(kinds: [EventKind.textNote]),
         ];
-        const countResponse = CountResponse(count: 9223372036854775807);
+        const countResponse = CountResponse(
+          isComplete: true,
+          count: 9223372036854775807,
+        );
 
         when(
           () => mockNostr.countEvents(
@@ -6386,7 +6393,7 @@ void main() {
             if (attempts == 1) {
               throw CountNotSentException('No relay accepted COUNT');
             }
-            return const CountResponse(count: 7);
+            return const CountResponse(isComplete: true, count: 7);
           });
           when(mockRelayManager.retryDisconnectedRelays).thenAnswer((_) async {
             calls.add('redial');
@@ -6574,7 +6581,7 @@ void main() {
           if (attempts == 1) {
             throw CountNotSentException('No relay accepted COUNT');
           }
-          return const CountResponse(count: 7);
+          return const CountResponse(isComplete: true, count: 7);
         });
         when(
           mockRelayManager.retryDisconnectedRelays,
@@ -6610,7 +6617,9 @@ void main() {
             relayTypes: any(named: 'relayTypes'),
             timeout: any(named: 'timeout'),
           ),
-        ).thenAnswer((_) async => const CountResponse(count: 10));
+        ).thenAnswer(
+          (_) async => const CountResponse(isComplete: true, count: 10),
+        );
 
         await client.countEvents(filters, subscriptionId: customId);
 
@@ -6639,7 +6648,9 @@ void main() {
             relayTypes: any(named: 'relayTypes'),
             timeout: any(named: 'timeout'),
           ),
-        ).thenAnswer((_) async => const CountResponse(count: 10));
+        ).thenAnswer(
+          (_) async => const CountResponse(isComplete: true, count: 10),
+        );
 
         await client.countEvents(filters, timeout: customTimeout);
 
@@ -6668,7 +6679,9 @@ void main() {
             relayTypes: any(named: 'relayTypes'),
             timeout: any(named: 'timeout'),
           ),
-        ).thenAnswer((_) async => const CountResponse(count: 10));
+        ).thenAnswer(
+          (_) async => const CountResponse(isComplete: true, count: 10),
+        );
 
         await client.countEvents(filters, tempRelays: tempRelays);
 
@@ -6697,7 +6710,9 @@ void main() {
             relayTypes: any(named: 'relayTypes'),
             timeout: any(named: 'timeout'),
           ),
-        ).thenAnswer((_) async => const CountResponse(count: 10));
+        ).thenAnswer(
+          (_) async => const CountResponse(isComplete: true, count: 10),
+        );
 
         await client.countEvents(filters, relayTypes: relayTypes);
 
@@ -6725,7 +6740,9 @@ void main() {
             relayTypes: any(named: 'relayTypes'),
             timeout: any(named: 'timeout'),
           ),
-        ).thenAnswer((_) async => const CountResponse(count: 5));
+        ).thenAnswer(
+          (_) async => const CountResponse(isComplete: true, count: 5),
+        );
 
         await client.countEvents(filters);
 

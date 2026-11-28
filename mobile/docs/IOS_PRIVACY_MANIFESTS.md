@@ -24,8 +24,11 @@ machine-readable catalogue in
 2. **Declare only what you use.** Apple permits use of these APIs "for the
    declared reasons only", so an extra reason is inaccurate, not cautious.
 
-Scope note: the requirement covers **iOS, iPadOS, tvOS, visionOS and watchOS**.
-macOS is not listed, which is why `mobile/macos` carries no obligation here.
+Scope note: Apple's required-reason API requirement covers **iOS, iPadOS, tvOS,
+visionOS and watchOS**. macOS is not on Apple's required-reason enforcement
+list, so `mobile/macos/Runner/PrivacyInfo.xcprivacy` mirrors the app's
+`NSPrivacyCollectedDataTypes` / `NSPrivacyTracking` declarations with an empty
+`NSPrivacyAccessedAPITypes` array for Mac App Store submissions.
 
 ## Where our manifests live
 

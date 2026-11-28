@@ -12,11 +12,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:http/http.dart' as http;
 import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/constants/semantic_ids.dart';
+import 'package:openvine/constants/terms_acceptance_keys.dart';
+import 'package:openvine/features/guest_classics/guest_classics_entry.dart';
+import 'package:openvine/features/guest_classics/guest_classics_manifest.dart';
+import 'package:openvine/features/guest_classics/guest_classics_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/account_deletion_attempt.dart';
 import 'package:openvine/models/known_account.dart';
@@ -28,6 +33,8 @@ import 'package:openvine/repositories/social_sign_in_repository.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/auth/welcome_screen.dart';
 import 'package:openvine/screens/minor_account_review_screen.dart';
+import 'package:openvine/services/auth/account_session_store.dart';
+import 'package:openvine/services/auth/account_storage_exception.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/auth/auth_hero_section.dart';
@@ -119,6 +126,9 @@ void main() {
     String? initialSelectedPubkeyHex,
     Locale? locale,
     bool offerSocialSignIn = false,
+    bool guestEntry = false,
+    Future<GuestClassicsManifest?> Function(http.Client, {required bool muted})?
+    guestLoader,
   }) {
     final socialSignInRepository = _MockSocialSignInRepository();
     when(
@@ -141,6 +151,7 @@ void main() {
             path: WelcomeScreen.path,
             builder: (context, state) => WelcomeScreen(
               initialSelectedPubkeyHex: initialSelectedPubkeyHex,
+              guestEntry: guestEntry,
             ),
             routes: [
               GoRoute(
@@ -175,6 +186,14 @@ void main() {
     );
     return ProviderScope(
       overrides: [
+        if (guestEntry) ...[
+          guestClassicsBaseProvider.overrideWithValue(
+            Uri.parse('https://example.test/'),
+          ),
+          guestClassicsManifestProvider.overrideWithValue(
+            guestLoader ?? (_, {required muted}) async => null,
+          ),
+        ],
         authServiceProvider.overrideWithValue(mockAuthService),
         currentAuthStateProvider.overrideWithValue(authState),
         databaseProvider.overrideWithValue(mockDb),
@@ -189,6 +208,205 @@ void main() {
 
   group(WelcomeScreen, () {
     group('default variant', () {
+      // The fresh-install hero column overflows the default 800x600 test
+      // surface by 13px, but only when it lays out with the wide fallback
+      // font: VineTheme's GoogleFonts.inter registers its asset into the
+      // process-global font collection asynchronously, so the first test in
+      // an isolate to render this screen misses real Inter metrics. Under
+      // randomized ordering that is whichever test the seed sorts first, so
+      // every test here takes the headroom rather than the four that
+      // happened to hit it. Width stays 800 so nothing re-wraps. This cannot
+      // move into setUp — setSurfaceSize asserts it runs inside a test.
+      Future<void> useTallSurface(WidgetTester tester) async {
+        await tester.binding.setSurfaceSize(const Size(800, 1200));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+      }
+
+      for (final auth in [
+        AuthState.unauthenticated,
+        AuthState.awaitingTosAcceptance,
+        AuthState.checking,
+      ]) {
+        testWidgets('guest entry under $auth preserves the auth boundary', (
+          tester,
+        ) async {
+          await useTallSurface(tester);
+          await tester.pumpWidget(
+            createTestWidget(guestEntry: true, authState: auth),
+          );
+          await tester.pump();
+          expect(
+            find.byType(GuestClassicsEntry),
+            auth == AuthState.unauthenticated ? findsOneWidget : findsNothing,
+          );
+        });
+      }
+
+      testWidgets(
+        'known accounts stay on recovery when the guest entry is selected',
+        (tester) async {
+          await useTallSurface(tester);
+          when(() => mockAuthService.getKnownAccounts())
+              .thenAnswer((_) async => [_testKnownAccount]);
+          await tester.pumpWidget(createTestWidget(guestEntry: true));
+          await tester.pump();
+          expect(find.byType(GuestClassicsEntry), findsNothing);
+        },
+      );
+
+      testWidgets(
+        'guest catalog waits for the viewer to accept terms',
+        (tester) async {
+          await useTallSurface(tester);
+          final canWrite = Completer<void>();
+          var loads = 0;
+          when(() => mockAuthService.acceptTerms()).thenAnswer((_) async {
+            await canWrite.future;
+            await AccountSessionStore(sharedPreferences).acceptTerms();
+          });
+          await tester.pumpWidget(
+            createTestWidget(
+              guestEntry: true,
+              guestLoader: (_, {required muted}) async {
+                loads++;
+                return null;
+              },
+            ),
+          );
+          await tester.pump();
+          expect(loads, 0);
+          expect(
+            sharedPreferences.containsKey(TermsAcceptanceKeys.termsAcceptedAt),
+            isFalse,
+          );
+
+          await tester.tap(find.text('Watch Classics as a guest'));
+          await tester.pump();
+          expect(loads, 0);
+          expect(
+            sharedPreferences.containsKey(TermsAcceptanceKeys.termsAcceptedAt),
+            isFalse,
+          );
+
+          canWrite.complete();
+          await tester.pumpAndSettle();
+          expect(loads, 1);
+          expect(
+            sharedPreferences.getString(TermsAcceptanceKeys.termsAcceptedAt),
+            isNotEmpty,
+          );
+          expect(
+            sharedPreferences.getBool(TermsAcceptanceKeys.ageVerified16Plus),
+            isTrue,
+          );
+        },
+      );
+
+      testWidgets(
+        'a failed consent write leaves the guest catalog untouched',
+        (tester) async {
+          await useTallSurface(tester);
+          when(() => mockAuthService.acceptTerms()).thenAnswer((_) async {
+            throw const AccountStorageException('Preferences write failed');
+          });
+          var loads = 0;
+          await tester.pumpWidget(
+            createTestWidget(
+              guestEntry: true,
+              guestLoader: (_, {required muted}) async {
+                loads++;
+                return null;
+              },
+            ),
+          );
+          await tester.pump();
+          await tester.tap(find.text('Watch Classics as a guest'));
+          await tester.pumpAndSettle();
+          expect(loads, 0);
+          expect(find.text('Watch Classics as a guest'), findsOneWidget);
+          expect(find.text('Create a new Divine account'), findsOneWidget);
+        },
+      );
+
+      testWidgets(
+        'a phone can open guest Classics and return without refetching',
+        (tester) async {
+          await tester.binding.setSurfaceSize(const Size(390, 844));
+          addTearDown(() => tester.binding.setSurfaceSize(null));
+          tester.binding.handleAppLifecycleStateChanged(
+            AppLifecycleState.resumed,
+          );
+          addTearDown(tester.binding.resetInternalState);
+          final channels = <MethodChannel>[];
+          const global = MethodChannel('divine_video_player');
+          channels.add(global);
+          final messenger = tester.binding.defaultBinaryMessenger;
+          messenger.setMockMethodCallHandler(global, (call) async {
+            if (call.method == 'create') {
+              final id = call.arguments['id'];
+              for (final name in [
+                'divine_video_player/player_$id',
+                'divine_video_player/player_$id/events',
+              ]) {
+                final channel = MethodChannel(name);
+                channels.add(channel);
+                messenger.setMockMethodCallHandler(channel, (_) async => null);
+              }
+              return {'textureId': 1};
+            }
+            return null;
+          });
+          addTearDown(() {
+            for (final channel in channels) {
+              messenger.setMockMethodCallHandler(channel, null);
+            }
+          });
+          final manifest = GuestClassicsManifest.parse({
+            'schema_version': 1,
+            'revision': 'qa1',
+            'expires_at': DateTime.now()
+                .toUtc()
+                .add(const Duration(minutes: 10))
+                .toIso8601String(),
+            'items': [
+              {
+                'event_id': 'ab' * 32,
+                'sha256': 'cd' * 32,
+                'video_url': 'https://media.divine.video/classic.mp4',
+                'attribution': 'Creator 1',
+                'original_loops': 100,
+              },
+            ],
+          }, now: DateTime.now().toUtc())!;
+
+          var loads = 0;
+          await tester.pumpWidget(
+            createTestWidget(
+              guestEntry: true,
+              guestLoader: (_, {required muted}) async {
+                loads++;
+                return manifest;
+              },
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+          expect(find.text('Watch Classics as a guest'), findsOneWidget);
+
+          await tester.tap(find.text('Watch Classics as a guest'));
+          await tester.pump();
+          await tester.pump();
+          expect(find.text('Creator 1'), findsOneWidget);
+          expect(loads, 1);
+
+          await tester.tap(find.bySemanticsLabel('Close'));
+          await tester.pump();
+          expect(find.text('Creator 1'), findsNothing);
+          expect(find.text('Watch Classics as a guest'), findsOneWidget);
+          expect(loads, 1);
+        },
+      );
+
       testWidgets('displays $AuthHeroSection', (tester) async {
         await tester.pumpWidget(createTestWidget());
         await tester.pumpAndSettle();

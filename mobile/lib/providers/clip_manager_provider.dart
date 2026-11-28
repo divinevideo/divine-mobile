@@ -198,6 +198,9 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
     ]);
   }
 
+  /// The recording duration limit for the current session.
+  Duration get durationLimit => state.durationLimit;
+
   /// Calculates the remaining recording time available.
   ///
   /// Returns the difference between [ClipManagerState.durationLimit] and
@@ -209,6 +212,10 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
   /// The length a room part filmed in series may run, while one is filmed.
   static Duration? _partDurationLimit(CollabRoomPartContext? part) =>
       part != null && part.isActive ? part.partLength : null;
+
+  /// How long the take in progress has run, or what it reached while its
+  /// clip is still being finalized.
+  Duration get activeRecordingDuration => state.activeRecordingDuration;
 
   /// Calculates the total duration of all recorded clips.
   Duration get totalDuration {

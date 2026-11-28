@@ -15,8 +15,9 @@ import com.divinevideo.divine_video_player.VideoFrameEffects
  * evenest, for hard edges, deepens the colours and lights the patches' edges
  * from the top left like thick paint, with fine bristle marks.
  *
- * Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1: how
- * far the picture turns into paint).
+ * Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how far
+ * the picture turns into paint), `size` (0.5–3: how large the brush strokes
+ * are, as a share of the default).
  */
 class PaintVideoEffect(private val style: Style, params: Map<String, Any?>) :
     ShaderVideoEffect(FRAGMENT_SHADER) {
@@ -29,9 +30,12 @@ class PaintVideoEffect(private val style: Style, params: Map<String, Any?>) :
 
     private val intensity = intensityOf(params)
 
+    private val brush = numberOf(params, "size", 1f, 0.5f, 3f)
+
     override fun setUniforms(shader: CustomVideoEffectShader, effectTimeUs: Long) {
         shader.setFloat("uIntensity", intensity)
         shader.setFloat("uStyle", style.shaderValue)
+        shader.setFloat("uBrush", brush)
     }
 
     companion object {
@@ -50,6 +54,7 @@ class PaintVideoEffect(private val style: Style, params: Map<String, Any?>) :
         private const val FRAGMENT_SHADER = ShaderVideoEffect.PRELUDE + """
 uniform float uIntensity;
 uniform float uStyle;
+uniform float uBrush;
 
 float luma(vec3 c) {
   return dot(c, vec3(0.299, 0.587, 0.114));
@@ -61,6 +66,7 @@ float hash(vec2 q) {
   return fract((r.x + r.y) * r.z);
 }
 
+// Value noise: the hash on a grid, blended smoothly between its points.
 float noise(vec2 q) {
   vec2 i = floor(q);
   vec2 f = q - i;
@@ -73,7 +79,7 @@ float noise(vec2 q) {
 void main() {
   vec2 p = vTexCoord * uSize;
   float s = min(uSize.x, uSize.y);
-  float e = max(1.0, s / 360.0);
+  float e = max(1.0, s / 360.0 * uBrush);
   vec3 m0 = vec3(0.0);
   vec3 m1 = vec3(0.0);
   vec3 m2 = vec3(0.0);

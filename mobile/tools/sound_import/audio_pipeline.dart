@@ -22,6 +22,8 @@ class AudioTargets {
     this.trailingSilence = 0.2,
     this.musicBitrateKbps = 192,
     this.otherBitrateKbps = 128,
+    this.maxDurationSeconds,
+    this.fadeOutSeconds = 3,
   });
 
   /// Integrated loudness (EBU R128), the level most phones play speech and
@@ -45,6 +47,17 @@ class AudioTargets {
 
   final int musicBitrateKbps;
   final int otherBitrateKbps;
+
+  /// A longer sound keeps only its first this many seconds, faded out over
+  /// [fadeOutSeconds]. Null keeps every sound whole.
+  ///
+  /// Divine's media server takes at most 16 MiB in one upload, which AAC at
+  /// 192 kbps reaches after about 11 minutes.
+  final double? maxDurationSeconds;
+
+  /// How long the end of a cut sound fades out, so it does not stop
+  /// mid-note.
+  final double fadeOutSeconds;
 }
 
 /// The MIME type of what [AudioPipeline] writes: AAC in an MP4 container,
@@ -140,16 +153,38 @@ class AudioPipeline {
         return RejectedAudio('trim failed: ${trim.stderr}');
       }
 
+      // A silent file trims to a few samples, and the peak check below
+      // rejects it. No minimum length: a click can be 20 ms long.
       final trimmedDuration = await _duration(trimmed.path);
-      if (trimmedDuration == null || trimmedDuration < 0.05) {
-        return const RejectedAudio('silent');
+      if (trimmedDuration == null) return const RejectedAudio('silent');
+
+      var source = trimmed;
+      final maxDuration = targets.maxDurationSeconds;
+      final cut = maxDuration != null && trimmedDuration > maxDuration;
+      if (cut) {
+        source = File('${scratch.path}/excerpt.wav');
+        final excerpt = await _run(ffmpeg, [
+          '-nostdin',
+          '-hide_banner',
+          '-y',
+          '-i',
+          trimmed.path,
+          '-af',
+          _excerptFilter(maxDuration),
+          '-c:a',
+          'pcm_f32le',
+          source.path,
+        ]);
+        if (excerpt.exitCode != 0) {
+          return RejectedAudio('excerpt failed: ${excerpt.stderr}');
+        }
       }
 
       final measure = await _run(ffmpeg, [
         '-nostdin',
         '-hide_banner',
         '-i',
-        trimmed.path,
+        source.path,
         '-af',
         _loudnormFilter,
         '-f',
@@ -173,11 +208,11 @@ class AudioPipeline {
         '-hide_banner',
         '-y',
         '-i',
-        trimmed.path,
+        source.path,
         '-af',
         'volume=${gainDb.toStringAsFixed(2)}dB',
         // Mono stays mono; anything wider than stereo is mixed down.
-        if ((await _channels(trimmed.path) ?? 2) > 2) ...['-ac', '2'],
+        if ((await _channels(source.path) ?? 2) > 2) ...['-ac', '2'],
         '-ar',
         '44100',
         '-c:a',
@@ -211,6 +246,8 @@ class AudioPipeline {
         gainDb: gainDb,
         changes: [
           if (inputDuration - trimmedDuration > 0.01) 'edge silence trimmed',
+          if (cut)
+            'cut to the first ${_lengthText(maxDuration)} with a fade-out',
           if (gainDb.abs() >= 0.1) 'loudness normalized',
         ],
       );
@@ -237,6 +274,14 @@ class AudioPipeline {
       remove(targets.trailingSilence),
       'areverse',
     ].join(',');
+  }
+
+  /// Keeps the first [seconds] and fades out over their end.
+  String _excerptFilter(double seconds) {
+    final fade = targets.fadeOutSeconds < seconds
+        ? targets.fadeOutSeconds
+        : seconds;
+    return 'atrim=end=$seconds,afade=t=out:st=${seconds - fade}:d=$fade';
   }
 
   Future<double?> _duration(String path) async {
@@ -269,6 +314,14 @@ class AudioPipeline {
     if (probe.exitCode != 0) return null;
     return int.tryParse('${probe.stdout}'.trim());
   }
+}
+
+/// [seconds] as the credit names a length: `5 minutes`, `90 seconds`.
+String _lengthText(double seconds) {
+  String count(num value, String unit) =>
+      '$value ${value == 1 ? unit : '${unit}s'}';
+  if (seconds % 60 == 0) return count(seconds ~/ 60, 'minute');
+  return count(seconds % 1 == 0 ? seconds.toInt() : seconds, 'second');
 }
 
 /// The gain that brings [measured] to [targets]' loudness without lifting

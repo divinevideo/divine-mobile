@@ -13,8 +13,10 @@ import 'package:dm_repository/dm_repository.dart'
         parseCollabRoomMessage,
         parseSoundRequestMessage;
 import 'package:equatable/equatable.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/semantics.dart' show SemanticsService;
-import 'package:flutter/services.dart' show HapticFeedback;
+import 'package:flutter/services.dart'
+    show Clipboard, ClipboardData, HapticFeedback;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:follow_repository/follow_repository.dart'
@@ -44,6 +46,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/follow_relationship_provider.dart';
 import 'package:openvine/providers/nip05_verification_provider.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
+import 'package:openvine/providers/short_link_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/routes/messaging_routes.dart';
 import 'package:openvine/router/routes/profile_routes.dart';
@@ -51,6 +54,8 @@ import 'package:openvine/screens/feed/dm_reply_context.dart';
 import 'package:openvine/screens/inbox/conversation/dm_clip_picker.dart';
 import 'package:openvine/screens/inbox/conversation/dm_video_play_page.dart';
 import 'package:openvine/screens/inbox/conversation/dm_video_target.dart';
+import 'package:openvine/screens/inbox/conversation/widgets/conversation_focus_list.dart';
+import 'package:openvine/screens/inbox/conversation/widgets/editable_draft_card.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/sound_request_card.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/widgets.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
@@ -82,12 +87,14 @@ class ConversationView extends ConsumerStatefulWidget {
   const ConversationView({
     required this.participantPubkeys,
     this.subject,
+    this.messageId,
     super.key,
   });
 
   /// Pubkeys of the other participants (excludes current user).
   final List<String> participantPubkeys;
   final String? subject;
+  final String? messageId;
 
   @override
   ConsumerState<ConversationView> createState() => _ConversationViewState();
@@ -682,6 +689,7 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
                               child: ColoredBox(
                                 color: context.vineColors.surfaceContainerHigh,
                                 child: _ConversationContent(
+                                  messageId: widget.messageId,
                                   currentPubkey: currentPubkey,
                                   otherPubkey: otherPubkey,
                                   participantPubkeys: widget.participantPubkeys,
@@ -1489,7 +1497,9 @@ class _ComposerSlotNotice extends StatelessWidget {
 /// Selects status, messages and pending video sends from the bloc and
 /// switches between loading, error, empty, and message-list states.
 class _ConversationContent extends StatelessWidget {
+  final String? messageId;
   const _ConversationContent({
+    required this.messageId,
     required this.currentPubkey,
     required this.otherPubkey,
     required this.participantPubkeys,
@@ -1592,7 +1602,9 @@ class _ConversationContent extends StatelessWidget {
             ),
           ),
           ConversationStatus.loaded =>
-            selected.messages.isEmpty && selected.videoSends.entries.isEmpty
+            messageId == null &&
+                    selected.messages.isEmpty &&
+                    selected.videoSends.entries.isEmpty
                 ? (isUnresolved
                       ? const SizedBox.shrink()
                       : EmptyConversation(
@@ -1612,6 +1624,7 @@ class _ConversationContent extends StatelessWidget {
                               ),
                         ))
                 : _MessageList(
+                    messageId: messageId,
                     messages: selected.messages,
                     pendingVideoSends: selected.videoSends.entries,
                     currentPubkey: currentPubkey,
@@ -1680,7 +1693,9 @@ String _pendingVideoKey(OutgoingVideoDm entry) => 'pending-video-${entry.id}';
 final String _doubleTapLikeEmoji = kDefaultDmReactionEmojis.first;
 
 class _MessageList extends StatelessWidget {
+  final String? messageId;
   const _MessageList({
+    required this.messageId,
     required this.messages,
     required this.pendingVideoSends,
     required this.currentPubkey,
@@ -1834,6 +1849,7 @@ class _MessageList extends StatelessWidget {
       isSent: isSent,
       isVideoShare: videoTarget != null,
       isEncryptedVideo: message.fileMetadata?.isVideo == true,
+      isEditableDraft: message.fileMetadata?.isEditableDraft == true,
       canAddToClips: canAddToClips,
       senderBlock: senderBlock,
       showPicker: showPicker,
@@ -1862,11 +1878,26 @@ class _MessageList extends StatelessWidget {
         // An encrypted video's content is its ciphertext URL, which is never
         // user-visible; the action sheet withholds the tile, and this guard
         // keeps it off the clipboard if the action is ever returned.
-        if (message.fileMetadata?.isVideo == true) return;
+        if (message.fileMetadata?.isVideo == true ||
+            message.fileMetadata?.isEditableDraft == true) {
+          return;
+        }
         await ClipboardUtils.copy(context, message.content);
       case MessageAction.copyVideoUrl:
         if (videoTarget == null) return;
-        await ClipboardUtils.copy(context, videoTarget.canonicalUrl);
+        final canonical = videoTarget.canonicalUrl;
+        final shortener = ProviderScope.containerOf(
+          context,
+          listen: false,
+        ).read(shortLinkClientProvider);
+        final url =
+            await (shortener?.shorten(canonical) ?? Future.value(canonical));
+        if (context.mounted) {
+          await ClipboardUtils.copy(context, url);
+        } else {
+          // The chat closed while the link was shortening; still copy it.
+          await Clipboard.setData(ClipboardData(text: url));
+        }
       case MessageAction.playVideo:
         await DmVideoPlayPage.open(
           context,
@@ -2100,12 +2131,14 @@ class _MessageList extends StatelessWidget {
       for (final pubkey in mutedPubkeys) pubkey.toLowerCase(),
     };
 
-    return ListView.builder(
-      reverse: true,
-      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      // bottom: 8 stacks with the newest bubble's own 8 px bottom padding
-      // for a 16 px gap to the scroll-view edge.
-      padding: const EdgeInsets.only(top: 8, bottom: 8),
+    return ConversationFocusList(
+      owner: currentPubkey,
+      conversation: messages.firstOrNull?.conversationId,
+      messageId: messageId,
+      highlightColor: context.vineColors.primaryContainer,
+      onUnavailable: () => ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.dmNotificationMessageUnavailable)),
+      ),
       itemCount: pendingCount + messages.length,
       findChildIndexCallback: (key) {
         if (key is! ValueKey<String>) return null;
@@ -2134,7 +2167,7 @@ class _MessageList extends StatelessWidget {
         final index = itemIndex - pendingCount;
         final message = messages[index];
         final messageKey = ValueKey(message.id);
-        final isSent = message.senderPubkey == currentPubkey;
+        final isSent = pubkeysEqual(message.senderPubkey, currentPubkey);
         final soundRequest = parseSoundRequestMessage(
           message,
           ownerPubkey: currentPubkey,
@@ -2264,12 +2297,13 @@ class _MessageList extends StatelessWidget {
           DmDeliveryStatus status, {
           DmPeerNameResolution? author,
         }) {
+          final isDraft = message.fileMetadata?.isEditableDraft == true;
           Widget bubbleWith({
             String? encryptedVideoFramePath,
             DmVideoHold? encryptedVideoHold,
             String? encryptedVideoFrameBlurhash,
           }) => MessageBubble(
-            message: message.content,
+            message: isDraft ? context.l10n.dmSharedDraft : message.content,
             timestamp: LocalizedTimeFormatter.formatMessageTime(
               context.l10n,
               message.createdAt,
@@ -2325,6 +2359,27 @@ class _MessageList extends StatelessWidget {
             sharedVideoRef: ownShareVideoRef,
             quotedVideoRef: quotedVideoRef,
             fileMetadata: message.fileMetadata,
+            draftAttachment: isDraft
+                ? EditableDraftCard(
+                    message: message,
+                    showPreview:
+                        !blockedSenders.contains(
+                          message.senderPubkey.toLowerCase(),
+                        ) &&
+                        !mutedSenders.contains(
+                          message.senderPubkey.toLowerCase(),
+                        ),
+                    canOpen:
+                        !kIsWeb &&
+                        !isSent &&
+                        !isGroup &&
+                        isOneToOneWith(message.senderPubkey) &&
+                        !blockedSenders.contains(
+                          message.senderPubkey.toLowerCase(),
+                        ) &&
+                        message.retractionStatus == DmRetractionStatus.none,
+                  )
+                : null,
             isClip: message.isDivineClip,
             senderName: author?.visualName,
             isSenderNameResolving: author?.isResolving ?? false,

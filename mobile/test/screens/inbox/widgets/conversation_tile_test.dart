@@ -24,6 +24,11 @@ import 'package:skeletonizer/skeletonizer.dart';
 import '../../../helpers/retired_key_custody.dart';
 import '../../../helpers/test_provider_overrides.dart';
 
+/// The localized inbox summary for a shared video.
+final String _sharedVideo = lookupAppLocalizations(
+  const Locale('en'),
+).inboxSharedVideoPreview;
+
 class _MockContentBlocklistRepository extends Mock
     implements ContentBlocklistRepository {}
 
@@ -450,7 +455,7 @@ void main() {
           //   https://divine.video/video/<id>
           // The conversation preview shouldn't surface the URL; it should
           // render an inline cameraRetro icon (the same glyph as the
-          // bottom-nav camera button) followed by the title.
+          // bottom-nav camera button) followed by the localized share summary.
           final testProfile = createTestProfile(displayName: 'Alice');
           final testConversation = createTestConversation(
             lastMessageContent:
@@ -478,7 +483,7 @@ void main() {
           await tester.pumpAndSettle();
 
           expect(
-            find.textContaining('"#DIVINE #TEAMFB @shutupphia"'),
+            find.textContaining(_sharedVideo),
             findsOneWidget,
           );
           expect(
@@ -525,10 +530,73 @@ void main() {
           );
           await tester.pumpAndSettle();
 
-          expect(find.textContaining('"Skate loop"'), findsOneWidget);
+          expect(find.textContaining(_sharedVideo), findsOneWidget);
           expect(find.textContaining('https://divine.video'), findsNothing);
         },
       );
+
+      for (final example in [
+        (
+          body: 'https://divine.video/video/untitled',
+          structured: false,
+          expected: _sharedVideo,
+        ),
+        (
+          body: 'Watch this\n\n"Template title"\n\nhttps://divine.video/video/clip',
+          structured: false,
+          // Preserves quoted lines after removing dmVideoQuotedTitleLine;
+          // Text.rich clips this 3rd line at maxLines: 2.
+          expected: '$_sharedVideo\nWatch this\n"Template title"',
+        ),
+        (
+          body: '"A personal note"\nnostr:nevent1abc',
+          structured: true,
+          expected: '$_sharedVideo\n"A personal note"',
+        ),
+        (
+          body: '"Quoted note"\n\nhttps://divine.video/video/untitled',
+          structured: false,
+          expected: '$_sharedVideo\n"Quoted note"',
+        ),
+        (
+          body: '"Quoted note"\n\nhttps://divine.video/video/untitled',
+          structured: true,
+          expected: '$_sharedVideo\n"Quoted note"',
+        ),
+        (
+          body: 'Read https://divine.video/video/clip when you can',
+          structured: false,
+          expected: 'Read https://divine.video/video/clip when you can',
+        ),
+        (
+          body: 'https://example.org/ordinary',
+          structured: false,
+          expected: 'https://example.org/ordinary',
+        ),
+      ]) {
+        testWidgets('previews ${example.body}', (tester) async {
+          await tester.pumpWidget(
+            testMaterialApp(
+              additionalOverrides: [
+                fetchUserProfileProvider(otherPubkey).overrideWith(
+                  (ref) async => createTestProfile(displayName: 'Alice'),
+                ),
+              ],
+              home: Scaffold(
+                body: ConversationTile(
+                  conversation: createTestConversation(
+                    lastMessageContent: example.body,
+                  ).copyWith(lastMessageIsVideoShare: example.structured),
+                  currentUserPubkey: currentPubkey,
+                  onTap: () {},
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          expect(find.textContaining(example.expected), findsOneWidget);
+        });
+      }
 
       testWidgets(
         'plain-text preview does not include the camera icon',
@@ -1691,7 +1759,7 @@ void main() {
         );
 
         final preview = tester.widget<Text>(
-          find.textContaining('"Skate loop"'),
+          find.textContaining(_sharedVideo),
         );
         expect(preview.textSpan!.toPlainText(), startsWith(prefixFor('Bob')));
         expect(find.textContaining('https://divine.video'), findsNothing);
@@ -1946,6 +2014,7 @@ void main() {
               lastMessageContent: visibleMessage,
               lastMessageTimestamp: nowUnix - 60,
               lastMessageSenderPubkey: otherPubkey,
+              lastMessageIsVideoShare: false,
               hasUnread: false,
             ),
           );
@@ -1969,6 +2038,7 @@ void main() {
               lastMessageContent: visibleMessage,
               lastMessageTimestamp: nowUnix - 60,
               lastMessageSenderPubkey: otherPubkey,
+              lastMessageIsVideoShare: false,
               hasUnread: true,
             ),
           );
@@ -1991,6 +2061,7 @@ void main() {
               lastMessageContent: null,
               lastMessageTimestamp: null,
               lastMessageSenderPubkey: null,
+              lastMessageIsVideoShare: false,
               hasUnread: false,
             ),
           );

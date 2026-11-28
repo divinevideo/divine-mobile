@@ -180,7 +180,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.e);
 
   @override
-  int get schemaVersion => 36;
+  int get schemaVersion => 40;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -451,8 +451,13 @@ class AppDatabase extends _$AppDatabase {
           'ON event (created_at DESC) WHERE signature_verified = 1',
         );
       }
+      if (from < 39 && to >= 39) {
+        await _ensureProcessedGiftWraps(m);
+      }
+      await _withholdV39Columns(to);
       await _withholdV31Columns(to);
       await _withholdV34Columns(to);
+      await _migrateVersionedColumns(to);
     },
     beforeOpen: (details) async {
       // Salvage may preserve only one of these local-only tables. A missing
@@ -500,6 +505,8 @@ class AppDatabase extends _$AppDatabase {
         }
         await _withholdV31Columns(details.versionNow);
         await _withholdV34Columns(details.versionNow);
+        await _migrateVersionedColumns(details.versionNow);
+        await _withholdV39Columns(details.versionNow);
       }
 
       // Run cleanup of expired data on every app startup
@@ -616,6 +623,8 @@ class AppDatabase extends _$AppDatabase {
       TableMigration(
         directMessages,
         newColumns: [
+          if (!messageColumns.contains('recipient_accepted_environment'))
+            directMessages.recipientAcceptedEnvironment,
           if (!messageColumns.contains('held_deletion_wraps'))
             directMessages.heldDeletionWraps,
         ],
@@ -626,6 +635,8 @@ class AppDatabase extends _$AppDatabase {
       TableMigration(
         conversations,
         newColumns: [
+          if (!conversationColumns.contains('last_message_id'))
+            conversations.lastMessageId,
           if (!conversationColumns.contains('is_dismissed'))
             conversations.isDismissed,
           if (!conversationColumns.contains('last_message_created_at'))
@@ -806,7 +817,17 @@ class AppDatabase extends _$AppDatabase {
       "UPDATE processed_gift_wraps SET owner_pubkey = '' "
       'WHERE owner_pubkey IS NULL',
     );
-    await m.alterTable(TableMigration(processedGiftWraps));
+    await m.alterTable(
+      TableMigration(
+        processedGiftWraps,
+        newColumns: [
+          if (!(await _columnNames(
+            'processed_gift_wraps',
+          )).contains('verified_message_id'))
+            processedGiftWraps.verifiedMessageId,
+        ],
+      ),
+    );
   }
 
   /// Drops the v31 columns again from a database opened at an earlier
@@ -830,6 +851,60 @@ class AppDatabase extends _$AppDatabase {
         await customStatement('ALTER TABLE $table DROP COLUMN $column');
       }
     }
+  }
+
+  /// Adds the v37, v38, and v40 columns, or drops them again from a database
+  /// opened at an earlier [version] (only a migration test does); see
+  /// [_withholdV31Columns].
+  Future<void> _migrateVersionedColumns(int version) async {
+    const columns = [
+      (37, 'direct_messages', 'recipient_accepted_environment', 'TEXT NULL'),
+      (
+        37,
+        'outgoing_dms',
+        'skip_nip04_fallback',
+        'INTEGER NOT NULL DEFAULT 0 CHECK (skip_nip04_fallback IN (0, 1))',
+      ),
+      (
+        38,
+        'outgoing_dms',
+        'is_video_share',
+        'INTEGER NOT NULL DEFAULT 0 CHECK (is_video_share IN (0, 1))',
+      ),
+      (40, 'conversations', 'last_message_id', 'TEXT NULL'),
+    ];
+    for (final (added, table, column, definition) in columns) {
+      if (version >= added) {
+        await _addColumnIfMissing(table, column, definition);
+      } else if ((await _columnNames(table)).contains(column)) {
+        // Rebuilds use today's table definitions on historical upgrades.
+        await customStatement('ALTER TABLE $table DROP COLUMN $column');
+      }
+    }
+  }
+
+  // Older targets can create this table from its current Drift definition.
+  Future<void> _withholdV39Columns(int version) async {
+    if (version < 39 &&
+        (await _columnNames(
+          'processed_gift_wraps',
+        )).contains('verified_message_id')) {
+      await customStatement(
+        'ALTER TABLE processed_gift_wraps DROP COLUMN verified_message_id',
+      );
+    }
+  }
+
+  Future<void> _ensureProcessedGiftWraps(Migrator migrator) async {
+    if (!await _tableExists('processed_gift_wraps')) {
+      await migrator.createTable(processedGiftWraps);
+      return;
+    }
+    await _addColumnIfMissing(
+      'processed_gift_wraps',
+      'verified_message_id',
+      'TEXT NULL',
+    );
   }
 
   Future<void> _repairSchemaV3() async {
@@ -1779,25 +1854,9 @@ class AppDatabase extends _$AppDatabase {
       ON pending_gift_wraps (owner_pubkey, attempts)
     ''');
 
-    // Check if processed_gift_wraps table exists, create if missing.
-    // Added for #5452 (dedup ledger so DM reaction/deletion gift wraps are not
-    // re-decrypted on every launch). No index: the only access is a primary-key
-    // lookup on gift_wrap_id.
-    final processedGiftWrapsResult = await customSelect(
-      "SELECT name FROM sqlite_master WHERE type='table' "
-      "AND name='processed_gift_wraps'",
-    ).get();
-
-    if (processedGiftWrapsResult.isEmpty) {
-      await customStatement('''
-        CREATE TABLE processed_gift_wraps (
-          gift_wrap_id TEXT NOT NULL,
-          processed_at INTEGER NOT NULL,
-          owner_pubkey TEXT NOT NULL DEFAULT '',
-          PRIMARY KEY (gift_wrap_id, owner_pubkey)
-        )
-      ''');
-    }
+    // Recreate a missing ledger from the current Drift schema. Older rows
+    // without a verified alias remain terminal dedup evidence.
+    await _ensureProcessedGiftWraps(createMigrator());
 
     // Check if identity_events table exists, create if missing.
     // Added for #3936 (NIP-39 kind-10011 source + verification cache).
@@ -2019,6 +2078,7 @@ class AppDatabase extends _$AppDatabase {
         'has_comment_target',
       ],
       'direct_messages': [
+        if (schemaVersion >= 37) 'recipient_accepted_environment',
         'message_kind',
         'file_type',
         'encryption_algorithm',
@@ -2042,6 +2102,7 @@ class AppDatabase extends _$AppDatabase {
         'last_read_timestamp',
         'is_dismissed',
         'last_message_created_at',
+        if (schemaVersion >= 40) 'last_message_id',
         'retained_message_ids',
       ],
       'pending_product_events': ['owner_pubkey'],
@@ -2050,6 +2111,11 @@ class AppDatabase extends _$AppDatabase {
         'send_batch_id',
         'environment',
         if (schemaVersion >= 34) 'unconfirmed_recipient_wrap_json',
+        if (schemaVersion >= 37) 'skip_nip04_fallback',
+        if (schemaVersion >= 38) 'is_video_share',
+      ],
+      'processed_gift_wraps': [
+        if (schemaVersion >= 39) 'verified_message_id',
       ],
       'removed_conversations': ['rejoined_at'],
       'personal_reactions': ['addressable_id'],

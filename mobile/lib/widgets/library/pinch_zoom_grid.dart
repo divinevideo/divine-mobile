@@ -164,10 +164,10 @@ class _PinchZoomGridState extends State<PinchZoomGrid>
   /// a pinch is worth reporting against that would drop the second of two
   /// pinches inside one round trip, leaving the owner — and what it persists
   /// — on a step the user has already left.
-  late int _lastReportedColumns = widget.columnCount;
+  late int _lastReportedColumns;
 
   /// Fractional column count when the current pinch started.
-  double _gestureStartColumns = 0;
+  double? _gestureStartColumns;
 
   /// Pointers currently down on the grid.
   int _pointerCount = 0;
@@ -185,6 +185,7 @@ class _PinchZoomGridState extends State<PinchZoomGrid>
   void initState() {
     super.initState();
     _columns.value = widget.columnCount.toDouble();
+    _lastReportedColumns = widget.columnCount;
     if (widget.scrollController == null) {
       _ownedController = ScrollController();
     }
@@ -205,6 +206,25 @@ class _PinchZoomGridState extends State<PinchZoomGrid>
         _ownedController = null;
       }
     }
+    final rangeShift = widget.minColumnCount - oldWidget.minColumnCount;
+    if (rangeShift != 0 || widget.maxColumnCount != oldWidget.maxColumnCount) {
+      // A breakpoint moves the whole range. Stop the old settle and ignore
+      // movement from a pinch that started in that range.
+      _settleController.stop();
+      _settle = null;
+      _gestureStartColumns = null;
+
+      // If the owner's choice only moved with the range, the last reported
+      // pinch may still be waiting to be persisted. Move that choice too.
+      final columns = widget.columnCount == oldWidget.columnCount + rangeShift
+          ? _lastReportedColumns + rangeShift
+          : widget.columnCount;
+      _syncCommittedColumns(
+        columns.clamp(widget.minColumnCount, widget.maxColumnCount),
+      );
+      return;
+    }
+
     // Only a count that actually changed is the owner's decision. A rebuild
     // repeating the previous one is the owner not having caught up with what
     // the last pinch reported — the state layer persists before it emits, and
@@ -214,10 +234,14 @@ class _PinchZoomGridState extends State<PinchZoomGrid>
     // A count arriving mid-pinch (or mid-settle) is that same echo, just early
     // enough to fight the gesture.
     if (widget.columnCount == _renderColumns || _isGestureActive) return;
+    _syncCommittedColumns(widget.columnCount);
+  }
+
+  void _syncCommittedColumns(int columns) {
     _disposeFrozenLayout();
-    _renderColumns = widget.columnCount;
-    _lastReportedColumns = widget.columnCount;
-    _columns.value = widget.columnCount.toDouble();
+    _renderColumns = columns;
+    _lastReportedColumns = columns;
+    _columns.value = columns.toDouble();
   }
 
   @override
@@ -268,10 +292,15 @@ class _PinchZoomGridState extends State<PinchZoomGrid>
   }
 
   void _onScaleUpdate(ScaleUpdateDetails details) {
-    if (details.pointerCount < 2 || details.scale <= 0) return;
+    final startColumns = _gestureStartColumns;
+    if (startColumns == null ||
+        details.pointerCount < 2 ||
+        details.scale <= 0) {
+      return;
+    }
     // Spreading the fingers (scale > 1) grows the thumbnails, which means
     // fewer columns.
-    _setColumns(_gestureStartColumns / math.pow(details.scale, _zoomGain));
+    _setColumns(startColumns / math.pow(details.scale, _zoomGain));
   }
 
   void _onScaleEnd(ScaleEndDetails details) {

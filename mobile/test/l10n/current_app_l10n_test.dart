@@ -12,6 +12,14 @@ void main() {
     setUp(TestWidgetsFlutterBinding.ensureInitialized);
     tearDown(SharedPreferences.resetStatic);
 
+    test(
+      'generic alerts resolve the language selected for the active account',
+      () {
+        expect(appL10nForLanguage('de').localeName, 'de');
+        expect(appL10nForLanguage('cs').localeName, 'en');
+      },
+    );
+
     test('uses the language the user picked in Settings', () async {
       // The bug report's `locale` field is only worth routing by if it names
       // the language the user was actually reading, which for a Settings

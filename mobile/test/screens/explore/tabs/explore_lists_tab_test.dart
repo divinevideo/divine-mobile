@@ -31,6 +31,7 @@ import 'package:riverpod/misc.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../helpers/go_router.dart';
+import '../../../helpers/large_screen_layout.dart';
 import '../../../helpers/test_provider_overrides.dart';
 
 class _MockListsDiscoveryCubit extends MockCubit<ListsDiscoveryState>
@@ -90,6 +91,30 @@ CuratedList _videoList(String id) => CuratedList(
   createdAt: DateTime(2026),
   updatedAt: DateTime(2026),
 );
+
+CuratedListSearchResult _result(String id) =>
+    CuratedListSearchResult(_videoList(id));
+
+/// Answers [repository]'s video-list discovery with [next] on each call.
+void _answerDiscovery(
+  _MockCuratedListRepository repository,
+  Stream<List<CuratedListSearchResult>> Function() next,
+) {
+  when(
+    () => repository.discoverLists(
+      limit: any(named: 'limit'),
+      excludeAuthor: any(named: 'excludeAuthor'),
+      maxThumbnails: any(named: 'maxThumbnails'),
+    ),
+  ).thenAnswer((_) => next());
+}
+
+/// A curated list repository whose discovery finds nothing.
+_MockCuratedListRepository _emptyDiscovery() {
+  final repository = _MockCuratedListRepository();
+  _answerDiscovery(repository, () => Stream.value(const []));
+  return repository;
+}
 
 PeopleListSearchResult _peopleList(String id) => PeopleListSearchResult(
   ownerPubkey: _author,
@@ -298,18 +323,7 @@ void main() {
       final service = _MockCuratedListService();
       final videos = _MockCuratedListRepository();
       final people = _MockPeopleListsRepository();
-      when(
-        () => service.streamPublicListsFromRelays(limit: any(named: 'limit')),
-      ).thenAnswer((_) => Stream.value([_videoList('skate')]));
-      when(
-        () => videos.resolveListThumbnails(
-          any(),
-          maxThumbnails: any(named: 'maxThumbnails'),
-        ),
-      ).thenAnswer(
-        (invocation) async =>
-            invocation.positionalArguments.first as List<CuratedList>,
-      );
+      _answerDiscovery(videos, () => Stream.value([_result('skate')]));
       when(
         () => people.discoverPublicLists(
           limit: any(named: 'limit'),
@@ -357,31 +371,33 @@ void main() {
             final service = _MockCuratedListService();
             final videos = _MockCuratedListRepository();
             final people = _MockPeopleListsRepository();
-            final pending = Completer<List<CuratedList>>();
+            // Stays open: the first discovery still resolving thumbnails.
+            final pending = StreamController<List<CuratedListSearchResult>>();
+            // Not awaited: a stream nobody listened to never reports done.
+            addTearDown(() => unawaited(pending.close()));
             var permitted = true;
             var requests = 0;
             final initialList = _videoList('policy-list').copyWith(
               videoEventIds: [_author],
               thumbnailUrls: const ['https://media.divine.video/allowed.jpg'],
             );
-            when(
-              () => service.streamPublicListsFromRelays(
-                limit: any(named: 'limit'),
-              ),
-            ).thenAnswer((_) => Stream.value([initialList]));
-            when(
-              () => videos.resolveListThumbnails(
-                any(),
-                maxThumbnails: any(named: 'maxThumbnails'),
-              ),
-            ).thenAnswer((_) async {
+            _answerDiscovery(videos, () {
               requests++;
-              if (initiallyPending && requests == 1) return pending.future;
-              return [
-                initialList.copyWith(
-                  thumbnailUrls: permitted ? initialList.thumbnailUrls : [],
+              if (initiallyPending && requests == 1) {
+                pending.add([
+                  CuratedListSearchResult(
+                    initialList.copyWith(thumbnailUrls: const []),
+                  ),
+                ]);
+                return pending.stream;
+              }
+              return Stream.value([
+                CuratedListSearchResult(
+                  initialList.copyWith(
+                    thumbnailUrls: permitted ? initialList.thumbnailUrls : [],
+                  ),
                 ),
-              ];
+              ]);
             });
             when(
               () => people.discoverPublicLists(
@@ -429,7 +445,7 @@ void main() {
             expect(requests, 1);
             if (!initiallyPending) {
               expect(
-                oldCubit.state.videoLists.single.thumbnailUrls,
+                oldCubit.state.videoLists.single.list.thumbnailUrls,
                 initialList.thumbnailUrls,
               );
             }
@@ -457,15 +473,21 @@ void main() {
                 .element(find.byType(ExploreListsView))
                 .read<ListsDiscoveryCubit>();
             expect(freshCubit, isNot(same(oldCubit)));
-            expect(freshCubit.state.videoLists.single.thumbnailUrls, isEmpty);
+            expect(
+              freshCubit.state.videoLists.single.list.thumbnailUrls,
+              isEmpty,
+            );
             expect(find.text('Video policy-list'), findsOneWidget);
             expect(requests, 2);
             if (initiallyPending) {
-              pending.complete([initialList]);
+              pending.add([CuratedListSearchResult(initialList)]);
               await tester.pump();
               await tester.runAsync(pumpEventQueue);
               await tester.pump();
-              expect(freshCubit.state.videoLists.single.thumbnailUrls, isEmpty);
+              expect(
+                freshCubit.state.videoLists.single.list.thumbnailUrls,
+                isEmpty,
+              );
             }
             expect(tester.takeException(), isNull);
             await tester.pumpWidget(const SizedBox.shrink());
@@ -487,9 +509,6 @@ void main() {
       var blocked = false;
       var requests = 0;
       when(
-        () => service.streamPublicListsFromRelays(limit: any(named: 'limit')),
-      ).thenAnswer((_) => const Stream.empty());
-      when(
         () => people.discoverPublicLists(
           limit: any(named: 'limit'),
           excludeAuthor: any(named: 'excludeAuthor'),
@@ -503,7 +522,7 @@ void main() {
               () => _TestCuratedListsState(service),
             ),
             curatedListRepositoryProvider.overrideWithValue(
-              _MockCuratedListRepository(),
+              _emptyDiscovery(),
             ),
             peopleListsRepositoryProvider.overrideWithValue(people),
             listsDiscoveryBlockFilterProvider.overrideWith((ref) {
@@ -539,16 +558,15 @@ void main() {
         final videos = _MockCuratedListRepository();
         final people = _MockPeopleListsRepository();
         var blocked = false;
-        final pending = Completer<List<CuratedList>>();
-        when(
-          () => service.streamPublicListsFromRelays(limit: any(named: 'limit')),
-        ).thenAnswer((_) => Stream.value([_videoList('skate')]));
-        when(
-          () => videos.resolveListThumbnails(
-            any(),
-            maxThumbnails: any(named: 'maxThumbnails'),
-          ),
-        ).thenAnswer((_) => pending.future);
+        // The first discovery stays open, still resolving thumbnails.
+        final pending = StreamController<List<CuratedListSearchResult>>();
+        addTearDown(() => unawaited(pending.close()));
+        var requests = 0;
+        _answerDiscovery(videos, () {
+          if (requests++ > 0) return Stream.value([_result('skate')]);
+          pending.add([_result('skate')]);
+          return pending.stream;
+        });
         when(
           () => people.discoverPublicLists(
             limit: any(named: 'limit'),
@@ -587,7 +605,7 @@ void main() {
         expect(oldCubit.isClosed, isTrue);
         expect(find.text('Video skate'), findsNothing);
         expect(find.text('People crew'), findsNothing);
-        pending.complete([_videoList('skate')]);
+        pending.add([_result('skate')]);
         await tester.pumpAndSettle();
         expect(find.text('Video skate'), findsNothing);
         verify(
@@ -597,7 +615,11 @@ void main() {
           ),
         ).called(2);
         verify(
-          () => service.streamPublicListsFromRelays(limit: any(named: 'limit')),
+          () => videos.discoverLists(
+            limit: any(named: 'limit'),
+            excludeAuthor: any(named: 'excludeAuthor'),
+            maxThumbnails: any(named: 'maxThumbnails'),
+          ),
         ).called(2);
       },
     );
@@ -608,9 +630,6 @@ void main() {
         final service = _MockCuratedListService();
         final people = _MockPeopleListsRepository();
         var attempts = 0;
-        when(
-          () => service.streamPublicListsFromRelays(limit: any(named: 'limit')),
-        ).thenAnswer((_) => const Stream.empty());
         when(
           () => people.discoverPublicLists(
             limit: any(named: 'limit'),
@@ -629,7 +648,7 @@ void main() {
                 ),
               ),
               curatedListRepositoryProvider.overrideWithValue(
-                _MockCuratedListRepository(),
+                _emptyDiscovery(),
               ),
               peopleListsRepositoryProvider.overrideWithValue(people),
               listsDiscoveryBlockFilterProvider.overrideWithValue((_) => false),
@@ -657,9 +676,7 @@ void main() {
     ) async {
       final service = _MockCuratedListService();
       final peopleRepository = _MockPeopleListsRepository();
-      when(
-        () => service.streamPublicListsFromRelays(limit: any(named: 'limit')),
-      ).thenAnswer((_) => const Stream.empty());
+      final videos = _emptyDiscovery();
       when(
         () => peopleRepository.discoverPublicLists(
           limit: any(named: 'limit'),
@@ -674,9 +691,7 @@ void main() {
             curatedListsStateProvider.overrideWith(
               () => _TestCuratedListsState(service),
             ),
-            curatedListRepositoryProvider.overrideWithValue(
-              _MockCuratedListRepository(),
-            ),
+            curatedListRepositoryProvider.overrideWithValue(videos),
             peopleListsRepositoryProvider.overrideWithValue(peopleRepository),
           ],
           child: MaterialApp(
@@ -712,7 +727,11 @@ void main() {
           .read<ListsDiscoveryCubit>();
       expect(identical(initial, returned), isTrue);
       verify(
-        () => service.streamPublicListsFromRelays(limit: any(named: 'limit')),
+        () => videos.discoverLists(
+          limit: any(named: 'limit'),
+          excludeAuthor: any(named: 'excludeAuthor'),
+          maxThumbnails: any(named: 'maxThumbnails'),
+        ),
       ).called(1);
       verify(
         () => peopleRepository.discoverPublicLists(
@@ -723,7 +742,11 @@ void main() {
       await tester.runAsync(returned.load);
       await tester.pumpAndSettle();
       verify(
-        () => service.streamPublicListsFromRelays(limit: any(named: 'limit')),
+        () => videos.discoverLists(
+          limit: any(named: 'limit'),
+          excludeAuthor: any(named: 'excludeAuthor'),
+          maxThumbnails: any(named: 'maxThumbnails'),
+        ),
       ).called(1);
       verify(
         () => peopleRepository.discoverPublicLists(
@@ -768,7 +791,7 @@ void main() {
         initialState: ListsDiscoveryState(
           videoStatus: ListsDiscoveryColumnStatus.success,
           peopleStatus: ListsDiscoveryColumnStatus.success,
-          videoLists: [_videoList('skate')],
+          videoLists: [_result('skate')],
           peopleLists: [_peopleList('crew')],
         ),
       );
@@ -790,7 +813,7 @@ void main() {
         initialState: ListsDiscoveryState(
           videoStatus: ListsDiscoveryColumnStatus.success,
           peopleStatus: ListsDiscoveryColumnStatus.success,
-          videoLists: [_videoList('skate'), _videoList('surf')],
+          videoLists: [_result('skate'), _result('surf')],
         ),
       );
       final semantics = tester.ensureSemantics();
@@ -821,16 +844,18 @@ void main() {
           videoStatus: ListsDiscoveryColumnStatus.success,
           peopleStatus: ListsDiscoveryColumnStatus.success,
           videoLists: [
-            CuratedList(
-              id: 'skate',
-              name: 'Video \u{1F51D} skate',
-              description:
-                  'A description long enough to wrap onto a second line '
-                  'and then keep going past it for the ellipsis.',
-              pubkey: _author,
-              videoEventIds: const ['v1'],
-              createdAt: DateTime(2026),
-              updatedAt: DateTime(2026),
+            CuratedListSearchResult(
+              CuratedList(
+                id: 'skate',
+                name: 'Video \u{1F51D} skate',
+                description:
+                    'A description long enough to wrap onto a second line '
+                    'and then keep going past it for the ellipsis.',
+                pubkey: _author,
+                videoEventIds: const ['v1'],
+                createdAt: DateTime(2026),
+                updatedAt: DateTime(2026),
+              ),
             ),
           ],
           peopleLists: [_peopleList('crew')],
@@ -857,7 +882,7 @@ void main() {
         initialState: ListsDiscoveryState(
           videoStatus: ListsDiscoveryColumnStatus.success,
           peopleStatus: ListsDiscoveryColumnStatus.success,
-          videoLists: [_videoList('skate')],
+          videoLists: [_result('skate')],
           videoThumbnailsPending: true,
         ),
       );
@@ -871,6 +896,117 @@ void main() {
       expect(card.thumbnailsPending, isTrue);
     });
 
+    group('on a wide window', () {
+      /// The gallery in a 1300 pt window: 1268 pt between the side padding,
+      /// past the last breakpoint, so five columns with the large-screen
+      /// layouts.
+      Future<void> pumpWide(
+        WidgetTester tester, {
+        required bool largeScreenLayout,
+        required ListsDiscoveryState state,
+      }) async {
+        whenListen(
+          cubit,
+          const Stream<ListsDiscoveryState>.empty(),
+          initialState: state,
+        );
+        setTestWindowSize(tester, 1300);
+        await tester.pumpWidget(
+          largeScreenLayoutApp(
+            enabled: largeScreenLayout,
+            overrides: getStandardTestOverrides(),
+            home: Scaffold(
+              body: BlocProvider<ListsDiscoveryCubit>.value(
+                value: cubit,
+                child: const ExploreListsView(),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+      }
+
+      final loaded = ListsDiscoveryState(
+        videoStatus: ListsDiscoveryColumnStatus.success,
+        peopleStatus: ListsDiscoveryColumnStatus.success,
+        videoLists: [
+          _result('a'),
+          _result('b'),
+          _result('c'),
+          _result('d'),
+        ],
+        peopleLists: [_peopleList('x'), _peopleList('y')],
+      );
+
+      Rect card(WidgetTester tester, String name) => tester.getRect(
+        find.ancestor(
+          of: find.text(name),
+          matching: find.byType(DivineListThumbnail),
+        ),
+      );
+
+      testWidgets('gives the video lists the odd column of five', (
+        tester,
+      ) async {
+        await pumpWide(tester, largeScreenLayout: true, state: loaded);
+
+        final firstRow = [
+          for (final name in [
+            'Video a',
+            'Video b',
+            'Video c',
+            'People x',
+            'People y',
+          ])
+            card(tester, name),
+        ];
+        // (1268 - 4 gaps of 16) / 5 columns, all equally wide.
+        for (final rect in firstRow) {
+          expect(rect.width, moreOrLessEquals(240.8));
+          expect(rect.top, equals(firstRow.first.top));
+        }
+        for (var i = 1; i < firstRow.length; i++) {
+          expect(firstRow[i].left, greaterThan(firstRow[i - 1].right));
+        }
+        // The fourth video list starts a second row under the first.
+        final d = card(tester, 'Video d');
+        expect(d.left, equals(firstRow.first.left));
+        expect(d.top, greaterThan(firstRow.first.bottom));
+      });
+
+      testWidgets('fills every loading column with silhouettes', (
+        tester,
+      ) async {
+        await pumpWide(
+          tester,
+          largeScreenLayout: true,
+          state: const ListsDiscoveryState(
+            videoStatus: ListsDiscoveryColumnStatus.loading,
+            peopleStatus: ListsDiscoveryColumnStatus.loading,
+          ),
+        );
+
+        // Four silhouettes in each of the five columns.
+        expect(find.byType(DivineListThumbnailSkeleton), findsNWidgets(20));
+      });
+
+      testWidgets('keeps one video and one people column with the flag off', (
+        tester,
+      ) async {
+        await pumpWide(tester, largeScreenLayout: false, state: loaded);
+
+        final a = card(tester, 'Video a');
+        final b = card(tester, 'Video b');
+        final x = card(tester, 'People x');
+        // (1268 - 16) / 2, as before the large-screen layouts.
+        expect(a.width, moreOrLessEquals(626));
+        expect(x.width, moreOrLessEquals(626));
+        expect(x.top, equals(a.top));
+        expect(b.left, equals(a.left));
+        expect(b.top, greaterThan(a.bottom));
+      });
+    });
+
     testWidgets('keeps one column alive while the other loads', (tester) async {
       whenListen(
         cubit,
@@ -878,7 +1014,7 @@ void main() {
         initialState: ListsDiscoveryState(
           videoStatus: ListsDiscoveryColumnStatus.success,
           peopleStatus: ListsDiscoveryColumnStatus.loading,
-          videoLists: [_videoList('skate')],
+          videoLists: [_result('skate')],
         ),
       );
 
@@ -915,7 +1051,7 @@ void main() {
         initialState: ListsDiscoveryState(
           videoStatus: ListsDiscoveryColumnStatus.success,
           peopleStatus: ListsDiscoveryColumnStatus.failure,
-          videoLists: [_videoList('skate')],
+          videoLists: [_result('skate')],
         ),
       );
 
@@ -957,7 +1093,7 @@ void main() {
         initialState: ListsDiscoveryState(
           videoStatus: ListsDiscoveryColumnStatus.success,
           peopleStatus: ListsDiscoveryColumnStatus.success,
-          videoLists: [_videoList('skate')],
+          videoLists: [_result('skate')],
         ),
       );
 
@@ -978,6 +1114,95 @@ void main() {
       expect(extra.authorPubkey, equals(_videoList('skate').pubkey));
       expect(extra.list?.id, equals('skate'));
       expect(extra.authorPubkey, equals(extra.list?.pubkey));
+    });
+
+    testWidgets(
+      'a summary card counts the index videos and opens the list by its '
+      'address',
+      (tester) async {
+        final goRouter = MockGoRouter();
+        when(
+          () => goRouter.push<void>(any(), extra: any(named: 'extra')),
+        ).thenAnswer((_) async {});
+        whenListen(
+          cubit,
+          const Stream<ListsDiscoveryState>.empty(),
+          initialState: ListsDiscoveryState(
+            videoStatus: ListsDiscoveryColumnStatus.success,
+            peopleStatus: ListsDiscoveryColumnStatus.success,
+            videoLists: [
+              CuratedListSearchResult.summary(
+                list: _videoList('skate').copyWith(videoEventIds: const []),
+                itemCount: 12,
+              ),
+            ],
+          ),
+        );
+
+        final semantics = tester.ensureSemantics();
+        await tester.pumpWidget(buildSubject(goRouter: goRouter));
+        await tester.pump();
+
+        expect(
+          find.bySemanticsLabel(
+            l10n.listCardSemanticLabel(
+              'Video skate',
+              'public',
+              l10n.listVideoCount(12),
+            ),
+          ),
+          findsOneWidget,
+        );
+        semantics.dispose();
+        await tester.tap(find.text('Video skate'));
+
+        final extra =
+            verify(
+                  () => goRouter.push<void>(
+                    '/list/$_author/skate',
+                    extra: captureAny(named: 'extra'),
+                  ),
+                ).captured.single
+                as CuratedListRouteExtra;
+        expect(extra.videoIds, isNull);
+        expect(extra.list, isNull);
+      },
+    );
+
+    testWidgets('people card counts every member, not just the preview', (
+      tester,
+    ) async {
+      whenListen(
+        cubit,
+        const Stream<ListsDiscoveryState>.empty(),
+        initialState: ListsDiscoveryState(
+          videoStatus: ListsDiscoveryColumnStatus.success,
+          peopleStatus: ListsDiscoveryColumnStatus.success,
+          peopleLists: [
+            PeopleListSearchResult(
+              ownerPubkey: _author,
+              list: _peopleList('crew').list,
+              memberCount: 17,
+            ),
+          ],
+        ),
+      );
+
+      final semantics = tester.ensureSemantics();
+      await tester.pumpWidget(buildSubject());
+      await tester.pump();
+
+      expect(
+        find.bySemanticsLabel(
+          l10n.listCardSemanticLabel(
+            'People crew',
+            'public',
+            l10n.listMemberCount(17),
+          ),
+        ),
+        findsOneWidget,
+      );
+      semantics.dispose();
     });
 
     testWidgets('people card navigates with the owner query param', (

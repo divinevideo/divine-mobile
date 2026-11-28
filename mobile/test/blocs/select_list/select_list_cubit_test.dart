@@ -122,8 +122,20 @@ void main() {
           expect(cubit.state.canEdit, isFalse);
           expect(cubit.state.canSubmit, isFalse);
           expect(cubit.state.status, SelectListStatus.editing);
-          verifyNever(() => service.addVideoToList(any(), any()));
-          verifyNever(() => service.removeVideoFromList(any(), any()));
+          verifyNever(
+            () => service.addVideoToList(
+              any(),
+              any(),
+              allowSeries: any(named: 'allowSeries'),
+            ),
+          );
+          verifyNever(
+            () => service.removeVideoFromList(
+              any(),
+              any(),
+              allowSeries: any(named: 'allowSeries'),
+            ),
+          );
           verifyNever(() => service.retryListSync(any()));
         },
       );
@@ -147,8 +159,20 @@ void main() {
           expect(cubit.state.listIdsToAdd, isEmpty);
           expect(cubit.state.listIdsToRemove, isEmpty);
           expect(cubit.state.status, SelectListStatus.editing);
-          verifyNever(() => service.addVideoToList(any(), any()));
-          verifyNever(() => service.removeVideoFromList(any(), any()));
+          verifyNever(
+            () => service.addVideoToList(
+              any(),
+              any(),
+              allowSeries: any(named: 'allowSeries'),
+            ),
+          );
+          verifyNever(
+            () => service.removeVideoFromList(
+              any(),
+              any(),
+              allowSeries: any(named: 'allowSeries'),
+            ),
+          );
         },
       );
 
@@ -158,7 +182,11 @@ void main() {
           stubLists([_list('first'), _list('second')]);
           final gate = Completer<bool>();
           when(
-            () => service.addVideoToList('$_ownerPubkey:first', _videoId),
+            () => service.addVideoToList(
+              '$_ownerPubkey:first',
+              _videoId,
+              allowSeries: false,
+            ),
           ).thenAnswer((_) => gate.future);
           final cubit = buildCubit();
           addTearDown(cubit.close);
@@ -176,7 +204,11 @@ void main() {
           expect(await save, isNull);
           expect(cubit.state.status, SelectListStatus.editing);
           verifyNever(
-            () => service.addVideoToList('$_ownerPubkey:second', _videoId),
+            () => service.addVideoToList(
+              '$_ownerPubkey:second',
+              _videoId,
+              allowSeries: any(named: 'allowSeries'),
+            ),
           );
         },
       );
@@ -244,7 +276,11 @@ void main() {
           stubLists([_list('first'), _list('second')]);
           final gate = Completer<bool>();
           when(
-            () => service.addVideoToList('$_ownerPubkey:first', _videoId),
+            () => service.addVideoToList(
+              '$_ownerPubkey:first',
+              _videoId,
+              allowSeries: false,
+            ),
           ).thenAnswer((_) => gate.future);
           final cubit = buildCubit();
           addTearDown(cubit.close);
@@ -266,9 +302,19 @@ void main() {
           expect(cubit.state.selectedListIds, {'replacement'});
           expect(cubit.state.status, SelectListStatus.editing);
           verifyNever(
-            () => service.addVideoToList('$_ownerPubkey:second', _videoId),
+            () => service.addVideoToList(
+              '$_ownerPubkey:second',
+              _videoId,
+              allowSeries: any(named: 'allowSeries'),
+            ),
           );
-          verifyNever(() => replacement.addVideoToList(any(), any()));
+          verifyNever(
+            () => replacement.addVideoToList(
+              any(),
+              any(),
+              allowSeries: any(named: 'allowSeries'),
+            ),
+          );
         },
       );
 
@@ -325,7 +371,7 @@ void main() {
         setUp: () {
           stubLists([_list('empty')]);
           when(
-            () => service.addVideoToList(any(), any()),
+            () => service.addVideoToList(any(), any(), allowSeries: false),
           ).thenAnswer((_) async => false);
         },
         build: buildCubit,
@@ -373,10 +419,91 @@ void main() {
           ),
         ],
         verify: (_) {
-          verifyNever(() => service.addVideoToList(any(), any()));
-          verifyNever(() => service.removeVideoFromList(any(), any()));
+          verifyNever(
+            () => service.addVideoToList(
+              any(),
+              any(),
+              allowSeries: any(named: 'allowSeries'),
+            ),
+          );
+          verifyNever(
+            () => service.removeVideoFromList(
+              any(),
+              any(),
+              allowSeries: any(named: 'allowSeries'),
+            ),
+          );
         },
       );
+
+      group('when another pick becomes a series mid-save', () {
+        // A sync that lands mid-save can merge a newer version of any list.
+        // This one turns every pick but the one being saved into a series.
+        void seriesOnFirstWrite(List<CuratedList> lists, Invocation write) {
+          final coordinate = write.positionalArguments.first as String;
+          stubLists([
+            for (final list in lists)
+              if (list.authorScopedId == coordinate)
+                list
+              else
+                list.copyWith(
+                  preservedTags: const [
+                    ['series', 'true'],
+                  ],
+                ),
+          ]);
+          capturedListener()();
+        }
+
+        test('refuses that add and keeps the sheet', () async {
+          final lists = [_list('first'), _list('second')];
+          stubLists(lists);
+          final cubit = buildCubit();
+          addTearDown(cubit.close);
+          when(
+            () => service.addVideoToList(any(), any(), allowSeries: false),
+          ).thenAnswer((write) async {
+            seriesOnFirstWrite(lists, write);
+            return true;
+          });
+          cubit
+            ..toggled('first')
+            ..toggled('second');
+
+          expect(await cubit.submitted(), SelectListStatus.failure);
+          expect(cubit.state.serviceAvailable, isTrue);
+          expect(cubit.state.lists, hasLength(1));
+          verify(
+            () => service.addVideoToList(any(), any(), allowSeries: false),
+          ).called(1);
+        });
+
+        test('refuses that removal and keeps the sheet', () async {
+          final lists = [
+            _list('first', videoEventIds: [_videoId]),
+            _list('second', videoEventIds: [_videoId]),
+          ];
+          stubLists(lists);
+          final cubit = buildCubit();
+          addTearDown(cubit.close);
+          when(
+            () => service.removeVideoFromList(any(), any(), allowSeries: false),
+          ).thenAnswer((write) async {
+            seriesOnFirstWrite(lists, write);
+            return true;
+          });
+          cubit
+            ..toggled('first')
+            ..toggled('second');
+
+          expect(await cubit.submitted(), SelectListStatus.failure);
+          expect(cubit.state.serviceAvailable, isTrue);
+          expect(cubit.state.lists, hasLength(1));
+          verify(
+            () => service.removeVideoFromList(any(), any(), allowSeries: false),
+          ).called(1);
+        });
+      });
 
       blocTest<SelectListCubit, SelectListState>(
         'adds the video to every newly picked list and removes it from '
@@ -388,10 +515,10 @@ void main() {
             _list('second'),
           ]);
           when(
-            () => service.addVideoToList(any(), any()),
+            () => service.addVideoToList(any(), any(), allowSeries: false),
           ).thenAnswer((_) async => true);
           when(
-            () => service.removeVideoFromList(any(), any()),
+            () => service.removeVideoFromList(any(), any(), allowSeries: false),
           ).thenAnswer((_) async => true);
         },
         build: buildCubit,
@@ -417,16 +544,32 @@ void main() {
         ],
         verify: (_) {
           verify(
-            () => service.addVideoToList('$_ownerPubkey:first', _videoId),
+            () => service.addVideoToList(
+              '$_ownerPubkey:first',
+              _videoId,
+              allowSeries: false,
+            ),
           ).called(1);
           verify(
-            () => service.addVideoToList('$_ownerPubkey:second', _videoId),
+            () => service.addVideoToList(
+              '$_ownerPubkey:second',
+              _videoId,
+              allowSeries: false,
+            ),
           ).called(1);
           verify(
-            () => service.removeVideoFromList('$_ownerPubkey:holds', _videoId),
+            () => service.removeVideoFromList(
+              '$_ownerPubkey:holds',
+              _videoId,
+              allowSeries: false,
+            ),
           ).called(1);
           verifyNever(
-            () => service.addVideoToList('$_ownerPubkey:holds', any()),
+            () => service.addVideoToList(
+              '$_ownerPubkey:holds',
+              any(),
+              allowSeries: any(named: 'allowSeries'),
+            ),
           );
         },
       );
@@ -439,7 +582,7 @@ void main() {
             _list('holds', videoEventIds: [_videoId]),
           ]);
           when(
-            () => service.removeVideoFromList(any(), any()),
+            () => service.removeVideoFromList(any(), any(), allowSeries: false),
           ).thenAnswer((_) async => true);
         },
         build: buildCubit,
@@ -462,7 +605,11 @@ void main() {
         ],
         verify: (_) {
           verify(
-            () => service.removeVideoFromList('$_ownerPubkey:holds', _videoId),
+            () => service.removeVideoFromList(
+              '$_ownerPubkey:holds',
+              _videoId,
+              allowSeries: false,
+            ),
           ).called(1);
         },
       );
@@ -472,10 +619,18 @@ void main() {
         setUp: () {
           stubLists([_list('works'), _list('refuses')]);
           when(
-            () => service.addVideoToList('$_ownerPubkey:works', any()),
+            () => service.addVideoToList(
+              '$_ownerPubkey:works',
+              any(),
+              allowSeries: false,
+            ),
           ).thenAnswer((_) async => true);
           when(
-            () => service.addVideoToList('$_ownerPubkey:refuses', any()),
+            () => service.addVideoToList(
+              '$_ownerPubkey:refuses',
+              any(),
+              allowSeries: false,
+            ),
           ).thenAnswer((_) async => false);
         },
         build: buildCubit,
@@ -511,7 +666,7 @@ void main() {
             ),
           ]);
           when(
-            () => service.addVideoToList(any(), any()),
+            () => service.addVideoToList(any(), any(), allowSeries: false),
           ).thenAnswer((_) async => false);
         },
         build: buildCubit,
@@ -543,7 +698,7 @@ void main() {
             _list('refuses'),
           ]);
           when(
-            () => service.addVideoToList(any(), any()),
+            () => service.addVideoToList(any(), any(), allowSeries: false),
           ).thenAnswer((_) async => false);
         },
         build: buildCubit,
@@ -568,7 +723,7 @@ void main() {
         setUp: () {
           stubLists([_list('empty')]);
           when(
-            () => service.addVideoToList(any(), any()),
+            () => service.addVideoToList(any(), any(), allowSeries: false),
           ).thenThrow(StateError('no signer'));
         },
         build: buildCubit,
@@ -588,7 +743,7 @@ void main() {
       test('ignores a second submit while the first is running', () async {
         stubLists([_list('empty')]);
         when(
-          () => service.addVideoToList(any(), any()),
+          () => service.addVideoToList(any(), any(), allowSeries: false),
         ).thenAnswer((_) async => true);
         final cubit = buildCubit();
         addTearDown(cubit.close);
@@ -600,7 +755,11 @@ void main() {
         await first;
 
         verify(
-          () => service.addVideoToList('$_ownerPubkey:empty', _videoId),
+          () => service.addVideoToList(
+            '$_ownerPubkey:empty',
+            _videoId,
+            allowSeries: false,
+          ),
         ).called(1);
         expect(cubit.state.status, SelectListStatus.saved);
       });
@@ -626,7 +785,13 @@ void main() {
           expect(cubit.state.lists, isEmpty);
           expect(cubit.state.selectedListIds, isEmpty);
           expect(cubit.state.canEdit, isFalse);
-          verifyNever(() => service.addVideoToList(any(), any()));
+          verifyNever(
+            () => service.addVideoToList(
+              any(),
+              any(),
+              allowSeries: any(named: 'allowSeries'),
+            ),
+          );
         },
       );
 
@@ -642,14 +807,24 @@ void main() {
         cubit.toggled('empty');
         owner = 'e' * 64;
         expect(await cubit.submitted(), SelectListStatus.failure);
-        verifyNever(() => service.addVideoToList(any(), any()));
+        verifyNever(
+          () => service.addVideoToList(
+            any(),
+            any(),
+            allowSeries: any(named: 'allowSeries'),
+          ),
+        );
       });
 
       test('stops the remainder of a batch after an account changes', () async {
         stubLists([_list('first'), _list('second')]);
         final gate = Completer<bool>();
         when(
-          () => service.addVideoToList('$_ownerPubkey:first', _videoId),
+          () => service.addVideoToList(
+            '$_ownerPubkey:first',
+            _videoId,
+            allowSeries: false,
+          ),
         ).thenAnswer((_) => gate.future);
         String? owner = _ownerPubkey;
         final cubit = SelectListCubit(
@@ -666,7 +841,11 @@ void main() {
         gate.complete(true);
         expect(await save, SelectListStatus.failure);
         verifyNever(
-          () => service.addVideoToList('$_ownerPubkey:second', _videoId),
+          () => service.addVideoToList(
+            '$_ownerPubkey:second',
+            _videoId,
+            allowSeries: any(named: 'allowSeries'),
+          ),
         );
       });
 
@@ -681,6 +860,24 @@ void main() {
         expect(cubit.state.canSubmit, isFalse);
       });
 
+      test('a series is not offered', () {
+        stubLists([
+          _list('plain'),
+          _list('episodes', videoEventIds: [_videoId]).copyWith(
+            preservedTags: const [
+              ['series', 'true'],
+            ],
+          ),
+        ]);
+        final cubit = buildCubit();
+        addTearDown(cubit.close);
+
+        expect(cubit.state.lists.map((list) => list.id), ['plain']);
+        expect(cubit.state.memberListIds, isEmpty);
+        cubit.toggled('episodes');
+        expect(cubit.state.selectedListIds, isEmpty);
+      });
+
       test(
         'revalidates ownership of a selected coordinate before writing',
         () async {
@@ -690,7 +887,13 @@ void main() {
           cubit.toggled('same');
           stubLists([_list('same').copyWith(pubkey: 'e' * 64)]);
           expect(await cubit.submitted(), SelectListStatus.failure);
-          verifyNever(() => service.addVideoToList(any(), any()));
+          verifyNever(
+            () => service.addVideoToList(
+              any(),
+              any(),
+              allowSeries: any(named: 'allowSeries'),
+            ),
+          );
         },
       );
     });
@@ -712,8 +915,20 @@ void main() {
         expect(cubit.state.memberListIds, {'pending'});
         expect(cubit.state.selectedListIds, {'pending'});
         expect(cubit.state.status, SelectListStatus.syncFailed);
-        verifyNever(() => service.addVideoToList(any(), any()));
-        verifyNever(() => service.removeVideoFromList(any(), any()));
+        verifyNever(
+          () => service.addVideoToList(
+            any(),
+            any(),
+            allowSeries: any(named: 'allowSeries'),
+          ),
+        );
+        verifyNever(
+          () => service.removeVideoFromList(
+            any(),
+            any(),
+            allowSeries: any(named: 'allowSeries'),
+          ),
+        );
       },
     );
 
@@ -889,7 +1104,7 @@ void main() {
         setUp: () {
           stubLists([_list('empty')]);
           when(
-            () => service.addVideoToList(any(), any()),
+            () => service.addVideoToList(any(), any(), allowSeries: false),
           ).thenAnswer((_) async => true);
         },
         build: buildCubit,
@@ -973,8 +1188,20 @@ void main() {
         expect(cubit.state.status, SelectListStatus.videoPendingSync);
         expect(cubit.state.memberListIds, {'unpublished'});
         expect(cubit.state.selectedListIds, {'unpublished'});
-        verifyNever(() => service.addVideoToList(any(), any()));
-        verifyNever(() => service.removeVideoFromList(any(), any()));
+        verifyNever(
+          () => service.addVideoToList(
+            any(),
+            any(),
+            allowSeries: any(named: 'allowSeries'),
+          ),
+        );
+        verifyNever(
+          () => service.removeVideoFromList(
+            any(),
+            any(),
+            allowSeries: any(named: 'allowSeries'),
+          ),
+        );
       });
 
       test('keeps a save in progress on its status', () async {
@@ -983,14 +1210,15 @@ void main() {
         when(() => service.addListener(any())).thenAnswer((invocation) {
           listener.add(invocation.positionalArguments.single as VoidCallback);
         });
-        when(() => service.addVideoToList(any(), any())).thenAnswer((_) async {
-          // The service notifies its listeners as it writes.
-          stubLists([
-            _list('empty', videoEventIds: [_videoId]),
-          ]);
-          listener.single();
-          return true;
-        });
+        when(() => service.addVideoToList(any(), any(), allowSeries: false))
+            .thenAnswer((_) async {
+              // The service notifies its listeners as it writes.
+              stubLists([
+                _list('empty', videoEventIds: [_videoId]),
+              ]);
+              listener.single();
+              return true;
+            });
         final cubit = buildCubit();
         addTearDown(cubit.close);
         cubit.toggled('empty');
@@ -1013,7 +1241,11 @@ void main() {
           pendingWrite = Completer<bool>();
           stubLists([_list('first'), _list('second')]);
           when(
-            () => service.addVideoToList('$_ownerPubkey:first', _videoId),
+            () => service.addVideoToList(
+              '$_ownerPubkey:first',
+              _videoId,
+              allowSeries: false,
+            ),
           ).thenAnswer((_) => pendingWrite.future);
         },
         build: () => SelectListCubit(
@@ -1047,12 +1279,26 @@ void main() {
         ],
         verify: (_) {
           verify(
-            () => service.addVideoToList('$_ownerPubkey:first', _videoId),
+            () => service.addVideoToList(
+              '$_ownerPubkey:first',
+              _videoId,
+              allowSeries: false,
+            ),
           ).called(1);
           verifyNever(
-            () => service.addVideoToList('$_ownerPubkey:second', _videoId),
+            () => service.addVideoToList(
+              '$_ownerPubkey:second',
+              _videoId,
+              allowSeries: any(named: 'allowSeries'),
+            ),
           );
-          verifyNever(() => service.removeVideoFromList(any(), any()));
+          verifyNever(
+            () => service.removeVideoFromList(
+              any(),
+              any(),
+              allowSeries: any(named: 'allowSeries'),
+            ),
+          );
         },
         errors: () => [isA<StateError>()],
       );
@@ -1072,7 +1318,13 @@ void main() {
       expect(cubit.state.selectedListIds, isEmpty);
       expect(cubit.state.status, SelectListStatus.failure);
       verifyNever(() => service.retryListSync(any()));
-      verifyNever(() => service.addVideoToList(any(), any()));
+      verifyNever(
+        () => service.addVideoToList(
+          any(),
+          any(),
+          allowSeries: any(named: 'allowSeries'),
+        ),
+      );
     });
 
     group('permission and deletion recovery', () {
@@ -1127,8 +1379,20 @@ void main() {
           expect(cubit.state.status, SelectListStatus.syncFailed);
           expect(cubit.state.selectedListIds, isEmpty);
           expect(cubit.state.memberListIds, isEmpty);
-          verifyNever(() => service.addVideoToList(any(), any()));
-          verifyNever(() => service.removeVideoFromList(any(), any()));
+          verifyNever(
+            () => service.addVideoToList(
+              any(),
+              any(),
+              allowSeries: any(named: 'allowSeries'),
+            ),
+          );
+          verifyNever(
+            () => service.removeVideoFromList(
+              any(),
+              any(),
+              allowSeries: any(named: 'allowSeries'),
+            ),
+          );
           when(
             () => service.retryListSync('$_ownerPubkey:redaction'),
           ).thenAnswer((_) async {
@@ -1166,8 +1430,20 @@ void main() {
           stubLists([recovery()]);
           expect(await cubit.submitted(), SelectListStatus.recoveryPendingSync);
           expect(cubit.state.lists, isNotEmpty);
-          verifyNever(() => service.addVideoToList(any(), any()));
-          verifyNever(() => service.removeVideoFromList(any(), any()));
+          verifyNever(
+            () => service.addVideoToList(
+              any(),
+              any(),
+              allowSeries: any(named: 'allowSeries'),
+            ),
+          );
+          verifyNever(
+            () => service.removeVideoFromList(
+              any(),
+              any(),
+              allowSeries: any(named: 'allowSeries'),
+            ),
+          );
         },
       );
 
@@ -1192,7 +1468,13 @@ void main() {
           expect(cubit.state.selectedListIds, isEmpty);
           cubit.toggled('recovering');
           expect(cubit.state.selectedListIds, {'recovering'});
-          verifyNever(() => service.addVideoToList(any(), any()));
+          verifyNever(
+            () => service.addVideoToList(
+              any(),
+              any(),
+              allowSeries: any(named: 'allowSeries'),
+            ),
+          );
         },
       );
 
@@ -1204,14 +1486,26 @@ void main() {
           addTearDown(cubit.close);
           cubit.toggled('other');
           when(
-            () => service.addVideoToList('$_ownerPubkey:other', _videoId),
+            () => service.addVideoToList(
+              '$_ownerPubkey:other',
+              _videoId,
+              allowSeries: false,
+            ),
           ).thenAnswer((_) async => true);
           expect(await cubit.submitted(), SelectListStatus.saved);
           verify(
-            () => service.addVideoToList('$_ownerPubkey:other', _videoId),
+            () => service.addVideoToList(
+              '$_ownerPubkey:other',
+              _videoId,
+              allowSeries: false,
+            ),
           ).called(1);
           verifyNever(
-            () => service.addVideoToList('$_ownerPubkey:recovering', any()),
+            () => service.addVideoToList(
+              '$_ownerPubkey:recovering',
+              any(),
+              allowSeries: any(named: 'allowSeries'),
+            ),
           );
         },
       );
@@ -1242,7 +1536,7 @@ void main() {
       test('adds the video by its coordinate', () async {
         stubLists([_list('empty')]);
         when(
-          () => service.addVideoToList(any(), any()),
+          () => service.addVideoToList(any(), any(), allowSeries: false),
         ).thenAnswer((_) async => true);
         final cubit = buildAddressableCubit();
         addTearDown(cubit.close);
@@ -1252,9 +1546,19 @@ void main() {
 
         expect(status, SelectListStatus.saved);
         verify(
-          () => service.addVideoToList('$_ownerPubkey:empty', address),
+          () => service.addVideoToList(
+            '$_ownerPubkey:empty',
+            address,
+            allowSeries: false,
+          ),
         ).called(1);
-        verifyNever(() => service.addVideoToList(any(), _videoId));
+        verifyNever(
+          () => service.addVideoToList(
+            any(),
+            _videoId,
+            allowSeries: any(named: 'allowSeries'),
+          ),
+        );
       });
 
       test('removes the video under every name the list holds it by', () async {
@@ -1262,7 +1566,7 @@ void main() {
           _list('holds', videoEventIds: [_videoId, _otherVideoId, address]),
         ]);
         when(
-          () => service.removeVideoFromList(any(), any()),
+          () => service.removeVideoFromList(any(), any(), allowSeries: false),
         ).thenAnswer((_) async => true);
         final cubit = buildAddressableCubit();
         addTearDown(cubit.close);
@@ -1272,12 +1576,26 @@ void main() {
 
         expect(status, SelectListStatus.saved);
         verify(
-          () => service.removeVideoFromList('$_ownerPubkey:holds', _videoId),
+          () => service.removeVideoFromList(
+            '$_ownerPubkey:holds',
+            _videoId,
+            allowSeries: false,
+          ),
         ).called(1);
         verify(
-          () => service.removeVideoFromList('$_ownerPubkey:holds', address),
+          () => service.removeVideoFromList(
+            '$_ownerPubkey:holds',
+            address,
+            allowSeries: false,
+          ),
         ).called(1);
-        verifyNever(() => service.removeVideoFromList(any(), _otherVideoId));
+        verifyNever(
+          () => service.removeVideoFromList(
+            any(),
+            _otherVideoId,
+            allowSeries: any(named: 'allowSeries'),
+          ),
+        );
       });
 
       test('reports a failure when either name could not be removed', () async {
@@ -1286,10 +1604,11 @@ void main() {
           _list('holds', videoEventIds: [address, _videoId]),
         ]);
         when(
-          () => service.removeVideoFromList(any(), address),
+          () => service.removeVideoFromList(any(), address, allowSeries: false),
         ).thenAnswer((_) async => false);
         when(
-          () => service.removeVideoFromList(any(), _videoId),
+          () =>
+              service.removeVideoFromList(any(), _videoId, allowSeries: false),
         ).thenAnswer((_) async => true);
         final cubit = buildAddressableCubit();
         addTearDown(cubit.close);
@@ -1320,7 +1639,7 @@ void main() {
         );
         stubLists([full]);
         when(
-          () => service.addVideoToList(any(), any()),
+          () => service.addVideoToList(any(), any(), allowSeries: false),
         ).thenAnswer((_) async => false);
         final cubit = SelectListCubit(
           service: service,
@@ -1403,7 +1722,7 @@ void main() {
             ),
           ]);
           when(
-            () => service.removeVideoFromList(any(), any()),
+            () => service.removeVideoFromList(any(), any(), allowSeries: false),
           ).thenAnswer((_) async => true);
           final cubit = buildResolvingCubit(
             (_) async => {olderVideoId: address},
@@ -1418,12 +1737,23 @@ void main() {
             () => service.removeVideoFromList(
               '$_ownerPubkey:holds',
               olderVideoId,
+              allowSeries: false,
             ),
           ).called(1);
           verify(
-            () => service.removeVideoFromList('$_ownerPubkey:holds', address),
+            () => service.removeVideoFromList(
+              '$_ownerPubkey:holds',
+              address,
+              allowSeries: false,
+            ),
           ).called(1);
-          verifyNever(() => service.removeVideoFromList(any(), _otherVideoId));
+          verifyNever(
+            () => service.removeVideoFromList(
+              any(),
+              _otherVideoId,
+              allowSeries: any(named: 'allowSeries'),
+            ),
+          );
         },
       );
 
@@ -1474,7 +1804,7 @@ void main() {
           _list('holds', videoEventIds: [olderVideoId, _videoId]),
         ]);
         when(
-          () => service.removeVideoFromList(any(), any()),
+          () => service.removeVideoFromList(any(), any(), allowSeries: false),
         ).thenAnswer((_) async => true);
         final lookup = Completer<Map<String, String>>();
         final cubit = buildResolvingCubit((_) => lookup.future);
@@ -1487,11 +1817,18 @@ void main() {
 
         expect(await save, SelectListStatus.saved);
         verify(
-          () => service.removeVideoFromList('$_ownerPubkey:holds', _videoId),
+          () => service.removeVideoFromList(
+            '$_ownerPubkey:holds',
+            _videoId,
+            allowSeries: false,
+          ),
         ).called(1);
         verify(
-          () =>
-              service.removeVideoFromList('$_ownerPubkey:holds', olderVideoId),
+          () => service.removeVideoFromList(
+            '$_ownerPubkey:holds',
+            olderVideoId,
+            allowSeries: false,
+          ),
         ).called(1);
       });
 
@@ -1501,7 +1838,7 @@ void main() {
           _list('older', videoEventIds: [olderVideoId]),
         ]);
         when(
-          () => service.addVideoToList(any(), any()),
+          () => service.addVideoToList(any(), any(), allowSeries: false),
         ).thenAnswer((_) async => true);
         final lookup = Completer<Map<String, String>>();
         final cubit = buildResolvingCubit((_) => lookup.future);
@@ -1513,8 +1850,61 @@ void main() {
         lookup.complete({olderVideoId: address});
 
         expect(await save, SelectListStatus.saved);
-        verifyNever(() => service.addVideoToList(any(), any()));
+        verifyNever(
+          () => service.addVideoToList(
+            any(),
+            any(),
+            allowSeries: any(named: 'allowSeries'),
+          ),
+        );
         expect(cubit.state.memberListIds, {'older'});
+      });
+
+      test('reports a pick that becomes a series while the save waits for '
+          'the lookup and saves the remaining picks', () async {
+        final older = _list('older', videoEventIds: [olderVideoId]);
+        final changing = _list('changing');
+        final ordinary = _list('ordinary');
+        stubLists([older, changing, ordinary]);
+        when(
+          () => service.addVideoToList(any(), any(), allowSeries: false),
+        ).thenAnswer((_) async => true);
+        final lookup = Completer<Map<String, String>>();
+        final cubit = buildResolvingCubit((_) => lookup.future);
+        addTearDown(cubit.close);
+
+        cubit
+          ..toggled(changing.id)
+          ..toggled(ordinary.id);
+        final save = cubit.submitted();
+        stubLists([
+          older,
+          changing.copyWith(
+            preservedTags: const [
+              ['series', 'true'],
+            ],
+          ),
+          ordinary,
+        ]);
+        capturedListener()();
+        lookup.complete({olderVideoId: address});
+
+        expect(await save, SelectListStatus.failure);
+        expect(cubit.state.serviceAvailable, isTrue);
+        verify(
+          () => service.addVideoToList(
+            ordinary.authorScopedId,
+            address,
+            allowSeries: false,
+          ),
+        ).called(1);
+        verifyNever(
+          () => service.addVideoToList(
+            changing.authorScopedId,
+            address,
+            allowSeries: any(named: 'allowSeries'),
+          ),
+        );
       });
 
       test('saves the picks when the lookup fails', () async {
@@ -1524,10 +1914,10 @@ void main() {
           _list('empty'),
         ]);
         when(
-          () => service.addVideoToList(any(), any()),
+          () => service.addVideoToList(any(), any(), allowSeries: false),
         ).thenAnswer((_) async => true);
         when(
-          () => service.removeVideoFromList(any(), any()),
+          () => service.removeVideoFromList(any(), any(), allowSeries: false),
         ).thenAnswer((_) async => true);
         final lookup = Completer<Map<String, String>>();
         final cubit = buildResolvingCubit((_) => lookup.future);
@@ -1541,10 +1931,18 @@ void main() {
 
         expect(await save, SelectListStatus.saved);
         verify(
-          () => service.removeVideoFromList('$_ownerPubkey:holds', address),
+          () => service.removeVideoFromList(
+            '$_ownerPubkey:holds',
+            address,
+            allowSeries: false,
+          ),
         ).called(1);
         verify(
-          () => service.addVideoToList('$_ownerPubkey:empty', address),
+          () => service.addVideoToList(
+            '$_ownerPubkey:empty',
+            address,
+            allowSeries: false,
+          ),
         ).called(1);
       });
 

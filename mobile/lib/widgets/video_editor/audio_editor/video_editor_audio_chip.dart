@@ -138,10 +138,11 @@ class VideoEditorAudioChip extends StatelessWidget {
                                           selectedSound?.title ??
                                           context.l10n.videoEditorAudioUntitled,
                                     ),
-                                    if (selectedSound?.source != null) ...[
+                                    if (selectedSound?.sourceForDisplay
+                                        case final source?) ...[
                                       const TextSpan(text: ' ∙ '),
                                       TextSpan(
-                                        text: selectedSound!.source,
+                                        text: source,
                                         style: VineTheme.bodyMediumFont(
                                           color: VineTheme.whiteText,
                                         ),

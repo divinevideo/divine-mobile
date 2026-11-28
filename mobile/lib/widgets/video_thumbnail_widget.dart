@@ -96,20 +96,27 @@ class _VideoThumbnailWidgetState extends State<VideoThumbnailWidget> {
   }
 
   Widget _buildContent(BoxFit fit) {
+    final blurhash = widget.video.blurhash;
+    final useColorClouds =
+        (blurhash == null || blurhash.isEmpty) &&
+        Theme.of(context).brightness == Brightness.dark;
+
     return Stack(
       fit: StackFit.expand,
       children: [
-        // Show blurhash or flat color as background while image loads
-        BlurhashDisplay(
-          blurhash: widget.video.blurhash,
-          contentType: widget.video.blurhashContentType,
-          width: widget.width,
-          height: widget.height,
-          fit: fit,
-        ),
+        if (useColorClouds)
+          _ThumbnailColorClouds(videoId: widget.video.id)
+        else
+          BlurhashDisplay(
+            blurhash: blurhash,
+            contentType: widget.video.blurhashContentType,
+            width: widget.width,
+            height: widget.height,
+            fit: fit,
+          ),
 
         // Actual thumbnail image with error boundary, rendered on top of
-        // the blurhash placeholder once it loads.
+        // the placeholder once it loads.
         if (_thumbnailUrl != null)
           PassiveAuthThumbnailImage(
             url: _thumbnailUrl!,
@@ -171,6 +178,39 @@ class _VideoThumbnailWidgetState extends State<VideoThumbnailWidget> {
     }
 
     return AspectRatio(aspectRatio: clampedAspectRatio, child: content);
+  }
+}
+
+/// Soft, low-brightness colors for dark thumbnails without a video BlurHash.
+class _ThumbnailColorClouds extends StatelessWidget {
+  const _ThumbnailColorClouds({required this.videoId});
+
+  final String videoId;
+
+  @override
+  Widget build(BuildContext context) {
+    // A video keeps the same palette when it reappears in another grid.
+    final seed = videoId.codeUnits.fold<int>(0, (sum, unit) => sum + unit);
+    const palettes = VineTheme.darkThumbnailPlaceholderPalettes;
+    final palette = palettes[seed % palettes.length];
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: RadialGradient(
+          center: palette.tintCenter,
+          radius: 1,
+          colors: [palette.tint, palette.base],
+        ),
+      ),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: RadialGradient(
+            center: palette.glowCenter,
+            radius: 0.9,
+            colors: [palette.glow, palette.glow.withValues(alpha: 0)],
+          ),
+        ),
+      ),
+    );
   }
 }
 

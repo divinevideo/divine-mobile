@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="divine_watch_start_recording">መቅዳት ጀምር</string>
+    <string name="divine_watch_stop_recording">መቅዳት አቁም</string>
+    <string name="divine_watch_notification_channel">የካሜራ ሪሞት</string>
+</resources>

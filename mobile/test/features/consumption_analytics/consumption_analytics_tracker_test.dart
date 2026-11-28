@@ -20,7 +20,6 @@ void main() {
     test('records engagement with video context and no raw creator or target pubkeys', () async {
       await tracker.reactionSent(targetVideoId: 'a' * 64);
       await tracker.commentSent(targetVideoId: 'a' * 64);
-      await tracker.shareTapped(targetVideoId: 'a' * 64);
       await tracker.followAdded(targetVideoId: 'a' * 64);
 
       expect(analytics.eventNames, everyElement('engagement_recorded'));
@@ -28,7 +27,6 @@ void main() {
         for (final action in [
           'reaction_sent',
           'comment_sent',
-          'share_tapped',
           'follow_added',
         ])
           {'action': action, 'content_id': 'a' * 64},

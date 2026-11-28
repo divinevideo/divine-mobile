@@ -45,7 +45,8 @@ The device steps below are written for iOS; §5b has Android, macOS and web.
 - A TestFlight or App Store report is a release report. A debug repro proves the logic; say so, and name what differs: asserts that throw in debug and are skipped in release, `kDebugMode` branches, JIT timing, default log level.
 - Performance claims are measured in profile, median of several runs. Debug numbers are not evidence.
 - Profile and release install over the user's production app. Ask first.
-- Debug needs `--dart-define=DEFAULT_ENV=STAGING` (or `LOCAL`), otherwise the staging bundle talks to production.
+- Use `--dart-define=DEFAULT_ENV=LOCAL` for local debugging. The debug bundle ID is independent of the backend. The build defaults to production if the define is omitted, and a saved environment overrides the build default. Verify the active environment before signing in.
+- Staging may no longer run: on 2026-11-24 `wss://relay.staging.divine.video` timed out on TCP 443 while the same `nak req` reached `relay.divine.video`, and `mobile/lib/models/environment_config.dart` says staging and POC no longer run. Probe it before you plan on it (`nak req -k 0 -l 1 wss://relay.staging.divine.video </dev/null`). Without staging or Docker, `nak serve --port 47777 </dev/null` is LOCAL's relay: a `DEFAULT_ENV=LOCAL` build signs in, follows, publishes and receives DMs against it, while the Funnelcake REST calls seen answered 404, so feeds, counts and notifications fail (#7684, iOS 27.2 simulator, debug).
 
 ## 2. See every log, not two categories of seven
 
@@ -90,7 +91,7 @@ directory. In a fresh worktree run `mise trust` in `mobile/` once first, or
 
 ```bash
 FM="bash <skill dir>/scripts/flutter-machine.sh"; RUN=<scratch>/run1
-$FM start $RUN <repo>/mobile <device-id> --dart-define=DEFAULT_ENV=STAGING \
+$FM start $RUN <repo>/mobile <device-id> --dart-define=DEFAULT_ENV=LOCAL \
     --dart-define=LOG_CATEGORIES=RELAY,VIDEO,UI,AUTH,STORAGE,API,SYSTEM \
     --dart-define=LOG_LEVEL=verbose
 $FM wait $RUN                          # prints appId, wsUri (VM service), dtdUri
@@ -204,8 +205,8 @@ Traps that make a probe lie:
 **Android.** Debug builds are `co.openvine.app.staging` and release is `co.openvine.app` (`mobile/android/app/build.gradle.kts`); setup is in `mobile/docs/ANDROID_LOCAL_SETUP.md`.
 
 - Name the device: `adb devices`, then `ANDROID_SERIAL=<serial>` for `adb` and the `mise run` tasks, and `-d <serial>` for every `flutter` command (§0 says why a phone beside an emulator gets picked).
-- The helper works unchanged: `$FM start $RUN <repo>/mobile <serial> --dart-define=DEFAULT_ENV=STAGING …`. `flutter run` forwards the VM service port to the host, so the `wsUri` from `wait` works with `websocat` as in §4.
-- `flutter run` can stop before it builds: "The Java version used for the build is 25.0.4, which is incompatible with Gradle 8.14". Flutter takes Android Studio's bundled JDK before `JAVA_HOME` (`flutter doctor -v` names it), and the repo builds on 17 (`mobile/mise.toml`). `flutter config --jdk-dir=<JDK 17>` fixes it but is a global setting, so ask first. Without it, build with Gradle and let the helper install the result: in `mobile/android`, `JAVA_HOME=<mise JDK 17> FLUTTER_ROOT=<flutter sdk> ./gradlew assembleDebug -Ptarget=lib/main.dart -Ptarget-platform=android-arm64 -Pdart-defines=$(printf 'DEFAULT_ENV=STAGING' | base64)` (1 m 52 s in a worktree that had never built Android), then `$FM start … --use-application-binary=<repo>/mobile/build/app/outputs/flutter-apk/app-debug.apk`. The app then talked to staging.
+- On an emulator, use `$FM start $RUN <repo>/mobile <serial> --dart-define=DEFAULT_ENV=LOCAL …`. `flutter run` forwards the VM service port to the host, so the `wsUri` from `wait` works with `websocat` as in §4.
+- `flutter run` can stop before it builds: "The Java version used for the build is 25.0.4, which is incompatible with Gradle 8.14". Flutter takes Android Studio's bundled JDK before `JAVA_HOME` (`flutter doctor -v` names it), and the repo builds on 17 (`mobile/mise.toml`). `flutter config --jdk-dir=<JDK 17>` fixes it but is a global setting, so ask first. Without it, build with Gradle and let the helper install the result. In `mobile/android`, run `JAVA_HOME=<mise JDK 17> FLUTTER_ROOT=<flutter sdk> ./gradlew assembleDebug -Ptarget=lib/main.dart -Ptarget-platform=android-arm64 -Pdart-defines=$(printf 'DEFAULT_ENV=LOCAL' | base64)`, then `$FM start … --use-application-binary=<repo>/mobile/build/app/outputs/flutter-apk/app-debug.apk`. The Gradle workaround was exercised with `DEFAULT_ENV=STAGING` and took 1 m 52 s in a fresh worktree.
 - `evaluate` compiles through that `flutter run`. Once it has ended, `evaluate` answers "No compilation service available; cannot evaluate from source" while the VM service is still up behind its `adb forward` (`adb logcat -d | grep 'Dart VM service is listening'` prints the port and token). Start the run again.
 - Keep the screen on. On the S23 one run ended with "Lost connection to device." about 70 s after the screen went off and the app went to `paused`. With `adb shell input keyevent KEYCODE_WAKEUP` every 15 s (it changes no setting) the next run was still up after three minutes. That is two runs, not a controlled test. The phone woke straight into the app; a lock screen would need the user.
 - A first `flutter run` once ended with "Error connecting to the service protocol … DDS shut down too early" while the app was running. The same command worked on the second try.

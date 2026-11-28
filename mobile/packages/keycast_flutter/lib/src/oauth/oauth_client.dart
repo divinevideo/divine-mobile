@@ -304,14 +304,17 @@ class KeycastOAuth {
     );
   }
 
-  /// Exchange authorization code for tokens
-  /// Automatically saves session to storage after successful exchange
+  /// Exchanges an authorization code for tokens.
+  ///
+  /// By default, saves the session and its credentials. Pass
+  /// `persistSession: false` when the caller owns credential persistence.
   ///
   /// Throws [TimeoutException] if the server does not respond within
   /// [requestTimeout].
   Future<TokenResponse> exchangeCode({
     required String code,
     required String verifier,
+    bool persistSession = true,
   }) async {
     final response = await _client
         .post(
@@ -340,9 +343,9 @@ class KeycastOAuth {
 
     final tokenResponse = TokenResponse.fromJson(json);
 
-    // Auto-save session and authorization handle to storage
-    final session = KeycastSession.fromTokenResponse(tokenResponse);
-    await _saveSession(session);
+    if (persistSession) {
+      await _saveSession(KeycastSession.fromTokenResponse(tokenResponse));
+    }
 
     return tokenResponse;
   }
@@ -363,6 +366,10 @@ class KeycastOAuth {
   /// [marketingConsent] - The answer from a marketing consent prompt. Omit
   /// when the registration flow did not show one.
   /// [appVersion] - The app version that displayed the consent wording.
+  /// [instantAccess] - Ask Keycast to create the account now and return an
+  /// authorization code in [HeadlessRegisterResult.code], leaving email
+  /// confirmation for later. Servers that do not support it, or that cannot
+  /// grant it for this email, answer with the device-code flow instead.
   Future<(HeadlessRegisterResult, String verifier)> headlessRegister({
     required String email,
     required String password,
@@ -371,6 +378,7 @@ class KeycastOAuth {
     String? state,
     bool? marketingConsent,
     String? appVersion,
+    bool instantAccess = false,
   }) async {
     String? byokPubkey;
     if (nsec != null) {
@@ -405,6 +413,10 @@ class KeycastOAuth {
 
       if (state != null) {
         body['state'] = state;
+      }
+
+      if (instantAccess) {
+        body['instant_access'] = true;
       }
 
       final response = await _client
@@ -509,11 +521,17 @@ class KeycastOAuth {
   ///
   /// Returns [HeadlessLoginResult] with authorization code directly (no polling needed).
   /// After login, call [exchangeCode] with the returned code and verifier.
+  ///
+  /// [instantAccess] - Ask Keycast to sign in an account whose email is not
+  /// confirmed yet. Without it, such an account is refused with
+  /// [KeycastLoginFailure.emailNotVerified], which is what older app builds
+  /// rely on.
   Future<(HeadlessLoginResult, String verifier)> headlessLogin({
     required String email,
     required String password,
     String scope = 'policy:social',
     String? state,
+    bool instantAccess = false,
   }) async {
     final verifier = Pkce.generateVerifier();
     final challenge = Pkce.generateChallenge(verifier);
@@ -531,6 +549,10 @@ class KeycastOAuth {
 
       if (state != null) {
         body['state'] = state;
+      }
+
+      if (instantAccess) {
+        body['instant_access'] = true;
       }
 
       final response = await _client
@@ -1049,13 +1071,37 @@ class KeycastOAuth {
   /// Posts to `/api/auth/resend-verification`. The server always responds with
   /// success to avoid email enumeration and rate-limits to one send per
   /// 5 minutes; callers surface their own client-side cooldown.
-  Future<ResendVerificationResult> resendVerification(String email) async {
+  Future<ResendVerificationResult> resendVerification(String email) =>
+      _postResendVerification(
+        headers: const {'Content-Type': 'application/json'},
+        body: {'email': email},
+      );
+
+  /// Request a fresh verification email for the signed-in account behind the
+  /// bearer [token].
+  ///
+  /// Keycast resolves the address from the token, so an account that signed
+  /// in before confirming its email can ask again without retyping it.
+  Future<ResendVerificationResult> resendVerificationForAccount(
+    String token,
+  ) => _postResendVerification(
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    },
+    body: const <String, dynamic>{},
+  );
+
+  Future<ResendVerificationResult> _postResendVerification({
+    required Map<String, String> headers,
+    required Map<String, dynamic> body,
+  }) async {
     try {
       final response = await _client
           .post(
             Uri.parse('${config.serverUrl}/api/auth/resend-verification'),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'email': email}),
+            headers: headers,
+            body: jsonEncode(body),
           )
           .timeout(requestTimeout);
 

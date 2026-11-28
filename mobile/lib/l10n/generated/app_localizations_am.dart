@@ -10,6 +10,21 @@ class AppLocalizationsAm extends AppLocalizations {
   AppLocalizationsAm([String locale = 'am']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'ይህን መልዕክት ለመክፈት ወደ $account ይቀየር?';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'የግል መልዕክቶች';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'የላኪውን ስም ወይም መልዕክቱን ሳያሳዩ የግል ማሳወቂያ ያሳዩ።';
+
+  @override
+  String get dmNotificationMessageUnavailable => 'ይህ መልዕክት አይገኝም።';
+
+  @override
   String get devOptionsClipRecovery => 'የክሊፕ መልሶ ማግኛ';
 
   @override
@@ -315,7 +330,7 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get privacySettingsShareUsageSubtitle =>
-      'ሰዎች በእውነት ምን እንደሚጠቀሙ እንድናይ ይረዳናል። ካጠፉት በዚህ መሣሪያ ላይ የተሰለፈው ውሂብ ይሰረዛል።';
+      'ሰዎች በእውነት ምን እንደሚጠቀሙ እንድናይ ይረዳናል። ካጠፉት በዚህ መሣሪያ ላይ የተሰለፈው ውሂብ ይሰረዛል። ስህተቶችን ለማስተካከል የብልሽት ሪፖርቶች አሁንም ይላካሉ።';
 
   @override
   String get privacySettingsSaveFailed =>
@@ -1778,51 +1793,8 @@ class AppLocalizationsAm extends AppLocalizations {
   String get shareVideoLabel => 'ቪዲዮ አጋራ';
 
   @override
-  String sharePostSharedWith(String recipientName) {
-    return 'ልጥፍ ለ$recipientName ተጋርቷል።';
-  }
-
-  @override
-  String sharePostSharedWithCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'ልጥፍ ለ$count ሰዎች ተጋርቷል።',
-      one: 'ልጥፍ ለ$count ሰው ተጋርቷል።',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String shareStillTryingToSendTo(String recipientName) {
-    return 'ለ$recipientName ለመላክ አሁንም እየሞከርን ነው';
-  }
-
-  @override
-  String shareStillTryingToSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'ለ$count ሰዎች ለመላክ አሁንም እየሞከርን ነው',
-      one: 'ለ$count ሰው ለመላክ አሁንም እየሞከርን ነው',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String shareCouldNotSendTo(String recipientName) {
     return 'ለ$recipientName መላክ አልተቻለም';
-  }
-
-  @override
-  String shareCouldNotSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'ለ$count ሰዎች መላክ አልተቻለም',
-      one: 'ለ$count ሰው መላክ አልተቻለም',
-    );
-    return '$_temp0';
   }
 
   @override
@@ -1857,11 +1829,32 @@ class AppLocalizationsAm extends AppLocalizations {
   String get shareFindPeopleMultiline => 'አግኝ\nሰዎች';
 
   @override
+  String get shareDeliveryFailed => 'መላክ ገና አልተቻለም';
+
+  @override
+  String shareDeliveryHeld(String name) {
+    return '$name ሊደረስበት ሲችል ይላካል';
+  }
+
+  @override
+  String shareDeliveryForRecipient(String name, String status) {
+    return '$name — $status';
+  }
+
+  @override
   String get shareSent => 'ተልኳል።';
 
   @override
   String shareSelectedRecipientAnnouncement(String name) {
     return '$name ተመርጧል';
+  }
+
+  @override
+  String get shareRecipientSend => 'ይላኩ';
+
+  @override
+  String shareRecipientSendTo(String name) {
+    return 'ወደ $name ላክ';
   }
 
   @override
@@ -2080,6 +2073,28 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoStickerAddYoursButton => 'የእርስዎ ተራ';
+
+  @override
+  String get videoStickerAddYoursWatchSeries => 'ተከታታዩን ይመልከቱ';
+
+  @override
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'ተከታታዩን ይመልከቱ፦ $prompt';
+  }
+
+  @override
+  String videoSeriesChipEpisode(String episode, String total) {
+    return 'ክፍል $episode ከ$total';
+  }
+
+  @override
+  String videoSeriesChipSemanticLabel(
+    String seriesName,
+    String episode,
+    String total,
+  ) {
+    return 'ተከታታይ $seriesName፣ ክፍል $episode ከ$total';
+  }
 
   @override
   String videoStickerAddYoursJoined(int count) {
@@ -3381,6 +3396,9 @@ class AppLocalizationsAm extends AppLocalizations {
       'እዚህ መግባት እነዚያ ረቂቆች እና ክሊፖች ይደብቃቸዋል';
 
   @override
+  String get authWatchClassicsAsGuest => 'ክላሲኮችን እንደ እንግዳ ይመልከቱ';
+
+  @override
   String get authTermsPrefix => 'ከታች አማራጭ በመምረጥህ ቢያንስ 16 ዓመት እንደሆንህ (ወይም ';
 
   @override
@@ -3993,6 +4011,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get remixStartFailed => 'ሪሚክሱን መጀመር አልተቻለም። እንደገና ይሞክሩ።';
 
   @override
+  String get remixSettingSaveFailed => 'የሪሚክስ ቅንብርዎን ማዘመን አልተቻለም። እንደገና ይሞክሩ።';
+
+  @override
   String get remixSettingAllowTitle => 'ሌሎች ቪዲዮዎቼን እንዲቀላቅሉ መፍቀድ';
 
   @override
@@ -4387,6 +4408,10 @@ class AppLocalizationsAm extends AppLocalizations {
       'ማስተላለፊያው ማዘመኛውን አልተቀበለም። ትንሽ ቆይተህ እንደገና ሞክር።';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      'ይህ ቪዲዮ በሌላ መሣሪያ ላይ ተቀይሯል፤ አሁን በጣም ብዙ መለያዎች ወይም ተባባሪዎች አሉት። እንደገና ከፍተው ጥቂቶቹን ያስወግዱ።';
+
+  @override
   String get videoUpdateErrorGeneric => 'ይህን ቪዲዮ ማዘመን አልተቻለም። እንደገና ሞክር።';
 
   @override
@@ -4475,6 +4500,18 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get soundsNoSoundsFoundDescription => 'የተለየ የፍለጋ ቃል ይሞክሩ';
+
+  @override
+  String soundsSearchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ድምፆች ተገኝተዋል',
+      one: '$count ድምፅ ተገኝቷል',
+      zero: 'ምንም ድምፆች አልተገኙም',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get soundsSavedToLibrary => 'ወደ ድምፆች ተቀመጠ';
@@ -6202,6 +6239,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get inboxCollabInviteSentStatus => 'ግብዣ ተልኳል።';
 
   @override
+  String get inboxSharedVideoPreview => 'ቪዲዮ አጋርቷል';
+
+  @override
   String get inboxConversationCollabInvitePreview => 'የተባባሪ ግብዣ';
 
   @override
@@ -6999,6 +7039,52 @@ class AppLocalizationsAm extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'አባዛ';
 
   @override
+  String get libraryDraftActionConvertToClip => 'ወደ ክሊፕ ቀይር';
+
+  @override
+  String get libraryDraftConvertingToClip => 'ወደ ክሊፕ በመቀየር ላይ...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar => 'ረቂቅ ወደ ክሊፕ ተቀይሯል።';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar => 'ረቂቅን መቀየር አልተሳካም።';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'የዚህ ረቂቅ ጽሑፍና ተለጣፊዎች ሊዘጋጁ አልቻሉም። በአራሚው ውስጥ ይክፈቱት፣ ከዚያ እንደገና ይሞክሩ።';
+
+  @override
+  String get libraryDraftActionShare => 'ረቂቅ አጋራ';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return 'ሊታረም የሚችል ረቂቅ ለ$name ይላክ?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'ዋናዎቹ ክሊፖችና የአርትዖት ታሪኩ ይላካሉ። ተቀባዩ የተቆረጡትን ክፍሎች ማየት፣ ቅጂውን ማርትዕ፣ መለጠፍ ወይም መልሶ መላክ ይችላል።';
+
+  @override
+  String get libraryDraftShareFailed => 'ረቂቁን መላክ አልተቻለም።';
+
+  @override
+  String get libraryDraftShareTooLarge => 'ረቂቁ ለመላክ በጣም ትልቅ ነው።';
+
+  @override
+  String get dmSharedDraft => 'የተጋራ ረቂቅ';
+
+  @override
+  String get dmOpenDraft => 'አስገባና አርም';
+
+  @override
+  String get dmDraftImportFailed => 'ረቂቁን ማስገባት አልተቻለም።';
+
+  @override
+  String get libraryDraftSent => 'ረቂቁ ተልኳል';
+
+  @override
   String get libraryDraftActionDelete => 'ረቂቅ ሰርዝ';
 
   @override
@@ -7613,6 +7699,14 @@ class AppLocalizationsAm extends AppLocalizations {
   ) {
     return '$displayName ሊልክልህ ይፈልጋል፣ $messageText ልከዋል።';
   }
+
+  @override
+  String messageRequestGroupWantsToMessageYou(String messageText) {
+    return 'ይህ ቡድን ሊልክልህ ይፈልጋል፣ $messageText ልከዋል።';
+  }
+
+  @override
+  String get messageRequestGroupMembersHeading => 'በዚህ ቡድን ውስጥ';
 
   @override
   String get deleteAccountAccountChanged =>
@@ -9308,6 +9402,21 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorEffectSpinBlur => 'የማሽከርከር ብዥታ';
 
   @override
+  String get videoEditorEffectShockwave => 'የግፊት ሞገድ';
+
+  @override
+  String get videoEditorEffectSubwoofer => 'ሰብዉፈር';
+
+  @override
+  String get videoEditorEffectPlasma => 'ፕላዝማ';
+
+  @override
+  String get videoEditorEffectEnergyWave => 'የኃይል ሞገድ';
+
+  @override
+  String get videoEditorEffectSmokeBurst => 'የጭስ ፍንዳታ';
+
+  @override
   String get videoEditorEffectComic => 'ኮሚክ';
 
   @override
@@ -9503,9 +9612,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorFilterCategoryTints => 'ቀለሞች';
 
   @override
-  String get videoEditorDropsSettingsTitle => 'ጠብታዎችን አስተካክል';
-
-  @override
   String get videoEditorDropsCountLabel => 'ብዛት';
 
   @override
@@ -9550,6 +9656,202 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoEditorEffectsOnBeatNoSound => 'ሙዚቃ ያክሉ ወይም የአንድ ክሊፕ ድምፅ ያብሩ';
+
+  @override
+  String get videoEditorEffectSettingsOpen => 'የኢፌክት ቅንብሮች';
+
+  @override
+  String videoEditorEffectSettingsTitle(String effect) {
+    return 'ቅንብሮች፦ $effect';
+  }
+
+  @override
+  String videoEditorEffectSeconds(String seconds) {
+    return '$seconds ሰ';
+  }
+
+  @override
+  String get videoEditorEffectHitDuration => 'ቆይታ';
+
+  @override
+  String get videoEditorEffectHitRepeat => 'ድገም';
+
+  @override
+  String get videoEditorEffectHitOnce => 'አንድ ጊዜ፣ ኢፌክቱ በጊዜ መስመሩ ላይ በሚጀምርበት';
+
+  @override
+  String get videoEditorEffectHitInterval => 'ክፍተት';
+
+  @override
+  String get videoEditorEffectLookTitle => 'መልክ';
+
+  @override
+  String get videoEditorEffectHitHorizontal => 'አግድም ቦታ';
+
+  @override
+  String get videoEditorEffectHitVertical => 'ቁም ቦታ';
+
+  @override
+  String get videoEditorEffectHitReach => 'ስፋት';
+
+  @override
+  String get videoEditorEffectHitShake => 'መንቀጥቀጥ';
+
+  @override
+  String get videoEditorEffectHitPunch => 'የማጉላት ምት';
+
+  @override
+  String get videoEditorEffectLookReset => 'መልክን ዳግም አስጀምር';
+
+  @override
+  String get videoEditorEffectTimingTitle => 'ጊዜ አቆጣጠር';
+
+  @override
+  String get videoEditorEffectTimingReset => 'ጊዜ አቆጣጠርን ዳግም አስጀምር';
+
+  @override
+  String get videoEditorEffectMotionTitle => 'እንቅስቃሴ';
+
+  @override
+  String get videoEditorEffectMotionReset => 'እንቅስቃሴን ዳግም አስጀምር';
+
+  @override
+  String get videoEditorEffectSettingFocus => 'ትኩረት';
+
+  @override
+  String get videoEditorEffectSettingWidth => 'ስፋት';
+
+  @override
+  String get videoEditorEffectSettingDirection => 'አቅጣጫ';
+
+  @override
+  String get videoEditorEffectSettingHorizontal => 'አግድም';
+
+  @override
+  String get videoEditorEffectSettingVertical => 'ቁልቁል';
+
+  @override
+  String get videoEditorEffectSettingClockwise => 'በሰዓት አቅጣጫ';
+
+  @override
+  String get videoEditorEffectSettingAnticlockwise => 'ከሰዓት አቅጣጫ ተቃራኒ';
+
+  @override
+  String get videoEditorEffectSettingZoomIn => 'አቅርብ';
+
+  @override
+  String get videoEditorEffectSettingZoomOut => 'አርቅ';
+
+  @override
+  String get videoEditorEffectSettingSpacing => 'ክፍተት';
+
+  @override
+  String get videoEditorEffectSettingAngle => 'ማዕዘን';
+
+  @override
+  String get videoEditorEffectSettingHue => 'ቀለም ዓይነት';
+
+  @override
+  String get videoEditorEffectSettingLength => 'ርዝመት';
+
+  @override
+  String get videoEditorEffectSettingSensitivity => 'ስሜታዊነት';
+
+  @override
+  String get videoEditorEffectSettingPosition => 'ቦታ';
+
+  @override
+  String get videoEditorEffectSettingWind => 'ነፋስ';
+
+  @override
+  String get videoEditorEffectSettingDotSize => 'የነጥብ መጠን';
+
+  @override
+  String get videoEditorEffectSettingOutline => 'ዝርዝር መስመር';
+
+  @override
+  String get videoEditorEffectSettingLevels => 'ደረጃዎች';
+
+  @override
+  String get videoEditorEffectSettingPixelSize => 'የፒክሰል መጠን';
+
+  @override
+  String get videoEditorEffectSettingOffset => 'ማፈንገጥ';
+
+  @override
+  String get videoEditorEffectSettingBrushSize => 'የብሩሽ መጠን';
+
+  @override
+  String get videoEditorEffectSettingDensity => 'ጥግግት';
+
+  @override
+  String get videoEditorEffectSettingGrain => 'ጥራጥሬ';
+
+  @override
+  String get videoEditorEffectSettingGrid => 'ፍርግርግ';
+
+  @override
+  String get videoEditorEffectSettingLayers => 'ንብርብሮች';
+
+  @override
+  String get videoEditorEffectSettingShadow => 'ጥላ';
+
+  @override
+  String get videoEditorEffectSettingFirstInk => 'የመጀመሪያ ቀለም';
+
+  @override
+  String get videoEditorEffectSettingSecondInk => 'ሁለተኛ ቀለም';
+
+  @override
+  String get videoEditorEffectSettingColors => 'ቀለሞች';
+
+  @override
+  String get videoEditorEffectSettingOriginalColors => 'የመጀመሪያ';
+
+  @override
+  String get videoEditorEffectSettingSingleColor => 'አንድ ቀለም';
+
+  @override
+  String get videoEditorEffectSettingDelay => 'መዘግየት';
+
+  @override
+  String get videoEditorEffectSettingDown => 'ወደ ታች';
+
+  @override
+  String get videoEditorEffectSettingUp => 'ወደ ላይ';
+
+  @override
+  String get videoEditorEffectSettingRight => 'ወደ ቀኝ';
+
+  @override
+  String get videoEditorEffectSettingLeft => 'ወደ ግራ';
+
+  @override
+  String get videoEditorEffectSettingFrequency => 'ድግግሞሽ';
+
+  @override
+  String get videoEditorEffectSettingDistance => 'ርቀት';
+
+  @override
+  String get videoEditorEffectSettingScanlines => 'የፍተሻ መስመሮች';
+
+  @override
+  String get videoEditorEffectSettingGrainSize => 'የጥራጥሬ መጠን';
+
+  @override
+  String get videoEditorEffectSettingSepia => 'ሴፒያ';
+
+  @override
+  String get videoEditorEffectSettingFlicker => 'ብልጭታ';
+
+  @override
+  String get videoEditorEffectSettingVignette => 'ጠርዝ ጨለማ';
+
+  @override
+  String get videoEditorEffectSettingTempo => 'ፍጥነት';
+
+  @override
+  String get videoEditorEffectSettingWavelength => 'የሞገድ ርዝመት';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {
@@ -11348,6 +11650,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorAudioUseSound => 'ተጠቀም';
 
   @override
+  String get videoEditorAudioOpenSoundDetails => 'የድምፅ ዝርዝሮችን ይክፈቱ';
+
+  @override
   String get videoEditorAudioFileMissing => 'የድምፅ ፋይሉ በዚህ መሣሪያ ላይ የለም';
 
   @override
@@ -11374,6 +11679,9 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoEditorAudioCategoryMySounds => 'የእኔ ድምፆች';
+
+  @override
+  String get videoEditorAudioCategorySongs => 'Songs';
 
   @override
   String get videoEditorAudioFilterEffects => 'የድምፅ ውጤቶች';
@@ -11588,6 +11896,34 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get videoEditorSocialStickerRepliesNote =>
       'ለዚህ ቪዲዮ በቪዲዮ ምላሽ የሰጡትን ያሳያል። ተመልካቾች ምላሾቹን ለማየት ይነኩታል።';
+
+  @override
+  String get videoEditorSocialStickerAudienceTitle => 'ማን መመለስ ይችላል';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => 'ሁሉም';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => 'ጓደኞች';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => 'እኔ ብቻ';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      'የሚከተሏቸው ሰዎች ብቻ ሊሳተፉ ይችላሉ። ሌሎች ሁሉ አንድ ሰው ከተሳተፈ በኋላ ተለጣፊውን ያያሉ።';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      'ተለጣፊው የሚያሳየው እርስዎ ከሚከተሏቸው ሰዎች የመጡ የቪዲዮ ምላሾችን ብቻ ነው። ሌሎች ሁሉ ከእነሱ አንዱ ምላሽ ከሰጠ በኋላ ያዩታል።';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      'እርስዎ ብቻ መሳተፍ ይችላሉ። እርስዎ እስኪሳተፉ ድረስ ሌላ ማንም ተለጣፊውን አያይም።';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      'ተለጣፊው የሚያሳየው የእርስዎን የቪዲዮ ምላሾች ብቻ ነው። እርስዎ ምላሽ እስኪሰጡ ድረስ ሌላ ማንም አያየውም።';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>
@@ -13327,6 +13663,29 @@ class AppLocalizationsAm extends AppLocalizations {
   String get devOptionsProtectedMinorClearedToast => 'የተጠበቀ-ታዳጊ ሽፋን ጸድቷል';
 
   @override
+  String get devOptionsConfirmationAccessTitle => 'Divine Confirmation access';
+
+  @override
+  String get devOptionsConfirmationAccessReal => 'Real answer';
+
+  @override
+  String get devOptionsConfirmationAccessHas => 'Has Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessHasNot => 'Doesn\'t have Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessUnknown => 'Couldn\'t check';
+
+  @override
+  String get devOptionsConfirmationRequirementSimulatedTitle =>
+      'Act as if Confirmation is required';
+
+  @override
+  String get devOptionsConfirmationRequirementSimulatedSubtitle =>
+      'Treats signing in as needing Confirmation even when the verifier doesn\'t. Needs the Confirmation Sign-in flag; choose \"Doesn\'t have Confirmation\" above to see the offer. The verifier still approves sign-ins.';
+
+  @override
   String get commentsRecordVideoButtonLabel => 'የቪዲዮ አስተያየት ቅረጽ';
 
   @override
@@ -14345,6 +14704,65 @@ class AppLocalizationsAm extends AppLocalizations {
   String get verifyStatusAccountChanged => 'Account changed';
 
   @override
+  String get verifyStatusNeedsConfirmation => 'Needs Confirmation';
+
+  @override
+  String get verifyConfirmationTitle => 'Divine Confirmation';
+
+  @override
+  String get verifyConfirmationHeroBody =>
+      'Divine Confirmation lets you link your accounts on other platforms by signing in to them.';
+
+  @override
+  String get verifyConfirmationIncludedTitle => 'What\'s included';
+
+  @override
+  String get verifyConfirmationIncludedSignIn => 'Link accounts by signing in';
+
+  @override
+  String get verifyConfirmationComingSoon => 'Coming soon';
+
+  @override
+  String get verifyConfirmationSmallPrint =>
+      'Details will appear here when Divine Confirmation is ready.';
+
+  @override
+  String get verifyConfirmationStoreOnly =>
+      'Divine Confirmation is available in the App Store and Google Play versions of Divine.';
+
+  @override
+  String get verifyConfirmationBuySemantic =>
+      'Divine Confirmation, coming soon, unavailable';
+
+  @override
+  String get verifyConfirmationRestoreSemantic =>
+      'Restore purchases, unavailable';
+
+  @override
+  String get verifyConfirmationCardTitle => 'Link by signing in';
+
+  @override
+  String get verifyConfirmationCardBody =>
+      'One-tap linking is part of Divine Confirmation.';
+
+  @override
+  String get verifyGetConfirmation => 'Get Divine Confirmation';
+
+  @override
+  String get verifyProofAlwaysAvailable => 'Proof posts are always available';
+
+  @override
+  String get verifyConfirmationSheetTitle =>
+      'Linking by signing in needs Divine Confirmation';
+
+  @override
+  String get verifyConfirmationSheetSubtitle =>
+      'You can still link this account with a proof post.';
+
+  @override
+  String get verifyConfirmationSheetUseProof => 'Use a proof post';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return 'የ$platform መለያ $identity ግንኙነት አቋርጥ';
   }
@@ -14376,7 +14794,26 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
+  String verifyLinkNeedsConfirmationSemanticLabel(String platform) {
+    return 'Link your $platform account. Signing in needs Divine Confirmation';
+  }
+
+  @override
   String get verifyOneTapBadge => 'አንድ ንክኪ';
+
+  @override
+  String get verifyOneTapWithConfirmationBadge => 'One tap with Confirmation';
+
+  @override
+  String get verifyRenewConfirmation => 'Renew Confirmation';
+
+  @override
+  String verifyRenewConfirmationSemanticLabel(
+    String platform,
+    String identity,
+  ) {
+    return 'Renew Divine Confirmation to restore $platform account $identity';
+  }
 
   @override
   String verifyConnectSignInLifetime(int days) {
@@ -14487,6 +14924,18 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get verifyErrorPublishFailed =>
       'ተረጋግጧል፣ ግን ማንኛውም ሪሌይ ዝማኔውን አልተቀበለም። እንደገና ሞክር።';
+
+  @override
+  String get verifyErrorConfirmationRequired =>
+      'Linking by signing in needs Divine Confirmation. You can still link with a proof post.';
+
+  @override
+  String get verifyErrorConfirmationUnavailable =>
+      'Couldn\'t check Divine Confirmation right now. Try again in a few minutes.';
+
+  @override
+  String get verifyErrorConfirmationPending =>
+      'This can take a minute after buying. Try again shortly.';
 
   @override
   String get verifyErrorOauthUnavailable =>
@@ -14766,7 +15215,7 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get changeEmailSubtitle =>
-      'ወደ አዲሱ አድራሻህ እና በመለያህ ላይ ወዳለው አድራሻ የማረጋገጫ ማገናኛ እንልካለን። ከሁለቱም ስታረጋግጥ ኢሜይልህ ይቀየራል።';
+      'ወደ አዲሱ ኢሜይል አድራሻዎ አገናኝ እንልካለን። በመለያዎ ላይ ኢሜይል ካለ፣ ወደዚያም እንልካለን።';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -14786,18 +15235,18 @@ class AppLocalizationsAm extends AppLocalizations {
   String get changeEmailWrongPassword => 'ይህ የይለፍ ቃልህ አይደለም።';
 
   @override
-  String get changeEmailSubmit => 'የማረጋገጫ ማገናኛዎችን ላክ';
+  String get changeEmailSubmit => 'ማረጋገጫ መጠየቅ';
 
   @override
-  String get changeEmailSentTitle => 'ሁለት ማገናኛዎች በመንገድ ላይ ናቸው';
+  String get changeEmailSentTitle => 'ኢሜይልዎን ይመልከቱ';
 
   @override
   String changeEmailSentMessage(String email) {
-    return 'ከ$email እና በመለያህ ላይ ካለው አድራሻ አረጋግጥ። ሁለቱም ሲጠናቀቁ ኢሜይልህ ይቀየራል።';
+    return 'በ$email የደረሰውን አገናኝ ይክፈቱ። በመለያዎ ላይ ኢሜይል ካለ፣ እዚያ የደረሰውንም አገናኝ ይክፈቱ።';
   }
 
   @override
-  String get changeEmailSentExpiry => 'ማገናኛዎቹ ከ24 ሰዓት በኋላ አይሠሩም።';
+  String get changeEmailSentExpiry => 'የእያንዳንዱ አገናኝ ጊዜ ከ24 ሰዓት በኋላ ያበቃል።';
 
   @override
   String get changeEmailSentDone => 'ገባኝ';
@@ -15079,6 +15528,12 @@ class AppLocalizationsAm extends AppLocalizations {
   String get updateAction => 'ያዘምኑ';
 
   @override
+  String get announcementViewContest => 'ውድድሩን ይመልከቱ';
+
+  @override
+  String get featuredFeedUnavailable => 'ይህ ተለይቶ የቀረበ ፊድ ከእንግዲህ አይገኝም።';
+
+  @override
   String updateNewIn(String version) {
     return 'በ$version አዲስ፦';
   }
@@ -15221,6 +15676,15 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get settingsHelpAboutSubtitle => 'ድጋፍ፣ ሕጋዊ መረጃ እና የመተግበሪያ ዝርዝሮች';
+
+  @override
+  String get settingsDiscordTitle => 'የDiscord ሰርቨራችንን ይቀላቀሉ';
+
+  @override
+  String get settingsDiscordSubtitle => 'ከDivine ቡድን እና ማኅበረሰብ ጋር ይወያዩ';
+
+  @override
+  String get settingsDiscordOpenError => 'Discordን መክፈት አልተቻለም';
 
   @override
   String listLoopsCount(int count, String formatted) {
@@ -16468,4 +16932,110 @@ class AppLocalizationsAm extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return 'የ$badgeName ቪዲዮዎች';
   }
+
+  @override
+  String get menuBarEdit => 'አርትዕ';
+
+  @override
+  String get menuBarUndo => 'ቀልብስ';
+
+  @override
+  String get menuBarRedo => 'ድገም';
+
+  @override
+  String get menuBarCut => 'ቁረጥ';
+
+  @override
+  String get menuBarCopy => 'ቅዳ';
+
+  @override
+  String get menuBarPaste => 'ለጥፍ';
+
+  @override
+  String get menuBarSelectAll => 'ሁሉንም ምረጥ';
+
+  @override
+  String get menuBarView => 'እይታ';
+
+  @override
+  String get menuBarVideo => 'ቪዲዮ';
+
+  @override
+  String get menuBarPreviousVideo => 'ቀዳሚ ቪዲዮ';
+
+  @override
+  String get menuBarNextVideo => 'ቀጣይ ቪዲዮ';
+
+  @override
+  String get menuBarPlayPause => 'አጫውት/ለአፍታ አቁም';
+
+  @override
+  String get menuBarMute => 'ድምጸ-ከል አድርግ';
+
+  @override
+  String get menuBarUnmute => 'ድምጸ-ከል አንሳ';
+
+  @override
+  String get menuBarWindow => 'መስኮት';
+
+  @override
+  String get menuBarHelp => 'እገዛ';
+
+  @override
+  String get emailConfirmationTitle => 'ኢሜይልዎን ያረጋግጡ';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return 'ወደ $email አገናኝ ልከናል። መልእክቶችን ለመክፈት እና ሁልጊዜ ወደ መለያዎ መመለስ እንዲችሉ አገናኙን ይንኩ።';
+  }
+
+  @override
+  String get emailConfirmationResendButton => 'ኢሜይሉን እንደገና ይላኩ';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return 'ገብተዋል! መለያዎን ለማረጋገጥ ወደ $email የተላከውን ኢሜይል ይመልከቱ።';
+  }
+
+  @override
+  String get emailConfirmationResendSent =>
+      'የማረጋገጫ ጥያቄዎን ተቀብለናል። ኢሜይልዎን ይመልከቱ።';
+
+  @override
+  String get emailConfirmationResendFailed =>
+      'መላክ አልተቻለም። ትንሽ ቆይተው እንደገና ይሞክሩ።';
+
+  @override
+  String get emailConfirmationMessagesTitle => 'መልእክት መላክ ለመጀመር ኢሜይልዎን ያረጋግጡ';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return 'ወደ $email የላክነውን አገናኝ ይንኩ። ከዚያ መልእክቶች ሙሉ በሙሉ የእርስዎ ናቸው።';
+  }
+
+  @override
+  String get emailConfirmationCheckInbox => 'የማረጋገጫ ሊንኩን በገቢ መልዕክቶችዎ ውስጥ ይፈልጉ።';
+
+  @override
+  String get emailConfirmationDone => 'ኢሜይሉ ተረጋግጧል። መልእክቶች ተከፍተዋል።';
+
+  @override
+  String get emailConfirmationLinkConfirmed => 'ኢሜይሉ ተረጋግጧል።';
+
+  @override
+  String get emailConfirmationAddEmailTitle => 'ኢሜይል ያክሉ';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      'መለያዎ አሁን ኢሜይል የለውም። ሁልጊዜ ተመልሰው መግባት እንዲችሉ አንድ ያክሉ።';
+
+  @override
+  String get emailConfirmationAddEmailButton => 'ኢሜይል ያክሉ';
+
+  @override
+  String get emailConfirmationSendBlocked => 'መልእክቶችን ለመላክ ኢሜይልዎን ያረጋግጡ።';
+
+  @override
+  String get emailConfirmationCapReached =>
+      'ለአዲስ መለያዎች የሰዓት ገደቡ ይህ ነው። ገደቡን ለማንሳት ኢሜይልዎን ያረጋግጡ።';
 }

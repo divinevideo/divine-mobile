@@ -9550,6 +9550,17 @@ class $DirectMessagesTable extends DirectMessages
         type: DriftSqlType.string,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _recipientAcceptedEnvironmentMeta =
+      const VerificationMeta('recipientAcceptedEnvironment');
+  @override
+  late final GeneratedColumn<String> recipientAcceptedEnvironment =
+      GeneratedColumn<String>(
+        'recipient_accepted_environment',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -9579,6 +9590,7 @@ class $DirectMessagesTable extends DirectMessages
     deletionRumorJson,
     deletionPublishStatus,
     heldDeletionWraps,
+    recipientAcceptedEnvironment,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -9808,6 +9820,15 @@ class $DirectMessagesTable extends DirectMessages
         ),
       );
     }
+    if (data.containsKey('recipient_accepted_environment')) {
+      context.handle(
+        _recipientAcceptedEnvironmentMeta,
+        recipientAcceptedEnvironment.isAcceptableOrUnknown(
+          data['recipient_accepted_environment']!,
+          _recipientAcceptedEnvironmentMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -9924,6 +9945,10 @@ class $DirectMessagesTable extends DirectMessages
       heldDeletionWraps: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}held_deletion_wraps'],
+      ),
+      recipientAcceptedEnvironment: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}recipient_accepted_environment'],
       ),
     );
   }
@@ -10092,10 +10117,19 @@ class DirectMessageRow extends DataClass
   /// turn out to advertise no inbox, and wraps the retraction again only once
   /// their inbox is found.
   ///
+  /// Under the sender's own hex pubkey, never a recipient, the record names
+  /// the sender's own copy once one lands (#10016), so a retry publishes no
+  /// other.
+  ///
   /// Lives as long as the rumor it was recorded for: cleared when the
   /// retraction is confirmed or a different kind-5 replaces it, and kept,
   /// like the rumor, by a blocked one.
   final String? heldDeletionWraps;
+
+  /// Environment where this installation observed recipient-route acceptance.
+  /// History sync never sets this, even for the sender's own gift wrap.
+  /// `''` means accepted while no environment was set.
+  final String? recipientAcceptedEnvironment;
   const DirectMessageRow({
     required this.id,
     required this.conversationId,
@@ -10124,6 +10158,7 @@ class DirectMessageRow extends DataClass
     this.deletionRumorJson,
     this.deletionPublishStatus,
     this.heldDeletionWraps,
+    this.recipientAcceptedEnvironment,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -10188,6 +10223,11 @@ class DirectMessageRow extends DataClass
     }
     if (!nullToAbsent || heldDeletionWraps != null) {
       map['held_deletion_wraps'] = Variable<String>(heldDeletionWraps);
+    }
+    if (!nullToAbsent || recipientAcceptedEnvironment != null) {
+      map['recipient_accepted_environment'] = Variable<String>(
+        recipientAcceptedEnvironment,
+      );
     }
     return map;
   }
@@ -10255,6 +10295,10 @@ class DirectMessageRow extends DataClass
       heldDeletionWraps: heldDeletionWraps == null && nullToAbsent
           ? const Value.absent()
           : Value(heldDeletionWraps),
+      recipientAcceptedEnvironment:
+          recipientAcceptedEnvironment == null && nullToAbsent
+          ? const Value.absent()
+          : Value(recipientAcceptedEnvironment),
     );
   }
 
@@ -10299,6 +10343,9 @@ class DirectMessageRow extends DataClass
       heldDeletionWraps: serializer.fromJson<String?>(
         json['heldDeletionWraps'],
       ),
+      recipientAcceptedEnvironment: serializer.fromJson<String?>(
+        json['recipientAcceptedEnvironment'],
+      ),
     );
   }
   @override
@@ -10334,6 +10381,9 @@ class DirectMessageRow extends DataClass
         deletionPublishStatus,
       ),
       'heldDeletionWraps': serializer.toJson<String?>(heldDeletionWraps),
+      'recipientAcceptedEnvironment': serializer.toJson<String?>(
+        recipientAcceptedEnvironment,
+      ),
     };
   }
 
@@ -10365,6 +10415,7 @@ class DirectMessageRow extends DataClass
     Value<String?> deletionRumorJson = const Value.absent(),
     Value<String?> deletionPublishStatus = const Value.absent(),
     Value<String?> heldDeletionWraps = const Value.absent(),
+    Value<String?> recipientAcceptedEnvironment = const Value.absent(),
   }) => DirectMessageRow(
     id: id ?? this.id,
     conversationId: conversationId ?? this.conversationId,
@@ -10407,6 +10458,9 @@ class DirectMessageRow extends DataClass
     heldDeletionWraps: heldDeletionWraps.present
         ? heldDeletionWraps.value
         : this.heldDeletionWraps,
+    recipientAcceptedEnvironment: recipientAcceptedEnvironment.present
+        ? recipientAcceptedEnvironment.value
+        : this.recipientAcceptedEnvironment,
   );
   DirectMessageRow copyWithCompanion(DirectMessagesCompanion data) {
     return DirectMessageRow(
@@ -10469,6 +10523,9 @@ class DirectMessageRow extends DataClass
       heldDeletionWraps: data.heldDeletionWraps.present
           ? data.heldDeletionWraps.value
           : this.heldDeletionWraps,
+      recipientAcceptedEnvironment: data.recipientAcceptedEnvironment.present
+          ? data.recipientAcceptedEnvironment.value
+          : this.recipientAcceptedEnvironment,
     );
   }
 
@@ -10501,7 +10558,8 @@ class DirectMessageRow extends DataClass
           ..write('sendBatchId: $sendBatchId, ')
           ..write('deletionRumorJson: $deletionRumorJson, ')
           ..write('deletionPublishStatus: $deletionPublishStatus, ')
-          ..write('heldDeletionWraps: $heldDeletionWraps')
+          ..write('heldDeletionWraps: $heldDeletionWraps, ')
+          ..write('recipientAcceptedEnvironment: $recipientAcceptedEnvironment')
           ..write(')'))
         .toString();
   }
@@ -10535,6 +10593,7 @@ class DirectMessageRow extends DataClass
     deletionRumorJson,
     deletionPublishStatus,
     heldDeletionWraps,
+    recipientAcceptedEnvironment,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -10566,7 +10625,9 @@ class DirectMessageRow extends DataClass
           other.sendBatchId == this.sendBatchId &&
           other.deletionRumorJson == this.deletionRumorJson &&
           other.deletionPublishStatus == this.deletionPublishStatus &&
-          other.heldDeletionWraps == this.heldDeletionWraps);
+          other.heldDeletionWraps == this.heldDeletionWraps &&
+          other.recipientAcceptedEnvironment ==
+              this.recipientAcceptedEnvironment);
 }
 
 class DirectMessagesCompanion extends UpdateCompanion<DirectMessageRow> {
@@ -10597,6 +10658,7 @@ class DirectMessagesCompanion extends UpdateCompanion<DirectMessageRow> {
   final Value<String?> deletionRumorJson;
   final Value<String?> deletionPublishStatus;
   final Value<String?> heldDeletionWraps;
+  final Value<String?> recipientAcceptedEnvironment;
   final Value<int> rowid;
   const DirectMessagesCompanion({
     this.id = const Value.absent(),
@@ -10626,6 +10688,7 @@ class DirectMessagesCompanion extends UpdateCompanion<DirectMessageRow> {
     this.deletionRumorJson = const Value.absent(),
     this.deletionPublishStatus = const Value.absent(),
     this.heldDeletionWraps = const Value.absent(),
+    this.recipientAcceptedEnvironment = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   DirectMessagesCompanion.insert({
@@ -10656,6 +10719,7 @@ class DirectMessagesCompanion extends UpdateCompanion<DirectMessageRow> {
     this.deletionRumorJson = const Value.absent(),
     this.deletionPublishStatus = const Value.absent(),
     this.heldDeletionWraps = const Value.absent(),
+    this.recipientAcceptedEnvironment = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        conversationId = Value(conversationId),
@@ -10691,6 +10755,7 @@ class DirectMessagesCompanion extends UpdateCompanion<DirectMessageRow> {
     Expression<String>? deletionRumorJson,
     Expression<String>? deletionPublishStatus,
     Expression<String>? heldDeletionWraps,
+    Expression<String>? recipientAcceptedEnvironment,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -10723,6 +10788,8 @@ class DirectMessagesCompanion extends UpdateCompanion<DirectMessageRow> {
       if (deletionPublishStatus != null)
         'deletion_publish_status': deletionPublishStatus,
       if (heldDeletionWraps != null) 'held_deletion_wraps': heldDeletionWraps,
+      if (recipientAcceptedEnvironment != null)
+        'recipient_accepted_environment': recipientAcceptedEnvironment,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -10755,6 +10822,7 @@ class DirectMessagesCompanion extends UpdateCompanion<DirectMessageRow> {
     Value<String?>? deletionRumorJson,
     Value<String?>? deletionPublishStatus,
     Value<String?>? heldDeletionWraps,
+    Value<String?>? recipientAcceptedEnvironment,
     Value<int>? rowid,
   }) {
     return DirectMessagesCompanion(
@@ -10786,6 +10854,8 @@ class DirectMessagesCompanion extends UpdateCompanion<DirectMessageRow> {
       deletionPublishStatus:
           deletionPublishStatus ?? this.deletionPublishStatus,
       heldDeletionWraps: heldDeletionWraps ?? this.heldDeletionWraps,
+      recipientAcceptedEnvironment:
+          recipientAcceptedEnvironment ?? this.recipientAcceptedEnvironment,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -10876,6 +10946,11 @@ class DirectMessagesCompanion extends UpdateCompanion<DirectMessageRow> {
     if (heldDeletionWraps.present) {
       map['held_deletion_wraps'] = Variable<String>(heldDeletionWraps.value);
     }
+    if (recipientAcceptedEnvironment.present) {
+      map['recipient_accepted_environment'] = Variable<String>(
+        recipientAcceptedEnvironment.value,
+      );
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -10912,6 +10987,9 @@ class DirectMessagesCompanion extends UpdateCompanion<DirectMessageRow> {
           ..write('deletionRumorJson: $deletionRumorJson, ')
           ..write('deletionPublishStatus: $deletionPublishStatus, ')
           ..write('heldDeletionWraps: $heldDeletionWraps, ')
+          ..write(
+            'recipientAcceptedEnvironment: $recipientAcceptedEnvironment, ',
+          )
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -11973,6 +12051,17 @@ class $ConversationsTable extends Conversations
         type: DriftSqlType.string,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _lastMessageIdMeta = const VerificationMeta(
+    'lastMessageId',
+  );
+  @override
+  late final GeneratedColumn<String> lastMessageId = GeneratedColumn<String>(
+    'last_message_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _lastMessageTimestampMeta =
       const VerificationMeta('lastMessageTimestamp');
   @override
@@ -12119,6 +12208,7 @@ class $ConversationsTable extends Conversations
     participantPubkeys,
     isGroup,
     lastMessageContent,
+    lastMessageId,
     lastMessageTimestamp,
     lastMessageSenderPubkey,
     subject,
@@ -12172,6 +12262,15 @@ class $ConversationsTable extends Conversations
         lastMessageContent.isAcceptableOrUnknown(
           data['last_message_content']!,
           _lastMessageContentMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_message_id')) {
+      context.handle(
+        _lastMessageIdMeta,
+        lastMessageId.isAcceptableOrUnknown(
+          data['last_message_id']!,
+          _lastMessageIdMeta,
         ),
       );
     }
@@ -12298,6 +12397,10 @@ class $ConversationsTable extends Conversations
         DriftSqlType.string,
         data['${effectivePrefix}last_message_content'],
       ),
+      lastMessageId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_message_id'],
+      ),
       lastMessageTimestamp: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}last_message_timestamp'],
@@ -12369,6 +12472,9 @@ class ConversationRow extends DataClass implements Insertable<ConversationRow> {
   /// Preview text of the last message.
   final String? lastMessageContent;
 
+  /// Exact local message behind the preview, when known.
+  final String? lastMessageId;
+
   /// Unix timestamp of the last message.
   final int? lastMessageTimestamp;
 
@@ -12438,6 +12544,7 @@ class ConversationRow extends DataClass implements Insertable<ConversationRow> {
     required this.participantPubkeys,
     required this.isGroup,
     this.lastMessageContent,
+    this.lastMessageId,
     this.lastMessageTimestamp,
     this.lastMessageSenderPubkey,
     this.subject,
@@ -12459,6 +12566,9 @@ class ConversationRow extends DataClass implements Insertable<ConversationRow> {
     map['is_group'] = Variable<bool>(isGroup);
     if (!nullToAbsent || lastMessageContent != null) {
       map['last_message_content'] = Variable<String>(lastMessageContent);
+    }
+    if (!nullToAbsent || lastMessageId != null) {
+      map['last_message_id'] = Variable<String>(lastMessageId);
     }
     if (!nullToAbsent || lastMessageTimestamp != null) {
       map['last_message_timestamp'] = Variable<int>(lastMessageTimestamp);
@@ -12499,6 +12609,9 @@ class ConversationRow extends DataClass implements Insertable<ConversationRow> {
       lastMessageContent: lastMessageContent == null && nullToAbsent
           ? const Value.absent()
           : Value(lastMessageContent),
+      lastMessageId: lastMessageId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastMessageId),
       lastMessageTimestamp: lastMessageTimestamp == null && nullToAbsent
           ? const Value.absent()
           : Value(lastMessageTimestamp),
@@ -12542,6 +12655,7 @@ class ConversationRow extends DataClass implements Insertable<ConversationRow> {
       lastMessageContent: serializer.fromJson<String?>(
         json['lastMessageContent'],
       ),
+      lastMessageId: serializer.fromJson<String?>(json['lastMessageId']),
       lastMessageTimestamp: serializer.fromJson<int?>(
         json['lastMessageTimestamp'],
       ),
@@ -12572,6 +12686,7 @@ class ConversationRow extends DataClass implements Insertable<ConversationRow> {
       'participantPubkeys': serializer.toJson<String>(participantPubkeys),
       'isGroup': serializer.toJson<bool>(isGroup),
       'lastMessageContent': serializer.toJson<String?>(lastMessageContent),
+      'lastMessageId': serializer.toJson<String?>(lastMessageId),
       'lastMessageTimestamp': serializer.toJson<int?>(lastMessageTimestamp),
       'lastMessageSenderPubkey': serializer.toJson<String?>(
         lastMessageSenderPubkey,
@@ -12594,6 +12709,7 @@ class ConversationRow extends DataClass implements Insertable<ConversationRow> {
     String? participantPubkeys,
     bool? isGroup,
     Value<String?> lastMessageContent = const Value.absent(),
+    Value<String?> lastMessageId = const Value.absent(),
     Value<int?> lastMessageTimestamp = const Value.absent(),
     Value<String?> lastMessageSenderPubkey = const Value.absent(),
     Value<String?> subject = const Value.absent(),
@@ -12613,6 +12729,9 @@ class ConversationRow extends DataClass implements Insertable<ConversationRow> {
     lastMessageContent: lastMessageContent.present
         ? lastMessageContent.value
         : this.lastMessageContent,
+    lastMessageId: lastMessageId.present
+        ? lastMessageId.value
+        : this.lastMessageId,
     lastMessageTimestamp: lastMessageTimestamp.present
         ? lastMessageTimestamp.value
         : this.lastMessageTimestamp,
@@ -12646,6 +12765,9 @@ class ConversationRow extends DataClass implements Insertable<ConversationRow> {
       lastMessageContent: data.lastMessageContent.present
           ? data.lastMessageContent.value
           : this.lastMessageContent,
+      lastMessageId: data.lastMessageId.present
+          ? data.lastMessageId.value
+          : this.lastMessageId,
       lastMessageTimestamp: data.lastMessageTimestamp.present
           ? data.lastMessageTimestamp.value
           : this.lastMessageTimestamp,
@@ -12686,6 +12808,7 @@ class ConversationRow extends DataClass implements Insertable<ConversationRow> {
           ..write('participantPubkeys: $participantPubkeys, ')
           ..write('isGroup: $isGroup, ')
           ..write('lastMessageContent: $lastMessageContent, ')
+          ..write('lastMessageId: $lastMessageId, ')
           ..write('lastMessageTimestamp: $lastMessageTimestamp, ')
           ..write('lastMessageSenderPubkey: $lastMessageSenderPubkey, ')
           ..write('subject: $subject, ')
@@ -12708,6 +12831,7 @@ class ConversationRow extends DataClass implements Insertable<ConversationRow> {
     participantPubkeys,
     isGroup,
     lastMessageContent,
+    lastMessageId,
     lastMessageTimestamp,
     lastMessageSenderPubkey,
     subject,
@@ -12729,6 +12853,7 @@ class ConversationRow extends DataClass implements Insertable<ConversationRow> {
           other.participantPubkeys == this.participantPubkeys &&
           other.isGroup == this.isGroup &&
           other.lastMessageContent == this.lastMessageContent &&
+          other.lastMessageId == this.lastMessageId &&
           other.lastMessageTimestamp == this.lastMessageTimestamp &&
           other.lastMessageSenderPubkey == this.lastMessageSenderPubkey &&
           other.subject == this.subject &&
@@ -12748,6 +12873,7 @@ class ConversationsCompanion extends UpdateCompanion<ConversationRow> {
   final Value<String> participantPubkeys;
   final Value<bool> isGroup;
   final Value<String?> lastMessageContent;
+  final Value<String?> lastMessageId;
   final Value<int?> lastMessageTimestamp;
   final Value<String?> lastMessageSenderPubkey;
   final Value<String?> subject;
@@ -12766,6 +12892,7 @@ class ConversationsCompanion extends UpdateCompanion<ConversationRow> {
     this.participantPubkeys = const Value.absent(),
     this.isGroup = const Value.absent(),
     this.lastMessageContent = const Value.absent(),
+    this.lastMessageId = const Value.absent(),
     this.lastMessageTimestamp = const Value.absent(),
     this.lastMessageSenderPubkey = const Value.absent(),
     this.subject = const Value.absent(),
@@ -12785,6 +12912,7 @@ class ConversationsCompanion extends UpdateCompanion<ConversationRow> {
     required String participantPubkeys,
     this.isGroup = const Value.absent(),
     this.lastMessageContent = const Value.absent(),
+    this.lastMessageId = const Value.absent(),
     this.lastMessageTimestamp = const Value.absent(),
     this.lastMessageSenderPubkey = const Value.absent(),
     this.subject = const Value.absent(),
@@ -12806,6 +12934,7 @@ class ConversationsCompanion extends UpdateCompanion<ConversationRow> {
     Expression<String>? participantPubkeys,
     Expression<bool>? isGroup,
     Expression<String>? lastMessageContent,
+    Expression<String>? lastMessageId,
     Expression<int>? lastMessageTimestamp,
     Expression<String>? lastMessageSenderPubkey,
     Expression<String>? subject,
@@ -12826,6 +12955,7 @@ class ConversationsCompanion extends UpdateCompanion<ConversationRow> {
       if (isGroup != null) 'is_group': isGroup,
       if (lastMessageContent != null)
         'last_message_content': lastMessageContent,
+      if (lastMessageId != null) 'last_message_id': lastMessageId,
       if (lastMessageTimestamp != null)
         'last_message_timestamp': lastMessageTimestamp,
       if (lastMessageSenderPubkey != null)
@@ -12852,6 +12982,7 @@ class ConversationsCompanion extends UpdateCompanion<ConversationRow> {
     Value<String>? participantPubkeys,
     Value<bool>? isGroup,
     Value<String?>? lastMessageContent,
+    Value<String?>? lastMessageId,
     Value<int?>? lastMessageTimestamp,
     Value<String?>? lastMessageSenderPubkey,
     Value<String?>? subject,
@@ -12871,6 +13002,7 @@ class ConversationsCompanion extends UpdateCompanion<ConversationRow> {
       participantPubkeys: participantPubkeys ?? this.participantPubkeys,
       isGroup: isGroup ?? this.isGroup,
       lastMessageContent: lastMessageContent ?? this.lastMessageContent,
+      lastMessageId: lastMessageId ?? this.lastMessageId,
       lastMessageTimestamp: lastMessageTimestamp ?? this.lastMessageTimestamp,
       lastMessageSenderPubkey:
           lastMessageSenderPubkey ?? this.lastMessageSenderPubkey,
@@ -12902,6 +13034,9 @@ class ConversationsCompanion extends UpdateCompanion<ConversationRow> {
     }
     if (lastMessageContent.present) {
       map['last_message_content'] = Variable<String>(lastMessageContent.value);
+    }
+    if (lastMessageId.present) {
+      map['last_message_id'] = Variable<String>(lastMessageId.value);
     }
     if (lastMessageTimestamp.present) {
       map['last_message_timestamp'] = Variable<int>(lastMessageTimestamp.value);
@@ -12956,6 +13091,7 @@ class ConversationsCompanion extends UpdateCompanion<ConversationRow> {
           ..write('participantPubkeys: $participantPubkeys, ')
           ..write('isGroup: $isGroup, ')
           ..write('lastMessageContent: $lastMessageContent, ')
+          ..write('lastMessageId: $lastMessageId, ')
           ..write('lastMessageTimestamp: $lastMessageTimestamp, ')
           ..write('lastMessageSenderPubkey: $lastMessageSenderPubkey, ')
           ..write('subject: $subject, ')
@@ -13566,6 +13702,36 @@ class $OutgoingDmsTable extends OutgoingDms
         type: DriftSqlType.string,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _skipNip04FallbackMeta = const VerificationMeta(
+    'skipNip04Fallback',
+  );
+  @override
+  late final GeneratedColumn<bool> skipNip04Fallback = GeneratedColumn<bool>(
+    'skip_nip04_fallback',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("skip_nip04_fallback" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _isVideoShareMeta = const VerificationMeta(
+    'isVideoShare',
+  );
+  @override
+  late final GeneratedColumn<bool> isVideoShare = GeneratedColumn<bool>(
+    'is_video_share',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_video_share" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -13589,6 +13755,8 @@ class $OutgoingDmsTable extends OutgoingDms
     sendBatchId,
     environment,
     unconfirmedRecipientWrapJson,
+    skipNip04Fallback,
+    isVideoShare,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -13790,6 +13958,24 @@ class $OutgoingDmsTable extends OutgoingDms
         ),
       );
     }
+    if (data.containsKey('skip_nip04_fallback')) {
+      context.handle(
+        _skipNip04FallbackMeta,
+        skipNip04Fallback.isAcceptableOrUnknown(
+          data['skip_nip04_fallback']!,
+          _skipNip04FallbackMeta,
+        ),
+      );
+    }
+    if (data.containsKey('is_video_share')) {
+      context.handle(
+        _isVideoShareMeta,
+        isVideoShare.isAcceptableOrUnknown(
+          data['is_video_share']!,
+          _isVideoShareMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -13883,6 +14069,14 @@ class $OutgoingDmsTable extends OutgoingDms
         DriftSqlType.string,
         data['${effectivePrefix}unconfirmed_recipient_wrap_json'],
       ),
+      skipNip04Fallback: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}skip_nip04_fallback'],
+      )!,
+      isVideoShare: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_video_share'],
+      )!,
     );
   }
 
@@ -14014,6 +14208,15 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
   /// Separate from [recipientWrapEventId], which records a wrap the fallback
   /// pool did accept while the recipient's inbox was unreadable (#10012).
   final String? unconfirmedRecipientWrapJson;
+
+  /// Suppresses the legacy kind-4 copy on every attempt, including a replay
+  /// after restart.
+  final bool skipNip04Fallback;
+
+  /// Whether the share sheet queued this send. Every attempt, including a
+  /// replay after restart, rechecks that the share sheet would still offer
+  /// the recipient.
+  final bool isVideoShare;
   const OutgoingDmRow({
     required this.id,
     required this.conversationId,
@@ -14036,6 +14239,8 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
     this.sendBatchId,
     this.environment,
     this.unconfirmedRecipientWrapJson,
+    required this.skipNip04Fallback,
+    required this.isVideoShare,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -14083,6 +14288,8 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
         unconfirmedRecipientWrapJson,
       );
     }
+    map['skip_nip04_fallback'] = Variable<bool>(skipNip04Fallback);
+    map['is_video_share'] = Variable<bool>(isVideoShare);
     return map;
   }
 
@@ -14128,6 +14335,8 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
           unconfirmedRecipientWrapJson == null && nullToAbsent
           ? const Value.absent()
           : Value(unconfirmedRecipientWrapJson),
+      skipNip04Fallback: Value(skipNip04Fallback),
+      isVideoShare: Value(isVideoShare),
     );
   }
 
@@ -14168,6 +14377,8 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
       unconfirmedRecipientWrapJson: serializer.fromJson<String?>(
         json['unconfirmedRecipientWrapJson'],
       ),
+      skipNip04Fallback: serializer.fromJson<bool>(json['skipNip04Fallback']),
+      isVideoShare: serializer.fromJson<bool>(json['isVideoShare']),
     );
   }
   @override
@@ -14199,6 +14410,8 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
       'unconfirmedRecipientWrapJson': serializer.toJson<String?>(
         unconfirmedRecipientWrapJson,
       ),
+      'skipNip04Fallback': serializer.toJson<bool>(skipNip04Fallback),
+      'isVideoShare': serializer.toJson<bool>(isVideoShare),
     };
   }
 
@@ -14224,6 +14437,8 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
     Value<String?> sendBatchId = const Value.absent(),
     Value<String?> environment = const Value.absent(),
     Value<String?> unconfirmedRecipientWrapJson = const Value.absent(),
+    bool? skipNip04Fallback,
+    bool? isVideoShare,
   }) => OutgoingDmRow(
     id: id ?? this.id,
     conversationId: conversationId ?? this.conversationId,
@@ -14258,6 +14473,8 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
     unconfirmedRecipientWrapJson: unconfirmedRecipientWrapJson.present
         ? unconfirmedRecipientWrapJson.value
         : this.unconfirmedRecipientWrapJson,
+    skipNip04Fallback: skipNip04Fallback ?? this.skipNip04Fallback,
+    isVideoShare: isVideoShare ?? this.isVideoShare,
   );
   OutgoingDmRow copyWithCompanion(OutgoingDmsCompanion data) {
     return OutgoingDmRow(
@@ -14314,6 +14531,12 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
       unconfirmedRecipientWrapJson: data.unconfirmedRecipientWrapJson.present
           ? data.unconfirmedRecipientWrapJson.value
           : this.unconfirmedRecipientWrapJson,
+      skipNip04Fallback: data.skipNip04Fallback.present
+          ? data.skipNip04Fallback.value
+          : this.skipNip04Fallback,
+      isVideoShare: data.isVideoShare.present
+          ? data.isVideoShare.value
+          : this.isVideoShare,
     );
   }
 
@@ -14340,7 +14563,11 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
           ..write('ownerPubkey: $ownerPubkey, ')
           ..write('sendBatchId: $sendBatchId, ')
           ..write('environment: $environment, ')
-          ..write('unconfirmedRecipientWrapJson: $unconfirmedRecipientWrapJson')
+          ..write(
+            'unconfirmedRecipientWrapJson: $unconfirmedRecipientWrapJson, ',
+          )
+          ..write('skipNip04Fallback: $skipNip04Fallback, ')
+          ..write('isVideoShare: $isVideoShare')
           ..write(')'))
         .toString();
   }
@@ -14368,6 +14595,8 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
     sendBatchId,
     environment,
     unconfirmedRecipientWrapJson,
+    skipNip04Fallback,
+    isVideoShare,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -14394,7 +14623,9 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
           other.sendBatchId == this.sendBatchId &&
           other.environment == this.environment &&
           other.unconfirmedRecipientWrapJson ==
-              this.unconfirmedRecipientWrapJson);
+              this.unconfirmedRecipientWrapJson &&
+          other.skipNip04Fallback == this.skipNip04Fallback &&
+          other.isVideoShare == this.isVideoShare);
 }
 
 class OutgoingDmsCompanion extends UpdateCompanion<OutgoingDmRow> {
@@ -14419,6 +14650,8 @@ class OutgoingDmsCompanion extends UpdateCompanion<OutgoingDmRow> {
   final Value<String?> sendBatchId;
   final Value<String?> environment;
   final Value<String?> unconfirmedRecipientWrapJson;
+  final Value<bool> skipNip04Fallback;
+  final Value<bool> isVideoShare;
   final Value<int> rowid;
   const OutgoingDmsCompanion({
     this.id = const Value.absent(),
@@ -14442,6 +14675,8 @@ class OutgoingDmsCompanion extends UpdateCompanion<OutgoingDmRow> {
     this.sendBatchId = const Value.absent(),
     this.environment = const Value.absent(),
     this.unconfirmedRecipientWrapJson = const Value.absent(),
+    this.skipNip04Fallback = const Value.absent(),
+    this.isVideoShare = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   OutgoingDmsCompanion.insert({
@@ -14466,6 +14701,8 @@ class OutgoingDmsCompanion extends UpdateCompanion<OutgoingDmRow> {
     this.sendBatchId = const Value.absent(),
     this.environment = const Value.absent(),
     this.unconfirmedRecipientWrapJson = const Value.absent(),
+    this.skipNip04Fallback = const Value.absent(),
+    this.isVideoShare = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        conversationId = Value(conversationId),
@@ -14499,6 +14736,8 @@ class OutgoingDmsCompanion extends UpdateCompanion<OutgoingDmRow> {
     Expression<String>? sendBatchId,
     Expression<String>? environment,
     Expression<String>? unconfirmedRecipientWrapJson,
+    Expression<bool>? skipNip04Fallback,
+    Expression<bool>? isVideoShare,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -14527,6 +14766,8 @@ class OutgoingDmsCompanion extends UpdateCompanion<OutgoingDmRow> {
       if (environment != null) 'environment': environment,
       if (unconfirmedRecipientWrapJson != null)
         'unconfirmed_recipient_wrap_json': unconfirmedRecipientWrapJson,
+      if (skipNip04Fallback != null) 'skip_nip04_fallback': skipNip04Fallback,
+      if (isVideoShare != null) 'is_video_share': isVideoShare,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -14553,6 +14794,8 @@ class OutgoingDmsCompanion extends UpdateCompanion<OutgoingDmRow> {
     Value<String?>? sendBatchId,
     Value<String?>? environment,
     Value<String?>? unconfirmedRecipientWrapJson,
+    Value<bool>? skipNip04Fallback,
+    Value<bool>? isVideoShare,
     Value<int>? rowid,
   }) {
     return OutgoingDmsCompanion(
@@ -14579,6 +14822,8 @@ class OutgoingDmsCompanion extends UpdateCompanion<OutgoingDmRow> {
       environment: environment ?? this.environment,
       unconfirmedRecipientWrapJson:
           unconfirmedRecipientWrapJson ?? this.unconfirmedRecipientWrapJson,
+      skipNip04Fallback: skipNip04Fallback ?? this.skipNip04Fallback,
+      isVideoShare: isVideoShare ?? this.isVideoShare,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -14657,6 +14902,12 @@ class OutgoingDmsCompanion extends UpdateCompanion<OutgoingDmRow> {
         unconfirmedRecipientWrapJson.value,
       );
     }
+    if (skipNip04Fallback.present) {
+      map['skip_nip04_fallback'] = Variable<bool>(skipNip04Fallback.value);
+    }
+    if (isVideoShare.present) {
+      map['is_video_share'] = Variable<bool>(isVideoShare.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -14689,6 +14940,8 @@ class OutgoingDmsCompanion extends UpdateCompanion<OutgoingDmRow> {
           ..write(
             'unconfirmedRecipientWrapJson: $unconfirmedRecipientWrapJson, ',
           )
+          ..write('skipNip04Fallback: $skipNip04Fallback, ')
+          ..write('isVideoShare: $isVideoShare, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -17841,8 +18094,25 @@ class $ProcessedGiftWrapsTable extends ProcessedGiftWraps
     requiredDuringInsert: false,
     defaultValue: const Constant(''),
   );
+  static const VerificationMeta _verifiedMessageIdMeta = const VerificationMeta(
+    'verifiedMessageId',
+  );
   @override
-  List<GeneratedColumn> get $columns => [giftWrapId, processedAt, ownerPubkey];
+  late final GeneratedColumn<String> verifiedMessageId =
+      GeneratedColumn<String>(
+        'verified_message_id',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  @override
+  List<GeneratedColumn> get $columns => [
+    giftWrapId,
+    processedAt,
+    ownerPubkey,
+    verifiedMessageId,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -17886,6 +18156,15 @@ class $ProcessedGiftWrapsTable extends ProcessedGiftWraps
         ),
       );
     }
+    if (data.containsKey('verified_message_id')) {
+      context.handle(
+        _verifiedMessageIdMeta,
+        verifiedMessageId.isAcceptableOrUnknown(
+          data['verified_message_id']!,
+          _verifiedMessageIdMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -17907,6 +18186,10 @@ class $ProcessedGiftWrapsTable extends ProcessedGiftWraps
         DriftSqlType.string,
         data['${effectivePrefix}owner_pubkey'],
       )!,
+      verifiedMessageId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}verified_message_id'],
+      ),
     );
   }
 
@@ -17944,10 +18227,15 @@ class ProcessedGiftWrap extends DataClass
   /// `direct_messages` already uses, and rows written before v32 are backfilled
   /// to it. Cleanup and lookups treat it as the account's own.
   final String ownerPubkey;
+
+  /// Verified inbound rumor referenced by a second wrap for the same message.
+  /// Terminal outcomes without a navigable message keep this NULL.
+  final String? verifiedMessageId;
   const ProcessedGiftWrap({
     required this.giftWrapId,
     required this.processedAt,
     required this.ownerPubkey,
+    this.verifiedMessageId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -17955,6 +18243,9 @@ class ProcessedGiftWrap extends DataClass
     map['gift_wrap_id'] = Variable<String>(giftWrapId);
     map['processed_at'] = Variable<int>(processedAt);
     map['owner_pubkey'] = Variable<String>(ownerPubkey);
+    if (!nullToAbsent || verifiedMessageId != null) {
+      map['verified_message_id'] = Variable<String>(verifiedMessageId);
+    }
     return map;
   }
 
@@ -17963,6 +18254,9 @@ class ProcessedGiftWrap extends DataClass
       giftWrapId: Value(giftWrapId),
       processedAt: Value(processedAt),
       ownerPubkey: Value(ownerPubkey),
+      verifiedMessageId: verifiedMessageId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(verifiedMessageId),
     );
   }
 
@@ -17975,6 +18269,9 @@ class ProcessedGiftWrap extends DataClass
       giftWrapId: serializer.fromJson<String>(json['giftWrapId']),
       processedAt: serializer.fromJson<int>(json['processedAt']),
       ownerPubkey: serializer.fromJson<String>(json['ownerPubkey']),
+      verifiedMessageId: serializer.fromJson<String?>(
+        json['verifiedMessageId'],
+      ),
     );
   }
   @override
@@ -17984,6 +18281,7 @@ class ProcessedGiftWrap extends DataClass
       'giftWrapId': serializer.toJson<String>(giftWrapId),
       'processedAt': serializer.toJson<int>(processedAt),
       'ownerPubkey': serializer.toJson<String>(ownerPubkey),
+      'verifiedMessageId': serializer.toJson<String?>(verifiedMessageId),
     };
   }
 
@@ -17991,10 +18289,14 @@ class ProcessedGiftWrap extends DataClass
     String? giftWrapId,
     int? processedAt,
     String? ownerPubkey,
+    Value<String?> verifiedMessageId = const Value.absent(),
   }) => ProcessedGiftWrap(
     giftWrapId: giftWrapId ?? this.giftWrapId,
     processedAt: processedAt ?? this.processedAt,
     ownerPubkey: ownerPubkey ?? this.ownerPubkey,
+    verifiedMessageId: verifiedMessageId.present
+        ? verifiedMessageId.value
+        : this.verifiedMessageId,
   );
   ProcessedGiftWrap copyWithCompanion(ProcessedGiftWrapsCompanion data) {
     return ProcessedGiftWrap(
@@ -18007,6 +18309,9 @@ class ProcessedGiftWrap extends DataClass
       ownerPubkey: data.ownerPubkey.present
           ? data.ownerPubkey.value
           : this.ownerPubkey,
+      verifiedMessageId: data.verifiedMessageId.present
+          ? data.verifiedMessageId.value
+          : this.verifiedMessageId,
     );
   }
 
@@ -18015,37 +18320,43 @@ class ProcessedGiftWrap extends DataClass
     return (StringBuffer('ProcessedGiftWrap(')
           ..write('giftWrapId: $giftWrapId, ')
           ..write('processedAt: $processedAt, ')
-          ..write('ownerPubkey: $ownerPubkey')
+          ..write('ownerPubkey: $ownerPubkey, ')
+          ..write('verifiedMessageId: $verifiedMessageId')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(giftWrapId, processedAt, ownerPubkey);
+  int get hashCode =>
+      Object.hash(giftWrapId, processedAt, ownerPubkey, verifiedMessageId);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is ProcessedGiftWrap &&
           other.giftWrapId == this.giftWrapId &&
           other.processedAt == this.processedAt &&
-          other.ownerPubkey == this.ownerPubkey);
+          other.ownerPubkey == this.ownerPubkey &&
+          other.verifiedMessageId == this.verifiedMessageId);
 }
 
 class ProcessedGiftWrapsCompanion extends UpdateCompanion<ProcessedGiftWrap> {
   final Value<String> giftWrapId;
   final Value<int> processedAt;
   final Value<String> ownerPubkey;
+  final Value<String?> verifiedMessageId;
   final Value<int> rowid;
   const ProcessedGiftWrapsCompanion({
     this.giftWrapId = const Value.absent(),
     this.processedAt = const Value.absent(),
     this.ownerPubkey = const Value.absent(),
+    this.verifiedMessageId = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ProcessedGiftWrapsCompanion.insert({
     required String giftWrapId,
     required int processedAt,
     this.ownerPubkey = const Value.absent(),
+    this.verifiedMessageId = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : giftWrapId = Value(giftWrapId),
        processedAt = Value(processedAt);
@@ -18053,12 +18364,14 @@ class ProcessedGiftWrapsCompanion extends UpdateCompanion<ProcessedGiftWrap> {
     Expression<String>? giftWrapId,
     Expression<int>? processedAt,
     Expression<String>? ownerPubkey,
+    Expression<String>? verifiedMessageId,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (giftWrapId != null) 'gift_wrap_id': giftWrapId,
       if (processedAt != null) 'processed_at': processedAt,
       if (ownerPubkey != null) 'owner_pubkey': ownerPubkey,
+      if (verifiedMessageId != null) 'verified_message_id': verifiedMessageId,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -18067,12 +18380,14 @@ class ProcessedGiftWrapsCompanion extends UpdateCompanion<ProcessedGiftWrap> {
     Value<String>? giftWrapId,
     Value<int>? processedAt,
     Value<String>? ownerPubkey,
+    Value<String?>? verifiedMessageId,
     Value<int>? rowid,
   }) {
     return ProcessedGiftWrapsCompanion(
       giftWrapId: giftWrapId ?? this.giftWrapId,
       processedAt: processedAt ?? this.processedAt,
       ownerPubkey: ownerPubkey ?? this.ownerPubkey,
+      verifiedMessageId: verifiedMessageId ?? this.verifiedMessageId,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -18089,6 +18404,9 @@ class ProcessedGiftWrapsCompanion extends UpdateCompanion<ProcessedGiftWrap> {
     if (ownerPubkey.present) {
       map['owner_pubkey'] = Variable<String>(ownerPubkey.value);
     }
+    if (verifiedMessageId.present) {
+      map['verified_message_id'] = Variable<String>(verifiedMessageId.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -18101,6 +18419,7 @@ class ProcessedGiftWrapsCompanion extends UpdateCompanion<ProcessedGiftWrap> {
           ..write('giftWrapId: $giftWrapId, ')
           ..write('processedAt: $processedAt, ')
           ..write('ownerPubkey: $ownerPubkey, ')
+          ..write('verifiedMessageId: $verifiedMessageId, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -29540,6 +29859,7 @@ typedef $$DirectMessagesTableCreateCompanionBuilder =
       Value<String?> deletionRumorJson,
       Value<String?> deletionPublishStatus,
       Value<String?> heldDeletionWraps,
+      Value<String?> recipientAcceptedEnvironment,
       Value<int> rowid,
     });
 typedef $$DirectMessagesTableUpdateCompanionBuilder =
@@ -29571,6 +29891,7 @@ typedef $$DirectMessagesTableUpdateCompanionBuilder =
       Value<String?> deletionRumorJson,
       Value<String?> deletionPublishStatus,
       Value<String?> heldDeletionWraps,
+      Value<String?> recipientAcceptedEnvironment,
       Value<int> rowid,
     });
 
@@ -29715,6 +30036,11 @@ class $$DirectMessagesTableFilterComposer
 
   ColumnFilters<String> get heldDeletionWraps => $composableBuilder(
     column: $table.heldDeletionWraps,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get recipientAcceptedEnvironment => $composableBuilder(
+    column: $table.recipientAcceptedEnvironment,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -29862,6 +30188,12 @@ class $$DirectMessagesTableOrderingComposer
     column: $table.heldDeletionWraps,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get recipientAcceptedEnvironment =>
+      $composableBuilder(
+        column: $table.recipientAcceptedEnvironment,
+        builder: (column) => ColumnOrderings(column),
+      );
 }
 
 class $$DirectMessagesTableAnnotationComposer
@@ -29985,6 +30317,12 @@ class $$DirectMessagesTableAnnotationComposer
     column: $table.heldDeletionWraps,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get recipientAcceptedEnvironment =>
+      $composableBuilder(
+        column: $table.recipientAcceptedEnvironment,
+        builder: (column) => column,
+      );
 }
 
 class $$DirectMessagesTableTableManager
@@ -30051,6 +30389,8 @@ class $$DirectMessagesTableTableManager
                 Value<String?> deletionRumorJson = const Value.absent(),
                 Value<String?> deletionPublishStatus = const Value.absent(),
                 Value<String?> heldDeletionWraps = const Value.absent(),
+                Value<String?> recipientAcceptedEnvironment =
+                    const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DirectMessagesCompanion(
                 id: id,
@@ -30080,6 +30420,7 @@ class $$DirectMessagesTableTableManager
                 deletionRumorJson: deletionRumorJson,
                 deletionPublishStatus: deletionPublishStatus,
                 heldDeletionWraps: heldDeletionWraps,
+                recipientAcceptedEnvironment: recipientAcceptedEnvironment,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -30111,6 +30452,8 @@ class $$DirectMessagesTableTableManager
                 Value<String?> deletionRumorJson = const Value.absent(),
                 Value<String?> deletionPublishStatus = const Value.absent(),
                 Value<String?> heldDeletionWraps = const Value.absent(),
+                Value<String?> recipientAcceptedEnvironment =
+                    const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DirectMessagesCompanion.insert(
                 id: id,
@@ -30140,6 +30483,7 @@ class $$DirectMessagesTableTableManager
                 deletionRumorJson: deletionRumorJson,
                 deletionPublishStatus: deletionPublishStatus,
                 heldDeletionWraps: heldDeletionWraps,
+                recipientAcceptedEnvironment: recipientAcceptedEnvironment,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -30594,6 +30938,7 @@ typedef $$ConversationsTableCreateCompanionBuilder =
       required String participantPubkeys,
       Value<bool> isGroup,
       Value<String?> lastMessageContent,
+      Value<String?> lastMessageId,
       Value<int?> lastMessageTimestamp,
       Value<String?> lastMessageSenderPubkey,
       Value<String?> subject,
@@ -30614,6 +30959,7 @@ typedef $$ConversationsTableUpdateCompanionBuilder =
       Value<String> participantPubkeys,
       Value<bool> isGroup,
       Value<String?> lastMessageContent,
+      Value<String?> lastMessageId,
       Value<int?> lastMessageTimestamp,
       Value<String?> lastMessageSenderPubkey,
       Value<String?> subject,
@@ -30655,6 +31001,11 @@ class $$ConversationsTableFilterComposer
 
   ColumnFilters<String> get lastMessageContent => $composableBuilder(
     column: $table.lastMessageContent,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lastMessageId => $composableBuilder(
+    column: $table.lastMessageId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -30748,6 +31099,11 @@ class $$ConversationsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get lastMessageId => $composableBuilder(
+    column: $table.lastMessageId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get lastMessageTimestamp => $composableBuilder(
     column: $table.lastMessageTimestamp,
     builder: (column) => ColumnOrderings(column),
@@ -30831,6 +31187,11 @@ class $$ConversationsTableAnnotationComposer
 
   GeneratedColumn<String> get lastMessageContent => $composableBuilder(
     column: $table.lastMessageContent,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get lastMessageId => $composableBuilder(
+    column: $table.lastMessageId,
     builder: (column) => column,
   );
 
@@ -30924,6 +31285,7 @@ class $$ConversationsTableTableManager
                 Value<String> participantPubkeys = const Value.absent(),
                 Value<bool> isGroup = const Value.absent(),
                 Value<String?> lastMessageContent = const Value.absent(),
+                Value<String?> lastMessageId = const Value.absent(),
                 Value<int?> lastMessageTimestamp = const Value.absent(),
                 Value<String?> lastMessageSenderPubkey = const Value.absent(),
                 Value<String?> subject = const Value.absent(),
@@ -30942,6 +31304,7 @@ class $$ConversationsTableTableManager
                 participantPubkeys: participantPubkeys,
                 isGroup: isGroup,
                 lastMessageContent: lastMessageContent,
+                lastMessageId: lastMessageId,
                 lastMessageTimestamp: lastMessageTimestamp,
                 lastMessageSenderPubkey: lastMessageSenderPubkey,
                 subject: subject,
@@ -30962,6 +31325,7 @@ class $$ConversationsTableTableManager
                 required String participantPubkeys,
                 Value<bool> isGroup = const Value.absent(),
                 Value<String?> lastMessageContent = const Value.absent(),
+                Value<String?> lastMessageId = const Value.absent(),
                 Value<int?> lastMessageTimestamp = const Value.absent(),
                 Value<String?> lastMessageSenderPubkey = const Value.absent(),
                 Value<String?> subject = const Value.absent(),
@@ -30980,6 +31344,7 @@ class $$ConversationsTableTableManager
                 participantPubkeys: participantPubkeys,
                 isGroup: isGroup,
                 lastMessageContent: lastMessageContent,
+                lastMessageId: lastMessageId,
                 lastMessageTimestamp: lastMessageTimestamp,
                 lastMessageSenderPubkey: lastMessageSenderPubkey,
                 subject: subject,
@@ -31250,6 +31615,8 @@ typedef $$OutgoingDmsTableCreateCompanionBuilder =
       Value<String?> sendBatchId,
       Value<String?> environment,
       Value<String?> unconfirmedRecipientWrapJson,
+      Value<bool> skipNip04Fallback,
+      Value<bool> isVideoShare,
       Value<int> rowid,
     });
 typedef $$OutgoingDmsTableUpdateCompanionBuilder =
@@ -31275,6 +31642,8 @@ typedef $$OutgoingDmsTableUpdateCompanionBuilder =
       Value<String?> sendBatchId,
       Value<String?> environment,
       Value<String?> unconfirmedRecipientWrapJson,
+      Value<bool> skipNip04Fallback,
+      Value<bool> isVideoShare,
       Value<int> rowid,
     });
 
@@ -31389,6 +31758,16 @@ class $$OutgoingDmsTableFilterComposer
 
   ColumnFilters<String> get unconfirmedRecipientWrapJson => $composableBuilder(
     column: $table.unconfirmedRecipientWrapJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get skipNip04Fallback => $composableBuilder(
+    column: $table.skipNip04Fallback,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isVideoShare => $composableBuilder(
+    column: $table.isVideoShare,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -31507,6 +31886,16 @@ class $$OutgoingDmsTableOrderingComposer
         column: $table.unconfirmedRecipientWrapJson,
         builder: (column) => ColumnOrderings(column),
       );
+
+  ColumnOrderings<bool> get skipNip04Fallback => $composableBuilder(
+    column: $table.skipNip04Fallback,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isVideoShare => $composableBuilder(
+    column: $table.isVideoShare,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$OutgoingDmsTableAnnotationComposer
@@ -31613,6 +32002,16 @@ class $$OutgoingDmsTableAnnotationComposer
         column: $table.unconfirmedRecipientWrapJson,
         builder: (column) => column,
       );
+
+  GeneratedColumn<bool> get skipNip04Fallback => $composableBuilder(
+    column: $table.skipNip04Fallback,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isVideoShare => $composableBuilder(
+    column: $table.isVideoShare,
+    builder: (column) => column,
+  );
 }
 
 class $$OutgoingDmsTableTableManager
@@ -31668,6 +32067,8 @@ class $$OutgoingDmsTableTableManager
                 Value<String?> environment = const Value.absent(),
                 Value<String?> unconfirmedRecipientWrapJson =
                     const Value.absent(),
+                Value<bool> skipNip04Fallback = const Value.absent(),
+                Value<bool> isVideoShare = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => OutgoingDmsCompanion(
                 id: id,
@@ -31691,6 +32092,8 @@ class $$OutgoingDmsTableTableManager
                 sendBatchId: sendBatchId,
                 environment: environment,
                 unconfirmedRecipientWrapJson: unconfirmedRecipientWrapJson,
+                skipNip04Fallback: skipNip04Fallback,
+                isVideoShare: isVideoShare,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -31717,6 +32120,8 @@ class $$OutgoingDmsTableTableManager
                 Value<String?> environment = const Value.absent(),
                 Value<String?> unconfirmedRecipientWrapJson =
                     const Value.absent(),
+                Value<bool> skipNip04Fallback = const Value.absent(),
+                Value<bool> isVideoShare = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => OutgoingDmsCompanion.insert(
                 id: id,
@@ -31740,6 +32145,8 @@ class $$OutgoingDmsTableTableManager
                 sendBatchId: sendBatchId,
                 environment: environment,
                 unconfirmedRecipientWrapJson: unconfirmedRecipientWrapJson,
+                skipNip04Fallback: skipNip04Fallback,
+                isVideoShare: isVideoShare,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -33228,6 +33635,7 @@ typedef $$ProcessedGiftWrapsTableCreateCompanionBuilder =
       required String giftWrapId,
       required int processedAt,
       Value<String> ownerPubkey,
+      Value<String?> verifiedMessageId,
       Value<int> rowid,
     });
 typedef $$ProcessedGiftWrapsTableUpdateCompanionBuilder =
@@ -33235,6 +33643,7 @@ typedef $$ProcessedGiftWrapsTableUpdateCompanionBuilder =
       Value<String> giftWrapId,
       Value<int> processedAt,
       Value<String> ownerPubkey,
+      Value<String?> verifiedMessageId,
       Value<int> rowid,
     });
 
@@ -33259,6 +33668,11 @@ class $$ProcessedGiftWrapsTableFilterComposer
 
   ColumnFilters<String> get ownerPubkey => $composableBuilder(
     column: $table.ownerPubkey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get verifiedMessageId => $composableBuilder(
+    column: $table.verifiedMessageId,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -33286,6 +33700,11 @@ class $$ProcessedGiftWrapsTableOrderingComposer
     column: $table.ownerPubkey,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get verifiedMessageId => $composableBuilder(
+    column: $table.verifiedMessageId,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ProcessedGiftWrapsTableAnnotationComposer
@@ -33309,6 +33728,11 @@ class $$ProcessedGiftWrapsTableAnnotationComposer
 
   GeneratedColumn<String> get ownerPubkey => $composableBuilder(
     column: $table.ownerPubkey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get verifiedMessageId => $composableBuilder(
+    column: $table.verifiedMessageId,
     builder: (column) => column,
   );
 }
@@ -33356,11 +33780,13 @@ class $$ProcessedGiftWrapsTableTableManager
                 Value<String> giftWrapId = const Value.absent(),
                 Value<int> processedAt = const Value.absent(),
                 Value<String> ownerPubkey = const Value.absent(),
+                Value<String?> verifiedMessageId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ProcessedGiftWrapsCompanion(
                 giftWrapId: giftWrapId,
                 processedAt: processedAt,
                 ownerPubkey: ownerPubkey,
+                verifiedMessageId: verifiedMessageId,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -33368,11 +33794,13 @@ class $$ProcessedGiftWrapsTableTableManager
                 required String giftWrapId,
                 required int processedAt,
                 Value<String> ownerPubkey = const Value.absent(),
+                Value<String?> verifiedMessageId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ProcessedGiftWrapsCompanion.insert(
                 giftWrapId: giftWrapId,
                 processedAt: processedAt,
                 ownerPubkey: ownerPubkey,
+                verifiedMessageId: verifiedMessageId,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

@@ -22,7 +22,7 @@ class DivineVideoPlayer extends StatelessWidget {
   ///
   /// If [placeholder] is non-null it covers the video surface and
   /// fades out once [DivineVideoPlayerController.firstFrameRendered]
-  /// completes.
+  /// completes with true.
   const DivineVideoPlayer({
     required this.controller,
     this.placeholder,
@@ -64,13 +64,15 @@ class DivineVideoPlayer extends StatelessWidget {
     if (ctrl.usesWebBackend) {
       surface = ctrl.buildWebView();
     } else if (ctrl.usesLinuxBackend) {
-      surface = ctrl.buildLinuxView();
-    } else if (ctrl.useTexture && ctrl.textureId != null) {
-      // SurfaceProducer does not forward ExoPlayer's GL transform matrix
-      // (NATIVE_WINDOW_TRANSFORM_HINT) to Flutter, unlike the legacy
-      // SurfaceTextureEntry which encoded rotation and crop implicitly. The
-      // native side sends both explicitly so Dart can apply them. Listen to
-      // stateStream because they arrive after the first build.
+      surface = _DesktopPlayerView(controller: ctrl);
+    } else if (ctrl.textureId != null) {
+      // Set when the controller asked for a texture, and always on Windows,
+      // which has no platform views. SurfaceProducer does not forward
+      // ExoPlayer's GL transform matrix (NATIVE_WINDOW_TRANSFORM_HINT) to
+      // Flutter, unlike the legacy SurfaceTextureEntry which encoded rotation
+      // and crop implicitly. The native side sends both explicitly so Dart
+      // can apply them. Listen to stateStream because they arrive after the
+      // first build.
       surface = _PlayerTexture(controller: ctrl);
     } else {
       final creationParams = <String, dynamic>{'playerId': ctrl.playerId};
@@ -106,6 +108,21 @@ class DivineVideoPlayer extends StatelessWidget {
       ],
     );
   }
+}
+
+class _DesktopPlayerView extends StatelessWidget {
+  const _DesktopPlayerView({required this.controller});
+
+  final DivineVideoPlayerController controller;
+
+  @override
+  Widget build(BuildContext context) => StreamBuilder<DivineVideoPlayerState>(
+    stream: controller.stateStream,
+    builder: (context, snapshot) {
+      if (controller.isDisposed) return const SizedBox.shrink();
+      return controller.buildLinuxView();
+    },
+  );
 }
 
 /// Android uses [PlatformViewLink] for Hybrid Composition which provides
@@ -229,7 +246,8 @@ class _TextureCropLayout extends SingleChildLayoutDelegate {
 }
 
 /// Shows the [placeholder] over the video surface and fades it out once
-/// [DivineVideoPlayerController.firstFrameRendered] completes, then removes
+/// [DivineVideoPlayerController.firstFrameRendered] completes with true,
+/// then removes
 /// it from the tree.
 ///
 /// Fading — rather than hard-cutting to [SizedBox.shrink] — avoids a visible
@@ -253,17 +271,18 @@ class _PlaceholderOverlayState extends State<_PlaceholderOverlay> {
   /// Fade-out duration from the placeholder to the first video frame.
   static const _fadeDuration = Duration(milliseconds: 120);
 
-  /// Bumped whenever a fresh first-frame wait begins (mount, or a swap to a
-  /// different controller), so a late completion from a superseded controller
-  /// can't flip this overlay's state.
+  /// Bumped when waiting for another output or controller, so a late
+  /// completion from its predecessor cannot flip this overlay's state.
   var _firstFrameWaitToken = 0;
+  Future<bool>? _firstFrameWait;
+  StreamSubscription<DivineVideoPlayerState>? _firstFrameSubscription;
   bool _firstFrameRendered = false;
   bool _faded = false;
 
   @override
   void initState() {
     super.initState();
-    _awaitFirstFrame();
+    _listenForFrames();
   }
 
   @override
@@ -280,19 +299,45 @@ class _PlaceholderOverlayState extends State<_PlaceholderOverlay> {
       _firstFrameRendered = false;
       _faded = false;
     });
+    _listenForFrames();
+  }
+
+  void _listenForFrames() {
+    unawaited(_firstFrameSubscription?.cancel());
+    _firstFrameWait = null;
+    _firstFrameSubscription = widget.controller.stateStream.listen(
+      (_) => _awaitFirstFrame(),
+    );
     _awaitFirstFrame();
   }
 
   void _awaitFirstFrame() {
+    if (_firstFrameRendered) return;
+    final frame = widget.controller.firstFrameRendered;
+    if (identical(frame, _firstFrameWait)) return;
+    _firstFrameWait = frame;
     final token = ++_firstFrameWaitToken;
     unawaited(
-      widget.controller.firstFrameRendered.then((_) {
-        if (!mounted || token != _firstFrameWaitToken || _firstFrameRendered) {
+      frame.then((rendered) {
+        if (!rendered ||
+            !mounted ||
+            token != _firstFrameWaitToken ||
+            _firstFrameRendered ||
+            !identical(frame, widget.controller.firstFrameRendered)) {
           return;
         }
+        unawaited(_firstFrameSubscription?.cancel());
+        _firstFrameSubscription = null;
         setState(() => _firstFrameRendered = true);
       }),
     );
+  }
+
+  @override
+  void dispose() {
+    _firstFrameWaitToken++;
+    unawaited(_firstFrameSubscription?.cancel());
+    super.dispose();
   }
 
   @override

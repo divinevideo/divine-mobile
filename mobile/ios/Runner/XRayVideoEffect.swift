@@ -9,16 +9,19 @@ import pro_video_editor
 /// found where the brightness changes sharply with a Sobel filter, are
 /// lightened on top, so shapes keep their edges.
 ///
-/// Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1: how
-/// far the picture turns into the X-ray).
+/// Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how far
+/// the picture turns into the X-ray), `color` (the film's colour where it is
+/// densest, as an ARGB integer: a pale blue by default).
 final class XRayVideoEffect: ShaderVideoEffect {
   /// The id the Dart `CustomVideoEffect` names.
   static let id = "divine.xray"
 
   private let intensity: Double
+  private let film: [Double]
 
   init(params: [String: Any]) {
     intensity = Self.readIntensity(params)
+    film = Self.readColor(params, "color", fallback: 0xFFC7_E6FF)
     super.init(function: Self.function, source: Self.source)
   }
 
@@ -31,7 +34,7 @@ final class XRayVideoEffect: ShaderVideoEffect {
   }
 
   override func values(effectTimeUs: Int64) -> [Double]? {
-    intensity > 0 ? [intensity] : nil
+    intensity > 0 ? [intensity] + film : nil
   }
 
   static let function = "divineXRay"
@@ -52,9 +55,11 @@ final class XRayVideoEffect: ShaderVideoEffect {
     ) {
       if (gid.x >= target.get_width() || gid.y >= target.get_height()) return;
       Frame f = frameOf(u);
-      float intensity = u[3].x;
+      float2 uSize = f.size;
+      float uIntensity = u[3].x;
+      float3 uFilm = u[3].yzw;
       float2 p = pixelOf(u, gid, target.get_height());
-      float s = min(f.size.x, f.size.y);
+      float s = min(uSize.x, uSize.y);
       float e = max(1.0, s / 540.0);
       float3 color = tap(frame, f, p);
       float tl = luma(tap(frame, f, p + float2(-e, e)));
@@ -69,8 +74,8 @@ final class XRayVideoEffect: ShaderVideoEffect {
       float gy = tl + 2.0 * tc + tr - bl - 2.0 * bc - br;
       float bone = smoothstep(0.1, 0.6, length(float2(gx, gy)));
       float density = clamp(1.1 * pow(max(1.0 - luma(color), 0.0), 1.6) + 0.5 * bone, 0.0, 1.0);
-      float3 film = mix(float3(0.0, 0.02, 0.06), float3(0.78, 0.9, 1.0), density);
-      target.write(float4(mix(color, film, intensity), 1.0), gid);
+      float3 film = mix(float3(0.0, 0.02, 0.06), uFilm, density);
+      target.write(float4(mix(color, film, uIntensity), 1.0), gid);
     }
     """
 }

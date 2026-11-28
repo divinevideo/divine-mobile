@@ -9,10 +9,6 @@ enum FeatureFlag {
     'Inline title, description, and hashtag ideas.',
     audience: FeatureFlagAudience.internal,
   ),
-  enhancedAnalytics(
-    'Enhanced Analytics',
-    'Detailed usage tracking and insights',
-  ),
   debugTools('Debug Tools', 'Developer debugging utilities and diagnostics'),
   blueskyPublishing(
     'Bluesky Publishing',
@@ -26,10 +22,6 @@ enum FeatureFlag {
     'Account Switching',
     'Enable switching between remembered accounts in Settings',
   ),
-  videoReplies(
-    'Video Replies',
-    'Enable recording and posting short video replies from comment threads',
-  ),
   advancedRelaySettings(
     'Advanced Relay Settings',
     'Show Nostr relay configuration and diagnostics in Settings. '
@@ -42,10 +34,6 @@ enum FeatureFlag {
         'signals that personalize recommendations. Off by default until the '
         'relay and recommendation backend are ready.',
     audience: FeatureFlagAudience.internal,
-  ),
-  profileMonetizationLinks(
-    'Profile Monetization Links',
-    'Enable outbound tip and subscription links on profiles.',
   ),
   communityContentWarnings(
     'Community Content Warnings',
@@ -109,6 +97,21 @@ enum FeatureFlag {
         'rooms. Messages are signed with your key and can be read publicly.',
     audience: FeatureFlagAudience.internal,
   ),
+  songCatalog(
+    'Songs (Apple Music previews)',
+    "Add a Songs list to the editor's sound picker: the most played songs "
+        'and a search by title or artist, played from Apple Music previews. '
+        'Internal prototype, only in builds made with a developer token. A '
+        'video posted with a song is public.',
+    audience: FeatureFlagAudience.internal,
+  ),
+  confirmationSignIn(
+    'Confirmation Sign-in',
+    'Show who can link by signing in when the verifier requires Divine '
+        'Confirmation, the placeholder Confirmation screen, and the refusal '
+        'sheet. Off until the purchase exists (#8278).',
+    audience: FeatureFlagAudience.internal,
+  ),
   // User-facing: families can start the existing Greenlight consent flow from
   // Experimental Features, or opt in while already in account review.
   minorConsentInAppRecording(
@@ -121,7 +124,8 @@ enum FeatureFlag {
     'Layouts for tablets and foldables like the iPhone Duo: whole videos '
         'instead of cropped ones, more grid columns, rotation on large '
         'screens, and side navigation with comments beside the video in '
-        'landscape.',
+        'landscape. Turning it off cannot lock an iPad running windowed apps '
+        'to portrait, so it shows the phone layout in landscape there.',
   );
 
   const FeatureFlag(

@@ -173,7 +173,9 @@ void main() {
         published.add(event);
         return PublishOutcome(
           eventId: event.id,
-          acceptedBy: const [_poolRelay],
+          acceptedBy:
+              invocation.namedArguments[#targetRelays] as List<String>? ??
+              const [_poolRelay],
           rejectedBy: const {},
           noResponseFrom: const [],
         );
@@ -372,8 +374,8 @@ void main() {
         expect(results.every((r) => r.success), isTrue);
         expect(
           selfCopies(),
-          hasLength(2),
-          reason: 'each member send publishes its own copy today',
+          hasLength(1),
+          reason: 'one own copy for the batch, not one per member (#10016)',
         );
       });
     });

@@ -13,6 +13,10 @@ on:
         description: Exact observed rejection or failed operation identity to acknowledge
         type: string
         required: false
+      approve_store_review:
+        description: Exact preflight confirmation for a verified production build
+        type: string
+        required: false
       diagnose_android_upload:
         description: Inspect a retained failed Android upload and validate notes without publishing
         type: string
@@ -43,6 +47,7 @@ jobs:
       github.ref == 'refs/heads/main' &&
       (github.event_name == 'workflow_dispatch' ||
        (vars.RELEASE_TRAIN_IOS != '' && vars.RELEASE_TRAIN_IOS != 'off') ||
+       (vars.RELEASE_TRAIN_MACOS != '' && vars.RELEASE_TRAIN_MACOS != 'off') ||
        (vars.RELEASE_TRAIN_ANDROID != '' && vars.RELEASE_TRAIN_ANDROID != 'off'))
     environment: store-release
     runs-on: ubuntu-24.04
@@ -55,7 +60,7 @@ jobs:
           persist-credentials: false
       - name: Scope private provenance installation token
         id: provenance
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc # v3.4.0
         with:
           app-id: ${{ secrets.PROVENANCE_APP_ID }}
           private-key: ${{ secrets.PROVENANCE_APP_PRIVATE_KEY }}
@@ -65,7 +70,7 @@ jobs:
           skip-token-revoke: true
       - name: Scope immutable candidate tag installation token
         id: candidate
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc # v3.4.0
         with:
           app-id: ${{ secrets.PROVENANCE_APP_ID }}
           private-key: ${{ secrets.PROVENANCE_APP_PRIVATE_KEY }}
@@ -89,10 +94,15 @@ jobs:
           TESTFLIGHT_GROUP_IDS: ${{ vars.TESTFLIGHT_GROUP_IDS }}
           PLAY_MANAGED_PUBLISHING: ${{ vars.PLAY_MANAGED_PUBLISHING }}
           PUBLIC_PEOPLE_LIST_POLICY: ${{ vars.DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS }}
+          ENGAGEMENT_DRAFT_API_URL: ${{ vars.ENGAGEMENT_DRAFT_API_URL }}
+          ENGAGEMENT_DRAFT_ACCESS_CLIENT_ID: ${{ secrets.ENGAGEMENT_DRAFT_ACCESS_CLIENT_ID }}
+          ENGAGEMENT_DRAFT_ACCESS_CLIENT_SECRET: ${{ secrets.ENGAGEMENT_DRAFT_ACCESS_CLIENT_SECRET }}
           RELEASE_TRAIN_IOS: ${{ vars.RELEASE_TRAIN_IOS }}
+          RELEASE_TRAIN_MACOS: ${{ vars.RELEASE_TRAIN_MACOS }}
           RELEASE_TRAIN_ANDROID: ${{ vars.RELEASE_TRAIN_ANDROID }}
           RELEASE_DRY_RUN: ${{ inputs.dry_run || false }}
           RELEASE_ACKNOWLEDGE: ${{ inputs.acknowledge }}
+          RELEASE_APPROVE_STORE_REVIEW: ${{ inputs.approve_store_review }}
           RELEASE_DIAGNOSE_ANDROID_UPLOAD: ${{ inputs.diagnose_android_upload }}
           RELEASE_BOOTSTRAP: ${{ inputs.bootstrap || false }}
           RELEASE_SETUP_CODEMAGIC: ${{ inputs.setup_codemagic || false }}

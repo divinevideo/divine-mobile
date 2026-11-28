@@ -1,5 +1,5 @@
 import 'package:material_ui/material_ui.dart';
-import 'package:models/models.dart' show AudioEvent;
+import 'package:models/models.dart' show AudioEvent, SoundKind;
 import 'package:openvine/extensions/divine_sound_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/sound_cover.dart';
@@ -11,8 +11,10 @@ class AudioListTile extends StatelessWidget {
     required this.audio,
     required this.isSelected,
     required this.onTap,
+    this.onShowDetails,
     this.displayTitle,
     this.cover,
+    this.kind,
     this.isPlaying = false,
     this.isUnavailable = false,
     this.videoCount,
@@ -25,6 +27,10 @@ class AudioListTile extends StatelessWidget {
   final bool isPlaying;
   final VoidCallback onTap;
 
+  /// Opens the sound's page, with its credit and licence, on a long press;
+  /// `null` for a sound that has no page to show.
+  final VoidCallback? onShowDetails;
+
   /// Title to show instead of [AudioEvent.title].
   ///
   /// The saved-sounds list passes the private label the user gave the sound,
@@ -36,6 +42,9 @@ class AudioListTile extends StatelessWidget {
 
   /// See [SoundListTile.cover].
   final SoundCover? cover;
+
+  /// See [SoundListTile.kind].
+  final SoundKind? kind;
 
   /// Whether this sound cannot be attached because its device-local audio
   /// file is gone.
@@ -63,14 +72,19 @@ class AudioListTile extends StatelessWidget {
       child: SoundListTile(
         title: displayTitle ?? _titleOf(context, audio),
         duration: audio.duration,
+        // A provider's catalog can list a sound without the length of the
+        // file it plays, which the picker learns on loading it. Until then
+        // the row shows no length rather than one second.
+        showsUnknownDuration: !audio.isExternalProviderSound,
         details: [
           if (videoCount != null && videoCount > 0)
             context.l10n.soundVideoCount(videoCount),
-          // Last, so a long source such as a URL is what the single line
-          // cuts short, not the count.
-          ?audio.source,
+          // Last, so a long source is what the single line cuts short, not
+          // the count.
+          ?audio.sourceForDisplay,
         ],
         cover: cover,
+        kind: kind,
         colorSeed: audio.id,
         isCommunitySound: audio.isCommunitySound,
         isActive: isSelected,
@@ -79,6 +93,8 @@ class AudioListTile extends StatelessWidget {
             ? context.l10n.videoEditorAudioFileMissing
             : null,
         onTap: onTap,
+        onLongPress: onShowDetails,
+        longPressLabel: context.l10n.videoEditorAudioOpenSoundDetails,
       ),
     );
   }

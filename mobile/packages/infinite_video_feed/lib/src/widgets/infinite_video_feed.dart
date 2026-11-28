@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:divine_video_player/divine_video_player.dart';
 import 'package:flutter/foundation.dart'
@@ -10,9 +9,17 @@ import 'package:flutter/foundation.dart'
         kIsWeb,
         setEquals,
         visibleForTesting;
+import 'package:flutter/gestures.dart'
+    show
+        GestureBinding,
+        PointerDeviceKind,
+        PointerScrollEvent,
+        PointerSignalEvent;
+import 'package:flutter/services.dart' show HardwareKeyboard;
 import 'package:flutter/widgets.dart';
 import 'package:infinite_video_feed/src/models/builders.dart';
 import 'package:infinite_video_feed/src/models/feed_first_frame_metric.dart';
+import 'package:infinite_video_feed/src/models/feed_playback_session_metric.dart';
 import 'package:infinite_video_feed/src/models/feed_playback_telemetry.dart';
 import 'package:infinite_video_feed/src/models/video_error_type.dart';
 import 'package:infinite_video_feed/src/models/video_retry_result.dart';
@@ -21,11 +28,13 @@ import 'package:infinite_video_feed/src/services/derivative_failure_cache.dart';
 import 'package:infinite_video_feed/src/services/disk_prefetcher.dart';
 import 'package:infinite_video_feed/src/services/load_watchdog.dart';
 import 'package:infinite_video_feed/src/services/playback_source_registry.dart';
+import 'package:infinite_video_feed/src/services/pointer_scroll_pager.dart';
 import 'package:infinite_video_feed/src/services/stale_playback_detector.dart';
 import 'package:infinite_video_feed/src/utils/canonical_divine_url.dart';
 import 'package:infinite_video_feed/src/utils/playback_failure_log.dart';
 import 'package:infinite_video_feed/src/utils/playback_sources.dart';
 import 'package:infinite_video_feed/src/utils/source_loader.dart';
+import 'package:infinite_video_feed/src/widgets/priority_pointer_signal_listener.dart';
 import 'package:infinite_video_feed/src/widgets/video_item.dart';
 import 'package:media_cache/media_cache.dart';
 import 'package:models/models.dart';
@@ -71,7 +80,9 @@ class InfiniteVideoFeed extends StatefulWidget {
     this.maxPlaybackDuration,
     this.onActiveVideoChanged,
     this.onNearEnd,
-    this.nearEndThreshold = 10,
+    this.onForwardBoundary,
+    this.nearEndThreshold = 15,
+    this.prefetchOnMount = false,
     this.onVideoLoopCompleted,
     this.onVideoStalled,
     this.slowLoadThreshold = const Duration(seconds: 8),
@@ -86,15 +97,17 @@ class InfiniteVideoFeed extends StatefulWidget {
 
   /// Whether the native video player is supported on the current platform.
   ///
-  /// Returns `true` on Android, iOS, macOS, Linux, and web. Returns `false`
-  /// on Windows and every other unsupported platform.
+  /// Returns `true` on Android, iOS, macOS, Linux, Windows, and web.
   static bool get isSupported =>
       _isSupportedOverrideForTesting ??
       (kIsWeb ||
-          Platform.isAndroid ||
-          Platform.isIOS ||
-          Platform.isMacOS ||
-          Platform.isLinux); // coverage:ignore-line
+          {
+            TargetPlatform.android,
+            TargetPlatform.iOS,
+            TargetPlatform.macOS,
+            TargetPlatform.linux,
+            TargetPlatform.windows,
+          }.contains(defaultTargetPlatform));
 
   static bool? _isSupportedOverrideForTesting;
 
@@ -275,8 +288,17 @@ class InfiniteVideoFeed extends StatefulWidget {
   /// Called when the user is near the end of the list.
   final VoidCallback? onNearEnd;
 
+  /// Handles a wheel scroll or next-page action past the last video.
+  ///
+  /// Supply this while more videos can be requested. With no handler, a
+  /// forward wheel scroll at the boundary is left to the enclosing scrollable.
+  final VoidCallback? onForwardBoundary;
+
   /// How many videos from the end should trigger [onNearEnd].
   final int nearEndThreshold;
+
+  /// Whether to check [onNearEnd] when the opening list mounts.
+  final bool prefetchOnMount;
 
   /// Called each time the active video completes a loop.
   ///
@@ -356,9 +378,12 @@ class InfiniteVideoFeed extends StatefulWidget {
 /// failover, slow-load detection, stalled-playback recovery, and
 /// per-controller stream subscriptions.
 ///
-/// Exposes [pauseActive], [resumeActive], [animateToPage], and
-/// [currentIndex] for owning widgets that need to drive the feed
-/// imperatively.
+/// Exposes [pauseActive], [resumeActive], [animateToPage], [nextPage],
+/// [previousPage] and [currentIndex] for owning widgets that need to drive the
+/// feed imperatively.
+///
+/// A mouse wheel notch, or a trackpad swipe a browser reports as wheel events,
+/// moves exactly one video (see [PointerScrollPager]).
 class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
   static const _logName = 'InfiniteVideoFeed';
   static const _loopEndThreshold = Duration(seconds: 1);
@@ -366,7 +391,20 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
   static const _pageJumpDuration = Duration(milliseconds: 300);
   static const Cubic _pageJumpCurve = Curves.easeInOut;
 
+  /// How far a trackpad swipe reported as wheel events has to scroll before it
+  /// moves a video, so a small, accidental trackpad movement does not.
+  ///
+  /// A mouse wheel notch moves a video however small its delta: a slow notch
+  /// in a browser on macOS reports only about 4 pixels.
+  static const _trackpadScrollStepThreshold = 40.0;
+
   late final PageController _pageController;
+  final _pointerScrollPager = PointerScrollPager();
+
+  /// The page a [nextPage] or [previousPage] animation is heading for, so a
+  /// second key press during the animation moves on from there rather than
+  /// repeating the step it is still finishing.
+  int? _stepTargetIndex;
 
   /// One revision counter per page index; the page's subtree listens to it.
   ///
@@ -389,6 +427,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
   final _loadingSourceFailures = <int>{};
   final _errorTypes = <int, VideoErrorType>{};
   final _terminalErrorTypesByVideoId = <String, VideoErrorType>{};
+  final _terminalPlaybackErrorsByVideoId = <String, FeedPlaybackError>{};
   // Viewer auth headers per index, applied to every resolved playback source
   // for that index. The age-gate token is a hash-bound BUD-01 (kind 24242)
   // auth, valid for any variant URL of the same blob, so one header set covers
@@ -456,6 +495,16 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
   late final LoadWatchdog _watchdog;
   late final StalePlaybackDetector _staleDetector;
   late final ControllerSubscriptions _subscriptions;
+
+  /// Whether a wait for data after playback started still goes through the
+  /// stale detector's recovery: on iOS and macOS, where AVPlayer reported
+  /// such waits as playing until it reported them as buffering.
+  static bool get _staleDetectorWatchesBuffering =>
+      !kIsWeb &&
+      {
+        TargetPlatform.iOS,
+        TargetPlatform.macOS,
+      }.contains(defaultTargetPlatform);
 
   // ─── Public API ─────────────────────────────────────────────────────────
 
@@ -550,6 +599,98 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     );
   }
 
+  /// Animates to the next video, or calls [InfiniteVideoFeed.onForwardBoundary]
+  /// when already on the last one.
+  Future<void> nextPage() => _stepPage(1);
+
+  /// Animates to the previous video. Does nothing on the first one.
+  Future<void> previousPage() => _stepPage(-1);
+
+  Future<void> _stepPage(int step) async {
+    final from = _stepTargetIndex ?? _currentIndex;
+    final target = _clampIndex(from + step);
+    if (target == from) {
+      if (step > 0 && from == _currentIndex && widget.videos.isNotEmpty) {
+        widget.onForwardBoundary?.call();
+      }
+      return;
+    }
+    _stepTargetIndex = target;
+    try {
+      await animateToPage(target);
+    } finally {
+      if (_stepTargetIndex == target) _stepTargetIndex = null;
+    }
+  }
+
+  /// Claims wheel and browser trackpad scrolls before the nested page view.
+  ///
+  /// The page view would apply raw deltas and cut short an ongoing animation.
+  /// The enclosing scrollable can handle input when the feed is at a true end.
+  void _onPointerSignal(PointerSignalEvent event) {
+    if (event is! PointerScrollEvent) return;
+    final modifiers = ScrollConfiguration.of(context).pointerAxisModifiers;
+    final scrollsAcross =
+        event.kind == PointerDeviceKind.mouse &&
+        HardwareKeyboard.instance.logicalKeysPressed.any(modifiers.contains);
+    final Offset(:dx, :dy) = event.scrollDelta;
+    final (along, across) = widget.scrollDirection == Axis.vertical
+        ? (dy, dx)
+        : (dx, dy);
+    final position = _pageController.position;
+    final acceptsOffset = position.physics.shouldAcceptUserOffset(position);
+    final direction = axisDirectionIsReversed(position.axisDirection) ? -1 : 1;
+    final delta = !scrollsAcross && along.abs() > across.abs()
+        ? along * direction
+        : 0.0;
+    if (delta == 0) {
+      // Keep the burst together even when some of it goes sideways. A
+      // Scrollable can still bid on one component of the rejected delta.
+      _pointerScrollPager.observe(event.timeStamp);
+      final nativeDelta = (scrollsAcross ? across : along) * direction;
+      final target = (position.pixels + nativeDelta).clamp(
+        position.minScrollExtent,
+        position.maxScrollExtent,
+      );
+      if (acceptsOffset && nativeDelta != 0 && target != position.pixels) {
+        // Block the native PageView fallback. Raw listeners, including
+        // horizontal feed tuning, still see the event before it resolves.
+        GestureBinding.instance.pointerSignalResolver.register(
+          event,
+          (rejected) => rejected.respond(allowPlatformDefault: true),
+        );
+      }
+      return;
+    }
+
+    final atEnd = delta < 0
+        ? position.pixels <= position.minScrollExtent
+        : position.pixels >= position.maxScrollExtent;
+    if (!acceptsOffset ||
+        (atEnd && (delta < 0 || widget.onForwardBoundary == null))) {
+      _pointerScrollPager.observe(event.timeStamp);
+      return;
+    }
+    GestureBinding.instance.pointerSignalResolver.register(
+      event,
+      (_) => _onPointerScroll(event, delta),
+    );
+  }
+
+  void _onPointerScroll(PointerScrollEvent scroll, double delta) {
+    final step = _pointerScrollPager.add(
+      delta,
+      timeStamp: scroll.timeStamp,
+      threshold: scroll.kind == PointerDeviceKind.trackpad
+          ? _trackpadScrollStepThreshold
+          : 0,
+      canStep: !_pageController.position.isScrollingNotifier.value,
+    );
+    // Keeps a browser from also scrolling the page the app is embedded in.
+    scroll.respond(allowPlatformDefault: false);
+    if (step != 0) unawaited(_stepPage(step));
+  }
+
   /// Activates [index] without waiting for a scroll animation.
   ///
   /// Device benchmarks use this hook because a continuously-rendering native
@@ -610,12 +751,14 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
         _retryWithNextSource(index, detectedStall: true),
       ),
       log: _log,
+      watchesBuffering: _staleDetectorWatchesBuffering,
     );
     // coverage:ignore-end
     _subscriptions = ControllerSubscriptions();
 
     _beginFirstFrameMeasurement(_currentIndex);
     unawaited(_onIndexChanged(_currentIndex));
+    if (widget.prefetchOnMount) _scheduleNearEndCheckIfNeeded();
   }
 
   @override
@@ -664,6 +807,9 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
           .toList()
           .forEach(_disposeAt);
       unawaited(_onIndexChanged(_currentIndex));
+      if (widget.videos.length != oldWidget.videos.length) {
+        _scheduleNearEndCheckIfNeeded();
+      }
       return;
     }
 
@@ -678,6 +824,8 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     );
 
     _terminalErrorTypesByVideoId.clear();
+    _terminalPlaybackErrorsByVideoId.clear();
+    _endPlaybackSession(FeedPlaybackSessionEnd.replaced);
     final sameVideos = identical(widget.videos, oldWidget.videos);
     _teardownAllControllers(
       keepViewerHeaders: sameVideos && bunnyRoutingChanged,
@@ -707,6 +855,24 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     });
 
     unawaited(_onIndexChanged(_currentIndex));
+    if (widget.videos.length != oldWidget.videos.length) {
+      _scheduleNearEndCheckIfNeeded();
+    }
+  }
+
+  /// Requests the next page after frame commit when the opening or updated
+  /// list leaves at most [InfiniteVideoFeed.nearEndThreshold] videos ahead.
+  void _scheduleNearEndCheckIfNeeded() {
+    if (widget.onNearEnd == null || widget.videos.isEmpty) return;
+    final distanceFromEnd = widget.videos.length - _currentIndex - 1;
+    if (distanceFromEnd > widget.nearEndThreshold) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || widget.videos.isEmpty) return;
+      final remaining = widget.videos.length - _currentIndex - 1;
+      if (remaining <= widget.nearEndThreshold) {
+        widget.onNearEnd?.call();
+      }
+    });
   }
 
   String? _resolvedSourceFor(
@@ -747,9 +913,11 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
   ) {
     for (var i = startIndex; i < oldWidget.videos.length; i++) {
       _terminalErrorTypesByVideoId.remove(oldWidget.videos[i].id);
+      _terminalPlaybackErrorsByVideoId.remove(oldWidget.videos[i].id);
     }
     for (var i = startIndex; i < newWidget.videos.length; i++) {
       _terminalErrorTypesByVideoId.remove(newWidget.videos[i].id);
+      _terminalPlaybackErrorsByVideoId.remove(newWidget.videos[i].id);
     }
     for (var i = startIndex; i < oldWidget.videos.length; i++) {
       _errors.remove(i);
@@ -761,7 +929,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
 
   @override
   void dispose() {
-    _activeFirstFrameTimer?.finish(outcome: FeedPlaybackOutcome.cancelled);
+    _endPlaybackSession(FeedPlaybackSessionEnd.closed);
     _cancelPreloadGraceTimers();
     _telemetryLoads.clear();
     for (final subscription in _networkSubscriptions.values) {
@@ -824,11 +992,20 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       final currentController = _controllers[_currentIndex];
       // A player that kept its painted frame while the feed was hidden has no
       // first frame left to wait for, so timing it would publish a ~0 ms
-      // sample for a video the viewer never waited on.
+      // sample for a video the viewer never waited on. Likewise, an already
+      // failed slot that will not re-initialize on reactivation is not
+      // starting a new playback attempt, so timing it would emit a bogus
+      // abandoned sample when the viewer leaves the error tile.
       final alreadyPainted =
           currentController != null &&
           currentController.state.isFirstFrameRendered;
-      if (alreadyPainted) {
+      final alreadyFailed =
+          _errors.contains(_currentIndex) &&
+          !_needsReinitOnActivate &&
+          !(widget.releaseNeighboursWhenInactive &&
+              currentController == null &&
+              !_hasTerminalError(_currentIndex));
+      if (alreadyPainted || alreadyFailed) {
         _activeFirstFrameTimer = null;
       } else {
         _beginFirstFrameMeasurement(_currentIndex);
@@ -852,7 +1029,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
         unawaited(_onIndexChanged(_currentIndex));
       }
     } else {
-      _activeFirstFrameTimer?.finish(outcome: FeedPlaybackOutcome.cancelled);
+      _endPlaybackSession(FeedPlaybackSessionEnd.hidden);
       _cancelPreloadGraceTimers();
       _pauseCurrentPlayback();
       _cancelAutoRetry(_currentIndex);
@@ -970,6 +1147,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     final isAllowed = _canAutoPlayAt(_currentIndex);
     _lastAppliedGate = isAllowed;
     if (wasAllowed == null || wasAllowed == isAllowed) return;
+    _firstFrameTimerFor(_currentIndex)?.markAutoPlay(allowed: isAllowed);
     if (isAllowed) {
       _resumeCurrentPlaybackIfReady();
     } else {
@@ -1000,6 +1178,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     if (!stillOwnsController() || !controller.isInitialized) return;
     final allowed = _canAutoPlayAt(index);
     if (index == _currentIndex) _lastAppliedGate = allowed;
+    _firstFrameTimerFor(index)?.markAutoPlay(allowed: allowed);
     if (!allowed) return;
     if (applyVolume) {
       await controller.setVolume(_volume);
@@ -1088,6 +1267,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
           TargetPlatform.android,
           TargetPlatform.iOS,
           TargetPlatform.macOS,
+          TargetPlatform.windows,
         }.contains(defaultTargetPlatform) &&
         !(Uri.tryParse(source)?.path.toLowerCase().endsWith('.m3u8') ?? false);
     final load = FeedPlaybackTelemetry.startLoad(
@@ -1111,16 +1291,24 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     };
   }
 
+  /// Ends the active video's playback session, which publishes its sample.
+  void _endPlaybackSession(FeedPlaybackSessionEnd reason) {
+    final timer = _activeFirstFrameTimer;
+    if (timer == null) return;
+    _activeFirstFrameTimer = null;
+    timer.end(reason, loadedFromCache: _loadedFromCache.contains(timer.index));
+  }
+
   void _beginFirstFrameMeasurement(int index) {
-    _activeFirstFrameTimer?.finish(outcome: FeedPlaybackOutcome.cancelled);
-    if (index < 0 || index >= widget.videos.length || !_isActive) {
-      _activeFirstFrameTimer = null;
-      return;
-    }
-    _activeFirstFrameTimer = FeedFirstFrameMetrics.start(
-      videoId: widget.videos[index].id,
-      index: index,
-    )..attachLoad(_telemetryLoads[index]);
+    _endPlaybackSession(FeedPlaybackSessionEnd.swipe);
+    if (index < 0 || index >= widget.videos.length || !_isActive) return;
+    _activeFirstFrameTimer =
+        FeedFirstFrameMetrics.start(
+            videoId: widget.videos[index].id,
+            index: index,
+          )
+          ..attachLoad(_telemetryLoads[index])
+          ..markAutoPlay(allowed: _canAutoPlayAt(index));
   }
 
   FeedFirstFrameTimer? _firstFrameTimerFor(int index) {
@@ -1134,19 +1322,27 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
   ) async {
     final timer = _activeFirstFrameTimer;
     if (timer == null || timer.index != index) return;
-    await controller.firstFrameRendered;
+    final rendered = await controller.firstFrameRendered;
     // The feed can go inactive while the native player is still decoding. A
     // frame that lands afterwards did not cost the viewer this wait, so drop
     // the sample rather than reporting the hidden span as activation latency.
-    if (!mounted ||
+    if (!rendered ||
+        !mounted ||
         !_isActive ||
         index != _currentIndex ||
         !identical(_controllers[index], controller) ||
         !identical(_activeFirstFrameTimer, timer)) {
       return;
     }
-    timer.complete(loadedFromCache: _loadedFromCache.contains(index));
+    timer
+      ..complete(loadedFromCache: _loadedFromCache.contains(index))
+      ..observePlayback(controller, reportsStalls: _reportsStalls);
   }
+
+  /// Whether the player reports a wait for data as buffering. AVPlayer keeps
+  /// its rate while it waits, so iOS and macOS report such a wait as playing.
+  static bool get _reportsStalls =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
   Future<void> _updatePlayerWindow(int index) async {
     final generation = ++_playerWindowGeneration;
@@ -1655,7 +1851,11 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
             nativePlayerErrorCodeFromError(e),
             e.toString(),
           )) {
-        _stopAndMarkTerminalError(index, errorType);
+        _stopAndMarkTerminalError(
+          index,
+          errorType,
+          errorCategory: FeedPlaybackError.initialization,
+        );
       } else {
         _errorTypes[index] = errorType;
         _errors.add(index);
@@ -1736,6 +1936,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     final videoId = _videoIdAt(index);
     if (videoId != null) {
       _terminalErrorTypesByVideoId.remove(videoId);
+      _terminalPlaybackErrorsByVideoId.remove(videoId);
     }
     if (httpHeaders.isEmpty) {
       _httpHeadersByIndex.remove(index);
@@ -1749,6 +1950,9 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     _subscriptions.unsubscribe(index);
     unawaited(_controllers.remove(index)?.dispose());
     _rebuildPage(index);
+    if (index == _currentIndex && _isActive && _activeFirstFrameTimer == null) {
+      _beginFirstFrameMeasurement(index);
+    }
     // Skip cache on manual retry so a corrupt cached file does not loop
     // the same failure indefinitely.
     final initialized = await _initController(index, skipCache: true);
@@ -1874,6 +2078,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       }
     } on Object catch (e, stackTrace) {
       if (!ownsFailover(e)) return;
+      _subscriptions.recheckPlaybackErrors(index, handledByCommand: true);
       final errorCode = nativePlayerErrorCodeFromError(e);
       if (changesBunny) {
         _log(
@@ -1908,6 +2113,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     } finally {
       if (identical(_controllers[index], controller)) {
         _failoverInFlight.remove(index);
+        if (mounted) _subscriptions.recheckPlaybackErrors(index);
       }
     }
     if (retryUnavailableBunny && ownsFailover()) {
@@ -1993,12 +2199,13 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
           _staleDetector.resetGrace();
         }
       }
-      _processingRetryAttempts.remove(index);
+      if (!controller.state.hasError) _processingRetryAttempts.remove(index);
     } on Object catch (e, stackTrace) {
       if (!ownsRetry()) {
         guardRetryOwnership('error handling');
         return;
       }
+      _subscriptions.recheckPlaybackErrors(index, handledByCommand: true);
       _log('Processing retry failed index $index source=$source: $e');
       logPlaybackFailure(
         'Processing retry failed',
@@ -2021,6 +2228,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     } finally {
       if (ownsRetry()) {
         _processingRetryInFlight.remove(index);
+        _subscriptions.recheckPlaybackErrors(index);
       }
     }
     if (retryProcessingAgain && ownsRetry()) {
@@ -2079,14 +2287,19 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
 
   /// Like [_stopAndMarkError] but records the failure as terminal for this
   /// video id, so it will not auto-retry and is restored on revisit.
-  void _stopAndMarkTerminalError(int index, VideoErrorType type) {
+  void _stopAndMarkTerminalError(
+    int index,
+    VideoErrorType type, {
+    FeedPlaybackError errorCategory = FeedPlaybackError.playback,
+  }) {
     _firstFrameTimerFor(index)?.finish(
       outcome: FeedPlaybackOutcome.error,
-      errorCategory: FeedPlaybackError.playback,
+      errorCategory: errorCategory,
     );
     final videoId = _videoIdAt(index);
     if (videoId != null) {
       _terminalErrorTypesByVideoId[videoId] = type;
+      _terminalPlaybackErrorsByVideoId[videoId] = errorCategory;
     }
     _cancelAutoRetry(index);
     unawaited(_controllers[index]?.stop());
@@ -2116,6 +2329,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     _firstFrameTimerFor(index)?.finish(
       outcome: FeedPlaybackOutcome.error,
       errorCategory: FeedPlaybackError.source,
+      sessionErrorCategory: _terminalPlaybackErrorsByVideoId[videoId],
     );
     _rebuildPage(index);
     return true;
@@ -2202,7 +2416,10 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       ..subscribeToFirstFrame(
         index,
         controller,
-        onFirstFrame: () => _rebuildPage(index),
+        onFirstFrame: () {
+          _rebuildPage(index);
+          unawaited(_recordFirstFrame(index, controller));
+        },
       )
       ..subscribeToPlaybackErrors(
         index,
@@ -2367,16 +2584,19 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
 
   @override
   Widget build(BuildContext context) {
-    return PageView.builder(
-      allowImplicitScrolling: true,
-      controller: _pageController,
-      physics: widget.scrollPhysics,
-      scrollDirection: widget.scrollDirection,
-      onPageChanged: _onPageChanged,
-      itemCount: widget.videos.length,
-      itemBuilder: (context, index) => ValueListenableBuilder<int>(
-        valueListenable: _pageRevision(index),
-        builder: (context, _, _) => _buildPage(context, index),
+    return PriorityPointerSignalListener(
+      onPointerSignal: _onPointerSignal,
+      child: PageView.builder(
+        allowImplicitScrolling: true,
+        controller: _pageController,
+        physics: widget.scrollPhysics,
+        scrollDirection: widget.scrollDirection,
+        onPageChanged: _onPageChanged,
+        itemCount: widget.videos.length,
+        itemBuilder: (context, index) => ValueListenableBuilder<int>(
+          valueListenable: _pageRevision(index),
+          builder: (context, _, _) => _buildPage(context, index),
+        ),
       ),
     );
   }

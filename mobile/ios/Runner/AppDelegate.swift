@@ -2,6 +2,7 @@ import Flutter
 import UIKit
 import UserNotifications
 import AVFoundation
+import divine_camera
 import LibProofMode
 import ZendeskCoreSDK
 import SupportSDK
@@ -39,6 +40,8 @@ extension FlutterError: @retroactive Error {}
     TunnelVideoEffect.register()
     ZoomBlurVideoEffect.register()
     SpinBlurVideoEffect.register()
+    BassHitVideoEffect.register()
+    BlastVideoEffect.register()
     ComicVideoEffect.register()
     EightBitVideoEffect.register()
     AnaglyphVideoEffect.register()
@@ -58,6 +61,14 @@ extension FlutterError: @retroactive Error {}
     IntroOutroVideoEffect.register()
     LookVideoEffect.register()
     AdjustVideoEffect.register()
+    if #available(iOS 16.2, *) {
+      // A Live Activity while the camera is open puts the Apple Watch remote
+      // in the Watch's Smart Stack.
+      let recorderLiveActivity = RecorderLiveActivityController()
+      DivineCameraPlugin.onWatchRemoteChanged = { recorderState in
+        recorderLiveActivity.show(recorderState: recorderState)
+      }
+    }
     #if DEBUG
     exportScreenshotLaunchConfig()
     #endif
@@ -135,7 +146,7 @@ extension FlutterError: @retroactive Error {}
 
   // Portrait for the entire app (including camera preview), except on a large
   // screen — an iPad, or the iPhone Duo's inner display — while the Large
-  // Screen Layout experimental feature is on. There every orientation is
+  // Screen Layout feature is on, as it is by default. There every orientation is
   // allowed here and Dart narrows it through SystemChrome
   // (AdaptiveLayoutScope), asking for portrait while the camera is on top.
   // Asked again on every rotation and whenever the feature turns on or off,
@@ -159,7 +170,11 @@ extension FlutterError: @retroactive Error {}
   /// FeatureFlag.largeScreenLayout as the app resolves it: the user's choice,
   /// or else the build default. Dart reports it (AdaptiveLayoutScope); a
   /// persisted override alone would miss a build that turns it on by default.
-  private var largeScreenLayoutEnabled = false
+  ///
+  /// Starts at the build default, on (#11472), so an iPad held in landscape
+  /// launches in landscape instead of turning once Dart reports. Only someone
+  /// who turned the layouts off sees the app turn to portrait at launch.
+  private var largeScreenLayoutEnabled = true
 
   /// AdaptiveBreakpoints.large: the shortest side, in points, from which a
   /// screen counts as large.
@@ -594,6 +609,21 @@ extension FlutterError: @retroactive Error {}
           return
         }
 
+        guard let zendesk = Zendesk.instance else {
+          result(FlutterError(code: "SDK_NOT_INITIALIZED",
+                            message: "Zendesk SDK not initialized",
+                            details: nil))
+          return
+        }
+        // Without an identity the SDK fails the ticket before sending it, as
+        // Android's does. Dart can set one and retry.
+        guard zendesk.identity != nil else {
+          result(FlutterError(code: "NO_IDENTITY",
+                            message: "Set an identity before creating a ticket",
+                            details: nil))
+          return
+        }
+
         let tags = args["tags"] as? [String] ?? []
         let ticketFormId = args["ticketFormId"] as? NSNumber
         let customFieldsData = args["customFields"] as? [[String: Any]] ?? []
@@ -631,13 +661,16 @@ extension FlutterError: @retroactive Error {}
           ZDKRequestProvider().createRequest(createRequest) { (request, error) in
             DispatchQueue.main.async {
               if let error = error {
-                NSLog("❌ Zendesk: Failed to create ticket - \(error.localizedDescription)")
-                // Same `networkError` detail as Android, so Dart can keep an
-                // offline attempt out of crash reports.
-                let networkError = (error as NSError).domain == NSURLErrorDomain
-                result(FlutterError(code: "CREATE_FAILED",
-                                  message: error.localizedDescription,
-                                  details: ["networkError": networkError]))
+                let nsError = error as NSError
+                NSLog("❌ Zendesk: Failed to create ticket - \(nsError.domain) \(nsError.code): \(nsError.localizedDescription)")
+                result(FlutterError(
+                  code: "CREATE_FAILED",
+                  message: nsError.localizedDescription,
+                  details: zendeskCreateTicketErrorDetails(
+                    error,
+                    identity: Zendesk.instance?.identity.map(zendeskIdentityName)
+                  )
+                ))
               } else if let request = request as? ZDKRequest {
                 NSLog("✅ Zendesk: Ticket created successfully - ID: \(request.requestId)")
                 result(true)
@@ -750,5 +783,104 @@ extension FlutterError: @retroactive Error {}
     default:
       return "image/jpeg"
     }
+  }
+}
+
+/// The errors the Zendesk iOS SDK (ZendeskCoreSDK 5.0, SupportProvidersSDK 9.0)
+/// fails a ticket with. None of them is public API: they were read from the SDK
+/// binaries, and the identity check's were also raised against a stub server.
+enum ZendeskSdkErrorDomain {
+  /// The ticket API answered with an HTTP error. The code is the HTTP status.
+  static let http = "com.zendesk.sdk"
+  /// Exchanging the identity for an access token failed (code 1000). The
+  /// exchange's HTTP status is in the user info under `HTTP Status code`.
+  static let tokenExchange = "com.zendesk.sdk.core"
+  /// The SDK held no identity when it tried to authenticate.
+  static let access = "com.zendesk.core.access"
+  /// The identity check that runs before the token exchange failed:
+  /// `identityMismatchCode`, 808 when the SDK has no settings that say which
+  /// type the app expects (also when the settings request fails offline), or
+  /// 809 when a request that needs no access token asked for one.
+  static let identityCheck = "com.zendesk.core.identity"
+  /// The identity's type differs from the one the SDK app is set up for.
+  static let identityMismatchCode = 303
+}
+
+/// The name Dart uses for the type of `identity`, as in `expectedAuth`.
+func zendeskIdentityName(_ identity: Identity) -> String {
+  switch identity.type {
+  case .jwt: return "jwt"
+  case .anonymous: return "anonymous"
+  @unknown default: return "unknown"
+  }
+}
+
+/// The `details` of the `CREATE_FAILED` error that `createTicket` raises when
+/// the Zendesk SDK fails to create a ticket, with the keys Android's
+/// `zendeskCreateTicketErrorDetails` uses.
+///
+/// `status` is the HTTP status, or -1 when none arrived; `networkError` marks
+/// an I/O failure; `authFailed` marks a failure to authenticate `identity`,
+/// which Dart retries with another identity; `expectedAuth`, `jwt` or
+/// `anonymous`, names the identity type the SDK app is set up for, so Dart
+/// never retries with a type the app refuses. `identity` is the type the SDK
+/// held, and `errorDomain` and `errorCode` identify the error, because iOS
+/// gives no reason as specific as Android's.
+func zendeskCreateTicketErrorDetails(_ error: Error, identity: String?) -> [String: Any] {
+  let nsError = error as NSError
+  let underlying = nsError.userInfo[NSUnderlyingErrorKey] as? NSError
+  let networkError =
+    nsError.domain == NSURLErrorDomain || underlying?.domain == NSURLErrorDomain
+
+  let status: Int
+  switch nsError.domain {
+  case ZendeskSdkErrorDomain.http:
+    status = nsError.code
+  case ZendeskSdkErrorDomain.tokenExchange:
+    status = zendeskStatusCode(nsError.userInfo["HTTP Status code"]) ?? -1
+  default:
+    status = -1
+  }
+
+  let identityMismatch =
+    nsError.domain == ZendeskSdkErrorDomain.identityCheck
+    && nsError.code == ZendeskSdkErrorDomain.identityMismatchCode
+  let authFailed = !networkError && (
+    identityMismatch
+      || nsError.domain == ZendeskSdkErrorDomain.tokenExchange
+      || nsError.domain == ZendeskSdkErrorDomain.access
+      || (nsError.domain == ZendeskSdkErrorDomain.http && status == 401)
+  )
+
+  var details: [String: Any] = [
+    "status": status,
+    "networkError": networkError,
+    "authFailed": authFailed,
+    "errorDomain": nsError.domain,
+    "errorCode": nsError.code,
+  ]
+  if let identity { details["identity"] = identity }
+  if authFailed {
+    // The identity check runs before authentication, so an identity that got
+    // as far as authenticating has the type the app expects. One refused by
+    // the check has the other type.
+    let expectedAuth: String?
+    switch (identityMismatch, identity) {
+    case (true, "jwt"): expectedAuth = "anonymous"
+    case (true, "anonymous"): expectedAuth = "jwt"
+    case (true, _): expectedAuth = nil
+    case (false, let held): expectedAuth = held
+    }
+    if let expectedAuth { details["expectedAuth"] = expectedAuth }
+  }
+  return details
+}
+
+private func zendeskStatusCode(_ value: Any?) -> Int? {
+  guard let value else { return nil }
+  switch value {
+  case let number as NSNumber: return number.intValue
+  case let text as String: return Int(text)
+  default: return nil
   }
 }

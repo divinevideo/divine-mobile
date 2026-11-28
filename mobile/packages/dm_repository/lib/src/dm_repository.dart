@@ -32,6 +32,7 @@ import 'package:dm_repository/src/dm_shared_video_citation.dart';
 import 'package:dm_repository/src/dm_subscription_ids.dart';
 import 'package:dm_repository/src/dm_sync_state.dart';
 import 'package:dm_repository/src/dm_verify_isolate.dart';
+import 'package:dm_repository/src/dm_wrap_lookup.dart';
 import 'package:dm_repository/src/group_conversation_recovery.dart';
 import 'package:dm_repository/src/nip17_message_service.dart';
 import 'package:meta/meta.dart';
@@ -54,10 +55,81 @@ import 'package:nostr_sdk/signer/isolate_decrypt_signer.dart';
 import 'package:nostr_sdk/signer/nostr_signer.dart';
 import 'package:nostr_sdk/utils/relay_addr_util.dart';
 import 'package:nostr_sdk/utils/relay_url_policy.dart';
+import 'package:rxdart/rxdart.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// A stored conversation: its id and the pubkeys taking part in it.
 typedef _Conversation = ({String id, List<String> participants});
+
+typedef _PreparedSend = ({
+  OutgoingDm row,
+  Event rumor,
+  List<List<String>> rumorTags,
+  List<String> participants,
+});
+
+typedef _SendPreparation = ({NIP17SendResult? refusal, _PreparedSend? send});
+
+/// The account or its session changed while a video share was being queued.
+///
+/// Nothing was queued. This is an expected race with sign-out or an account
+/// switch, not a programming error, so callers handle it without reporting it.
+class ShareSessionEndedException implements Exception {
+  /// Creates the exception; it carries no data.
+  const ShareSessionEndedException();
+
+  @override
+  String toString() =>
+      'ShareSessionEndedException: the session ended before the share was '
+      'queued';
+}
+
+/// The durable local outcome for one recipient of a video share.
+sealed class ShareEnqueueOutcome {
+  const ShareEnqueueOutcome();
+  const factory ShareEnqueueOutcome.queued(
+    String rumorId,
+    String conversationId,
+  ) = ShareEnqueueQueued;
+  const factory ShareEnqueueOutcome.blocked() = ShareEnqueueBlocked;
+  const factory ShareEnqueueOutcome.tooLong() = ShareEnqueueTooLong;
+  const factory ShareEnqueueOutcome.refused(String reason) =
+      ShareEnqueueRefused;
+}
+
+/// All queue writes committed, including this recipient’s rumor.
+final class ShareEnqueueQueued extends ShareEnqueueOutcome {
+  /// Identifies the two owner-scoped records the caller can observe.
+  const ShareEnqueueQueued(this.rumorId, this.conversationId);
+
+  /// Stable rumor id reused by the outbox across retries.
+  final String rumorId;
+
+  /// One-to-one conversation that holds the outgoing message.
+  final String conversationId;
+}
+
+/// The recipient failed the current outbound policy.
+final class ShareEnqueueBlocked extends ShareEnqueueOutcome {
+  /// No row was queued for this recipient.
+  const ShareEnqueueBlocked();
+}
+
+/// The built rumor exceeds [maxDmRumorBytes], the most a gift wrap can carry.
+final class ShareEnqueueTooLong extends ShareEnqueueOutcome {
+  /// The caller can shorten the share and send again.
+  const ShareEnqueueTooLong();
+}
+
+/// The recipient is not a valid hex pubkey, is the sender, or was refused for
+/// another local reason before anything was queued.
+final class ShareEnqueueRefused extends ShareEnqueueOutcome {
+  /// Carries the local cause of this refusal.
+  const ShareEnqueueRefused(this.reason);
+
+  /// Diagnostic detail for the caller.
+  final String reason;
+}
 
 /// Decrypts a gift-wrapped event (kind 1059) through the NIP-17 layers
 /// (gift wrap → seal → rumor) and returns the inner rumor event.
@@ -469,6 +541,7 @@ typedef DmInboxLookup = ({List<String>? relays, DmInboxResolution state});
 /// than the viewer wrote after both the conversation's read cursor and the
 /// viewer's own newest message.
 typedef DmVisibleActivity = ({
+  bool lastMessageIsVideoShare,
   String? lastMessageContent,
   int? lastMessageTimestamp,
   String? lastMessageSenderPubkey,
@@ -628,6 +701,7 @@ class DmRepository {
     OutgoingDmsDao? outgoingDmsDao,
     PendingGiftWrapsDao? pendingGiftWrapsDao,
     ProcessedGiftWrapsDao? processedGiftWrapsDao,
+    Stream<DmWrapAudience?> Function(String owner)? watchWrapAudience,
     RemovedConversationsDao? removedConversationsDao,
     RemovedMessageIdsDao? removedMessageIdsDao,
     DmSyncState? syncState,
@@ -651,6 +725,7 @@ class DmRepository {
     List<String> dmInboxTaggedRelays = const <String>[],
     Duration readMarkerDebounceDelay = _defaultReadMarkerDebounceDelay,
     Duration readStateRetryDelay = const Duration(seconds: 5),
+    this.isShareRecipientHidden,
     String Function()? sendBatchIdGenerator,
     String? environment,
   }) : _nostrClient = nostrClient,
@@ -661,6 +736,7 @@ class DmRepository {
        _outgoingDmsDao = outgoingDmsDao,
        _pendingGiftWrapsDao = pendingGiftWrapsDao,
        _processedGiftWrapsDao = processedGiftWrapsDao,
+       _watchWrapAudience = watchWrapAudience,
        _removedConversationsDao = removedConversationsDao,
        _removedMessageIdsDao = removedMessageIdsDao,
        _syncState = syncState,
@@ -719,6 +795,28 @@ class DmRepository {
   /// remote-signer RPC each). Nullable to keep older test fixtures working
   /// without rewiring. See #5452.
   final ProcessedGiftWrapsDao? _processedGiftWrapsDao;
+  final Stream<DmWrapAudience?> Function(String owner)? _watchWrapAudience;
+
+  /// Resolves only verified inbound rows belonging to the current account.
+  Stream<DmWrapLookup> watchWrapLookup({
+    required String ownerPubkey,
+    required String giftWrapId,
+  }) {
+    if (ownerPubkey.isEmpty || ownerPubkey != _ownerPubkey) {
+      return Stream.value(const DmWrapSuppressed());
+    }
+    return Rx.combineLatest2(
+      _directMessagesDao.watchWrapTarget(
+        ownerPubkey: ownerPubkey,
+        giftWrapId: giftWrapId,
+      ),
+      _watchWrapAudience?.call(ownerPubkey) ??
+          Stream<DmWrapAudience?>.value(null),
+      (row, audience) => ownerPubkey == _ownerPubkey
+          ? DmWrapLookup.fromRecord(row, ownerPubkey, audience)
+          : const DmWrapSuppressed(),
+    );
+  }
 
   /// Durable owner-scoped removal markers. Relay events are replayable, so a
   /// hard delete without this ledger would restore the thread on restart.
@@ -963,9 +1061,38 @@ class DmRepository {
   final List<String> _dmInboxLookupRelays;
   final List<String> _dmInboxTaggedRelays;
 
-  /// The app environment this repository sends in, stamped on every queued
-  /// DM so the retry service never resends it in another one (#10148). Null
-  /// leaves the rows unstamped, as before.
+  /// Whether the share sheet would hide a recipient now; checked again each
+  /// time a share-sheet share is sent or replayed. Other DMs never consult it,
+  /// because the app wires it to feed filtering, which includes other
+  /// people's block and mute lists.
+  final bool Function(String recipient)? isShareRecipientHidden;
+
+  NIP17SendResult? _shareRefusal(bool isVideoShare, String recipient) =>
+      isVideoShare && (isShareRecipientHidden?.call(recipient) ?? false)
+      ? const NIP17SendResult.blocked(
+          'Recipient is unavailable',
+          disposition: NIP17BlockedSendDisposition.retain,
+        )
+      : null;
+
+  NIP17SendResult? Function()? _beforeSharePublish({
+    required bool isVideoShare,
+    required String recipient,
+    required String owner,
+    required int generation,
+    required String rumorId,
+  }) {
+    if (!isVideoShare) return null;
+    return () {
+      if (_ingestSessionEnded(owner, generation)) {
+        return _queuedForDelivery(rumorId);
+      }
+      return _shareRefusal(true, recipient);
+    };
+  }
+
+  /// The app environment stamped on queued DMs to keep retries in the same
+  /// environment (#10148). Null retains the legacy unstamped behavior.
   final String? _environment;
 
   /// Mints the durable, collision-proof identity for one send invocation.
@@ -1363,6 +1490,10 @@ class DmRepository {
   final Map<String, Future<NIP17SendResult>> _recoveriesInFlight =
       <String, Future<NIP17SendResult>>{};
 
+  /// Group send batches whose own copy this account's session published
+  /// (#10016). A cancel can take every row that would record it.
+  final Set<String> _publishedBatchOwnCopies = <String>{};
+
   /// Rumor ids whose ORIGINAL [sendMessage] attempt is still running. Its
   /// queue row stays `pending` from enqueue until the attempt finalizes,
   /// which the row alone cannot tell apart from a send that ended held and
@@ -1574,6 +1705,7 @@ class DmRepository {
     _dismissalSubscription = null;
     _pendingReadCursors.clear();
     _earlyDeletions.clear();
+    _publishedBatchOwnCopies.clear();
     _endLiveSubscriptions();
     _liveCatchUp?.cancelHoldLimit();
     _liveCatchUp = null;
@@ -2070,9 +2202,11 @@ class DmRepository {
   /// Before this, the self-copy went to the pool only. Divine advertises
   /// `nos.lol` and `relay.primal.net` in every account's kind-10050 (the app
   /// layer's `IndexerRelayConfig.dmInboxTaggedRelays`, passed in as
-  /// [_dmInboxTaggedRelays]), and neither joins the pool unless NIP-65
-  /// discovery came back empty — so the sender's own replies were absent from
-  /// two of the three relays their own inbox list points at.
+  /// [_dmInboxTaggedRelays]), and at the time neither joined the pool unless
+  /// NIP-65 discovery came back empty — so the sender's own replies were
+  /// absent from two of the three relays their own inbox list points at. The
+  /// app layer has added both to the pool on every discovery since #8378; the
+  /// union still reaches inbox relays an account lists outside the pool.
   Future<List<String>?> _selfWrapTargetRelays() async {
     final ownInbox = await _ownInboxRelays();
     if (ownInbox == null || ownInbox.isEmpty) return null;
@@ -5185,7 +5319,20 @@ class DmRepository {
             ownerPubkey: ownerPubkey,
             sendBatchId: sendBatchId,
           );
-          if (!inserted) return;
+          if (!inserted) {
+            await _processedGiftWrapsDao?.record(
+              giftWrapId: giftWrapEvent.id,
+              ownerPubkey: ownerPubkey,
+              verifiedDuplicate: isSentByMe
+                  ? null
+                  : (
+                      messageId: rumor.id,
+                      sender: rumor.pubkey,
+                      conversationId: conversationId,
+                    ),
+            );
+            return;
+          }
 
           final existing = await _conversationsDao.getConversation(
             conversationId,
@@ -5197,6 +5344,7 @@ class DmRepository {
             participantPubkeys: jsonEncode(participants),
             isGroup: isGroup,
             createdAt: existing?.createdAt ?? persistedCreatedAt,
+            lastMessageId: rumor.id,
             lastMessageContent: previewContent,
             lastMessageTimestamp: persistedCreatedAt,
             // Unbounded on purpose: only the read-cursor pin reads it, and it
@@ -5326,10 +5474,6 @@ class DmRepository {
           return;
         }
         if (!inserted) {
-          await _recordProcessedWrap(
-            giftWrapEvent.id,
-            ownerPubkey: ownerPubkey,
-          );
           Log.debug(
             'Skipped duplicate NIP-17 DM ${rumor.id} in conversation '
             '$conversationId: insert was ignored by local dedup constraints',
@@ -6128,6 +6272,7 @@ class DmRepository {
           participantPubkeys: jsonEncode(participants),
           isGroup: false,
           createdAt: existing?.createdAt ?? persistedCreatedAt,
+          lastMessageId: nip04Event.id,
           lastMessageContent: plaintext,
           lastMessageTimestamp: persistedCreatedAt,
           // Unbounded on purpose: only the read-cursor pin reads it, and it
@@ -7139,6 +7284,7 @@ class DmRepository {
     required int lastMessageTimestamp,
     required String lastMessageSenderPubkey,
     String? lastMessageContent,
+    String? lastMessageId,
     String? ownerPubkey,
     String? dmProtocol,
   }) async {
@@ -7147,6 +7293,7 @@ class DmRepository {
       participantPubkeys: participantPubkeys,
       isGroup: isGroup,
       createdAt: createdAt,
+      lastMessageId: lastMessageId,
       lastMessageContent: lastMessageContent,
       lastMessageTimestamp: lastMessageTimestamp,
       lastMessageSenderPubkey: lastMessageSenderPubkey,
@@ -7253,44 +7400,26 @@ class DmRepository {
     );
   }
 
-  /// The guards, rumor build, and durable enqueue shared by [sendMessage] and
-  /// [enqueueSend] — everything up to and including parking the `outgoing_dms`
-  /// row, but NOT the publish. Returns a terminal [NIP17SendResult] in
-  /// `refusal` (self-send / policy block / oversized) or the built rumor and
-  /// its derived send context. #8053.
-  Future<
-    ({
-      NIP17SendResult? refusal,
-      Event? rumor,
-      String? conversationId,
-      String? sendBatchId,
-      List<List<String>>? rumorTags,
-      List<String>? participants,
-    })
-  >
-  _prepareAndEnqueueSend({
+  /// Prepares an outgoing rumor and its durable row without writing or
+  /// publishing. Batch shares collect these before committing any of them.
+  Future<_SendPreparation> _prepareSend({
+    required String owner,
+    required int generation,
     required String recipientPubkey,
     required String content,
     String? replyToId,
     String? idempotencyKey,
     int? createdAt,
     List<List<String>> additionalTags = const [],
+    bool skipNip04Fallback = false,
+    bool isVideoShare = false,
   }) async {
-    _assertInitialized();
-    final owner = _userPubkey;
-    final generation = _resetGeneration;
     final messageService = _messageService!;
-    bool isCurrent() =>
-        !_disposed && _resetGeneration == generation && _userPubkey == owner;
     const abandoned = (
       refusal: NIP17SendResult.failure(
         'account changed before send was queued',
       ),
-      rumor: null,
-      conversationId: null,
-      sendBatchId: null,
-      rumorTags: null,
-      participants: null,
+      send: null,
     );
     validatePubkey(recipientPubkey);
     if (content.trim().isEmpty) {
@@ -7316,11 +7445,7 @@ class DmRepository {
         refusal: const NIP17SendResult.failure(
           'refused: a message cannot be addressed to its own sender',
         ),
-        rumor: null,
-        conversationId: null,
-        sendBatchId: null,
-        rumorTags: null,
-        participants: null,
+        send: null,
       );
     }
 
@@ -7328,18 +7453,16 @@ class DmRepository {
     // NIP17MessageService.sendRumor is the authoritative choke point (it also
     // covers the drain replay); this earlier check avoids storing a queue row
     // that would only ever re-fail the gate.
+    final shareRefusal = _shareRefusal(isVideoShare, recipientPubkey);
+    if (shareRefusal != null) return (refusal: shareRefusal, send: null);
     final permitted = await messageService.canSendTo(recipientPubkey);
-    if (!isCurrent()) return abandoned;
+    if (_ingestSessionEnded(owner, generation)) return abandoned;
     if (!permitted) {
       return (
         refusal: const NIP17SendResult.blocked(
           'blocked: recipient not permitted by send policy',
         ),
-        rumor: null,
-        conversationId: null,
-        sendBatchId: null,
-        rumorTags: null,
-        participants: null,
+        send: null,
       );
     }
 
@@ -7392,22 +7515,14 @@ class DmRepository {
     if (oversized != null) {
       return (
         refusal: oversized,
-        rumor: null,
-        conversationId: null,
-        sendBatchId: null,
-        rumorTags: null,
-        participants: null,
+        send: null,
       );
     }
 
-    // Enqueue before publish so an app crash mid-send leaves a
-    // recoverable trace. No-op when the queue dao isn't wired in
-    // (older test fixtures, NIP-04-only callers).
-    if (!isCurrent()) return abandoned;
-    final outgoingDao = _outgoingDmsDao;
-    if (outgoingDao != null) {
-      await outgoingDao.enqueue(
-        OutgoingDm(
+    return (
+      refusal: null,
+      send: (
+        row: OutgoingDm(
           id: rumor.id,
           conversationId: conversationId,
           recipientPubkey: recipientPubkey,
@@ -7420,24 +7535,52 @@ class DmRepository {
           selfWrapStatus: OutgoingWrapStatus.pending,
           queuedAt: DateTime.now(),
           ownerPubkey: owner,
-          // Stamped verbatim, as the group path stamps its siblings: a 1:1
-          // row has no siblings, but carrying the token makes a deleted
-          // bubble's cancellation match by exact value instead of falling
-          // back to the collision-prone `(createdAt, content)` tuple.
           sendBatchId: sendBatchId,
           environment: _environment,
+          skipNip04Fallback: skipNip04Fallback,
+          isVideoShare: isVideoShare,
         ),
+        rumor: rumor,
+        rumorTags: rumorTags,
+        participants: participants,
+      ),
+    );
+  }
+
+  Future<_SendPreparation> _prepareAndEnqueueSend({
+    required String recipientPubkey,
+    required String content,
+    String? replyToId,
+    String? idempotencyKey,
+    int? createdAt,
+    List<List<String>> additionalTags = const [],
+    bool skipNip04Fallback = false,
+  }) async {
+    _assertInitialized();
+    final owner = _userPubkey;
+    final generation = _resetGeneration;
+    final prep = await _prepareSend(
+      owner: owner,
+      generation: generation,
+      recipientPubkey: recipientPubkey,
+      content: content,
+      replyToId: replyToId,
+      idempotencyKey: idempotencyKey,
+      createdAt: createdAt,
+      additionalTags: additionalTags,
+      skipNip04Fallback: skipNip04Fallback,
+    );
+    if (_ingestSessionEnded(owner, generation)) {
+      return (
+        refusal: const NIP17SendResult.failure(
+          'account changed before send was queued',
+        ),
+        send: null,
       );
     }
-
-    return (
-      refusal: null,
-      rumor: rumor,
-      conversationId: conversationId,
-      sendBatchId: sendBatchId,
-      rumorTags: rumorTags,
-      participants: participants,
-    );
+    final send = prep.send;
+    if (send != null) await _outgoingDmsDao?.enqueue(send.row);
+    return prep;
   }
 
   /// Enqueues a NIP-17 DM durably WITHOUT publishing it, returning the parked
@@ -7481,7 +7624,7 @@ class DmRepository {
       if (refusal.tooLong) return EnqueueSendResult.tooLong(message);
       return EnqueueSendResult.refused(message);
     }
-    return EnqueueSendResult.enqueued(prep.rumor!.id);
+    return EnqueueSendResult.enqueued(prep.send!.row.id);
   }
 
   /// Send a text message to a 1:1 conversation.
@@ -7530,10 +7673,24 @@ class DmRepository {
       content: content,
       replyToId: replyToId,
       additionalTags: additionalTags,
+      skipNip04Fallback: skipNip04Fallback,
     );
     final refusal = prep.refusal;
     if (refusal != null) return refusal;
-    final rumor = prep.rumor!;
+    return _deliverPreparedSend(
+      prep.send!,
+      generation: generation,
+      backgroundDelivery: backgroundDelivery,
+    );
+  }
+
+  Future<NIP17SendResult> _deliverPreparedSend(
+    _PreparedSend prep, {
+    required int generation,
+    required bool backgroundDelivery,
+  }) async {
+    final rumor = prep.rumor;
+    final row = prep.row;
 
     // Register the attempt under the per-rumor recovery key, as the group
     // send does for its publishes: a Retry or sweep recoverFullSend that
@@ -7549,10 +7706,10 @@ class DmRepository {
     // always owns the finalization.
     if (backgroundDelivery && _outgoingDmsDao != null) {
       await _ensureConversationVisibleAfterSendFailure(
-        conversationId: prep.conversationId!,
-        participants: prep.participants!,
+        conversationId: row.conversationId,
+        participants: prep.participants,
         isGroup: false,
-        content: content,
+        content: row.content,
         ownerPubkey: rumor.pubkey,
         expectedGeneration: generation,
       );
@@ -7569,14 +7726,15 @@ class DmRepository {
       try {
         return await _publishPreparedSend(
           rumor: rumor,
-          conversationId: prep.conversationId!,
-          sendBatchId: prep.sendBatchId!,
-          rumorTags: prep.rumorTags!,
-          participants: prep.participants!,
-          recipientPubkey: recipientPubkey,
-          content: content,
-          replyToId: replyToId,
-          skipNip04Fallback: skipNip04Fallback,
+          conversationId: row.conversationId,
+          sendBatchId: row.sendBatchId!,
+          rumorTags: prep.rumorTags,
+          participants: prep.participants,
+          recipientPubkey: row.recipientPubkey,
+          content: row.content,
+          replyToId: row.replyToId,
+          skipNip04Fallback: row.skipNip04Fallback,
+          isVideoShare: row.isVideoShare,
           generation: generation,
           checkCancelledBeforePublish: backgroundDelivery,
         );
@@ -7654,6 +7812,7 @@ class DmRepository {
     required bool skipNip04Fallback,
     required int generation,
     required bool checkCancelledBeforePublish,
+    required bool isVideoShare,
   }) async {
     final outgoingDao = _outgoingDmsDao;
     final owner = rumor.pubkey;
@@ -7709,6 +7868,13 @@ class DmRepository {
     final publishResult = await _sendRumorWithTimeout(
       rumor: rumor,
       recipientPubkey: recipientPubkey,
+      publishRefusal: _beforeSharePublish(
+        isVideoShare: isVideoShare,
+        recipient: recipientPubkey,
+        owner: owner,
+        generation: generation,
+        rumorId: rumor.id,
+      ),
       targetRelays: inbox.relays,
       selfWrapTargetRelays: selfWrapRelays,
       awaitRecipientOk: true,
@@ -7825,6 +7991,7 @@ class DmRepository {
             participantPubkeys: jsonEncode(participants),
             isGroup: false,
             createdAt: existingSend?.createdAt ?? now,
+            lastMessageId: rumor.id,
             lastMessageContent: content,
             lastMessageTimestamp: now,
             lastMessageSenderPubkey: owner,
@@ -7833,6 +8000,11 @@ class DmRepository {
           );
 
           if (outgoingDao != null) {
+            await _directMessagesDao.markRecipientAccepted(
+              ownerPubkey: owner,
+              rumorId: rumor.id,
+              environment: _environment ?? '',
+            );
             await _finalizeAfterRecipientSuccess(
               outgoingDao: outgoingDao,
               rumorId: rumor.id,
@@ -7976,6 +8148,119 @@ class DmRepository {
         ),
       };
 
+  /// Queues one one-to-one share per recipient in a single local transaction,
+  /// then starts background delivery for each. Never sends a kind-4 copy.
+  ///
+  /// Each accepted recipient gets its own stable rumor id for delivery and
+  /// retry. Results are keyed by trimmed, lower-cased hex pubkey, so
+  /// duplicates collapse.
+  ///
+  /// Throws:
+  ///
+  /// * [ShareSessionEndedException] if the account or session changes before
+  ///   the commit; nothing is queued.
+  /// * [StateError] if the repository is uninitialized or no outgoing queue
+  ///   is wired in.
+  @useResult
+  Future<Map<String, ShareEnqueueOutcome>> enqueueSharedVideoBatch({
+    required List<String> recipientPubkeys,
+    required String baseContent,
+    required int videoKind,
+    required String videoAuthorPubkey,
+    String? videoDTag,
+    String? videoEventId,
+    String? relayHint,
+  }) async {
+    _assertInitialized();
+    final dao = _outgoingDmsDao;
+    if (dao == null) {
+      throw StateError('Video shares require a durable outgoing queue');
+    }
+    final owner = _userPubkey;
+    final generation = _resetGeneration;
+    bool isCurrent() => !_ingestSessionEnded(owner, generation);
+    final share = _sharedVideoContent(
+      baseContent: baseContent,
+      videoKind: videoKind,
+      videoAuthorPubkey: videoAuthorPubkey,
+      videoDTag: videoDTag,
+      videoEventId: videoEventId,
+      relayHint: relayHint,
+    );
+    final outcomes = <String, ShareEnqueueOutcome>{};
+    final prepared = <_PreparedSend>[];
+    final recipients = recipientPubkeys
+        .map((key) => key.trim().toLowerCase())
+        .toSet();
+    for (final recipient in recipients) {
+      if (!NostrHexUtils.isValidPubkey(recipient)) {
+        outcomes[recipient] = const ShareEnqueueOutcome.refused(
+          'invalid recipient',
+        );
+        continue;
+      }
+      final prep = await _prepareSend(
+        owner: owner,
+        generation: generation,
+        recipientPubkey: recipient,
+        content: share.content,
+        additionalTags: share.tags,
+        skipNip04Fallback: true,
+        isVideoShare: true,
+      );
+      if (!isCurrent()) throw const ShareSessionEndedException();
+      final refusal = prep.refusal;
+      if (refusal != null) {
+        outcomes[recipient] = switch (refusal) {
+          NIP17SendFailure(blocked: true) =>
+            const ShareEnqueueOutcome.blocked(),
+          NIP17SendFailure(tooLong: true) =>
+            const ShareEnqueueOutcome.tooLong(),
+          _ => ShareEnqueueOutcome.refused(refusal.error ?? 'send refused'),
+        };
+        continue;
+      }
+      final send = prep.send!;
+      prepared.add(send);
+      outcomes[recipient] = ShareEnqueueOutcome.queued(
+        send.row.id,
+        send.row.conversationId,
+      );
+    }
+    if (prepared.isEmpty) return outcomes;
+    try {
+      await dao.enqueueAll([
+        for (final send in prepared) send.row,
+      ], isCurrent: isCurrent);
+    } on Object {
+      // The DAO rolls back when the owner check fails mid-transaction.
+      if (!isCurrent()) throw const ShareSessionEndedException();
+      rethrow;
+    }
+    for (final send in prepared) {
+      if (!isCurrent()) break;
+      try {
+        // Only awaits local visibility and registration of the recovery lock.
+        await _deliverPreparedSend(
+          send,
+          generation: generation,
+          backgroundDelivery: true,
+        );
+      } on Object catch (error, stackTrace) {
+        // The commit already owns this intent. Reporting enqueue failure here
+        // would invite a second send with a fresh rumor id.
+        Log.error(
+          'Could not start a queued share; the outbox will retry',
+          category: LogCategory.system,
+          error: error,
+          stackTrace: stackTrace,
+        );
+        if (isCurrent()) _notifyRetryableWork();
+      }
+    }
+    return outcomes;
+  }
+
   /// Shares a video into a 1:1 NIP-17 DM as a kind-14 rumor that cites the
   /// video with a NIP-18 `q` tag and a NIP-21 `nostr:` URI, in addition to the
   /// human-readable [baseContent] (which keeps the `https://divine.video` URL
@@ -7988,8 +8273,8 @@ class DmRepository {
   /// remains in [baseContent]).
   ///
   /// [skipNip04Fallback] forwards to [sendMessage]: pass `true` to suppress the
-  /// legacy plaintext kind-4 copy (recommended for shares — see the caller in
-  /// `VideoSharingService`).
+  /// legacy plaintext kind-4 copy. Recommended for shares;
+  /// [enqueueSharedVideoBatch] always suppresses it.
   ///
   /// [additionalTags] ride on the rumor after the citation, such as the
   /// question a viewer answers with a question sticker's answer.
@@ -8009,6 +8294,32 @@ class DmRepository {
     bool skipNip04Fallback = false,
     bool backgroundDelivery = false,
   }) async {
+    final share = _sharedVideoContent(
+      baseContent: baseContent,
+      videoKind: videoKind,
+      videoAuthorPubkey: videoAuthorPubkey,
+      videoDTag: videoDTag,
+      videoEventId: videoEventId,
+      relayHint: relayHint,
+    );
+    return sendMessage(
+      recipientPubkey: recipientPubkey,
+      content: share.content,
+      additionalTags: [...share.tags, ...additionalTags],
+      replyToId: replyToId,
+      backgroundDelivery: backgroundDelivery,
+      skipNip04Fallback: skipNip04Fallback,
+    );
+  }
+
+  ({String content, List<List<String>> tags}) _sharedVideoContent({
+    required String baseContent,
+    required int videoKind,
+    required String videoAuthorPubkey,
+    required String? videoDTag,
+    required String? videoEventId,
+    required String? relayHint,
+  }) {
     final citation = DmSharedVideoCitation.build(
       videoKind: videoKind,
       authorPubkey: videoAuthorPubkey,
@@ -8030,23 +8341,11 @@ class DmRepository {
         'message without the durable video reference.',
         category: LogCategory.system,
       );
-      return sendMessage(
-        recipientPubkey: recipientPubkey,
-        content: baseContent,
-        replyToId: replyToId,
-        additionalTags: additionalTags,
-        backgroundDelivery: backgroundDelivery,
-        skipNip04Fallback: skipNip04Fallback,
-      );
+      return (content: baseContent, tags: const []);
     }
-
-    return sendMessage(
-      recipientPubkey: recipientPubkey,
+    return (
       content: '$baseContent\n${citation.nostrUri}',
-      additionalTags: [citation.qTag, ...additionalTags],
-      replyToId: replyToId,
-      backgroundDelivery: backgroundDelivery,
-      skipNip04Fallback: skipNip04Fallback,
+      tags: [citation.qTag],
     );
   }
 
@@ -8268,10 +8567,29 @@ class DmRepository {
       );
     }
 
-    final result = await _messageService!.publishSelfWrap(
-      rumorEvent: rumor,
-      targetRelays: selfWrapRelays,
-    );
+    // A group member's row replays the batch's one copy, not a copy of its
+    // own. Once it lands, the batch's delivered rows go and its waiting rows
+    // record it (#10016).
+    final batchId = _groupBatchOf(row, rumor);
+    final result = batchId == null
+        ? await _messageService!.publishSelfWrap(
+            rumorEvent: rumor,
+            targetRelays: selfWrapRelays,
+          )
+        : await _ensureBatchOwnCopy(
+            dao: dao,
+            row: row,
+            sendBatchId: batchId,
+            rumor: rumor,
+            selfWrapRelays: selfWrapRelays,
+          );
+    // No publish ran after the row or session went away. Leave the queue
+    // and its retry budget alone.
+    if (!result.success &&
+        (_ingestSessionEnded(row.ownerPubkey, gen) ||
+            (batchId != null && result.retryablePending))) {
+      return _queuedForDelivery(rumorId);
+    }
 
     if (result.success) {
       // Both wraps have landed. Mirror sendMessage's full-delivery
@@ -8402,9 +8720,12 @@ class DmRepository {
   ///
   /// After a full success on a one-to-one thread still latched to NIP-04, the
   /// legacy kind-4 copy goes out too, as it would have from [sendMessage]
-  /// (#8506) — but only for a plain-text rumor. The row does not record
-  /// whether its sender opted out of the copy, so any tag beyond the
-  /// recipient, a reply reference and the send token suppresses it.
+  /// (#8506), unless the row opted out or the rumor carries structured tags.
+  /// The tag check covers rows queued before the opt-out was recorded, which
+  /// read as not opted out, and structured sends that never opted out.
+  ///
+  /// A row queued in another relay environment, or an account change during
+  /// the attempt, returns a pending result without finalizing the row.
   ///
   /// A one-to-one row addressed to its own sender is never republished: it is
   /// dropped and reported as blocked (#8363). [sendMessage] refuses such a
@@ -8483,7 +8804,11 @@ class DmRepository {
     required OutgoingDmsDao dao,
     required String rumorId,
   }) async {
+    final owner = _userPubkey;
+    final generation = _resetGeneration;
+    bool isCurrent() => !_ingestSessionEnded(owner, generation);
     final row = await dao.getById(rumorId);
+    if (!isCurrent()) return _queuedForDelivery(rumorId);
     if (row == null) {
       throw ArgumentError.value(
         rumorId,
@@ -8491,7 +8816,7 @@ class DmRepository {
         'no queued outgoing DM with this id',
       );
     }
-    if (row.ownerPubkey != _userPubkey) {
+    if (row.ownerPubkey != owner) {
       throw ArgumentError.value(
         rumorId,
         'rumorId',
@@ -8499,8 +8824,17 @@ class DmRepository {
       );
     }
 
+    // Another environment's relays own this row (#10148); leave it queued for
+    // the retry service running there.
+    if (_environment != null &&
+        row.environment != null &&
+        row.environment != _environment) {
+      return _queuedForDelivery(rumorId);
+    }
+
     // A one-to-one row addressed to its own sender is never republished
-    // (#8363). Checked first, so it is dropped whatever state it is in.
+    // (#8363). Checked before any wrap-state guard, so in this environment it
+    // is dropped whatever state it is in.
     if (_isSelfAddressedRow(row)) {
       return _dropSelfAddressedRow(dao: dao, row: row);
     }
@@ -8551,6 +8885,8 @@ class DmRepository {
       _selfWrapTargetRelays(),
     ).wait;
 
+    if (!isCurrent()) return _queuedForDelivery(rumorId);
+
     // The sweep resolves the same inbox the send path does, so it holds the
     // same evidence and must reach the same conclusion. A thread whose only
     // traffic is a queued message the sweep drives would otherwise stay
@@ -8568,9 +8904,10 @@ class DmRepository {
     // pair id, even when no conversation row survives. A row queued after
     // Leave may have escaped its queue deletion: cancel it before sending,
     // not only before local persistence on a successful send.
-    final pairParticipants = [_userPubkey, row.recipientPubkey]..sort();
+    final pairParticipants = [owner, row.recipientPubkey]..sort();
     final isGroupRow =
         row.conversationId != computeConversationId(pairParticipants);
+    final batchId = _groupBatchOf(row, rumor);
     if (isGroupRow && await _isLeftConversation(row.conversationId)) {
       await dao.deleteById(rumorId);
       return const NIP17SendResult.failure('group send cancelled by Leave');
@@ -8580,6 +8917,17 @@ class DmRepository {
     // inbox-less recipient reads, and another one is not more likely to reach
     // an inbox we still cannot read. Only a found inbox is sent to again
     // (#10012).
+    // Rows queued before the flag existed are recognized by the share sheet's
+    // exact shape. A reel reply or question answer also cites a video but is a
+    // DM, so it must not inherit the share sheet's feed-based eligibility.
+    final isVideoShare =
+        row.isVideoShare ||
+        (!isGroupRow &&
+            _isLegacyShareSheetRumor(
+              rumor,
+              recipientPubkey: row.recipientPubkey,
+            ) &&
+            parseCollaboratorInviteRumor(rumor) == null);
     final poolWrapId = _heldPoolWrapId(row);
     // A retry that keeps or settles on that wrap skips sendRumor, so it makes
     // sendRumor's pre-send checks here: the send policy (#176) and the offline
@@ -8588,7 +8936,10 @@ class DmRepository {
         poolWrapId != null &&
         (inbox.state == DmInboxResolution.unreadable ||
             inbox.state == DmInboxResolution.absent);
-    final refusal = keepsOrSettles ? await _heldRetryRefusal(rumor, row) : null;
+    final refusal =
+        _shareRefusal(isVideoShare, row.recipientPubkey) ??
+        (keepsOrSettles ? await _heldRetryRefusal(rumor, row) : null);
+    if (!isCurrent()) return _queuedForDelivery(rumorId);
     final NIP17SendResult result;
     if (refusal != null) {
       result = refusal;
@@ -8601,12 +8952,14 @@ class DmRepository {
       );
     } else if (poolWrapId != null && inbox.state == DmInboxResolution.absent) {
       result = await _settleHeldPoolWrap(
+        dao: dao,
         rumor: rumor,
         row: row,
         poolWrapId: poolWrapId,
         selfWrapRelays: selfWrapRelays,
       );
     } else {
+      Event? prebuiltOwnCopy;
       final publishResult = await _sendRumorWithTimeout(
         rumor: rumor,
         recipientPubkey: row.recipientPubkey,
@@ -8615,9 +8968,21 @@ class DmRepository {
         awaitRecipientOk: true,
         // Held by the downgrade below, so no self-copy yet (#10012).
         withholdSelfWrap: inbox.state == DmInboxResolution.unreadable,
+        // A group member's copy is its batch's, published once (#10016).
+        onSelfWrapDue: batchId == null
+            ? null
+            : (wrap) => prebuiltOwnCopy ??= wrap,
         recipientWrap: _storedUnconfirmedWrap(row),
+        publishRefusal: _beforeSharePublish(
+          isVideoShare: isVideoShare,
+          recipient: row.recipientPubkey,
+          owner: owner,
+          generation: generation,
+          rumorId: rumorId,
+        ),
       );
 
+      if (!isCurrent()) return _queuedForDelivery(rumorId);
       // Same rule as the initial send: a default-pool `OK` is not delivery
       // when the recipient's inbox stayed unreadable. Without this the sweep
       // undoes the send path's fix — it re-resolves to null, republishes to
@@ -8626,15 +8991,31 @@ class DmRepository {
       //
       // `dao` is non-null here (guarded above), so unlike `sendMessage` there
       // is always a row to preserve.
-      result = await _holdFallbackPoolDelivery(
+      final delivered = await _holdFallbackPoolDelivery(
         outgoingDao: dao,
         rowId: rumorId,
         rowStatus: row.recipientWrapStatus,
         published: publishResult,
         inboxState: inbox.state,
       );
+      result = batchId != null && delivered is NIP17SendSuccess
+          ? _withOwnCopyOutcome(
+              delivered,
+              published: (await _ensureBatchOwnCopy(
+                dao: dao,
+                row: row,
+                sendBatchId: batchId,
+                rumor: rumor,
+                selfWrapRelays: selfWrapRelays,
+                prebuiltSelfWrap: prebuiltOwnCopy,
+                deliveredHere: true,
+              )).success,
+            )
+          : delivered;
     }
 
+    if (!isCurrent()) return _queuedForDelivery(rumorId);
+    var finalized = result;
     if (result.success) {
       // Mirror sendMessage's happy-path transaction: persist
       // direct_messages + conversation upsert + queue finalize
@@ -8644,6 +9025,7 @@ class DmRepository {
       try {
         final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
         var persistedLocally = false;
+        var rowGone = false;
         String? protocol;
         await _conversationsDao.runInTransaction(() async {
           // Cancel interlock: the queue row may be gone by the time this
@@ -8655,6 +9037,7 @@ class DmRepository {
           // "give up", and for a concurrent recovery the winner has already
           // persisted the message.
           final liveRow = await dao.getById(rumorId);
+          if (!isCurrent()) return;
           if (liveRow == null) {
             Log.info(
               'Recovered publish for $rumorId landed after the queue row '
@@ -8662,6 +9045,7 @@ class DmRepository {
               'recovery); skipping local persist.',
               category: LogCategory.system,
             );
+            rowGone = true;
             return;
           }
           if (!_isLiveDelivery(liveRow)) {
@@ -8706,14 +9090,14 @@ class DmRepository {
               (batchId != null
                   ? await _directMessagesDao.hasMessageWithSendBatchId(
                       batchId: batchId,
-                      ownerPubkey: _userPubkey,
+                      ownerPubkey: owner,
                     )
                   : await _directMessagesDao.hasMatchingMessage(
                       conversationId: row.conversationId,
-                      senderPubkey: _userPubkey,
+                      senderPubkey: owner,
                       content: row.content,
                       createdAt: row.createdAt,
-                      ownerPubkey: _userPubkey,
+                      ownerPubkey: owner,
                       // Matches our OWN persisted send, not a cross-protocol
                       // twin, so the arrival-shape filter does not apply.
                       counterpart: DmDedupCounterpart.unconstrained,
@@ -8723,7 +9107,7 @@ class DmRepository {
             await _directMessagesDao.insertMessage(
               id: result.rumorEventId!,
               conversationId: row.conversationId,
-              senderPubkey: _userPubkey,
+              senderPubkey: owner,
               content: row.content,
               // The rumor's canonical timestamp (row.createdAt mirrors it),
               // NOT recovery-time `now` — keeps the bubble from jumping.
@@ -8745,13 +9129,13 @@ class DmRepository {
               // happy-path 1:1 send which stores only its own rumorTags;
               // harmless since only the `q` tag is read back.
               tagsJson: rumor.tags.isEmpty ? null : jsonEncode(rumor.tags),
-              ownerPubkey: _userPubkey,
+              ownerPubkey: owner,
             );
           }
 
           final existing = await _conversationsDao.getConversation(
             row.conversationId,
-            ownerPubkey: _userPubkey,
+            ownerPubkey: owner,
           );
           // Preserve the existing conversation's topology — a group row
           // recovered through this path must NOT rewrite the group as a
@@ -8767,7 +9151,7 @@ class DmRepository {
             isGroup = existing.isGroup;
           } else if (isGroupRow) {
             final members = <String>{
-              _userPubkey,
+              owner,
               row.recipientPubkey,
               for (final tag in rumor.tags)
                 if (tag.length >= 2 && tag[0] == 'p') tag[1],
@@ -8784,25 +9168,53 @@ class DmRepository {
           // still go out.
           final nextProtocol = existing?.dmProtocol ?? 'nip17';
           protocol = nextProtocol;
-          await _upsertSentConversationAndMarkRead(
-            id: row.conversationId,
-            participantPubkeys: participantsJson,
-            isGroup: isGroup,
-            createdAt: existing?.createdAt ?? now,
-            lastMessageContent: row.content,
-            lastMessageTimestamp: now,
-            lastMessageSenderPubkey: _userPubkey,
-            ownerPubkey: _userPubkey,
-            dmProtocol: nextProtocol,
-          );
+          if (!alreadyPersisted || existing == null) {
+            await _upsertSentConversationAndMarkRead(
+              id: row.conversationId,
+              participantPubkeys: participantsJson,
+              isGroup: isGroup,
+              createdAt: existing?.createdAt ?? now,
+              lastMessageId: alreadyPersisted ? null : result.rumorEventId,
+              lastMessageContent: row.content,
+              lastMessageTimestamp: alreadyPersisted ? row.createdAt : now,
+              lastMessageSenderPubkey: owner,
+              ownerPubkey: owner,
+              dmProtocol: nextProtocol,
+            );
+          }
 
+          if (!isGroupRow) {
+            await _directMessagesDao.markRecipientAccepted(
+              ownerPubkey: row.ownerPubkey,
+              rumorId: rumorId,
+              environment: _environment ?? '',
+            );
+          }
+          finalized = _withRecordedOwnCopy(result, liveRow);
           await _finalizeAfterRecipientSuccess(
             outgoingDao: dao,
             rumorId: rumorId,
-            result: result,
+            result: finalized,
           );
+          // Throwing rolls the finalize back so the old account's row stays
+          // queued for its own session.
+          if (!isCurrent()) throw StateError('Account changed during recovery');
           persistedLocally = true;
         });
+        // A delete took the batch while this publish was on the wire.
+        if (rowGone &&
+            batchId != null &&
+            result.selfWrapPublished != true &&
+            isCurrent()) {
+          await _restoreOwnCopyRow(
+            dao: dao,
+            conversationId: row.conversationId,
+            ownerPubkey: row.ownerPubkey,
+            sendBatchId: batchId,
+            rumor: rumor,
+            recipientPubkey: row.recipientPubkey,
+          );
+        }
 
         // Guarded: the interlock's early return above skips the persist, and
         // logging success for it made the race read as a delivered-and-saved
@@ -8817,10 +9229,12 @@ class DmRepository {
 
         // The original send fires the kind-4 copy only after its own persist,
         // which never ran for a send the sweep recovers, so without this the
-        // copy was never sent at all (#8506). Plain text only: the queue row
-        // does not record that a share or an invite opted out of the copy,
-        // and both carry tags a plain message never has.
-        if (persistedLocally && !isGroupRow && protocol != 'nip17') {
+        // copy was never sent at all (#8506). Honor the durable opt-out and
+        // keep the plain-text tag check for legacy rows and structured sends.
+        if (persistedLocally &&
+            !row.skipNip04Fallback &&
+            !isGroupRow &&
+            protocol != 'nip17') {
           if (_isPlainTextRumor(
             rumor,
             recipientPubkey: row.recipientPubkey,
@@ -8837,30 +9251,38 @@ class DmRepository {
             Log.info(
               'NIP-04 fallback: no legacy kind-4 copy for recovered message '
               '$rumorId to ${pubkeyForLogs(row.recipientPubkey)} — it is not '
-              'a plain-text message, and the queue row cannot say whether a '
-              'share or an invite opted out of the copy',
+              'a plain-text message',
               category: LogCategory.system,
             );
           }
         }
       } on Object catch (e, stackTrace) {
-        Log.error(
-          'Failed to persist recovered send locally for $rumorId: $e',
-          category: LogCategory.system,
-          error: e,
-          stackTrace: stackTrace,
-        );
+        if (isCurrent()) {
+          Log.error(
+            'Failed to persist recovered send locally for $rumorId: $e',
+            category: LogCategory.system,
+            error: e,
+            stackTrace: stackTrace,
+          );
+        } else {
+          Log.info(
+            'Recovered send for $rumorId was rolled back: the account changed '
+            'before it was recorded; the row stays queued for that account',
+            category: LogCategory.system,
+          );
+        }
         // The publish landed but the local persist failed. The transaction
         // rolled the queue transition back with the message, so the row
         // keeps its status and the retry sweep re-drives it; receivers drop
-        // the replay by its rumor id. The attempt spends retry budget, so a
-        // persist failure that keeps recurring stops being republished once
-        // the budget runs out. The row then shows as failed with Resend,
+        // the replay by its rumor id. Unless the account changed, the attempt
+        // spends retry budget, so a persist failure that keeps recurring
+        // stops being republished once the budget runs out. The row then shows
+        // as failed with Resend,
         // although the recipient has the message. The charge is a write of
         // its own, so if the database cannot record it either, the sweep
         // keeps re-driving the row. Don't rethrow: the caller still gets the
         // success result.
-        await _chargeFailedReplay(dao: dao, rumorId: rumorId);
+        if (isCurrent()) await _chargeFailedReplay(dao: dao, rumorId: rumorId);
       }
     } else if (result.blocked) {
       // A confirmed policy block is terminal, not a transient error.
@@ -8896,11 +9318,11 @@ class DmRepository {
       // An attempt that reached no relay is an outage on our side, not a
       // failed attempt, so it stays free (#8516).
       if (!result.reachedNoRelay) {
-        await _chargeFailedReplay(dao: dao, rumorId: rumorId);
+        if (isCurrent()) await _chargeFailedReplay(dao: dao, rumorId: rumorId);
       }
     }
 
-    return result;
+    return finalized;
   }
 
   /// Watches the durable outgoing DM queue for collaborator invites whose
@@ -9436,6 +9858,24 @@ class DmRepository {
     }
   }
 
+  /// Observe this 1:1 delivery under the same account and relay environment.
+  ///
+  /// Emits [DmDeliveryState.cancelled] when [ownerPubkey] is not the signed-in
+  /// account or the repository is disposed.
+  Stream<DmDeliveryState> watchDeliveryState({
+    required String ownerPubkey,
+    required String rumorId,
+  }) {
+    if (ownerPubkey != _userPubkey || _disposed) {
+      return Stream.value(DmDeliveryState.cancelled);
+    }
+    return _directMessagesDao.watchDeliveryState(
+      ownerPubkey: ownerPubkey,
+      rumorId: rumorId,
+      environment: _environment,
+    );
+  }
+
   /// Apply the queue-row transition for a successful per-recipient
   /// rumor publish. Shared between [sendMessage] and [sendGroupMessage]
   /// so both call sites agree on the partial-vs-full delivery
@@ -9464,6 +9904,246 @@ class DmRepository {
     }
   }
 
+  /// The batch whose members share [rumor] with [row]. Legacy group rows
+  /// used each member's rumor ID directly and still need their own copies.
+  String? _groupBatchOf(OutgoingDm row, Event rumor) =>
+      row.id == _groupQueueId(rumor.id, row.recipientPubkey)
+      ? row.sendBatchId
+      : null;
+
+  /// Make sure group send [row]'s batch has its one own copy before [row]
+  /// counts as delivered, publishing it now unless [row] or another member's
+  /// row already records it (#10016). A row that records it returns success
+  /// without publishing; see [_publishBatchOwnCopy] for the rest.
+  Future<NIP17SendResult> _ensureBatchOwnCopy({
+    required OutgoingDmsDao dao,
+    required OutgoingDm row,
+    required String sendBatchId,
+    required Event rumor,
+    required List<String>? selfWrapRelays,
+    Event? prebuiltSelfWrap,
+    bool deliveredHere = false,
+  }) {
+    if (row.selfWrapStatus == OutgoingWrapStatus.sent) {
+      return Future.value(_batchOwnCopyRecorded(rumor));
+    }
+    return _publishBatchOwnCopy(
+      dao: dao,
+      conversationId: row.conversationId,
+      ownerPubkey: row.ownerPubkey,
+      sendBatchId: sendBatchId,
+      rumor: rumor,
+      selfWrapRelays: selfWrapRelays,
+      generation: _resetGeneration,
+      prebuiltSelfWrap: prebuiltSelfWrap,
+      callerRowId: row.id,
+      deliveredHere: deliveredHere,
+    );
+  }
+
+  /// Publish the one own copy of group send [sendBatchId] (#10016), unless a
+  /// row already records it or no live row is left: a retry finished the
+  /// batch, or the sender cancelled it. A caller that saw a member delivered,
+  /// by its own attempt or a retry it joined, passes [deliveredHere] and still
+  /// gets the copy after a cancel, unless this session already published it.
+  ///
+  /// The group send and a replay of a member's row both publish through here,
+  /// joined under one key per batch. Once the copy lands, the batch records
+  /// it before releasing the key: delivered rows are removed and pending
+  /// rows are marked. A session that ended meanwhile publishes nothing:
+  /// the message service may already be the next account's.
+  Future<NIP17SendResult> _publishBatchOwnCopy({
+    required OutgoingDmsDao dao,
+    required String conversationId,
+    required String ownerPubkey,
+    required String sendBatchId,
+    required Event rumor,
+    required List<String>? selfWrapRelays,
+    required int generation,
+    Event? prebuiltSelfWrap,
+    String? callerRowId,
+    bool deliveredHere = false,
+  }) {
+    return _joinOrStartRecovery('self-batch:$sendBatchId', () async {
+      Future<List<OutgoingDm>?> readRows() => _batchRows(
+        dao: dao,
+        conversationId: conversationId,
+        ownerPubkey: ownerPubkey,
+        sendBatchId: sendBatchId,
+        rumorId: rumor.id,
+      );
+      final rows = await readRows();
+      if (_ingestSessionEnded(ownerPubkey, generation)) {
+        return _queuedForDelivery(callerRowId ?? rumor.id);
+      }
+      if (rows != null) {
+        // The original send may have recorded the copy on the caller's row
+        // and removed the other rows while its retry was on the wire.
+        if (rows.any((row) => row.selfWrapStatus == OutgoingWrapStatus.sent)) {
+          return _batchOwnCopyRecorded(rumor);
+        }
+        // Only finish a deferred publish for work still in the queue. A
+        // sibling may have completed it, or the sender may have cancelled it.
+        if (!rows.any(
+          (row) =>
+              _isLiveDelivery(row) &&
+              row.recipientWrapStatus != OutgoingWrapStatus.blocked &&
+              (callerRowId == null || row.id == callerRowId),
+        )) {
+          if (!deliveredHere) {
+            return _queuedForDelivery(callerRowId ?? rumor.id);
+          }
+          // A retry may have published it before a cancel took its rows.
+          if (_publishedBatchOwnCopies.contains(sendBatchId)) {
+            return _batchOwnCopyRecorded(rumor);
+          }
+        }
+      }
+      final published = await _messageService!.publishSelfWrap(
+        rumorEvent: rumor,
+        targetRelays: selfWrapRelays,
+        prebuiltSelfWrap: prebuiltSelfWrap,
+      );
+      if (!published.success) return published;
+      _publishedBatchOwnCopies.add(sendBatchId);
+      try {
+        await _conversationsDao.runInTransaction(() async {
+          // A recipient may have finished while the copy was on the wire.
+          // Any delivered row can go directly, without ever being sent/sent.
+          final liveRows = await readRows();
+          for (final row in liveRows ?? const <OutgoingDm>[]) {
+            if (row.recipientWrapStatus == OutgoingWrapStatus.sent) {
+              await dao.deleteById(row.id);
+            } else {
+              await dao.markSelfWrapStatus(
+                id: row.id,
+                status: OutgoingWrapStatus.sent,
+                eventId: published.messageEventId,
+              );
+            }
+          }
+        });
+      } on Object catch (e) {
+        // A row left unmarked replays the copy once more; the delivery stands
+        // either way.
+        Log.warning(
+          'Could not record the own copy of rumor ${rumor.id} on the rows of '
+          'batch $sendBatchId: $e',
+          category: LogCategory.system,
+        );
+      }
+      return published;
+    });
+  }
+
+  /// Puts back the row of [recipientPubkey], a member who got group send
+  /// [sendBatchId] after a delete took its rows, as delivered with the
+  /// sender's copy failed, so the sweep replays the copy (#10016). This device
+  /// stored no message then, so the copy is how the sender sees, and can
+  /// retract, what the members got. A message stored here is left to the
+  /// delete, which retracts it. Non-rethrowing: without the row the copy
+  /// stays unpublished, as before.
+  Future<void> _restoreOwnCopyRow({
+    required OutgoingDmsDao dao,
+    required String conversationId,
+    required String ownerPubkey,
+    required String sendBatchId,
+    required Event rumor,
+    required String recipientPubkey,
+  }) async {
+    try {
+      final stored = await _directMessagesDao.getMessageById(
+        rumor.id,
+        ownerPubkey: ownerPubkey,
+      );
+      if (stored != null) return;
+      await dao.enqueue(
+        OutgoingDm(
+          id: _groupQueueId(rumor.id, recipientPubkey),
+          conversationId: conversationId,
+          recipientPubkey: recipientPubkey,
+          content: rumor.content,
+          createdAt: rumor.createdAt,
+          rumorEventJson: jsonEncode(rumor.toJson()),
+          messageKind: rumor.kind,
+          recipientWrapStatus: OutgoingWrapStatus.sent,
+          selfWrapStatus: OutgoingWrapStatus.failed,
+          selfWrapLastError:
+              'Recipient delivered, but self-wrap publish failed',
+          queuedAt: DateTime.now(),
+          ownerPubkey: ownerPubkey,
+          sendBatchId: sendBatchId,
+          environment: _environment,
+        ),
+      );
+    } on Object catch (e) {
+      Log.warning(
+        'Could not queue the own copy of rumor ${rumor.id} for the sweep: $e',
+        category: LogCategory.system,
+      );
+    }
+  }
+
+  /// The queue rows of group send [sendBatchId]. Returns null if the read
+  /// failed, so the caller can still publish the copy after delivery.
+  Future<List<OutgoingDm>?> _batchRows({
+    required OutgoingDmsDao dao,
+    required String conversationId,
+    required String ownerPubkey,
+    required String sendBatchId,
+    required String rumorId,
+  }) async {
+    try {
+      return [
+        for (final row in await dao.getForConversation(
+          conversationId: conversationId,
+          ownerPubkey: ownerPubkey,
+        ))
+          if (row.sendBatchId == sendBatchId &&
+              row.id == _groupQueueId(rumorId, row.recipientPubkey))
+            row,
+      ];
+    } on Object catch (e) {
+      Log.warning(
+        'Could not read the rows of batch $sendBatchId: $e',
+        category: LogCategory.system,
+      );
+      return null;
+    }
+  }
+
+  /// The success [_ensureBatchOwnCopy] reports for a copy a row records.
+  NIP17SendResult _batchOwnCopyRecorded(Event rumor) => NIP17SendResult.success(
+    rumorEventId: rumor.id,
+    messageEventId: rumor.id,
+    recipientPubkey: _userPubkey,
+  );
+
+  /// [result] with its own-copy outcome replaced by [published]: a group
+  /// member's send hands the copy to the batch, so its own result cannot say.
+  NIP17SendSuccess _withOwnCopyOutcome(
+    NIP17SendSuccess result, {
+    required bool published,
+  }) => NIP17SendSuccess(
+    rumorEventId: result.rumorEventId,
+    messageEventId: result.messageEventId,
+    recipientPubkey: result.recipientPubkey,
+    selfWrapPublished: published,
+    queuedRumorId: result.queuedRumorId,
+    timestamp: result.timestamp,
+  );
+
+  /// The recipient's finalization can run after another batch attempt has
+  /// recorded its copy. Use the row read inside the finalization transaction.
+  NIP17SendResult _withRecordedOwnCopy(NIP17SendResult result, OutgoingDm row) {
+    if (result is NIP17SendSuccess &&
+        !result.selfWrapPublished &&
+        row.selfWrapStatus == OutgoingWrapStatus.sent) {
+      return _withOwnCopyOutcome(result, published: true);
+    }
+    return result;
+  }
+
   /// Apply the queue-row transition for a failed per-recipient rumor
   /// publish. Shared between [sendMessage] and [sendGroupMessage] so
   /// both call sites keep recipient/self wrap failure bookkeeping in
@@ -9490,7 +10170,8 @@ class DmRepository {
       await outgoingDao.markRecipientWrapStatus(
         id: rumorId,
         status: OutgoingWrapStatus.failed,
-        lastError: errorMessage,
+        // watchDeliveryState reads this exact sentinel as still queued.
+        lastError: reachedNoRelay ? outgoingDmOfflineError : errorMessage,
       );
       await outgoingDao.markSelfWrapStatus(
         id: rumorId,
@@ -9854,6 +10535,7 @@ class DmRepository {
   /// wrap is published (#10012). Publishes only the sender's withheld copy
   /// and reports the held wrap, for the caller's usual success handling.
   Future<NIP17SendResult> _settleHeldPoolWrap({
+    required OutgoingDmsDao dao,
     required Event rumor,
     required OutgoingDm row,
     required String poolWrapId,
@@ -9866,10 +10548,20 @@ class DmRepository {
       'only the withheld self-copy (#10012)',
       category: LogCategory.system,
     );
-    final selfCopy = await _messageService!.publishSelfWrap(
-      rumorEvent: rumor,
-      targetRelays: selfWrapRelays,
-    );
+    // A group member's withheld copy is its batch's one copy (#10016).
+    final batchId = _groupBatchOf(row, rumor);
+    final selfCopy = batchId == null
+        ? await _messageService!.publishSelfWrap(
+            rumorEvent: rumor,
+            targetRelays: selfWrapRelays,
+          )
+        : await _ensureBatchOwnCopy(
+            dao: dao,
+            row: row,
+            sendBatchId: batchId,
+            rumor: rumor,
+            selfWrapRelays: selfWrapRelays,
+          );
     return NIP17SendResult.success(
       rumorEventId: rumor.id,
       messageEventId: poolWrapId,
@@ -9920,6 +10612,10 @@ class DmRepository {
   /// waits for the attempt that is (#10012): a copy published here shows the
   /// message as sent on every other device while this row may still exhaust
   /// to failed, and each sweep pass would publish another.
+  ///
+  /// [onSelfWrapDue] takes the sender's copy over instead, for a group send
+  /// whose members share one copy (#10016). [withholdSelfWrap] wins when both
+  /// are set.
   Future<NIP17SendResult> _sendRumorWithTimeout({
     required Event rumor,
     required String recipientPubkey,
@@ -9927,7 +10623,9 @@ class DmRepository {
     List<String>? selfWrapTargetRelays,
     bool awaitRecipientOk = false,
     bool withholdSelfWrap = false,
+    void Function(Event? prebuiltSelfWrap)? onSelfWrapDue,
     Event? recipientWrap,
+    NIP17SendResult? Function()? publishRefusal,
   }) {
     return _messageService!
         .sendRumor(
@@ -9937,6 +10635,7 @@ class DmRepository {
           selfWrapTargetRelays: selfWrapTargetRelays,
           awaitRecipientOk: awaitRecipientOk,
           recipientWrap: recipientWrap,
+          publishRefusal: publishRefusal,
           // A soft-unconfirmed message send must NOT publish the self-wrap:
           // the durable queue replays the full send until the recipient wrap
           // confirms (publishing both wraps then), while a soft self-wrap
@@ -9951,7 +10650,7 @@ class DmRepository {
                   'so this attempt is held, not delivered (#10012)',
                   category: LogCategory.system,
                 )
-              : null,
+              : onSelfWrapDue,
         )
         .timeout(
           _messagePublishTimeout,
@@ -10017,7 +10716,12 @@ class DmRepository {
   /// outcome (full delivery → row deleted in the same transaction
   /// that inserts `direct_messages`; partial delivery → recipient
   /// `sent` + self `failed` so the recovery path can replay only the
-  /// missing self-wraps without re-delivering to recipients).
+  /// missing self-wrap without re-delivering to recipients).
+  ///
+  /// The sender's own copy is published once for the batch, after every
+  /// member's send and once any member has the message, not once per member
+  /// (#10016). Its outcome is every delivered member's `selfWrapPublished`,
+  /// and a member still waiting keeps a row that records it.
   ///
   /// Each failure that leaves a row behind carries that row's
   /// [NIP17SendResult.queuedRumorId], so a caller retries by re-driving the
@@ -10383,6 +11087,9 @@ class DmRepository {
     // one underlying attempt twice, and a five-retry budget then covered four
     // attempts (#8619). Only the durable handle is stamped for these.
     final joinedRecovery = <int>{};
+    // The copy the signer built beside a member's wrap, for the batch's one
+    // own copy published after every member (#10016).
+    Event? prebuiltOwnCopy;
     for (var i = 0; i < recipientPubkeys.length; i++) {
       if (_disposed || _resetGeneration != generation) {
         return [for (final id in queueIds) _queuedForDelivery(id)];
@@ -10447,6 +11154,10 @@ class DmRepository {
           // before this loop reached it. Read its wrap under the row's key: a
           // recovery can finish after the cancel check above read the row.
           final keptRow = await outgoingDao?.getById(queueIds[i]);
+          // Held by the downgrade below, so no self-copy yet (#10012).
+          final held =
+              outgoingDao != null &&
+              inbox?.state == DmInboxResolution.unreadable;
           final published = await _sendRumorWithTimeout(
             rumor: groupRumor,
             recipientPubkey: pubkey,
@@ -10456,10 +11167,10 @@ class DmRepository {
             targetRelays: inbox?.relays,
             selfWrapTargetRelays: selfWrapRelays,
             awaitRecipientOk: true,
-            // Held by the downgrade below, so no self-copy yet (#10012).
-            withholdSelfWrap:
-                outgoingDao != null &&
-                inbox?.state == DmInboxResolution.unreadable,
+            withholdSelfWrap: held,
+            // Each member's send used to publish its own, N - 1 copies of one
+            // rumor; the batch publishes one below (#10016).
+            onSelfWrapDue: (wrap) => prebuiltOwnCopy ??= wrap,
           );
           // Kept while this key is held: the finalize pass below runs only
           // after every sibling has published, and a retry of this row in
@@ -10519,6 +11230,46 @@ class DmRepository {
       results.add(result);
     }
 
+    if (_disposed || _resetGeneration != generation) {
+      return [for (final id in queueIds) _queuedForDelivery(id)];
+    }
+    // One own copy for the whole batch once any member has the message, the
+    // moment it is stored locally below. A replay of a member's row publishes
+    // through the same joined path, so the two share one copy (#10016).
+    var batchHasOwnCopy = joinedRecovery.any(
+      (i) => results[i].selfWrapPublished == true,
+    );
+    if (!batchHasOwnCopy && results.any((r) => r.success)) {
+      final ownCopy = outgoingDao == null
+          ? await _messageService!.publishSelfWrap(
+              rumorEvent: groupRumor,
+              targetRelays: selfWrapRelays,
+              prebuiltSelfWrap: prebuiltOwnCopy,
+            )
+          : await _publishBatchOwnCopy(
+              dao: outgoingDao,
+              conversationId: conversationId,
+              ownerPubkey: owner,
+              sendBatchId: sendBatchId,
+              rumor: groupRumor,
+              selfWrapRelays: selfWrapRelays,
+              generation: generation,
+              prebuiltSelfWrap: prebuiltOwnCopy,
+              // A member has it, a joined retry's too, so the copy is due even
+              // after a cancel took the rows. The session set stops a second.
+              deliveredHere: true,
+            );
+      batchHasOwnCopy = ownCopy.success;
+    }
+    // Every delivered member carries the batch's outcome, a joined retry's
+    // too: it is one copy for all of them.
+    for (var i = 0; i < results.length; i++) {
+      final result = results[i];
+      if (result is NIP17SendSuccess) {
+        results[i] = _withOwnCopyOutcome(result, published: batchHasOwnCopy);
+      }
+    }
+
     // If at least one send succeeded, persist locally (atomically). The
     // per-recipient queue updates for successful tuples ride inside the
     // same transaction so a watcher never observes a window where the
@@ -10535,6 +11286,7 @@ class DmRepository {
         if (replyToId != null) ['e', replyToId],
       ];
 
+      var deliveredAfterDelete = false;
       await _conversationsDao.runInTransaction(() async {
         if (_disposed || _resetGeneration != generation) return;
         // A Leave that landed after the rejoin above found nothing to rejoin,
@@ -10577,6 +11329,7 @@ class DmRepository {
               await outgoingDao.deleteById(queueIds[i]);
               continue;
             }
+            results[i] = _withRecordedOwnCopy(results[i], liveRow);
           }
           liveSuccessIndexes.add(i);
         }
@@ -10588,6 +11341,7 @@ class DmRepository {
             'conversation $conversationId.',
             category: LogCategory.system,
           );
+          deliveredAfterDelete = true;
           return;
         }
 
@@ -10635,17 +11389,22 @@ class DmRepository {
           ownerPubkey: owner,
         );
         if (_disposed || _resetGeneration != generation) return;
-        await _upsertSentConversationAndMarkRead(
-          id: conversationId,
-          participantPubkeys: jsonEncode(participants),
-          isGroup: true,
-          createdAt: existingGroup?.createdAt ?? now,
-          lastMessageContent: content,
-          lastMessageTimestamp: now,
-          lastMessageSenderPubkey: owner,
-          ownerPubkey: owner,
-          dmProtocol: existingGroup?.dmProtocol,
-        );
+        if (!alreadyPersisted || existingGroup == null) {
+          await _upsertSentConversationAndMarkRead(
+            id: conversationId,
+            participantPubkeys: jsonEncode(participants),
+            isGroup: true,
+            createdAt: existingGroup?.createdAt ?? now,
+            lastMessageId: alreadyPersisted
+                ? null
+                : firstLiveSuccess.rumorEventId,
+            lastMessageContent: content,
+            lastMessageTimestamp: alreadyPersisted ? batchCreatedAt : now,
+            lastMessageSenderPubkey: owner,
+            ownerPubkey: owner,
+            dmProtocol: existingGroup?.dmProtocol,
+          );
+        }
 
         if (outgoingDao != null) {
           for (final i in liveSuccessIndexes) {
@@ -10658,6 +11417,20 @@ class DmRepository {
           }
         }
       });
+      // A delete took the batch while a member's publish was on the wire.
+      if (deliveredAfterDelete && !batchHasOwnCopy && outgoingDao != null) {
+        await _restoreOwnCopyRow(
+          dao: outgoingDao,
+          conversationId: conversationId,
+          ownerPubkey: owner,
+          sendBatchId: sendBatchId,
+          rumor: groupRumor,
+          recipientPubkey:
+              recipientPubkeys[results.indexWhere(
+                (r) => r.success,
+              )],
+        );
+      }
     }
 
     // Per-recipient non-success finalize. Lives outside the success
@@ -11235,6 +12008,40 @@ class DmRepository {
     return outcome;
   }
 
+  /// Publish the sender's own copy of retraction [deletion], once for its
+  /// whole fan-out (#10016), and return whether it landed. Never throws: a
+  /// copy that fails, throws or outlives [_messagePublishTimeout] is logged
+  /// and dropped.
+  Future<bool> _publishRetractionOwnCopy({
+    required Event deletion,
+    required List<String>? targetRelays,
+    required Event? prebuiltSelfWrap,
+  }) async {
+    try {
+      final published = await _messageService!
+          .publishSelfWrap(
+            rumorEvent: deletion,
+            targetRelays: targetRelays,
+            prebuiltSelfWrap: prebuiltSelfWrap,
+          )
+          .timeout(_messagePublishTimeout);
+      if (!published.success) {
+        Log.warning(
+          'Own copy of retraction ${deletion.id} not published: '
+          '${published.error}',
+          category: LogCategory.system,
+        );
+      }
+      return published.success;
+    } on Object catch (e) {
+      Log.warning(
+        'Own copy of retraction ${deletion.id} failed: $e',
+        category: LogCategory.system,
+      );
+      return false;
+    }
+  }
+
   /// Wrap [deletion] to each recipient in turn.
   ///
   /// Terminal success only when EVERY recipient's wrap lands. One row holds
@@ -11275,10 +12082,17 @@ class DmRepository {
   /// with the rules `_fanOutRumor` applies (#10012): nothing more to that
   /// recipient while their inbox stays unreadable, the held wrap as their
   /// delivery once they advertise no inbox, a new wrap once it is found. An
-  /// attempt in which any recipient's inbox is unreadable is held, so no
-  /// recipient's send publishes the sender's copy then; the attempt that
-  /// delivers publishes one per member, as every delivered retraction does
-  /// (#10016), a member it sends nothing included.
+  /// attempt in which any recipient's inbox is unreadable is held, so it
+  /// publishes no copy for the sender then.
+  ///
+  /// The sender's own copy is published once per fan-out, after every
+  /// recipient, when at least one recipient's send reached the point where it
+  /// is due or a recipient counts as delivered with no send, as a reaction's
+  /// is (#8446). It used to be one per recipient (#10016). A copy handed over
+  /// by a send that outlived its cap, after this returned, is published
+  /// detached. Its outcome never changes the result. A copy that lands while
+  /// the row is left to be retried is recorded in [heldWraps] under the
+  /// sender's key, and a retry that finds it publishes no other.
   Future<({NIP17SendResult result, bool anyRecipientAccepted})>
   _fanOutDeletion({
     required String rumorId,
@@ -11286,6 +12100,7 @@ class DmRepository {
     required List<String> recipients,
     Map<String, HeldWrap> heldWraps = const {},
   }) async {
+    final generation = _resetGeneration;
     // Resolve every recipient's kind-10050 inbox concurrently BEFORE the loop,
     // exactly as `sendMessage` and `sendGroupMessage` do. Without it the
     // OK-confirm below is satisfied by the default pool rather than the
@@ -11314,6 +12129,57 @@ class DmRepository {
     final failures = <NIP17SendFailure>[];
     // The members this attempt delivered to, and the wrap each has (#10012).
     final deliveredWraps = <String, String>{};
+    // An earlier attempt's own copy, under the sender's key: recipients never
+    // include the sender.
+    final ownCopyRecorded = heldWraps[deletion.pubkey]?.delivered == true;
+    var ownCopyDue = false;
+    var withheldOwnCopy = false;
+    var returned = false;
+    Event? prebuiltOwnCopy;
+    Future<void> publishOwnCopy() async {
+      // The copy is published after awaits, on the detached path even after
+      // this returns: an account switch meanwhile replaces the message
+      // service, which would wrap this account's retraction as the next one's.
+      if (_ingestSessionEnded(deletion.pubkey, generation)) return;
+      final published = await _publishRetractionOwnCopy(
+        deletion: deletion,
+        targetRelays: selfWrapTargets,
+        prebuiltSelfWrap: prebuiltOwnCopy,
+      );
+      // Only a row left to be retried needs it, so its retries publish none.
+      if (published && failures.isNotEmpty) {
+        await _recordDeletionWraps(
+          rumorId,
+          what: 'the own copy',
+          write: () => _directMessagesDao.recordDeliveredDeletionWraps(
+            rumorId,
+            wraps: {deletion.pubkey: prebuiltOwnCopy?.id ?? deletion.id},
+            ownerPubkey: deletion.pubkey,
+          ),
+        );
+      }
+    }
+
+    void onOwnCopyDue(Event? prebuiltSelfWrap) {
+      if (held) {
+        if (!withheldOwnCopy) {
+          withheldOwnCopy = true;
+          Log.info(
+            'Withholding the own copy of rumor ${deletion.id}: a recipient '
+            'inbox is unreadable, so this attempt is held, not delivered '
+            '(#10012)',
+            category: LogCategory.system,
+          );
+        }
+        return;
+      }
+      if (ownCopyRecorded) return;
+      prebuiltOwnCopy ??= prebuiltSelfWrap;
+      if (ownCopyDue) return;
+      ownCopyDue = true;
+      if (returned) unawaited(publishOwnCopy());
+    }
+
     for (final recipient in recipients) {
       final inbox = inboxByRecipient[recipient];
       final heldWrap = heldWraps[recipient];
@@ -11327,22 +12193,9 @@ class DmRepository {
       );
       if (unsent != null) {
         result = unsent;
-        // Settled on the held wrap, or delivered by an earlier attempt:
-        // publish the copy its send would have.
-        if (unsent.success && !held) {
-          final ownCopy = await _messageService!.publishSelfWrap(
-            rumorEvent: deletion,
-            targetRelays: selfWrapTargets,
-          );
-          if (!ownCopy.success) {
-            Log.warning(
-              'Own copy of retraction ${deletion.id} not published for '
-              '${pubkeyForLogs(recipient)}, who has wrap '
-              '${unsent.messageEventId} with no send: ${ownCopy.error}',
-              category: LogCategory.system,
-            );
-          }
-        }
+        // Settled on the held wrap, or delivered by an earlier attempt: no
+        // send ran to hand the own copy over.
+        if (unsent.success) onOwnCopyDue(null);
       } else {
         final published = await _messageService!
             .sendRumor(
@@ -11351,14 +12204,7 @@ class DmRepository {
               targetRelays: inbox?.relays,
               selfWrapTargetRelays: selfWrapTargets,
               awaitRecipientOk: true,
-              onSelfWrapDue: held
-                  ? (_) => Log.info(
-                      'Withholding the self-wrap for rumor ${deletion.id}: '
-                      'a recipient inbox is unreadable, so this attempt is '
-                      'held, not delivered (#10012)',
-                      category: LogCategory.system,
-                    )
-                  : null,
+              onSelfWrapDue: onOwnCopyDue,
             )
             .timeout(
               _messagePublishTimeout,
@@ -11405,6 +12251,8 @@ class DmRepository {
         wraps: deliveredWraps,
       );
     }
+    if (ownCopyDue) await publishOwnCopy();
+    returned = true;
     final anyRecipientAccepted = lastSuccess != null;
     if (failures.isEmpty) {
       return (
@@ -11551,6 +12399,7 @@ class DmRepository {
         participantPubkeys: conversation.participantPubkeys,
         isGroup: conversation.isGroup,
         createdAt: conversation.createdAt,
+        lastMessageId: latest.id,
         lastMessageContent: previewContent,
         lastMessageTimestamp: latest.createdAt,
         lastMessageSenderPubkey: latest.senderPubkey,
@@ -11582,6 +12431,13 @@ class DmRepository {
   /// app-level markers the recipient's client reads back from
   /// [DmMessage.tags]. They must not repeat a file tag this method writes.
   ///
+  /// [createdAt] is the rumor's `created_at`, the time now when omitted.
+  /// [onRumorCreatedAt] receives the `created_at` the rumor is built with,
+  /// before it is published, and is not called when no rumor is built. A
+  /// caller retrying the same file passes that value back as [createdAt], so
+  /// the retry keeps the first attempt's rumor id even when that attempt
+  /// threw (A′ in `mobile/docs/NIP17_RETRY_CONTRACT.md`).
+  ///
   /// Throws [StateError] if the repository has not been initialized.
   /// Throws [ArgumentError] if [recipientPubkey] is invalid or required
   /// metadata is missing.
@@ -11592,6 +12448,8 @@ class DmRepository {
     required DmFileMetadata fileMetadata,
     String? replyToId,
     List<List<String>> extraTags = const [],
+    int? createdAt,
+    void Function(int createdAt)? onRumorCreatedAt,
   }) async {
     _assertInitialized();
     validatePubkey(recipientPubkey);
@@ -11650,11 +12508,14 @@ class DmRepository {
       );
     }
 
+    final rumorCreatedAt = createdAt ?? DmClock.now().nowSeconds;
+    onRumorCreatedAt?.call(rumorCreatedAt);
     final result = await _messageService!.sendPrivateMessage(
       recipientPubkey: recipientPubkey,
       content: fileUrl,
       eventKind: EventKind.fileMessage,
       additionalTags: additionalTags,
+      createdAt: rumorCreatedAt,
       targetRelays: inbox.relays,
       selfWrapTargetRelays: selfWrapRelays,
       awaitRecipientOk: true,
@@ -11700,6 +12561,7 @@ class DmRepository {
           participantPubkeys: jsonEncode(participants),
           isGroup: false,
           createdAt: existingFile?.createdAt ?? now,
+          lastMessageId: result.rumorEventId,
           lastMessageContent: _filePreviewText(fileMetadata.fileType),
           lastMessageTimestamp: now,
           lastMessageSenderPubkey: _userPubkey,
@@ -11847,6 +12709,28 @@ class DmRepository {
               'p' => tag[1] == recipientPubkey,
               'e' => tag[1] == replyToId,
               _sendBatchTagKey => true,
+              _ => false,
+            },
+      );
+
+  /// Whether [rumor] has the shape the share sheet queued before outbox rows
+  /// recorded `isVideoShare`: a kind-14 video citation with no tags beyond its
+  /// recipient, the `q` citation and the send batch token.
+  ///
+  /// A reel reply carries an `e` tag and a question answer its question tag,
+  /// so neither matches.
+  static bool _isLegacyShareSheetRumor(
+    Event rumor, {
+    required String recipientPubkey,
+  }) =>
+      rumor.kind == EventKind.privateDirectMessage &&
+      DmSharedVideoCitation.parse(rumor.tags) != null &&
+      rumor.tags.every(
+        (tag) =>
+            tag.length >= 2 &&
+            switch (tag.first) {
+              'p' => tag[1] == recipientPubkey,
+              'q' || _sendBatchTagKey => true,
               _ => false,
             },
       );
@@ -12164,6 +13048,7 @@ class DmRepository {
     final owner = _ownerPubkey;
     if (owner == null) return Stream.value(const <DmConversation>[]);
     return _watchConversationRows(
+      owner,
       () => _conversationsDao.watchAllConversations(
         limit: limit,
         ownerPubkey: owner,
@@ -12184,7 +13069,9 @@ class DmRepository {
       conversationId,
       ownerPubkey: owner,
     );
-    return row == null ? null : _conversationFromRow(row);
+    return row == null
+        ? null
+        : (await _withPreviewCitations([row], owner)).single;
   }
 
   /// Get all conversations.
@@ -12195,7 +13082,7 @@ class DmRepository {
     final rows = await _conversationsDao.getAllConversations(
       ownerPubkey: owner,
     );
-    return rows.map(_conversationFromRow).toList();
+    return _withPreviewCitations(rows, owner);
   }
 
   /// For each conversation in [excludedSendersByConversation], what its inbox
@@ -12222,6 +13109,7 @@ class DmRepository {
       for (final MapEntry(key: id, value: row) in rows.entries)
         id: (
           lastMessageContent: row.content,
+          lastMessageIsVideoShare: _hasVideoCitation(row.tagsJson),
           lastMessageTimestamp: row.createdAt,
           lastMessageSenderPubkey: row.senderPubkey,
           hasUnread: row.hasUnread,
@@ -12254,6 +13142,7 @@ class DmRepository {
     final owner = _ownerPubkey;
     if (owner == null) return Stream.value(const <DmConversation>[]);
     return _watchConversationRows(
+      owner,
       () => _conversationsDao.watchAcceptedConversations(
         limit: limit,
         ownerPubkey: owner,
@@ -12281,6 +13170,7 @@ class DmRepository {
     final owner = _ownerPubkey;
     if (owner == null) return Stream.value(const <DmConversation>[]);
     return _watchConversationRows(
+      owner,
       () => _conversationsDao.watchPotentialRequestConversations(
         ownerPubkey: owner,
         unreadOnly: unreadOnly,
@@ -13423,14 +14313,47 @@ class DmRepository {
   }
 
   Stream<List<DmConversation>> _watchConversationRows(
+    String owner,
     Stream<List<ConversationRow>> Function() watchRows,
   ) {
     final maintenance = _ensurePostAuthMaintenance();
     return Stream.fromFuture(
-      maintenance,
-    ).asyncExpand((_) => watchRows()).map((streamRows) {
-      return streamRows.map(_conversationFromRow).toList();
-    });
+          maintenance,
+        )
+        .asyncExpand((_) => watchRows())
+        .asyncMap((rows) => _withPreviewCitations(rows, owner));
+  }
+
+  bool _hasVideoCitation(String? tagsJson) =>
+      tagsJson != null &&
+      DmSharedVideoCitation.parse(_parseTagsJson(tagsJson)) != null;
+
+  Future<List<DmConversation>> _withPreviewCitations(
+    List<ConversationRow> rows,
+    String owner,
+  ) async {
+    final withPreview = rows.where(
+      (r) =>
+          r.lastMessageTimestamp != null &&
+          r.lastMessageContent != null &&
+          r.lastMessageSenderPubkey != null,
+    );
+    if (withPreview.isEmpty) return rows.map(_conversationFromRow).toList();
+    final tags = await _conversationsDao.latestPreviewTags(
+      withPreview.map((r) => r.id),
+      ownerPubkey: owner,
+    );
+    return rows.map((row) {
+      final snapshot = tags[row.id];
+      final isShare =
+          snapshot != null &&
+          snapshot.messageId == row.lastMessageId &&
+          snapshot.timestamp == row.lastMessageTimestamp &&
+          snapshot.content == row.lastMessageContent &&
+          snapshot.sender == row.lastMessageSenderPubkey &&
+          _hasVideoCitation(snapshot.tags);
+      return _conversationFromRow(row, lastMessageIsVideoShare: isShare);
+    }).toList();
   }
 
   // -------------------------------------------------------------------------
@@ -14255,6 +15178,7 @@ class DmRepository {
         participantPubkeys: jsonEncode(home.participants),
         isGroup: home.participants.length > 2,
         createdAt: existing?.createdAt ?? moving.first.createdAt,
+        lastMessageId: newest.id,
         lastMessageContent: newest.messageKind == EventKind.fileMessage
             ? _filePreviewText(newest.fileType)
             : newest.content,
@@ -14405,7 +15329,10 @@ class DmRepository {
     return 'Sent a file';
   }
 
-  DmConversation _conversationFromRow(ConversationRow row) {
+  DmConversation _conversationFromRow(
+    ConversationRow row, {
+    bool lastMessageIsVideoShare = false,
+  }) {
     final pubkeys = (jsonDecode(row.participantPubkeys) as List<dynamic>)
         .cast<String>();
     return DmConversation(
@@ -14414,6 +15341,7 @@ class DmRepository {
       isGroup: row.isGroup,
       createdAt: row.createdAt,
       lastMessageContent: row.lastMessageContent,
+      lastMessageIsVideoShare: lastMessageIsVideoShare,
       lastMessageTimestamp: row.lastMessageTimestamp,
       lastMessageSenderPubkey: row.lastMessageSenderPubkey,
       subject: row.subject,

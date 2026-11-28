@@ -52,13 +52,15 @@ enum TimeVideoEffects {
 }
 
 /// Time split: red shows the current frame, green the frame 100 ms earlier
-/// and blue the one 200 ms earlier, so still parts keep their colours and
-/// moving parts get rainbow ghosts. Mirrors the Android `TimeSplitVideoEffect`.
+/// and blue the one 200 ms earlier, or as many times that as the delay set, so
+/// still parts keep their colours and moving parts get rainbow ghosts. Mirrors
+/// the Android `TimeSplitVideoEffect`.
 ///
 /// Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how
-/// far the colours split, from the plain picture to the full split) and, for
-/// an effect on the beat, `beatsUs`: the beats, in microseconds after the
-/// effect's start. On the beat the colours only split on each hit and come
+/// far the colours split, from the plain picture to the full split), `delay`
+/// (0.34–3: how far back green and blue lag, as a share of the default; see
+/// ``frames(_:)``) and, for an effect on the beat, `beatsUs`: the beats, in
+/// microseconds after the effect's start. On the beat the colours only split on each hit and come
 /// back together over half a second, as the zoom blur's streaks fade; see
 /// ``BlurHits``.
 ///
@@ -70,15 +72,25 @@ final class TimeSplitVideoEffect: ShaderVideoEffect {
 
   private let intensity: Double
   private let beatsUs: [Int64]?
+  private let offsets: [Int64]
 
-  override var historyOffsetsUs: [Int64] {
-    [TimeVideoEffects.frameOffsetUs(3), TimeVideoEffects.frameOffsetUs(6)]
-  }
+  override var historyOffsetsUs: [Int64] { offsets }
 
   init(params: [String: Any]) {
     intensity = Self.readIntensity(params)
     beatsUs = BlurHits.beats(params)
+    let (green, blue) = Self.frames(params)
+    offsets = [TimeVideoEffects.frameOffsetUs(green), TimeVideoEffects.frameOffsetUs(blue)]
     super.init(function: Self.function, source: Self.source)
+  }
+
+  /// How many frames back green and blue lag: three and six times the
+  /// `delay` in `params`, at least one and one more. Mirrors the Android
+  /// `TimeSplitVideoEffect.framesOf`.
+  static func frames(_ params: [String: Any]) -> (green: Int, blue: Int) {
+    let delay = readNumber(params, "delay", fallback: 1, in: 0.34...3)
+    let green = max(1, Int((3 * delay).rounded()))
+    return (green, max(green + 1, Int((6 * delay).rounded())))
   }
 
   override func values(effectTimeUs: Int64) -> [Double]? {
@@ -118,14 +130,18 @@ final class TimeSplitVideoEffect: ShaderVideoEffect {
 /// further back it lies. A still part looks the same in every frame and stays
 /// as it is.
 ///
-/// Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1):
-/// longer trails, fading slower, and of less bright parts. The trails are
-/// soft anyway, so the earlier frames are kept at half size.
+/// Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1:
+/// longer trails, fading slower, and of less bright parts), `length` (0.5–3:
+/// how far apart the earlier frames lie, as a share of the default two frames,
+/// so how far back the trails reach) and `sensitivity` (0–1: how bright a part
+/// must be to leave a trail; 0.5 by default, higher leaves trails sooner). The
+/// trails are soft anyway, so the earlier frames are kept at half size.
 final class LongExposureVideoEffect: ShaderVideoEffect {
   /// The id the Dart `CustomVideoEffect` names.
   static let id = "divine.longExposure"
 
   private let intensity: Double
+  private let sensitivity: Double
   private let offsets: [Int64]
 
   override var historyOffsetsUs: [Int64] { offsets }
@@ -134,8 +150,12 @@ final class LongExposureVideoEffect: ShaderVideoEffect {
 
   init(params: [String: Any]) {
     intensity = Self.readIntensity(params)
+    sensitivity = Self.readNumber(params, "sensitivity", fallback: 0.5, in: 0...1)
     let copies = Self.copies(intensity)
-    offsets = (1...copies).map { TimeVideoEffects.frameOffsetUs(2 * $0) }
+    let length = Self.readNumber(params, "length", fallback: 1, in: 0.5...3)
+    offsets = (0..<copies).map {
+      TimeVideoEffects.frameOffsetUs(Self.framesBack($0, length: length))
+    }
     let (function, source) = Self.kernel(copies: copies)
     super.init(function: function, source: source)
   }
@@ -145,10 +165,17 @@ final class LongExposureVideoEffect: ShaderVideoEffect {
     min(6, max(2, Int((2 + 4 * intensity).rounded())))
   }
 
+  /// How many frames back earlier frame `k` lies, newest first: two frames
+  /// apart, times `length`, and at least one further back than the one
+  /// before.
+  static func framesBack(_ k: Int, length: Double) -> Int {
+    max(k + 1, Int((Double(2 * (k + 1)) * length).rounded()))
+  }
+
   /// A part starts to count from the first value, fully 0.25 above it; then
   /// how much of each earlier frame counts, newest first.
   override func values(effectTimeUs: Int64) -> [Double]? {
-    [0.7 - 0.25 * intensity]
+    [0.7 - 0.25 * intensity - 0.4 * (sensitivity - 0.5)]
       + offsets.indices.map { k in pow(0.7 + 0.25 * intensity, Double(k + 1)) }
   }
 
@@ -191,25 +218,35 @@ final class LongExposureVideoEffect: ShaderVideoEffect {
 /// most, so they light up as outlines. Mirrors the Android
 /// `MotionOnlyVideoEffect`.
 ///
-/// Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1):
-/// how dark the still parts go, down to black, and how much the moving parts
-/// glow. The frame before is kept whole, so fine still detail does not count
-/// as movement.
+/// Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how
+/// dark the still parts go, down to black, and how much the moving parts glow)
+/// and `sensitivity` (0–1: how small a change counts as movement; 0.5 by
+/// default, higher counts smaller ones). The frame before is kept whole, so
+/// fine still detail does not count as movement.
 final class MotionOnlyVideoEffect: ShaderVideoEffect {
   /// The id the Dart `CustomVideoEffect` names.
   static let id = "divine.motionOnly"
 
   private let intensity: Double
+  private let spread: Double
 
   override var historyOffsetsUs: [Int64] { [TimeVideoEffects.frameOffsetUs(1)] }
 
   init(params: [String: Any]) {
     intensity = Self.readIntensity(params)
+    spread = Self.spread(Self.readNumber(params, "sensitivity", fallback: 0.5, in: 0...1))
     super.init(function: Self.function, source: Self.source)
   }
 
+  /// How far the change that counts as movement is scaled at `sensitivity`:
+  /// 1 at the default 0.5, smaller as it rises. Mirrors the Android
+  /// `MotionOnlyVideoEffect.spreadOf`.
+  static func spread(_ sensitivity: Double) -> Double {
+    max(0.2, 2 - 2 * sensitivity)
+  }
+
   override func values(effectTimeUs: Int64) -> [Double]? {
-    intensity > 0 ? [intensity] : nil
+    intensity > 0 ? [intensity, spread] : nil
   }
 
   static let function = "divineMotionOnly"
@@ -226,10 +263,11 @@ final class MotionOnlyVideoEffect: ShaderVideoEffect {
       if (gid.x >= target.get_width() || gid.y >= target.get_height()) return;
       Frame f = frameOf(u);
       float intensity = u[3].x;
+      float spread = u[3].y;
       float2 p = pixelOf(u, gid, target.get_height());
       float3 now = tap(frame, f, p);
       float3 before = earlierAt(earlier0, f, p);
-      float moved = smoothstep(0.05, 0.15, length(now - before));
+      float moved = smoothstep(0.05 * spread, 0.15 * spread, length(now - before));
       float3 glow = min(now * (1.0 + 0.5 * intensity) + 0.1 * intensity, float3(1.0));
       target.write(float4(mix(now * (1.0 - intensity), glow, moved), 1.0), gid);
     }
@@ -320,9 +358,10 @@ enum StutterHolds {
 }
 
 /// Time warp: each band of the picture comes from a different moment, the
-/// top from now and each band below it from two frames further back, so
-/// moving people bend and stretch, as in a slit-scan photograph. Mirrors the
-/// Android `TimeWarpVideoEffect`.
+/// top from now and each band below it from two frames further back, or the
+/// same from whichever edge the user picks, so moving people bend and
+/// stretch, as in a slit-scan photograph. Mirrors the Android
+/// `TimeWarpVideoEffect`.
 ///
 /// Neighbouring bands blend over the middle 30% of the way from one band's
 /// middle to the next, so a moving edge steps rather than tears. Up to seven
@@ -330,9 +369,11 @@ enum StutterHolds {
 /// Android, where the current frame and seven earlier ones take the eight
 /// texture units OpenGL ES 2.0 guarantees.
 ///
-/// Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1):
-/// how far back the bottom of the picture reaches, up to 7 bands of two frames
-/// each, 467 ms. The earlier frames are kept at half size, as on Android.
+/// Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how
+/// far back the far edge of the picture reaches, up to 7 bands of two frames
+/// each, 467 ms) and `direction` (which way across the picture leads further
+/// back: 0 down, 1 up, 2 right, 3 left; see ``axis(_:)``). The earlier frames
+/// are kept at half size, as on Android.
 final class TimeWarpVideoEffect: ShaderVideoEffect {
   /// The id the Dart `CustomVideoEffect` names.
   static let id = "divine.timeWarp"
@@ -341,6 +382,7 @@ final class TimeWarpVideoEffect: ShaderVideoEffect {
 
   private let depth: Double
   private let offsets: [Int64]
+  private let axis: [Double]
 
   override var historyOffsetsUs: [Int64] { offsets }
 
@@ -349,6 +391,7 @@ final class TimeWarpVideoEffect: ShaderVideoEffect {
   init(params: [String: Any]) {
     let intensity = Self.readIntensity(params)
     depth = Double(Self.maxBandsBack) * intensity
+    axis = Self.axis((params["direction"] as? NSNumber)?.intValue ?? 0)
     let copies = Self.copies(intensity)
     offsets = (1...copies).map { TimeVideoEffects.frameOffsetUs(2 * $0) }
     let (function, source) = Self.kernel(copies: copies)
@@ -360,9 +403,24 @@ final class TimeWarpVideoEffect: ShaderVideoEffect {
     min(maxBandsBack, max(1, Int((Double(maxBandsBack) * intensity).rounded(.up))))
   }
 
-  /// How many bands back the bottom of the picture lies.
+  /// How far a point lies towards the past edge, from 0 at the present edge
+  /// to 1, as `dot(uv, axis.xy) + axis.z` for a point uv in shares of the
+  /// frame with y up: for `direction` 0 the top is now and the bottom furthest
+  /// back, 1 the other way round, 2 the left now and the right furthest back,
+  /// 3 the other way round. Mirrors the Android `TimeWarpVideoEffect.axisOf`.
+  static func axis(_ direction: Int) -> [Double] {
+    switch direction {
+    case 1: return [0, 1, 0]
+    case 2: return [1, 0, 0]
+    case 3: return [-1, 0, 1]
+    default: return [0, -1, 1]
+    }
+  }
+
+  /// How many bands back the far edge of the picture lies, then which edge
+  /// that is (see ``axis(_:)``).
   override func values(effectTimeUs: Int64) -> [Double]? {
-    [depth]
+    [depth] + axis
   }
 
   /// The kernel for `copies` earlier frames, by name and source.
@@ -391,8 +449,9 @@ final class TimeWarpVideoEffect: ShaderVideoEffect {
         if (gid.x >= target.get_width() || gid.y >= target.get_height()) return;
         Frame f = frameOf(u);
         float depth = u[3].x;
+        float3 axis = u[3].yzw;
         float2 p = pixelOf(u, gid, target.get_height());
-        float t = (1.0 - p.y / f.size.y) * depth;
+        float t = (dot(p / f.size, axis.xy) + axis.z) * depth;
         float3 color = tap(frame, f, p) * band(t, 0.0);
       \(bands)  target.write(float4(color, 1.0), gid);
       }

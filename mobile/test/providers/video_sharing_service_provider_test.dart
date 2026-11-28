@@ -9,8 +9,10 @@ import 'package:http/testing.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/service_providers.dart';
+import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:profile_repository/profile_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockAuthService extends Mock implements AuthService {}
 
@@ -36,12 +38,15 @@ void main() {
       },
     );
 
-    test('is available once the identity is known, before relays connect', () {
+    test('is available once the identity is known, before relays connect', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
       // Gating the service on the relay-ready client left Share a silent dead
       // tap during cold start (#6423). Publishing readiness is enforced on the
       // send path instead, via AuthService.canPublishNostrWritesNow.
       final container = ProviderContainer(
         overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
           // Builds the real native short-link provider, so a dependency it
           // gains that cannot build at cold start fails here.
           instrumentedHttpClientFactoryProvider.overrideWithValue(

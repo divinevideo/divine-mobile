@@ -29,8 +29,10 @@ import 'package:openvine/observability/sound_picker_telemetry.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/saved_sounds_provider.dart';
+import 'package:openvine/providers/song_catalog_providers.dart';
 import 'package:openvine/providers/sound_library_service_provider.dart';
 import 'package:openvine/providers/sounds_providers.dart';
+import 'package:openvine/screens/sound_detail_screen.dart';
 import 'package:openvine/services/audio_file_picker_service.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/local_audio_import_service.dart';
@@ -38,12 +40,19 @@ import 'package:openvine/services/sound_library_service.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/audio_category_bar.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/audio_editor_selection_overlay.dart';
+import 'package:openvine/widgets/video_editor/audio_editor/audio_kind_filter_pill.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/audio_list_tile.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/audio_selection_bottom_sheet.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 import 'package:sound_service/sound_service.dart';
 import 'package:sounds_repository/sounds_repository.dart'
-    show RankedSounds, SoundSearchRelays, SoundSearchSource, SoundsRepository;
+    show
+        AppleMusicApiException,
+        SongCatalogRepository,
+        SoundSearchRelays,
+        SoundSearchSource,
+        SoundsRepository;
 
 import '../../../helpers/recording_analytics_event_sink.dart';
 import '../../../helpers/recording_performance_monitor.dart';
@@ -71,6 +80,35 @@ AudioEvent _createTestAudioEvent({
   );
 }
 
+/// A song as the song catalog lists it: a provider sound that plays its
+/// preview and carries the catalog's artwork.
+AudioEvent _createTestSong({
+  required String id,
+  required String title,
+  String artist = 'The Example Band',
+}) {
+  final previewUrl = 'https://example.com/previews/$id.m4a';
+  return AudioEvent(
+    id: 'apple_music_$id',
+    pubkey: AudioEvent.externalProviderMarker,
+    createdAt: 0,
+    url: previewUrl,
+    title: title,
+    source: artist,
+    imageUrl: 'https://example.com/artwork/$id.jpg',
+    publicTags: const ['music'],
+    externalSource: AudioExternalSource(
+      provider: SongCatalogRepository.provider,
+      providerSoundId: id,
+      providerName: SongCatalogRepository.providerName,
+      creatorName: artist,
+      sourceUrl: 'https://example.com/songs/$id',
+      previewUrl: previewUrl,
+      license: SongCatalogRepository.previewTerms,
+    ),
+  );
+}
+
 /// [createdAt] for a sound published [age] ago.
 int _publishedAgo(Duration age) =>
     DateTime.now().subtract(age).millisecondsSinceEpoch ~/ 1000;
@@ -81,6 +119,9 @@ Finder _divineIcon(DivineIconName name) =>
 class _MockAudioPlaybackService extends Mock implements AudioPlaybackService {}
 
 class _MockSoundsRepository extends Mock implements SoundsRepository {}
+
+class _MockSongCatalogRepository extends Mock
+    implements SongCatalogRepository {}
 
 class _MockContentBlocklistRepository extends Mock
     implements ContentBlocklistRepository {}
@@ -110,8 +151,12 @@ _MockAudioPlaybackService _stubbedAudioService() {
     () => service.playingStream,
   ).thenAnswer((_) => const Stream<bool>.empty());
   when(
-    () => service.loadAudio(any()),
+    () => service.loadAudio(
+      any(),
+      streamUnlessCached: any(named: 'streamUnlessCached'),
+    ),
   ).thenAnswer((_) async => const Duration(seconds: 5));
+  when(() => service.position).thenReturn(Duration.zero);
   when(() => service.seek(Duration.zero)).thenAnswer((_) async {});
   when(service.play).thenAnswer((_) async {});
   when(service.pause).thenAnswer((_) async {});
@@ -155,10 +200,11 @@ void main() {
       Map<String, int> forYouUsageCounts = const {},
       List<List<AudioEvent>> laterForYouPages = const [],
       List<AudioEvent> divineSounds = const [],
-      RankedSounds popularSounds = (
-        sounds: const <AudioEvent>[],
-        usageCounts: const <String, int>{},
-      ),
+      ({List<AudioEvent> sounds, Map<String, int> usageCounts}) popularSounds =
+          (
+            sounds: const <AudioEvent>[],
+            usageCounts: const <String, int>{},
+          ),
       Map<String, List<AudioEvent>> searchResults = const {},
       Map<String, List<AudioEvent>> followedSearchResults = const {},
       Map<(SoundKind, SoundListOfKind), List<AudioEvent>> kindLists = const {},
@@ -179,7 +225,12 @@ void main() {
       Locale? locale,
       SoundPickerTelemetry? telemetry,
       Completer<List<AudioEvent>>? pendingSearch,
+      Map<String, Completer<List<AudioEvent>>> pendingSearches = const {},
+      Map<SoundListOfKind, Completer<PagedSounds>> pendingKindLists = const {},
       bool routed = false,
+      ValueSetter<AudioEvent?>? onPicked,
+      List<GoRouterState>? openedSoundPages,
+      SongCatalogRepository? songCatalog,
     }) {
       final blocklist = _MockContentBlocklistRepository();
       when(() => blocklist.currentState).thenAnswer(
@@ -235,6 +286,10 @@ void main() {
         child: ProviderScope(
           overrides: [
             contentBlocklistRepositoryProvider.overrideWithValue(blocklist),
+            // Always overridden: the real one reads the feature flags, and
+            // with them the stored preferences. Absent unless a test lists
+            // songs, as it is for everyone outside the experiment.
+            songCatalogRepositoryProvider.overrideWithValue(songCatalog),
             // `audioReuseConsentProvider` reads the viewer so it can grant a
             // creator consent for their own sound.
             authServiceProvider.overrideWithValue(
@@ -306,8 +361,11 @@ void main() {
                 relaySearches?.add(followed ? 'followed:$query' : query);
                 searchedKinds?.add(kind);
               }
-              final sounds = pendingSearch != null && query.isNotEmpty
-                  ? await pendingSearch.future
+              final pending = query.isEmpty
+                  ? null
+                  : pendingSearches[query] ?? pendingSearch;
+              final sounds = pending != null
+                  ? await pending.future
                   : (followed ? followedSearchResults : searchResults)[query] ??
                         const <AudioEvent>[];
               return (
@@ -322,12 +380,16 @@ void main() {
             }),
             // Always overridden: the real ones ask Funnelcake and the relays.
             soundsOfKindProvider.overrideWithBuild(
-              (_, notifier) async => PagedSounds(
-                pages: [
-                  kindLists[(notifier.kind, notifier.list)] ??
-                      const <AudioEvent>[],
-                ],
-              ),
+              (_, notifier) async {
+                final pending = pendingKindLists[notifier.list];
+                if (pending != null) return pending.future;
+                return PagedSounds(
+                  pages: [
+                    kindLists[(notifier.kind, notifier.list)] ??
+                        const <AudioEvent>[],
+                  ],
+                );
+              },
             ),
             soundsOfKindCoversProvider.overrideWith(
               (_, _) async => const <String, SoundCover?>{},
@@ -343,14 +405,40 @@ void main() {
                   localizationsDelegates: appLocalizationsDelegates,
                   supportedLocales: AppLocalizations.supportedLocales,
                   routerConfig: GoRouter(
-                    initialLocation: '/picker',
+                    // Pushed, as the editor opens it, when a test reads what
+                    // the picker closes with.
+                    initialLocation: onPicked == null ? '/picker' : '/',
                     routes: [
                       GoRoute(
                         path: '/',
-                        builder: (_, _) => const SizedBox(),
+                        builder: (_, _) => onPicked == null
+                            ? const SizedBox()
+                            : _PickerLauncher(onPicked: onPicked),
                         routes: [
                           GoRoute(path: 'picker', builder: (_, _) => picker),
                         ],
+                      ),
+                      // Stands in for the sound's page: Use Sound closes it
+                      // with `true`, as the real one does.
+                      GoRoute(
+                        path: SoundDetailScreen.path,
+                        builder: (context, state) {
+                          openedSoundPages?.add(state);
+                          return Scaffold(
+                            body: Column(
+                              children: [
+                                TextButton(
+                                  onPressed: () => context.pop(true),
+                                  child: const Text('Use on sound page'),
+                                ),
+                                TextButton(
+                                  onPressed: () => context.pop(),
+                                  child: const Text('Back from sound page'),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -448,6 +536,30 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byKey(const Key('audio_search_import')), findsOneWidget);
+      });
+
+      testWidgets('drops the search once it is cleared', (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.pumpWidget(
+          buildWidget(trendingSoundsAsync: AsyncValue.data(testSounds)),
+        );
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField).first, 'nothing like it');
+        await tester.pumpAndSettle();
+        final tryAnotherTerm = find.text(l10n.soundsNoSoundsFoundDescription);
+        expect(tryAnotherTerm, findsWidgets);
+
+        await tester.tap(find.byKey(const Key('search_clear_button')));
+        await tester.pumpAndSettle();
+
+        expect(
+          tester
+              .widget<TextField>(find.byType(TextField).first)
+              .controller!
+              .text,
+          isEmpty,
+        );
+        expect(tryAnotherTerm, findsNothing);
       });
 
       testWidgets('places the search above the list tabs', (tester) async {
@@ -1351,7 +1463,7 @@ void main() {
     });
 
     group('Preview', () {
-      testWidgets('loops, like the video a sound plays under', (tester) async {
+      testWidgets('plays once and goes back to its start', (tester) async {
         final audioService = _stubbedAudioService();
         await tester.pumpWidget(
           buildWidget(
@@ -1361,7 +1473,283 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        verify(() => audioService.setLooping(looping: true)).called(1);
+        verify(() => audioService.setRewindsAtEnd(rewinds: true)).called(1);
+      });
+
+      testWidgets('readies the sounds its list shows before they are tapped', (
+        tester,
+      ) async {
+        final audioService = _stubbedAudioService();
+        final kick = _createTestAudioEvent(
+          id: 'kick',
+          title: 'Big Kick',
+          url: 'https://media.divine.video/kick',
+        ).copyWith(fileSize: 4523);
+        final elsewhere = _createTestAudioEvent(
+          id: 'elsewhere',
+          title: 'Hosted Elsewhere',
+        ).copyWith(fileSize: 4523);
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data([kick, elsewhere]),
+            audioService: audioService,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.text(l10n.exploreTabNew));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Big Kick'), findsOneWidget);
+        expect(find.text('Hosted Elsewhere'), findsOneWidget);
+        verify(
+          () => audioService.prefetch(kick.url!, sizeBytes: 4523),
+        ).called(greaterThanOrEqualTo(1));
+        verifyNever(
+          () => audioService.prefetch(
+            elsewhere.url!,
+            sizeBytes: any(named: 'sizeBytes'),
+          ),
+        );
+        verifyNever(
+          () => audioService.loadAudio(
+            any(),
+            streamUnlessCached: any(named: 'streamUnlessCached'),
+          ),
+        );
+      });
+    });
+
+    group('Sound details', () {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      Finder cardTitle(String title) => find.descendant(
+        of: find.byType(AudioEditorSelectionOverlay),
+        matching: find.text(title),
+      );
+
+      testWidgets("opens the picked sound's page from its card with the "
+          'preview paused, and attaches the sound from there', (tester) async {
+        final audioService = _stubbedAudioService();
+        final opened = <GoRouterState>[];
+        final picked = <AudioEvent?>[];
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            audioService: audioService,
+            routed: true,
+            onPicked: picked.add,
+            openedSoundPages: opened,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.exploreTabNew));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Beta Song'));
+        await tester.pumpAndSettle();
+        clearInteractions(audioService);
+
+        await tester.tap(cardTitle('Beta Song'));
+        await tester.pumpAndSettle();
+
+        verify(audioService.pause).called(greaterThanOrEqualTo(1));
+        expect(opened, hasLength(1));
+        expect(opened.single.uri.toString(), '/sound/sound-2?for=video');
+        expect(
+          opened.single.extra,
+          isA<AudioEvent>().having((sound) => sound.id, 'id', 'sound-2'),
+        );
+
+        await tester.tap(find.text('Use on sound page'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(AudioSelectionBottomSheet), findsNothing);
+        expect(picked.map((sound) => sound?.id), ['sound-2']);
+      });
+
+      testWidgets('keeps the tab, search and pick, with the keyboard down, on '
+          "coming back from a sound's page", (tester) async {
+        final picked = <AudioEvent?>[];
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            audioService: _stubbedAudioService(),
+            routed: true,
+            onPicked: picked.add,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.exploreTabNew));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField).first, 'beta');
+        await tester.pumpAndSettle(const Duration(milliseconds: 400));
+        await tester.tap(find.text('Beta Song'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(cardTitle('Beta Song'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Back from sound page'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(AudioSelectionBottomSheet), findsOneWidget);
+        expect(
+          tester
+              .widget<TextField>(find.byType(TextField).first)
+              .controller!
+              .text,
+          'beta',
+        );
+        // New, narrowed to the search: For you lists none of these.
+        expect(
+          find.descendant(
+            of: find.byType(AudioListTile),
+            matching: find.text('Beta Song'),
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('Alpha Track'), findsNothing);
+        expect(cardTitle('Beta Song'), findsOneWidget);
+        expect(picked, isEmpty);
+        // The keyboard stays down instead of covering the list again.
+        expect(
+          tester
+              .widget<EditableText>(find.byType(EditableText).first)
+              .focusNode
+              .hasFocus,
+          isFalse,
+        );
+      });
+
+      testWidgets('attaches a sound whose page a long press on its row '
+          'opened', (tester) async {
+        final opened = <GoRouterState>[];
+        final picked = <AudioEvent?>[];
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            audioService: _stubbedAudioService(),
+            routed: true,
+            onPicked: picked.add,
+            openedSoundPages: opened,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.exploreTabNew));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Beta Song'));
+        await tester.pumpAndSettle();
+
+        await tester.longPress(find.text('Gamma Beat'));
+        await tester.pumpAndSettle();
+        expect(opened.single.pathParameters['id'], 'sound-3');
+
+        await tester.tap(find.text('Use on sound page'));
+        await tester.pumpAndSettle();
+
+        expect(picked.map((sound) => sound?.id), ['sound-3']);
+      });
+
+      // Its preview terms forbid changes, so its page would call it credit
+      // only, with no Use Sound, although the picker attaches it.
+      testWidgets('opens no page for a song from the catalog', (tester) async {
+        final songCatalog = _MockSongCatalogRepository();
+        when(songCatalog.fetchTrendingSongs).thenAnswer(
+          (_) async => [_createTestSong(id: 'top-1', title: 'Night Drive')],
+        );
+        final opened = <GoRouterState>[];
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            audioService: _stubbedAudioService(),
+            songCatalog: songCatalog,
+            routed: true,
+            openedSoundPages: opened,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.videoEditorAudioCategorySongs));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Night Drive'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(cardTitle('Night Drive'));
+        await tester.pumpAndSettle();
+
+        expect(opened, isEmpty);
+        expect(_divineIcon(DivineIconName.caretRight), findsNothing);
+        expect(
+          tester
+              .widget<AudioListTile>(find.byType(AudioListTile))
+              .onShowDetails,
+          isNull,
+        );
+      });
+
+      // The page plays its own preview, so one here that finishes loading
+      // meanwhile would play under it.
+      testWidgets("starts no preview while a sound's page is open", (
+        tester,
+      ) async {
+        final audioService = _stubbedAudioService();
+        final consent = Completer<bool>();
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            audioService: audioService,
+            pendingConsent: consent,
+            routed: true,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.exploreTabNew));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Beta Song'));
+        // The card slides in, and its loading ring spins until the check
+        // answers, so nothing settles.
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+        await tester.tap(cardTitle('Beta Song'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+        expect(find.text('Back from sound page'), findsOneWidget);
+
+        consent.complete(true);
+        await tester.pump();
+        await tester.pump();
+
+        verify(
+          () => audioService.loadAudio(any(), streamUnlessCached: true),
+        ).called(1);
+        verifyNever(audioService.play);
+      });
+
+      testWidgets('previews another sound after coming back from a page', (
+        tester,
+      ) async {
+        final audioService = _stubbedAudioService();
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            audioService: audioService,
+            routed: true,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.exploreTabNew));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Beta Song'));
+        await tester.pumpAndSettle();
+        await tester.tap(cardTitle('Beta Song'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Back from sound page'));
+        await tester.pumpAndSettle();
+        clearInteractions(audioService);
+
+        await tester.tap(find.text('Gamma Beat'));
+        await tester.pumpAndSettle();
+
+        verify(audioService.play).called(1);
       });
     });
 
@@ -1739,7 +2127,7 @@ void main() {
         await tester.tap(find.text(l10n.exploreTabNew));
         await tester.pumpAndSettle();
         await tester.enterText(find.byType(TextField).first, 'crowd');
-        await tester.pumpAndSettle();
+        await tester.pump();
 
         expect(
           find.text('Crowd ambience'),
@@ -1756,6 +2144,305 @@ void main() {
       });
 
       group('answered by Funnelcake', () {
+        testWidgets('waits for the typed query and reuses a settled answer '
+            'if the query is edited back', (tester) async {
+          final beta = Completer<List<AudioEvent>>();
+          final sentQueries = <String>[];
+          await tester.pumpWidget(
+            buildWidget(
+              trendingSoundsAsync: AsyncValue.data(testSounds),
+              searchSource: SoundSearchSource.funnelcake,
+              searchResults: {
+                'alpha': [
+                  _createTestAudioEvent(id: 'answer-a', title: 'Answer A'),
+                ],
+              },
+              pendingSearches: {'beta': beta},
+              relaySearches: sentQueries,
+            ),
+          );
+          await tester.pumpAndSettle();
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          await tester.tap(find.text(l10n.exploreTabNew));
+          await tester.pumpAndSettle();
+          final field = find.byType(TextField).first;
+          await tester.enterText(field, 'alpha');
+          await tester.pump(const Duration(milliseconds: 400));
+          await tester.pumpAndSettle();
+          expect(find.text('Answer A'), findsOneWidget);
+          tester.takeAnnouncements();
+
+          await tester.enterText(field, 'beta');
+          await tester.pump(const Duration(milliseconds: 400));
+          await tester.enterText(field, 'gamma');
+          await tester.pump();
+          beta.complete([
+            _createTestAudioEvent(id: 'answer-b', title: 'Answer B'),
+          ]);
+          await tester.pump();
+          await tester.pump();
+
+          expect(find.text('Answer B'), findsNothing);
+          expect(find.text('Answer A'), findsOneWidget);
+          expect(tester.takeAnnouncements(), isEmpty);
+
+          await tester.enterText(field, 'beta');
+          await tester.pumpAndSettle();
+
+          expect(find.text('Answer B'), findsOneWidget);
+          expect(find.text('Answer A'), findsNothing);
+          expect(sentQueries, ['alpha', 'beta']);
+          expect(
+            tester.takeAnnouncements().map(
+              (announcement) => announcement.message,
+            ),
+            [l10n.soundsSearchResultCount(1)],
+          );
+        });
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        for (final (list, label) in [
+          (SoundListOfKind.followed, l10n.exploreTabForYou),
+          (SoundListOfKind.popular, l10n.exploreTabPopular),
+          (SoundListOfKind.newest, l10n.exploreTabNew),
+        ]) {
+          testWidgets('keeps ranked results on ${list.name} while the kind '
+              'browse list loads', (tester) async {
+            final browse = Completer<PagedSounds>();
+            final filtered = Completer<List<AudioEvent>>();
+            final searches = <String, Completer<List<AudioEvent>>>{};
+            final ranked = {
+              'rain': [
+                _createTestAudioEvent(id: 'ranked-rain', title: 'Ranked rain'),
+              ],
+            };
+            await tester.pumpWidget(
+              buildWidget(
+                trendingSoundsAsync: AsyncValue.data(testSounds),
+                searchSource: SoundSearchSource.funnelcake,
+                searchResults: ranked,
+                followedSearchResults: ranked,
+                pendingSearches: searches,
+                pendingKindLists: {list: browse},
+              ),
+            );
+            await tester.pumpAndSettle();
+            await tester.tap(find.text(label));
+            await tester.pumpAndSettle();
+            await tester.enterText(find.byType(TextField).first, 'rain');
+            await tester.pump(const Duration(milliseconds: 400));
+            await tester.pumpAndSettle();
+            expect(find.text('Ranked rain'), findsOneWidget);
+
+            searches['rain'] = filtered;
+            tester
+                .widget<AudioKindFilterPill>(find.byType(AudioKindFilterPill))
+                .onChanged(SoundKind.effect);
+            await tester.pump();
+
+            expect(find.text('Ranked rain'), findsOneWidget);
+            expect(find.byType(DivineLinearProgressIndicator), findsOneWidget);
+
+            filtered.complete([
+              _createTestAudioEvent(id: 'rain-hit', title: 'Rain hit'),
+            ]);
+            await tester.pumpAndSettle();
+
+            expect(find.text('Rain hit'), findsOneWidget);
+            expect(find.text('Ranked rain'), findsNothing);
+            expect(find.byType(DivineLinearProgressIndicator), findsNothing);
+            browse.complete(const PagedSounds(pages: []));
+            await tester.pumpAndSettle();
+          });
+        }
+
+        testWidgets('shows rows loading, not the loaded rows that match as '
+            'typed, until it first answers', (tester) async {
+          final answer = Completer<List<AudioEvent>>();
+          await tester.pumpWidget(
+            buildWidget(
+              trendingSoundsAsync: AsyncValue.data(testSounds),
+              searchSource: SoundSearchSource.funnelcake,
+              pendingSearches: {'beta': answer},
+            ),
+          );
+          await tester.pumpAndSettle();
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          await tester.tap(find.text(l10n.exploreTabNew));
+          await tester.pumpAndSettle();
+
+          await tester.enterText(find.byType(TextField).first, 'beta');
+          await tester.pump();
+
+          expect(find.bySubtype<Skeletonizer>(), findsOneWidget);
+          expect(find.text('Beta Song'), findsNothing);
+
+          await tester.pump(const Duration(milliseconds: 400));
+
+          expect(
+            find.bySubtype<Skeletonizer>(),
+            findsOneWidget,
+            reason: 'the search is sent, but not answered yet',
+          );
+          expect(find.text('Beta Song'), findsNothing);
+
+          answer.complete([
+            _createTestAudioEvent(id: 'betta', title: 'Betta fish'),
+          ]);
+          await tester.pumpAndSettle();
+
+          expect(find.bySubtype<Skeletonizer>(), findsNothing);
+          expect(find.text('Betta fish'), findsOneWidget);
+          expect(
+            find.text('Beta Song'),
+            findsNothing,
+            reason: 'Funnelcake did not find it',
+          );
+        });
+
+        testWidgets('keeps its last answer, under a loading bar, until the '
+            'next one lands, then swaps once', (tester) async {
+          final next = Completer<List<AudioEvent>>();
+          await tester.pumpWidget(
+            buildWidget(
+              trendingSoundsAsync: AsyncValue.data(testSounds),
+              searchSource: SoundSearchSource.funnelcake,
+              searchResults: {
+                'gam': [_createTestAudioEvent(id: 'gamut', title: 'Gamut')],
+              },
+              pendingSearches: {'gamma': next},
+            ),
+          );
+          await tester.pumpAndSettle();
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          await tester.tap(find.text(l10n.exploreTabNew));
+          await tester.pumpAndSettle();
+          await tester.enterText(find.byType(TextField).first, 'gam');
+          await tester.pump(const Duration(milliseconds: 400));
+          await tester.pumpAndSettle();
+          expect(find.text('Gamut'), findsOneWidget);
+          expect(find.byType(DivineLinearProgressIndicator), findsNothing);
+
+          await tester.enterText(find.byType(TextField).first, 'gamma');
+          await tester.pump();
+
+          expect(find.text('Gamut'), findsOneWidget);
+          expect(find.byType(DivineLinearProgressIndicator), findsOneWidget);
+
+          await tester.pump(const Duration(milliseconds: 400));
+
+          expect(
+            find.text('Gamut'),
+            findsOneWidget,
+            reason: 'the last answer stays while the next is in flight',
+          );
+          expect(
+            find.text('Gamma Beat'),
+            findsNothing,
+            reason: 'no loaded row matching as typed shows in between',
+          );
+          expect(find.byType(DivineLinearProgressIndicator), findsOneWidget);
+
+          next.complete([
+            _createTestAudioEvent(id: 'gamma-ray', title: 'Gamma ray'),
+          ]);
+          await tester.pumpAndSettle();
+
+          expect(find.text('Gamma ray'), findsOneWidget);
+          expect(find.text('Gamut'), findsNothing);
+          expect(find.byType(DivineLinearProgressIndicator), findsNothing);
+        });
+
+        testWidgets("keeps Divine's own matches with the answer they were "
+            'listed with on For you', (tester) async {
+          final next = Completer<List<AudioEvent>>();
+          await tester.pumpWidget(
+            buildWidget(
+              trendingSoundsAsync: AsyncValue.data(testSounds),
+              searchSource: SoundSearchSource.funnelcake,
+              followedSearchResults: {
+                'boom': [
+                  _createTestAudioEvent(id: 'followed', title: 'Followed bomm'),
+                ],
+              },
+              pendingSearches: {'boomx': next},
+              bundledSounds: [
+                VineSound(
+                  id: 'vine-boom',
+                  title: 'Vine Boom',
+                  assetPath: 'assets/sounds/vine_boom.mp3',
+                  duration: const Duration(seconds: 1),
+                ),
+              ],
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          await tester.enterText(find.byType(TextField).first, 'boom');
+          await tester.pump();
+
+          expect(
+            find.text('Vine Boom'),
+            findsNothing,
+            reason: 'it shows with the answer, rather than alone before it',
+          );
+
+          await tester.pump(const Duration(milliseconds: 400));
+          await tester.pumpAndSettle();
+
+          expect(
+            tester.getTopLeft(find.text('Vine Boom')).dy,
+            lessThan(tester.getTopLeft(find.text('Followed bomm')).dy),
+          );
+
+          await tester.enterText(find.byType(TextField).first, 'boomx');
+          await tester.pump(const Duration(milliseconds: 400));
+
+          expect(
+            find.text('Vine Boom'),
+            findsOneWidget,
+            reason: 'matched against the search answered, not the words typed',
+          );
+          expect(find.text('Followed bomm'), findsOneWidget);
+
+          next.complete(const []);
+          await tester.pumpAndSettle();
+
+          expect(find.text('Vine Boom'), findsNothing);
+          expect(find.text('Followed bomm'), findsNothing);
+        });
+
+        testWidgets('tells a screen reader how many sounds it found', (
+          tester,
+        ) async {
+          await tester.pumpWidget(
+            buildWidget(
+              trendingSoundsAsync: AsyncValue.data(testSounds),
+              searchSource: SoundSearchSource.funnelcake,
+              searchResults: {
+                'coalness': [
+                  _createTestAudioEvent(id: 'typo', title: 'Coolness lol'),
+                  _createTestAudioEvent(id: 'exact', title: 'Coalness'),
+                ],
+              },
+            ),
+          );
+          await tester.pumpAndSettle();
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          await tester.tap(find.text(l10n.exploreTabNew));
+          await tester.pumpAndSettle();
+          tester.takeAnnouncements();
+
+          await tester.enterText(find.byType(TextField).first, 'coalness');
+          await tester.pump(const Duration(milliseconds: 400));
+          await tester.pumpAndSettle();
+
+          expect(
+            tester.takeAnnouncements().map((a) => a.message),
+            [l10n.soundsSearchResultCount(2)],
+          );
+        });
+
         testWidgets('shows what it found despite a typo, in its order', (
           tester,
         ) async {
@@ -1934,9 +2621,8 @@ void main() {
         });
       });
 
-      testWidgets('keeps loaded matches on screen while the query settles', (
-        tester,
-      ) async {
+      testWidgets('once the relays answered for Funnelcake, narrows the loaded '
+          'rows as typed while the next query settles', (tester) async {
         await tester.pumpWidget(
           buildWidget(trendingSoundsAsync: AsyncValue.data(testSounds)),
         );
@@ -1945,6 +2631,11 @@ void main() {
         final l10n = lookupAppLocalizations(const Locale('en'));
         await tester.tap(find.text(l10n.exploreTabNew));
         await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField).first, 'alpha');
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pumpAndSettle();
+        expect(find.text('Alpha Track'), findsOneWidget);
+
         await tester.enterText(find.byType(TextField).first, 'beta');
         await tester.pump();
 
@@ -1952,10 +2643,12 @@ void main() {
           find.text('Beta Song'),
           findsOneWidget,
           reason:
-              'the list narrows on the first keystroke rather than '
-              'blanking until the debounced search answers',
+              'what the relays find is appended to the rows that match as '
+              'typed, so those show at once and nothing swaps them out',
         );
         expect(find.text('Alpha Track'), findsNothing);
+        expect(find.bySubtype<Skeletonizer>(), findsNothing);
+        expect(find.byType(DivineLinearProgressIndicator), findsNothing);
       });
 
       testWidgets('finds a saved sound by the label its owner gave it', (
@@ -2316,7 +3009,10 @@ void main() {
         await tester.pump();
 
         verify(
-          () => audioService.loadAudio('https://example.com/audio/sound-2.mp3'),
+          () => audioService.loadAudio(
+            'https://example.com/audio/sound-2.mp3',
+            streamUnlessCached: true,
+          ),
         ).called(1);
         verifyNever(audioService.play);
 
@@ -2324,7 +3020,9 @@ void main() {
         await tester.pumpAndSettle();
 
         verify(audioService.play).called(1);
-        verifyNever(() => audioService.loadAudio(any()));
+        verifyNever(
+          () => audioService.loadAudio(any(), streamUnlessCached: true),
+        );
       });
 
       testWidgets('keeps the later pick when an earlier check answers last', (
@@ -2390,7 +3088,7 @@ void main() {
           final audioService = _stubbedAudioService();
           // Beta Song's file is still on its way when Wednesday is picked back.
           when(
-            () => audioService.loadAudio(betaUrl),
+            () => audioService.loadAudio(betaUrl, streamUnlessCached: true),
           ).thenAnswer((_) => Completer<Duration?>().future);
           await tester.pumpWidget(
             buildWidget(
@@ -2418,7 +3116,10 @@ void main() {
 
           expect(overlay(tester).audio.title, 'Wednesday My Dudes');
           expect(overlay(tester).isLoading, isFalse);
-          verify(() => audioService.loadAudio(wednesdayUrl)).called(2);
+          verify(
+            () =>
+                audioService.loadAudio(wednesdayUrl, streamUnlessCached: true),
+          ).called(2);
           consent.complete(true);
           await tester.pumpAndSettle();
         });
@@ -2429,7 +3130,8 @@ void main() {
           final wednesdayLoad = Completer<Duration?>();
           final audioService = _stubbedAudioService();
           when(
-            () => audioService.loadAudio(wednesdayUrl),
+            () =>
+                audioService.loadAudio(wednesdayUrl, streamUnlessCached: true),
           ).thenAnswer((_) => wednesdayLoad.future);
           await tester.pumpWidget(
             buildWidget(
@@ -2556,12 +3258,16 @@ void main() {
           () => audioService.positionStream,
         ).thenAnswer((_) => const Stream<Duration>.empty());
         when(() => audioService.duration).thenReturn(null);
+        when(() => audioService.position).thenReturn(Duration.zero);
         when(
           () => audioService.seek(Duration.zero),
         ).thenAnswer((_) => Future<void>.value());
         when(audioService.stop).thenAnswer((_) => Future<void>.value());
         when(
-          () => audioService.loadAudio(ownLegacySound.url!),
+          () => audioService.loadAudio(
+            ownLegacySound.url!,
+            streamUnlessCached: true,
+          ),
         ).thenAnswer((_) => Future.value(const Duration(seconds: 5)));
         when(audioService.play).thenAnswer((_) => Future<void>.value());
         when(audioService.pause).thenAnswer((_) => Future<void>.value());
@@ -2609,6 +3315,361 @@ void main() {
       });
     });
 
+    group('Songs', () {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final topSongs = [
+        _createTestSong(id: 'top-1', title: 'Night Drive'),
+        _createTestSong(
+          id: 'top-2',
+          title: 'Slow Morning',
+          artist: 'Second Artist',
+        ),
+      ];
+
+      late _MockSongCatalogRepository songCatalog;
+
+      setUp(() {
+        songCatalog = _MockSongCatalogRepository();
+      });
+
+      void stubTopSongs() => when(
+        songCatalog.fetchTrendingSongs,
+      ).thenAnswer((_) async => topSongs);
+
+      Future<void> openSongs(WidgetTester tester) async {
+        await tester.tap(find.text(l10n.videoEditorAudioCategorySongs));
+        await tester.pumpAndSettle();
+      }
+
+      /// Types [query] and waits out the pause the picker searches after.
+      Future<void> search(WidgetTester tester, String query) async {
+        await tester.enterText(find.byType(TextField).first, query);
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets('has no tab without the song catalog', (tester) async {
+        await tester.pumpWidget(
+          buildWidget(trendingSoundsAsync: AsyncValue.data(testSounds)),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.videoEditorAudioCategoryMySounds), findsWidgets);
+        expect(find.text(l10n.videoEditorAudioCategorySongs), findsNothing);
+      });
+
+      testWidgets('sits before My Sounds when the song catalog is there', (
+        tester,
+      ) async {
+        stubTopSongs();
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            songCatalog: songCatalog,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final songs = tester.getTopLeft(
+          find.text(l10n.videoEditorAudioCategorySongs),
+        );
+        expect(
+          songs.dx,
+          greaterThan(tester.getTopLeft(find.text(l10n.exploreTabNew)).dx),
+        );
+        expect(
+          songs.dx,
+          lessThan(
+            tester
+                .getTopLeft(find.text(l10n.videoEditorAudioCategoryMySounds))
+                .dx,
+          ),
+        );
+      });
+
+      testWidgets('lists the most played songs once its tab opens', (
+        tester,
+      ) async {
+        stubTopSongs();
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            songCatalog: songCatalog,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Not asked for until someone looks.
+        verifyNever(songCatalog.fetchTrendingSongs);
+        expect(find.text('Night Drive'), findsNothing);
+
+        await openSongs(tester);
+
+        expect(find.text('Night Drive'), findsOneWidget);
+        expect(find.text('Slow Morning'), findsOneWidget);
+        expect(find.textContaining('Second Artist'), findsOneWidget);
+        verify(songCatalog.fetchTrendingSongs).called(1);
+      });
+
+      testWidgets("leads a song with the catalog's artwork", (tester) async {
+        stubTopSongs();
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            songCatalog: songCatalog,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await openSongs(tester);
+
+        expect(
+          tester
+              .widgetList<VineCachedImage>(find.byType(VineCachedImage))
+              .map((image) => image.imageUrl),
+          equals([
+            'https://example.com/artwork/top-1.jpg',
+            'https://example.com/artwork/top-2.jpg',
+          ]),
+        );
+      });
+
+      testWidgets('keeps the songs it loaded when its tab is opened again', (
+        tester,
+      ) async {
+        stubTopSongs();
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            songCatalog: songCatalog,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await openSongs(tester);
+
+        await tester.tap(find.text(l10n.exploreTabForYou));
+        await tester.pumpAndSettle();
+        expect(find.text('Night Drive'), findsNothing);
+        await openSongs(tester);
+
+        expect(find.text('Night Drive'), findsOneWidget);
+        verify(songCatalog.fetchTrendingSongs).called(1);
+      });
+
+      testWidgets('searches the catalog for what is typed', (tester) async {
+        stubTopSongs();
+        when(() => songCatalog.searchSongs('paper')).thenAnswer(
+          (_) async => [_createTestSong(id: 'match', title: 'Paper Planes')],
+        );
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            songCatalog: songCatalog,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await openSongs(tester);
+
+        await search(tester, 'Paper');
+
+        expect(find.text('Paper Planes'), findsOneWidget);
+        expect(find.text('Night Drive'), findsNothing);
+        verify(() => songCatalog.searchSongs('paper')).called(1);
+      });
+
+      testWidgets('brings the most played songs back when the search is '
+          'cleared', (tester) async {
+        stubTopSongs();
+        when(() => songCatalog.searchSongs('paper')).thenAnswer(
+          (_) async => [_createTestSong(id: 'match', title: 'Paper Planes')],
+        );
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            songCatalog: songCatalog,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await openSongs(tester);
+        await search(tester, 'paper');
+        expect(find.text('Night Drive'), findsNothing);
+
+        await search(tester, '');
+
+        expect(find.text('Night Drive'), findsOneWidget);
+        expect(find.text('Paper Planes'), findsNothing);
+      });
+
+      testWidgets('says so when a search matches no song', (tester) async {
+        stubTopSongs();
+        when(
+          () => songCatalog.searchSongs('zzzz'),
+        ).thenAnswer((_) async => const []);
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            songCatalog: songCatalog,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await openSongs(tester);
+
+        await search(tester, 'zzzz');
+
+        expect(find.text(l10n.soundsNoSoundsFound), findsOneWidget);
+        expect(find.text('Night Drive'), findsNothing);
+      });
+
+      testWidgets('keeps what is searched on Songs from the sound search', (
+        tester,
+      ) async {
+        stubTopSongs();
+        when(
+          () => songCatalog.searchSongs('paper'),
+        ).thenAnswer((_) async => const []);
+        final soundSearches = <String>[];
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            songCatalog: songCatalog,
+            relaySearches: soundSearches,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await openSongs(tester);
+
+        await search(tester, 'paper');
+
+        verify(() => songCatalog.searchSongs('paper')).called(1);
+        expect(soundSearches, isEmpty);
+
+        // The same words do go out once a list of sounds is open.
+        await tester.tap(find.text(l10n.exploreTabNew));
+        await tester.pumpAndSettle();
+
+        expect(soundSearches, equals(['paper']));
+      });
+
+      testWidgets('keeps a search made on another tab from the catalog while '
+          'its list only peeks in', (tester) async {
+        stubTopSongs();
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            songCatalog: songCatalog,
+            savedSounds: [
+              _createTestAudioEvent(id: 'saved', title: 'My private label'),
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.videoEditorAudioCategoryMySounds));
+        await tester.pumpAndSettle();
+        await search(tester, 'private');
+        expect(find.text('My private label'), findsOneWidget);
+
+        // Dragging My Sounds aside builds the Songs list beside it.
+        final gesture = await tester.startGesture(
+          tester.getCenter(find.byType(TabBarView)),
+        );
+        await gesture.moveBy(const Offset(40, 0));
+        await gesture.moveBy(const Offset(120, 0));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+
+        verify(songCatalog.fetchTrendingSongs).called(1);
+        verifyNever(() => songCatalog.searchSongs(any()));
+
+        await gesture.moveBy(const Offset(-160, 0));
+        await gesture.up();
+        await tester.pumpAndSettle();
+      });
+
+      testWidgets('offers a retry when the catalog cannot be reached', (
+        tester,
+      ) async {
+        var attempts = 0;
+        when(songCatalog.fetchTrendingSongs).thenAnswer((_) async {
+          if (attempts++ == 0) {
+            throw const AppleMusicApiException('Apple Music request failed');
+          }
+          return topSongs;
+        });
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            songCatalog: songCatalog,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await openSongs(tester);
+
+        expect(
+          find.text(l10n.videoEditorAudioFailedToLoadTitle),
+          findsOneWidget,
+        );
+        expect(find.text('Night Drive'), findsNothing);
+
+        await tester.tap(find.text(l10n.commonRetry));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Night Drive'), findsOneWidget);
+      });
+
+      testWidgets('lists no song once the picker is narrowed to effects', (
+        tester,
+      ) async {
+        stubTopSongs();
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            songCatalog: songCatalog,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await openSongs(tester);
+        expect(find.text('Night Drive'), findsOneWidget);
+
+        await tester.tap(find.byKey(const Key('audio_kind_filter')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.videoEditorAudioFilterEffects).last);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Night Drive'), findsNothing);
+        expect(find.text(l10n.soundsNoSoundsFound), findsOneWidget);
+      });
+
+      testWidgets('picks a song and plays its preview without a reuse check', (
+        tester,
+      ) async {
+        stubTopSongs();
+        final audioService = _stubbedAudioService();
+        // A reuse check would refuse it: its terms forbid derivatives.
+        final refusedCheck = Completer<bool>();
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            songCatalog: songCatalog,
+            audioService: audioService,
+            pendingConsent: refusedCheck,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await openSongs(tester);
+
+        await tester.tap(find.text('Night Drive'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(AudioEditorSelectionOverlay), findsOneWidget);
+        verify(
+          () => audioService.loadAudio(
+            'https://example.com/previews/top-1.m4a',
+            streamUnlessCached: true,
+          ),
+        ).called(1);
+        verify(audioService.play).called(1);
+      });
+    });
+
     group('Loading state', () {
       testWidgets('renders $BrandedLoadingIndicator on community tab', (
         tester,
@@ -2626,67 +3687,78 @@ void main() {
         expect(find.byType(BrandedLoadingIndicator), findsOneWidget);
       });
 
-      testWidgets('shows selected-audio loading before stop completes', (
-        tester,
-      ) async {
-        final audioService = _MockAudioPlaybackService();
-        final stopCompleter = Completer<void>();
-        final sound = _createTestAudioEvent(title: 'Slow Load');
-        Future<void> completeImmediately(Invocation _) => Future<void>.value();
-        Future<Duration> loadDuration(Invocation _) =>
-            Future.value(const Duration(seconds: 5));
-        Future<void> waitForStop(Invocation _) => stopCompleter.future;
+      testWidgets(
+        'shows selected-audio loading before the old preview pauses',
+        (
+          tester,
+        ) async {
+          final audioService = _MockAudioPlaybackService();
+          final pauseCompleter = Completer<void>();
+          final sound = _createTestAudioEvent(title: 'Slow Load');
+          Future<void> completeImmediately(Invocation _) =>
+              Future<void>.value();
+          Future<Duration> loadDuration(Invocation _) =>
+              Future.value(const Duration(seconds: 5));
+          Future<void> waitForPause(Invocation _) => pauseCompleter.future;
 
-        when(() => audioService.isPlaying).thenReturn(false);
-        when(
-          () => audioService.playingStream,
-        ).thenAnswer((_) => const Stream<bool>.empty());
-        when(
-          () => audioService.durationStream,
-        ).thenAnswer((_) => const Stream<Duration?>.empty());
-        when(
-          () => audioService.positionStream,
-        ).thenAnswer((_) => const Stream<Duration>.empty());
-        when(() => audioService.duration).thenReturn(null);
-        when(
-          () => audioService.seek(Duration.zero),
-        ).thenAnswer(completeImmediately);
-        when(audioService.stop).thenAnswer(waitForStop);
-        when(() => audioService.loadAudio(sound.url!)).thenAnswer(loadDuration);
-        when(audioService.play).thenAnswer(completeImmediately);
-        when(audioService.pause).thenAnswer(completeImmediately);
-        when(audioService.dispose).thenAnswer(completeImmediately);
+          when(() => audioService.isPlaying).thenReturn(false);
+          when(
+            () => audioService.playingStream,
+          ).thenAnswer((_) => const Stream<bool>.empty());
+          when(
+            () => audioService.durationStream,
+          ).thenAnswer((_) => const Stream<Duration?>.empty());
+          when(
+            () => audioService.positionStream,
+          ).thenAnswer((_) => const Stream<Duration>.empty());
+          when(() => audioService.duration).thenReturn(null);
+          when(() => audioService.position).thenReturn(Duration.zero);
+          when(
+            () => audioService.seek(Duration.zero),
+          ).thenAnswer(completeImmediately);
+          when(audioService.stop).thenAnswer(completeImmediately);
+          when(
+            () => audioService.loadAudio(sound.url!, streamUnlessCached: true),
+          ).thenAnswer(loadDuration);
+          when(audioService.play).thenAnswer(completeImmediately);
+          when(audioService.pause).thenAnswer(waitForPause);
+          when(audioService.dispose).thenAnswer(completeImmediately);
 
-        await tester.pumpWidget(
-          buildWidget(
-            trendingSoundsAsync: AsyncValue.data([sound]),
-            audioService: audioService,
-          ),
-        );
-        await tester.pumpAndSettle();
+          await tester.pumpWidget(
+            buildWidget(
+              trendingSoundsAsync: AsyncValue.data([sound]),
+              audioService: audioService,
+            ),
+          );
+          await tester.pumpAndSettle();
 
-        final l10n = lookupAppLocalizations(const Locale('en'));
-        await tester.tap(find.text(l10n.exploreTabNew));
-        await tester.pumpAndSettle();
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          await tester.tap(find.text(l10n.exploreTabNew));
+          await tester.pumpAndSettle();
 
-        await tester.tap(find.text('Slow Load'));
-        await tester.pump();
+          await tester.tap(find.text('Slow Load'));
+          await tester.pump();
 
-        expect(
-          tester
-              .widget<AudioEditorSelectionOverlay>(
-                find.byType(AudioEditorSelectionOverlay),
-              )
-              .isLoading,
-          isTrue,
-        );
-        verifyNever(() => audioService.loadAudio(sound.url!));
+          expect(
+            tester
+                .widget<AudioEditorSelectionOverlay>(
+                  find.byType(AudioEditorSelectionOverlay),
+                )
+                .isLoading,
+            isTrue,
+          );
+          verifyNever(
+            () => audioService.loadAudio(sound.url!, streamUnlessCached: true),
+          );
 
-        stopCompleter.complete();
-        await tester.pumpAndSettle();
+          pauseCompleter.complete();
+          await tester.pumpAndSettle();
 
-        verify(() => audioService.loadAudio(sound.url!)).called(1);
-      });
+          verify(
+            () => audioService.loadAudio(sound.url!, streamUnlessCached: true),
+          ).called(1);
+        },
+      );
     });
 
     group('Lifecycle', () {
@@ -2712,9 +3784,11 @@ void main() {
           () => audioService.positionStream,
         ).thenAnswer((_) => const Stream<Duration>.empty());
         when(() => audioService.duration).thenReturn(null);
+        when(() => audioService.position).thenReturn(Duration.zero);
         when(() => audioService.seek(Duration.zero)).thenAnswer(immediate);
         when(audioService.stop).thenAnswer(immediate);
-        when(() => audioService.loadAudio(sound.url!)).thenAnswer(loadDuration);
+        when(() => audioService.loadAudio(sound.url!, streamUnlessCached: true))
+            .thenAnswer(loadDuration);
         // Blocks for the whole "playback" so the preview future is still
         // pending when the sheet is torn down.
         when(audioService.play).thenAnswer(blockOnPlay);
@@ -3230,6 +4304,38 @@ void main() {
           );
         });
 
+        testWidgets('reports a tab left for Songs, which is not timed, as '
+            'dismissed', (tester) async {
+          final songCatalog = _MockSongCatalogRepository();
+          when(
+            songCatalog.fetchTrendingSongs,
+          ).thenAnswer((_) async => const []);
+          await tester.pumpWidget(
+            buildWidget(
+              trendingSoundsAsync: const AsyncLoading(),
+              songCatalog: songCatalog,
+              telemetry: telemetry,
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.text(l10n.exploreTabNew));
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 1));
+          await tester.tap(find.text(l10n.videoEditorAudioCategorySongs));
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 1));
+
+          expect(
+            surfaceLoads(),
+            contains(tabLoad('newest', SurfaceLoadResult.dismissed)),
+          );
+          expect(
+            surfaceLoads().map((load) => load[AnalyticsParam.tab]),
+            isNot(contains('songs')),
+          );
+        });
+
         testWidgets('reports a list that failed to load', (tester) async {
           await tester.pumpWidget(
             buildWidget(
@@ -3417,12 +4523,13 @@ void main() {
         ) async {
           final audioService = _stubbedAudioService();
           const betaUrl = 'https://example.com/audio/sound-2.mp3';
-          when(() => audioService.loadAudio(betaUrl)).thenAnswer(
-            (_) async => throw RemoteAudioDownloadException(
-              Uri.parse(betaUrl),
-              statusCode: 503,
-            ),
-          );
+          when(() => audioService.loadAudio(betaUrl, streamUnlessCached: true))
+              .thenAnswer(
+                (_) async => throw RemoteAudioDownloadException(
+                  Uri.parse(betaUrl),
+                  statusCode: 503,
+                ),
+              );
           await tester.pumpWidget(
             buildWidget(
               trendingSoundsAsync: AsyncValue.data(testSounds),
@@ -3444,7 +4551,9 @@ void main() {
               .onTogglePlayState();
           await tester.pumpAndSettle();
 
-          verify(() => audioService.loadAudio(betaUrl)).called(3);
+          verify(
+            () => audioService.loadAudio(betaUrl, streamUnlessCached: true),
+          ).called(3);
           expect(picks(), [
             {'source': 'newest', 'outcome': 'download_failed', 'searched': 0},
           ]);
@@ -3513,9 +4622,63 @@ void main() {
             {'source': 'newest', 'outcome': 'attached', 'searched': 1},
           ]);
         });
+
+        testWidgets('reports a song attached as picked from Songs', (
+          tester,
+        ) async {
+          final songCatalog = _MockSongCatalogRepository();
+          when(songCatalog.fetchTrendingSongs).thenAnswer(
+            (_) async => [_createTestSong(id: 'top-1', title: 'Night Drive')],
+          );
+          await tester.pumpWidget(
+            buildWidget(
+              trendingSoundsAsync: AsyncValue.data(testSounds),
+              audioService: _stubbedAudioService(),
+              songCatalog: songCatalog,
+              telemetry: telemetry,
+              routed: true,
+            ),
+          );
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.videoEditorAudioCategorySongs));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('Night Drive'));
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.text(l10n.videoEditorAudioUseSound));
+          await tester.pumpAndSettle();
+
+          expect(picks(), [
+            {'source': 'songs', 'outcome': 'attached', 'searched': 0},
+          ]);
+        });
       });
     });
   });
+}
+
+/// Opens the picker the way the editor does, by pushing it, and hands on
+/// what it closed with.
+class _PickerLauncher extends StatefulWidget {
+  const _PickerLauncher({required this.onPicked});
+
+  final ValueSetter<AudioEvent?> onPicked;
+
+  @override
+  State<_PickerLauncher> createState() => _PickerLauncherState();
+}
+
+class _PickerLauncherState extends State<_PickerLauncher> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(context.push<AudioEvent>('/picker').then(widget.onPicked));
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => const SizedBox();
 }
 
 /// Fake TrendingSounds notifier for testing: its first page is

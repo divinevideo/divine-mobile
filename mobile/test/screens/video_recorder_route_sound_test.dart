@@ -10,6 +10,7 @@ import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/router/recorder_sound_selection.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/widgets/screen_frame_trace_scope.dart';
 
 class _MockAuthService extends Mock implements AuthService {}
 
@@ -61,10 +62,11 @@ void main() {
               builder: (context, ref, _) {
                 // Exercise the route's actual account-checked handoff without
                 // opening the native camera below the selection gate.
-                gate = VideoRecorderRoute(initialSound: selection).build(
+                final scope = VideoRecorderRoute(initialSound: selection).build(
                   context,
                   ref,
-                ) as RecorderSoundSelectionGate;
+                ) as ScreenFrameTraceScope;
+                gate = scope.child as RecorderSoundSelectionGate;
                 return const SizedBox.shrink();
               },
             ),

@@ -1,5 +1,5 @@
 // ABOUTME: Cubit for the Explore Lists discovery gallery. Streams public
-// ABOUTME: video lists, queries public people lists, hydrates thumbnails.
+// ABOUTME: video lists and queries public people lists, index first.
 
 import 'dart:async';
 
@@ -8,16 +8,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/features/lists_discovery/cubit/lists_discovery_state.dart';
-import 'package:openvine/services/curated_list_service.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 
 export 'package:openvine/features/lists_discovery/cubit/lists_discovery_state.dart';
 
-/// How many lists each column shows and enriches.
-///
-/// The relays are read over [kPublicListsRelayWindow] events so real lists
-/// surface past the empty default-list placeholders; this cap bounds the
-/// cards built and the thumbnails resolved, not what was read.
+/// How many lists each column shows.
 const kListsDiscoveryColumnCap = 50;
 
 /// How many thumbnails each video-list card fan needs.
@@ -25,23 +20,22 @@ const kListsDiscoveryThumbnails = 5;
 
 /// Drives the Explore Lists discovery gallery.
 ///
-/// The two columns load independently: kind-30005 video lists arrive over a
-/// relay stream and are enriched with thumbnails once the stream settles,
-/// while kind-30000 people lists come from a one-shot relay query. The
+/// The two columns load independently: kind-30005 video lists arrive over
+/// [CuratedListRepository.discoverLists], first as summaries and then
+/// completed with their videos and thumbnails, while kind-30000 people lists
+/// come from a one-shot [PeopleListsRepository.discoverPublicLists]. The
 /// viewer's own lists are excluded — those live on the profile's My Lists
-/// tab instead — and so is any list that has no videos yet.
+/// tab instead — and so are lists by blocked authors.
 class ListsDiscoveryCubit extends Cubit<ListsDiscoveryState>
     with CloseGuardedEmit<ListsDiscoveryState> {
   ListsDiscoveryCubit({
-    required CuratedListService? curatedListService,
     required CuratedListRepository curatedListRepository,
     required PeopleListsRepository peopleListsRepository,
     required String? viewerPubkey,
     bool videoInitializationFailed = false,
     bool Function(String authorPubkey)? blockFilter,
     ListsDiscoveryState? seed,
-  }) : _curatedListService = curatedListService,
-       _curatedListRepository = curatedListRepository,
+  }) : _curatedListRepository = curatedListRepository,
        _peopleListsRepository = peopleListsRepository,
        _viewerPubkey = viewerPubkey,
        _blockFilter = blockFilter,
@@ -56,7 +50,6 @@ class ListsDiscoveryCubit extends Cubit<ListsDiscoveryState>
          ),
        );
 
-  final CuratedListService? _curatedListService;
   final CuratedListRepository _curatedListRepository;
   final PeopleListsRepository _peopleListsRepository;
   final String? _viewerPubkey;
@@ -64,7 +57,7 @@ class ListsDiscoveryCubit extends Cubit<ListsDiscoveryState>
   final bool _videoInitializationFailed;
   final bool Function(String authorPubkey)? _blockFilter;
 
-  StreamSubscription<List<CuratedList>>? _videoSubscription;
+  StreamSubscription<List<CuratedListSearchResult>>? _videoSubscription;
 
   /// Settles when the video stream errors, completes, or the cubit closes —
   /// cancellation fires no onDone, so [close] must release this latch or a
@@ -75,8 +68,7 @@ class ListsDiscoveryCubit extends Cubit<ListsDiscoveryState>
   Future<void> load() {
     if (_isSeeded || isClosed) return Future.value();
     return Future.wait([
-      if (!_videoInitializationFailed && _curatedListService != null)
-        _loadVideoLists(),
+      if (!_videoInitializationFailed) _loadVideoLists(),
       _loadPeopleLists(),
     ]);
   }
@@ -88,7 +80,7 @@ class ListsDiscoveryCubit extends Cubit<ListsDiscoveryState>
     emitIfOpen(
       state.copyWith(
         videoStatus: ListsDiscoveryColumnStatus.loading,
-        videoLists: _sortedVideoLists(state.videoLists),
+        videoLists: _visibleVideoLists(state.videoLists),
       ),
     );
 
@@ -104,18 +96,23 @@ class ListsDiscoveryCubit extends Cubit<ListsDiscoveryState>
     await _videoSubscription?.cancel();
     if (!_isCurrentVideoLoad(completion)) return;
     var streamFailed = false;
-    var latest = const <CuratedList>[];
 
-    _videoSubscription = _curatedListService!
-        .streamPublicListsFromRelays()
+    _videoSubscription = _curatedListRepository
+        .discoverLists(
+          limit: kListsDiscoveryColumnCap,
+          excludeAuthor: _viewerPubkey,
+          // Explicit even though it matches the repository default: the
+          // value is this feature's product invariant (the fan has 5 slots).
+          // ignore: avoid_redundant_argument_values
+          maxThumbnails: kListsDiscoveryThumbnails,
+        )
         .listen(
-          (lists) {
+          (results) {
             if (!_isCurrentVideoLoad(completion)) return;
-            latest = _sortedVideoLists(lists);
             emitIfOpen(
               state.copyWith(
                 videoStatus: ListsDiscoveryColumnStatus.success,
-                videoLists: latest,
+                videoLists: _visibleVideoLists(results),
                 videoThumbnailsPending: true,
               ),
             );
@@ -130,83 +127,41 @@ class ListsDiscoveryCubit extends Cubit<ListsDiscoveryState>
                 videoStatus: state.videoLists.isEmpty
                     ? ListsDiscoveryColumnStatus.failure
                     : ListsDiscoveryColumnStatus.success,
+                videoThumbnailsPending: false,
               ),
             );
             if (!completion.isCompleted) completion.complete();
           },
           onDone: () {
             if (!_isCurrentVideoLoad(completion)) return;
-            // A successful empty refresh clears stale cards; an error keeps
-            // the last useful data and the status set by its handler.
-            if (!streamFailed) {
-              emitIfOpen(
-                state.copyWith(
-                  videoStatus: ListsDiscoveryColumnStatus.success,
-                  videoLists: latest,
-                ),
-              );
-            }
+            // An error keeps the status its handler set.
+            emitIfOpen(
+              state.copyWith(
+                videoStatus: streamFailed
+                    ? null
+                    : ListsDiscoveryColumnStatus.success,
+                videoThumbnailsPending: false,
+              ),
+            );
             if (!completion.isCompleted) completion.complete();
           },
         );
 
     await completion.future;
-    await _hydrateThumbnails(latest, generation: completion);
   }
 
-  /// Streamed lists render immediately with placeholder fans; the enriched
-  /// copies replace them once the resolver returns.
-  ///
-  /// [generation] is the load this resolve belongs to. Resolving is slow —
-  /// per video a funnelcake call plus a batched relay query — so a refresh
-  /// can land while it is in flight; emitting then would replace the fresh
-  /// lists with the ones this load started from.
-  Future<void> _hydrateThumbnails(
-    List<CuratedList> lists, {
-    required Completer<void> generation,
-  }) async {
-    if (!_isCurrentVideoLoad(generation)) return;
-    final visible = _sortedVideoLists(lists);
-    if (visible.isEmpty) {
-      emitIfOpen(state.copyWith(videoThumbnailsPending: false));
-      return;
-    }
-    try {
-      final enriched = await _curatedListRepository.resolveListThumbnails(
-        visible,
-        // Explicit even though it matches the resolver default: the value is
-        // this feature's product invariant (the card fan has 5 slots).
-        // ignore: avoid_redundant_argument_values
-        maxThumbnails: kListsDiscoveryThumbnails,
-      );
-      if (!_isCurrentVideoLoad(generation)) return;
-      emitIfOpen(
-        state.copyWith(
-          videoLists: _sortedVideoLists(enriched),
-          videoThumbnailsPending: false,
-        ),
-      );
-    } catch (error, stackTrace) {
-      // Thumbnails are progressive enhancement: the cards already render
-      // with placeholders, so a failed resolve only stops their shimmer.
-      addError(error, stackTrace);
-      if (_isCurrentVideoLoad(generation)) {
-        emitIfOpen(state.copyWith(videoThumbnailsPending: false));
-      }
-    }
-  }
-
-  List<CuratedList> _sortedVideoLists(List<CuratedList> lists) {
-    final visible = [
-      for (final list in lists)
-        if (list.hasVideos &&
-            !_isOwn(list) &&
-            (list.pubkey == null ||
-                !(_blockFilter?.call(list.pubkey!) ?? false)))
-          list,
-    ]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    return List.unmodifiable(visible.take(kListsDiscoveryColumnCap));
-  }
+  List<CuratedListSearchResult> _visibleVideoLists(
+    List<CuratedListSearchResult> results,
+  ) => List.unmodifiable(
+    results
+        .where(
+          (result) =>
+              !_isOwn(result.list) &&
+              (result.list.pubkey == null ||
+                  !(_blockFilter?.call(result.list.pubkey!) ?? false)),
+        )
+        .take(kListsDiscoveryColumnCap),
+  );
 
   bool _isOwn(CuratedList list) =>
       _viewerPubkey != null && list.pubkey == _viewerPubkey;

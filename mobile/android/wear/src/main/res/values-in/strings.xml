@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="divine_watch_start_recording">Mulai merekam</string>
+    <string name="divine_watch_stop_recording">Hentikan perekaman</string>
+    <string name="divine_watch_notification_channel">Remote kamera</string>
+</resources>

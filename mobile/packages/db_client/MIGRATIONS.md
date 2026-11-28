@@ -4,7 +4,7 @@ This document describes how to manage database migrations for the `db_client` pa
 
 ## Current Schema Version
 
-**Version: 36** (see `app_database.dart`).
+**Version: 40** (see `app_database.dart`).
 
 Version 2 is the legacy-normalization baseline. Earlier releases kept Drift's
 user-version at 1 while startup repair SQL added tables, columns, indexes, and
@@ -630,3 +630,41 @@ between short passes. An interrupted cleanup resumes from the remaining rows on
 the next launch. Only empty retired tables and indexes are dropped; there is no
 startup VACUUM or whole-cache DELETE. Retired tables are optional raw migration
 artifacts rather than permanent Drift schema entities.
+
+## Version 37: private share delivery evidence
+
+Version 37 adds two columns:
+
+- `direct_messages.recipient_accepted_environment` (nullable text): the
+  environment in which this device saw the recipient's route accept the
+  sender's message, `''` when no environment was set. It is NULL for every
+  upgraded row and for every row history sync writes, including the sender's
+  own gift wrap, so no existing or synced message carries an acknowledgment.
+- `outgoing_dms.skip_nip04_fallback` (boolean, default 0): suppresses the
+  legacy kind-4 copy on every attempt, including a replay after restart. Rows
+  queued before v37 get 0, so recovery keeps deciding their kind-4 copy with
+  the plain-text rumor check.
+
+## Version 38: share recipient eligibility
+
+Version 38 adds `outgoing_dms.is_video_share` (boolean, default 0): whether the
+share sheet queued the send, so every attempt rechecks the current block and
+mute policy for its recipient. Rows queued before v38 get 0; recovery
+recognizes the share sheet's structured video citation on those older queued
+messages instead.
+## Version 39: verified alias for a second gift wrap
+
+Version 39 adds `processed_gift_wraps.verified_message_id` (nullable text): the
+inbound NIP-17 rumor a second gift wrap of the same message resolves to, so a
+DM push that names that wrap can open the message. It is written only when the
+identical rumor already exists for the same account, room and sender. Every
+upgraded ledger row, and every terminal outcome without a navigable message,
+keeps NULL and stays plain dedup evidence. The v32 ledger rebuild uses today's
+table definition, so `_withholdV39Columns` drops the column again for any
+historical target below 39. The column is in the `beforeOpen` repair probe.
+
+## Version 40: exact inbox preview message
+
+Version 40 adds nullable `conversations.last_message_id`. The exact ID travels
+with a preview when it is selected. Earlier snapshots use their sender, content
+and timestamp only when exactly one visible message matches.

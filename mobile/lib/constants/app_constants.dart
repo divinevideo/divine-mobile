@@ -51,6 +51,9 @@ class AppConstants {
   /// Divine download page that selects stores for the visitor's platform.
   static const String downloadUrl = 'https://divine.video/download';
 
+  /// Invite link to the official Divine Discord server.
+  static const String discordInviteUrl = 'https://discord.gg/d6HpB6XnHp';
+
   /// Origin of the web app, under which every in-app path is a shareable
   /// link.
   static const String webOrigin = 'https://divine.video';

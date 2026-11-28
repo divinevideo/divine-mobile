@@ -1,9 +1,12 @@
+import 'package:analytics/analytics.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/explore_tabs/explore_tabs_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/readiness_gate_providers.dart';
@@ -13,6 +16,7 @@ import 'package:openvine/widgets/new_videos_tab.dart';
 import 'package:openvine/widgets/video_tile_transition/video_tile_origin.dart';
 import 'package:videos_repository/videos_repository.dart';
 
+import '../helpers/screen_load_recorder.dart';
 import '../helpers/test_provider_overrides.dart';
 
 class _MockVideosRepository extends Mock implements VideosRepository {}
@@ -185,6 +189,67 @@ void main() {
           skipCache: true,
         ),
       ).called(1);
+    });
+
+    group('Explore load telemetry', () {
+      late ScreenLoadRecorder recorder;
+      late ExploreTabsCubit exploreTabs;
+
+      setUp(() {
+        recorder = ScreenLoadRecorder();
+        exploreTabs = ExploreTabsCubit(
+          screenAnalytics: ScreenAnalyticsService(
+            history: PageLoadHistory(),
+            sink: const NoOpAnalyticsEventSink(),
+          ),
+          loadTelemetry: recorder.telemetry(AnalyticsSurface.explore),
+        )..trackScreenLoad(initialTabName: exploreDefaultTabName);
+        addTearDown(exploreTabs.close);
+      });
+
+      Future<void> pumpTab(WidgetTester tester) async {
+        await tester.pumpWidget(
+          testMaterialApp(
+            additionalOverrides: [
+              appReadyProvider.overrideWithValue(true),
+              videosRepositoryProvider.overrideWithValue(videosRepository),
+              videoEventServiceProvider.overrideWithValue(videoEventService),
+              contentBlocklistRepositoryProvider.overrideWithValue(
+                blocklistRepository,
+              ),
+            ],
+            home: BlocProvider.value(
+              value: exploreTabs,
+              child: const Scaffold(body: NewVideosTab()),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets('reports the grid it shows to Explore', (tester) async {
+        await pumpTab(tester);
+
+        expect(recorder.results, [SurfaceLoadResult.success]);
+        expect(
+          recorder.loads.single,
+          containsPair(AnalyticsParam.itemCount, 1),
+        );
+      });
+
+      testWidgets('reports a failed first page as a failure', (tester) async {
+        when(
+          () => videosRepository.getNewVideos(
+            limit: any(named: 'limit'),
+            until: any(named: 'until'),
+            skipCache: any(named: 'skipCache'),
+          ),
+        ).thenThrow(Exception('offline'));
+
+        await pumpTab(tester);
+
+        expect(recorder.results, [SurfaceLoadResult.failure]);
+      });
     });
   });
 }

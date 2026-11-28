@@ -14,6 +14,7 @@ class DmConversation extends Equatable {
     required this.isGroup,
     required this.createdAt,
     this.lastMessageContent,
+    this.lastMessageIsVideoShare = false,
     this.lastMessageTimestamp,
     this.lastMessageSenderPubkey,
     this.subject,
@@ -37,6 +38,9 @@ class DmConversation extends Equatable {
 
   /// Preview text of the last message.
   final String? lastMessageContent;
+
+  /// Whether the latest visible message has its own structured video citation.
+  final bool lastMessageIsVideoShare;
 
   /// Unix timestamp of the last message.
   final int? lastMessageTimestamp;
@@ -75,6 +79,7 @@ class DmConversation extends Equatable {
     int? createdAt,
     String? lastMessageContent,
     bool clearLastMessageContent = false,
+    bool? lastMessageIsVideoShare,
     int? lastMessageTimestamp,
     bool clearLastMessageTimestamp = false,
     String? lastMessageSenderPubkey,
@@ -92,6 +97,8 @@ class DmConversation extends Equatable {
       participantPubkeys: participantPubkeys ?? this.participantPubkeys,
       isGroup: isGroup ?? this.isGroup,
       createdAt: createdAt ?? this.createdAt,
+      lastMessageIsVideoShare:
+          lastMessageIsVideoShare ?? this.lastMessageIsVideoShare,
       lastMessageContent: clearLastMessageContent
           ? null
           : lastMessageContent ?? this.lastMessageContent,
@@ -116,6 +123,7 @@ class DmConversation extends Equatable {
     isGroup,
     createdAt,
     lastMessageContent,
+    lastMessageIsVideoShare,
     lastMessageTimestamp,
     lastMessageSenderPubkey,
     subject,

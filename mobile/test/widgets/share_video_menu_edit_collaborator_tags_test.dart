@@ -20,6 +20,8 @@ import 'package:openvine/services/video_metadata_update_service.dart';
 import 'package:openvine/services/video_publish/signed_event_relay_publisher.dart';
 import 'package:openvine/utils/collaborator_tags.dart';
 
+import 'package:videos_repository/videos_repository.dart';
+
 import '../helpers/test_provider_overrides.dart';
 import '../helpers/test_pubkeys.dart';
 
@@ -34,6 +36,8 @@ class _MockVideoEventService extends Mock implements VideoEventService {}
 
 class _MockSignedEventRelayPublisher extends Mock
     implements SignedEventRelayPublisher {}
+
+class _MockVideosRepository extends Mock implements VideosRepository {}
 
 class _FakeEvent extends Fake implements Event {}
 
@@ -52,8 +56,10 @@ VideoEvent _testVideo({
     videoUrl: 'https://cdn.example.com/video.mp4',
     title: 'Test Video Title',
     vineId: 'video-d-tag',
+    addressableDTag: 'video-d-tag',
     collaboratorPubkeys: [collaboratorPubkey],
     nostrEventTags: const [
+      ['d', 'video-d-tag'],
       ['imeta', 'url https://cdn.example.com/video.mp4', 'm video/mp4'],
     ],
   );
@@ -117,6 +123,30 @@ void main() {
       () => mockPersonalEventCacheService.cacheUserEvent(any()),
     ).thenReturn(null);
     when(() => mockVideoEventService.updateVideoEvent(any())).thenReturn(null);
+    // The newest revision read is the one being edited.
+    final videosRepository = _MockVideosRepository();
+    when(
+      () => videosRepository.fetchLatestVideoRevision(
+        any(),
+        notOlderThan: any(named: 'notOlderThan'),
+      ),
+    ).thenAnswer(
+      (_) async => LatestVideoRevisionFound(
+        Event.fromJson({
+          'id': 'event-id',
+          'pubkey': ownerPubkey,
+          'created_at': 1757385263,
+          'kind': 34236,
+          'tags': [
+            ['d', 'video-d-tag'],
+            ['imeta', 'url https://cdn.example.com/video.mp4', 'm video/mp4'],
+            buildCollaboratorPTag(collaboratorPubkey),
+          ],
+          'content': 'Test video content',
+          'sig': '',
+        }),
+      ),
+    );
 
     service = VideoMetadataUpdateService(
       authService: mockAuthService,
@@ -124,6 +154,7 @@ void main() {
       relayPublisher: mockRelayPublisher,
       personalEventCache: mockPersonalEventCacheService,
       videoEventService: mockVideoEventService,
+      readLatestRevision: videosRepository.fetchLatestVideoRevision,
       collaboratorInviteService: CollaboratorInviteService(
         dmRepository: mockDmRepository,
         l10n: lookupAppLocalizations(const Locale('en')),

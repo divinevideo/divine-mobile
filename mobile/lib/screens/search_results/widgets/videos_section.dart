@@ -15,6 +15,7 @@ import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_empty_state.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_error_state.dart';
 import 'package:openvine/screens/search_results/widgets/section_header.dart';
+import 'package:openvine/ui/adaptive_grid.dart';
 import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
@@ -23,6 +24,13 @@ import 'package:openvine/widgets/video_thumbnail_widget.dart';
 import 'package:openvine/widgets/video_tile_transition/video_tile_origin.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:skeletonizer/skeletonizer.dart';
+
+/// Columns of the results grid on a phone; a tablet without the large-screen
+/// layouts shows 3, and with them each breakpoint adds one.
+const _compactColumns = 2;
+
+/// Gap between the results' tiles, and around them.
+const double _gridSpacing = 4;
 
 /// Always-visible Videos section with a "Videos" header and optional
 /// "See all" chevron.
@@ -143,11 +151,8 @@ class _VideosGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     // Select the list by identity so same-ID API replacements reach the tiles.
     final (status, videos, query) = context.select(
-      (VideoSearchBloc bloc) => (
-        bloc.state.status,
-        bloc.state.videos,
-        bloc.state.query,
-      ),
+      (VideoSearchBloc bloc) =>
+          (bloc.state.status, bloc.state.videos, bloc.state.query),
     );
 
     if ((status == VideoSearchStatus.initial ||
@@ -168,28 +173,23 @@ class _VideosGrid extends StatelessWidget {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
 
-    final screenWidth = MediaQuery.of(context).size.width;
-    final layout = context.adaptiveLayout;
-    final crossAxisCount = layout.gridColumns(
-      compact: 2,
-      width: screenWidth,
-      largeColumnsWithoutFlag: 3,
-    );
-
     return SliverPadding(
-      padding: const EdgeInsets.all(4),
-      sliver: SliverMasonryGrid.count(
-        crossAxisCount: crossAxisCount,
-        mainAxisSpacing: 4,
-        crossAxisSpacing: 4,
-        childCount: videos.length,
-        itemBuilder: (context, index) {
+      padding: const EdgeInsets.all(_gridSpacing),
+      sliver: SliverMasonryGrid(
+        gridDelegate: AdaptiveMasonryColumns(
+          layout: context.adaptiveLayout,
+          compactColumns: _compactColumns,
+          largeColumnsWithoutFlag: 3,
+        ),
+        mainAxisSpacing: _gridSpacing,
+        crossAxisSpacing: _gridSpacing,
+        delegate: SliverChildBuilderDelegate((context, index) {
           return SearchVideoTile(
             video: videos[index],
             index: index,
             onTap: (captureOrigin) => onVideoTap(videos, index, captureOrigin),
           );
-        },
+        }, childCount: videos.length),
       ),
     );
   }
@@ -276,35 +276,50 @@ class SearchVideoTile extends StatelessWidget {
   }
 }
 
+/// Rows of placeholder tiles the loading skeleton shows.
+const _skeletonRows = 2;
+
 class _VideosSkeletonLoader extends StatelessWidget {
   const _VideosSkeletonLoader();
 
   @override
   Widget build(BuildContext context) {
+    final layout = context.adaptiveLayout;
     return SliverToBoxAdapter(
       child: Semantics(
         identifier: 'videos_loading_indicator',
         label: context.l10n.searchVideosLoadingLabel,
         child: Skeletonizer(
           effect: vineSkeletonEffectOf(context),
-          child: GridView.count(
-            crossAxisCount: 2,
-            mainAxisSpacing: 4,
-            crossAxisSpacing: 4,
-            padding: const EdgeInsets.all(4),
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            children: List.generate(
-              4,
-              (_) => Skeleton.leaf(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: context.vineColors.skeleton,
-                    borderRadius: BorderRadius.circular(4),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // As many columns as the results grid. Without the large-screen
+              // layouts the skeleton keeps the phone's columns, as it did
+              // before them.
+              final columns = layout.gridColumns(
+                compact: _compactColumns,
+                width: constraints.maxWidth - _gridSpacing * 2,
+              );
+              return GridView.count(
+                crossAxisCount: columns,
+                mainAxisSpacing: _gridSpacing,
+                crossAxisSpacing: _gridSpacing,
+                padding: const EdgeInsets.all(_gridSpacing),
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                children: List.generate(
+                  columns * _skeletonRows,
+                  (_) => Skeleton.leaf(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: context.vineColors.skeleton,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
         ),
       ),

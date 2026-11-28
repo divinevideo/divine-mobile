@@ -8,6 +8,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:feed_repository/feed_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/saved_sounds/saved_sounds_bloc.dart';
@@ -22,9 +23,12 @@ import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/nav_extensions.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/services/saved_sound_context_builder.dart';
+import 'package:openvine/ui/adaptive_grid.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/library/saved_sound_details_editor.dart';
+import 'package:openvine/widgets/list_action_buttons.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:openvine/widgets/video_feed_item/audio_attribution_credit.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
@@ -95,18 +99,37 @@ class SoundDetailScreen extends ConsumerStatefulWidget {
   /// Path pattern for this route.
   static const path = '/sound/:id';
 
+  /// Query parameter saying what the page was opened for.
+  static const purposeQueryParameter = 'for';
+
+  /// Value of [purposeQueryParameter] when the editor's sound picker opened
+  /// the page; see [choosesForVideo].
+  static const chooseForVideoPurpose = 'video';
+
   /// Creates a SoundDetailScreen.
   ///
   /// [sound] is the audio event to display.
   /// [sourceVideo] is optional — provided for original sounds to show
   /// the video this sound came from.
-  const SoundDetailScreen({required this.sound, this.sourceVideo, super.key});
+  const SoundDetailScreen({
+    required this.sound,
+    this.sourceVideo,
+    this.choosesForVideo = false,
+    super.key,
+  });
 
   /// The audio event to display details for.
   final AudioEvent sound;
 
   /// The source video for original sounds (when [AudioEvent.isOriginalSound]).
   final VideoEvent? sourceVideo;
+
+  /// Whether Use Sound picks [sound] for the video being edited, closing the
+  /// page with `true`, instead of saving it to My Sounds.
+  ///
+  /// The editor's sound picker opens the page this way, so a sound's credit
+  /// can be read before it is chosen.
+  final bool choosesForVideo;
 
   @override
   ConsumerState<SoundDetailScreen> createState() => _SoundDetailScreenState();
@@ -191,12 +214,12 @@ class _SoundDetailScreenState extends ConsumerState<SoundDetailScreen> {
       );
 
       await audioService.loadAudio(widget.sound.url!);
-      if (mounted) {
-        setState(() {
-          _isPlayingPreview = true;
-          _isLoadingPreview = false;
-        });
-      }
+      // The page closed while the preview loaded; nothing would stop it.
+      if (!mounted) return;
+      setState(() {
+        _isPlayingPreview = true;
+        _isLoadingPreview = false;
+      });
       await audioService.play();
 
       if (mounted) {
@@ -228,6 +251,13 @@ class _SoundDetailScreenState extends ConsumerState<SoundDetailScreen> {
   }
 
   void _onUseSound() {
+    // Only the picker that pushed the page waits for the answer. A page
+    // reloaded on the web, or opened from a link, saves as usual.
+    if (widget.choosesForVideo && context.canPop()) {
+      // The picker attaches the sound; leaving the page stops its preview.
+      context.safePop(result: true);
+      return;
+    }
     Log.info(
       'Saving sound to library: ${widget.sound.title} (${widget.sound.id})',
       name: 'SoundDetailScreen',
@@ -510,6 +540,10 @@ class _SoundHeaderState extends ConsumerState<_SoundHeader> {
   String? _licenseUrl;
   String? _sourceUrl;
 
+  /// Whether the app ships only a cut of this bundled sound's recording; a
+  /// published sound says so in its own description instead.
+  bool _isBundledExcerpt = false;
+
   @override
   void initState() {
     super.initState();
@@ -538,6 +572,7 @@ class _SoundHeaderState extends ConsumerState<_SoundHeader> {
       _license = vineSound.license;
       _licenseUrl = _launchableUrl(vineSound.licenseUrl);
       _sourceUrl = _launchableUrl(vineSound.sourceUrl);
+      _isBundledExcerpt = vineSound.isExcerpt;
     }
   }
 
@@ -585,6 +620,13 @@ class _SoundHeaderState extends ConsumerState<_SoundHeader> {
                 pubkey: profileCreditPubkey,
                 profile: profileCreditProfile,
               );
+    // Divine's imported library changes most of its recordings before
+    // sharing them (loudness, edge silence, length) and says so in the
+    // event, and the app ships two CC BY sounds as cuts of longer
+    // recordings. An Attribution licence asks the credit to say so.
+    final isEdited =
+        sound.requiresAttribution &&
+        (sound.isChangedFromOriginal || _isBundledExcerpt);
     // Matches the feed pill and the metadata sheet: a credited creator who is
     // not the signer means the signer only shared the sound. Bundled sounds
     // carry a marker pubkey rather than a real signer, so they are excluded
@@ -651,6 +693,7 @@ class _SoundHeaderState extends ConsumerState<_SoundHeader> {
                         license: _license,
                         licenseUrl: _licenseUrl,
                         sourceUrl: _sourceUrl,
+                        isEdited: isEdited,
                       )
                     else if (_artistName != null)
                       _AttributionInfo(
@@ -658,6 +701,7 @@ class _SoundHeaderState extends ConsumerState<_SoundHeader> {
                         license: _license,
                         licenseUrl: _licenseUrl,
                         sourceUrl: _sourceUrl,
+                        isEdited: isEdited,
                       ),
                     if (showsSeparatePublisher && publisherName != null)
                       _ProfileCreditLink(
@@ -700,34 +744,26 @@ class _SoundHeaderState extends ConsumerState<_SoundHeader> {
           const SizedBox(height: 16),
 
           // Action buttons
-          Row(
-            spacing: 12,
-            children: [
-              // Preview button
-              Expanded(
-                child: DivineButton(
-                  label: widget.isPlaying
-                      ? context.l10n.soundStop
-                      : context.l10n.soundPreview,
-                  type: DivineButtonType.secondary,
-                  leadingIcon: widget.isPlaying
-                      ? DivineIconName.squareFill
-                      : DivineIconName.play,
-                  isLoading: widget.isLoadingPreview,
-                  semanticIdentifier: 'sound_detail_preview_button',
-                  onPressed: widget.onPreviewTap,
-                ),
+          ListActionButtons(
+            buttons: [
+              DivineButton(
+                label: widget.isPlaying
+                    ? context.l10n.soundStop
+                    : context.l10n.soundPreview,
+                type: DivineButtonType.secondary,
+                leadingIcon: widget.isPlaying
+                    ? DivineIconName.squareFill
+                    : DivineIconName.play,
+                isLoading: widget.isLoadingPreview,
+                semanticIdentifier: 'sound_detail_preview_button',
+                onPressed: widget.onPreviewTap,
               ),
-
-              // Use Sound button
               if (widget.onUseSoundTap != null)
-                Expanded(
-                  child: DivineButton(
-                    label: context.l10n.soundUseSound,
-                    leadingIcon: DivineIconName.plus,
-                    semanticIdentifier: 'sound_detail_use_button',
-                    onPressed: widget.onUseSoundTap,
-                  ),
+                DivineButton(
+                  label: context.l10n.soundUseSound,
+                  leadingIcon: DivineIconName.plus,
+                  semanticIdentifier: 'sound_detail_use_button',
+                  onPressed: widget.onUseSoundTap,
                 ),
             ],
           ),
@@ -827,6 +863,7 @@ class _ProfileAttributionInfo extends StatelessWidget {
     this.license,
     this.licenseUrl,
     this.sourceUrl,
+    this.isEdited = false,
   });
 
   final String text;
@@ -834,8 +871,11 @@ class _ProfileAttributionInfo extends StatelessWidget {
   final String semanticsIdentifier;
   final String? license;
 
-  /// Makes [license] a link to the licence text, as CC BY 4.0
-  /// §3(a)(1)(C) asks where it is reasonably practicable.
+  /// See [_AttributionInfo.isEdited].
+  final bool isEdited;
+
+  /// Makes [license] a link to the licence, whose text or link CC BY 4.0
+  /// §3(a)(1)(C) asks a credit to include.
   final String? licenseUrl;
   final String? sourceUrl;
 
@@ -864,6 +904,7 @@ class _ProfileAttributionInfo extends StatelessWidget {
               ),
             ] else
               TextSpan(text: ' · $license'),
+          if (isEdited) TextSpan(text: ' · ${context.l10n.soundCreditEdited}'),
           if (sourceUrl != null) ...[
             const TextSpan(text: ' · '),
             WidgetSpan(
@@ -921,13 +962,18 @@ class _AttributionInfo extends StatelessWidget {
     this.license,
     this.licenseUrl,
     this.sourceUrl,
+    this.isEdited = false,
   });
 
   final String artistName;
   final String? license;
 
-  /// Makes [license] a link to the licence text, as CC BY 4.0
-  /// §3(a)(1)(C) asks where it is reasonably practicable.
+  /// Whether to say the sound was changed from the original recording, as
+  /// CC BY 4.0 §3(a)(1)(B) asks of whoever shares a changed copy.
+  final bool isEdited;
+
+  /// Makes [license] a link to the licence, whose text or link CC BY 4.0
+  /// §3(a)(1)(C) asks a credit to include.
   final String? licenseUrl;
   final String? sourceUrl;
 
@@ -948,6 +994,7 @@ class _AttributionInfo extends StatelessWidget {
               ),
             ] else
               TextSpan(text: ' · $license'),
+          if (isEdited) TextSpan(text: ' · ${context.l10n.soundCreditEdited}'),
           if (sourceUrl != null) ...[
             const TextSpan(text: ' · '),
             WidgetSpan(
@@ -1008,8 +1055,9 @@ class _SourceVideoGrid extends StatelessWidget {
     return SliverPadding(
       padding: const EdgeInsets.all(2),
       sliver: SliverGrid(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,
+        gridDelegate: AdaptiveGridDelegate(
+          layout: context.adaptiveLayout,
+          compactColumns: 3,
           crossAxisSpacing: 2,
           mainAxisSpacing: 2,
         ),
@@ -1272,8 +1320,9 @@ class _VideosGridContentState extends ConsumerState<_VideosGridContent> {
     return SliverPadding(
       padding: const EdgeInsets.all(2),
       sliver: SliverGrid(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,
+        gridDelegate: AdaptiveGridDelegate(
+          layout: context.adaptiveLayout,
+          compactColumns: 3,
           crossAxisSpacing: 2,
           mainAxisSpacing: 2,
         ),

@@ -18,6 +18,7 @@ import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/auth_result.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/email_confirmation_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/auth_routes.dart';
 import 'package:openvine/screens/settings/support_center_screen.dart';
@@ -53,6 +54,9 @@ class LoginOptionsScreen extends ConsumerWidget {
     final pendingVerificationService = ref.watch(
       pendingVerificationServiceProvider,
     );
+    final emailConfirmationRepository = ref.watch(
+      emailConfirmationRepositoryProvider,
+    );
 
     return BlocProvider(
       create: (_) =>
@@ -61,6 +65,7 @@ class LoginOptionsScreen extends ConsumerWidget {
             authService: authService,
             pendingVerificationService: pendingVerificationService,
             validationMessages: AuthValidationMessages.fromL10n(l10n),
+            emailConfirmationRepository: emailConfirmationRepository,
           )..initialize(
             isSignIn: true,
             initialEmail: initialEmail,

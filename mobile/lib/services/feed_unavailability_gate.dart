@@ -1,13 +1,16 @@
 // ABOUTME: Live handle to the per-identity broken-video tracker and dead-media
 // ABOUTME: guard, so a feed BLoC can ask about unavailable videos without a ref
 
+import 'dart:async';
+
 import 'package:models/models.dart';
 import 'package:openvine/services/broken_video_tracker.dart';
 import 'package:openvine/services/dead_media_feed_guard.dart';
 import 'package:openvine/services/video_event_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// Answers the fullscreen feed's unavailability questions on behalf of the
+/// Answers the feeds' unavailability questions on behalf of the
 /// per-identity [BrokenVideoTracker] and [DeadMediaFeedGuard].
 ///
 /// Also routes removals through the current [VideoEventService], which client
@@ -25,6 +28,9 @@ import 'package:unified_logger/unified_logger.dart';
 /// the gate answers conservatively: nothing is filtered and nothing is pruned.
 class FeedUnavailabilityGate {
   BrokenVideoTracker? _tracker;
+  StreamSubscription<String>? _trackerMarks;
+  final StreamController<String> _markedVideoIdsController =
+      StreamController<String>.broadcast();
   DeadMediaFeedGuard? _guard;
   late VideoEventService _videoEventService;
 
@@ -42,8 +48,41 @@ class FeedUnavailabilityGate {
   void removeVideoEventCompletely(VideoEvent video) =>
       _videoEventService.removeVideoEventCompletely(video);
 
+  /// Ids the attached tracker marks broken, from any surface, so a feed that
+  /// is already showing one can drop it. Follows identity changes.
+  ///
+  /// Attaching a tracker also replays the ids it already holds: a feed served
+  /// before the tracker resolved filtered none of them.
+  Stream<String> get markedVideoIds => _markedVideoIdsController.stream;
+
   /// Attaches the current identity's tracker; null while it has not resolved.
-  void attachTracker(BrokenVideoTracker? tracker) => _tracker = tracker;
+  void attachTracker(BrokenVideoTracker? tracker) {
+    if (identical(tracker, _tracker)) return;
+    _cancelTrackerMarks();
+    _tracker = tracker;
+    _trackerMarks = tracker?.markedVideoIds.listen(
+      _markedVideoIdsController.add,
+    );
+    tracker?.brokenVideoIds.forEach(_markedVideoIdsController.add);
+  }
+
+  /// Stops forwarding marks and ends [markedVideoIds].
+  void dispose() {
+    _cancelTrackerMarks();
+    unawaited(_markedVideoIdsController.close());
+  }
+
+  void _cancelTrackerMarks() {
+    final retired = _trackerMarks?.cancel();
+    _trackerMarks = null;
+    if (retired == null) return;
+    runDetached(
+      retired,
+      'cancel the retired tracker mark subscription',
+      logName: 'FeedUnavailabilityGate',
+      category: LogCategory.video,
+    );
+  }
 
   /// Attaches the current identity's guard; null while it has not resolved.
   void attachGuard(DeadMediaFeedGuard? guard) => _guard = guard;
@@ -55,7 +94,8 @@ class FeedUnavailabilityGate {
   /// stream boundary. This covers static / by-id sources (liked, saved,
   /// reposts, collabs, curated lists) whose repositories skip the central
   /// feed filters, so a video confirmed unavailable in a previous session
-  /// does not reappear when opened fullscreen. See #5237.
+  /// does not reappear when opened fullscreen. See #5237. Home applies it
+  /// to every page it fetches.
   bool isVideoBroken(String videoId) =>
       _tracker?.isVideoBroken(videoId) ?? false;
 

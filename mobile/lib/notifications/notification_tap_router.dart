@@ -10,6 +10,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/notifications/routing/dm_push_navigation.dart';
 import 'package:openvine/notifications/routing/notification_tap_target.dart';
 import 'package:openvine/notifications/view/notifications_page.dart';
 import 'package:openvine/providers/analytics_providers.dart';
@@ -80,6 +81,7 @@ Future<void> handleFirebaseMessagingBackgroundMessage(
   }
 
   final warming = () async {
+    if (message.data['type'] == NotificationWireValues.directMessage) return;
     try {
       await preloadContent(message.data).timeout(const Duration(seconds: 6));
     } on Object {
@@ -157,11 +159,9 @@ Future<void> _renderBackgroundLocalPush({
 /// preloader shares: a usable signed coordinate is routed to directly, and
 /// otherwise the executor walks `targetEventId` to a root video. Encoding the
 /// coordinate-over-walk precedence in the returned value keeps it out of the
-/// executor's branch order.
-///
-/// Campaign payloads skip this: an `app_route`, `video_address` or
-/// `creator_profile` target is validated by the campaign helpers beside
-/// [campaignAppRoute], is not preloaded, and anything else opens the inbox.
+/// executor's branch order. Campaign and activity-digest payloads return
+/// before preload. The helpers beside [campaignAppRoute] validate campaign
+/// targets and unsupported values open the inbox.
 ///
 /// Extracted and `@visibleForTesting` so the push-side per-kind routing can be
 /// asserted without a navigator — mirrors [resolveVideoDeepLinkNavAction].
@@ -175,7 +175,26 @@ pushNotificationTapTarget({
   required String? senderPubkey,
   required String? tapTargetType,
   required String? tapTargetValue,
+  String? receiverPubkey,
 }) {
+  if (notificationType == NotificationWireValues.directMessage) {
+    final hex = RegExp(r'^[0-9a-fA-F]{64}$');
+    final valid =
+        receiverPubkey != null &&
+        hex.hasMatch(receiverPubkey) &&
+        eventId != null &&
+        hex.hasMatch(eventId);
+    return (
+      target: valid
+          ? OpenDirectMessageTarget(
+              receiverPubkey: receiverPubkey.toLowerCase(),
+              giftWrapId: eventId.toLowerCase(),
+            )
+          : const OpenMessagesTarget(),
+      targetEventId: null,
+      videoCoordinate: null,
+    );
+  }
   if (notificationType == NotificationWireValues.activityDigest) {
     return (
       target: const OpenInboxTarget(),
@@ -284,32 +303,37 @@ Future<void> routeNotificationTap({
   required String? tapTargetType,
   required String? tapTargetValue,
   required NotificationOpenSource openSource,
+  String? receiverPubkey,
   String? messageId,
   String? campaignRevisionId,
 }) async {
   // Keep provider initialization and analytics off the navigation critical path.
-  scheduleMicrotask(() {
-    try {
-      unawaited(
-        container
-            .read(notificationAnalyticsTrackerProvider)
-            .opened(
-              notificationType: notificationType,
-              source: openSource,
-              deduplicationKey: messageId ?? eventId,
-              campaignRevisionId: campaignRevisionId,
-            ),
-      );
-    } on Object catch (error) {
-      // The account container may have been disposed since the tap arrived.
-      Log.warning(
-        'Skipped notification open analytics: $error',
-        name: 'PushNotifications',
-        category: LogCategory.system,
-      );
-    }
-  });
+  if (notificationType != NotificationWireValues.directMessage) {
+    cancelPendingDmPush(container);
+    scheduleMicrotask(() {
+      try {
+        unawaited(
+          container
+              .read(notificationAnalyticsTrackerProvider)
+              .opened(
+                notificationType: notificationType,
+                source: openSource,
+                deduplicationKey: messageId ?? eventId,
+                campaignRevisionId: campaignRevisionId,
+              ),
+        );
+      } on Object catch (error) {
+        // The account container may have been disposed since the tap arrived.
+        Log.warning(
+          'Skipped notification open analytics: $error',
+          name: 'PushNotifications',
+          category: LogCategory.system,
+        );
+      }
+    });
+  }
   final (:target, :targetEventId, :videoCoordinate) = pushNotificationTapTarget(
+    receiverPubkey: receiverPubkey,
     referencedAddress: referencedAddress,
     referencedEventId: referencedEventId,
     eventId: eventId,
@@ -329,6 +353,8 @@ Future<void> routeNotificationTap({
       container.read(goRouterProvider).go(location);
     case OpenProfileTarget(:final actorPubkey):
       _navigateToNotificationProfile(container, actorPubkey);
+    case OpenMessagesTarget():
+      openDmPush(container, target);
     case OpenInboxTarget():
       _navigateToNotificationInbox(container);
     case OpenVideoTarget(:final autoOpenComments):
@@ -379,6 +405,7 @@ Future<void> routeBackgroundPushTap(
     eventId: parsed.eventId,
     notificationType: parsed.notificationType,
     senderPubkey: parsed.senderPubkey,
+    receiverPubkey: parsed.receiverPubkey,
     tapTargetType: parsed.tapTargetType,
     tapTargetValue: parsed.tapTargetValue,
     container: liveContainer(),

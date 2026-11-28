@@ -14,10 +14,12 @@ import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:notification_repository/notification_repository.dart';
 import 'package:openvine/constants/terms_acceptance_keys.dart';
 import 'package:openvine/features/appearance/repositories/appearance_repository.dart';
+import 'package:openvine/features/confirmation/confirmation_access_providers.dart';
 import 'package:openvine/features/creator_highlights/creator_highlights_repository.dart';
 import 'package:openvine/features/hashtag_follows/data/shared_preferences_hashtag_subscription_store.dart';
 import 'package:openvine/models/known_account.dart';
 import 'package:openvine/notifications/services/announcement_store.dart';
+import 'package:openvine/repositories/email_confirmation_repository.dart';
 import 'package:openvine/services/account_label_service.dart';
 import 'package:openvine/services/account_preference_store.dart';
 import 'package:openvine/services/age_verification_service.dart';
@@ -47,6 +49,7 @@ import 'package:openvine/services/moderation_label_service.dart';
 import 'package:openvine/services/relay_discovery_service.dart';
 import 'package:openvine/services/saved_sounds_service.dart';
 import 'package:openvine/services/seen_videos_service.dart';
+import 'package:openvine/services/share_recents_store.dart';
 import 'package:openvine/services/sound_library_service.dart';
 import 'package:openvine/services/stats_visibility_preferences.dart';
 import 'package:openvine/services/subtitle_language_preference_service.dart';
@@ -65,11 +68,13 @@ class UserDataCleanupService {
   UserDataCleanupService(
     this._prefs, {
     this.onAccountStateWritesStop,
+    this.shareRecents,
     CuratedListDraftArchive? listDraftArchive,
   }) : _listDraftArchive = listDraftArchive,
        _listSessions = CuratedListSessionCoordinator.forPreferences(_prefs);
 
   final SharedPreferences _prefs;
+  final ShareRecentsStore? shareRecents;
   final CuratedListDraftArchive? _listDraftArchive;
   final CuratedListSessionCoordinator _listSessions;
 
@@ -146,7 +151,8 @@ class UserDataCleanupService {
     if (onConversationSweep == null &&
         onDirectMessageSweep == null &&
         onQueuedViewSweep == null &&
-        onKeptDmVideoSweep == null) {
+        onKeptDmVideoSweep == null &&
+        shareRecents == null) {
       return;
     }
     final Set<String> keep;
@@ -168,6 +174,11 @@ class UserDataCleanupService {
       );
       return;
     }
+    await _sweepUnknownOwners(
+      shareRecents?.sweepUnknown,
+      keep,
+      'share recents',
+    );
     await _sweepUnknownOwners(onConversationSweep, keep, 'conversations');
     await _sweepUnknownOwners(onDirectMessageSweep, keep, 'kept DM rows');
     await _sweepUnknownOwners(onQueuedViewSweep, keep, 'queued view events');
@@ -269,6 +280,9 @@ class UserDataCleanupService {
     // Sound library. SavedSoundsService is pubkey-scoped and swept
     // separately; this second store is not scoped and was missed.
     SoundLibraryService.customSoundsStorageKey,
+    // Developer override of the Confirmation answer: it forces a result for
+    // the signed-in account, so the next account must see its own real one.
+    confirmationAccessOverrideKey,
     // TOS acceptance (user must re-accept on new account)
     ...TermsAcceptanceKeys.all,
   ];
@@ -389,8 +403,10 @@ class UserDataCleanupService {
   /// [preserveActiveSession] is false when no other account session needs
   /// device-wide state preserved.
   ///
-  /// Throws [StateError] when a preference cannot be removed and propagates
-  /// database cleanup failures so callers can retry the incomplete deletion.
+  /// Throws [StateError] when a preference cannot be removed, and
+  /// [ShareRecentsStorageException] when the account's share recents cannot,
+  /// and propagates database cleanup failures so callers can retry the
+  /// incomplete deletion.
   /// Unattributable retained recovery bytes keep deletion incomplete.
   Future<int> deleteAccountData(
     String userPubkey, {
@@ -447,6 +463,7 @@ class UserDataCleanupService {
       throw const CuratedListRecoveryException();
     }
     await onAccountStateWritesStop?.call(userPubkey);
+    await shareRecents?.clearFor(userPubkey);
     // Intent readback can discard optimistic values from native writes that
     // were still pending. Inspect committed owner data only after their drain.
     await _prefs.reload();
@@ -510,6 +527,7 @@ class UserDataCleanupService {
     await remove(MinorAccountReviewStatusStore.storageKey(userPubkey));
     await remove(MessagesPreferenceService.storageKey(userPubkey));
     await remove(DmVideoBlurPreferenceService.storageKey(userPubkey));
+    await remove(EmailConfirmationRepository.storageKey(userPubkey));
     for (final key in AccountStateRepository.localAccountKeys(
       _prefs,
       userPubkey,
@@ -753,6 +771,7 @@ class UserDataCleanupService {
     var databaseCleanupFailed = false;
     if ((deleteUserData || forgetAccount) && userPubkey != null) {
       await onAccountStateWritesStop?.call(userPubkey);
+      await shareRecents?.clearFor(userPubkey);
       // The intent's readback may have preceded a held native projection.
       // Refresh after it settles before enumerating keys or checking ownership.
       await _prefs.reload();
@@ -857,6 +876,12 @@ class UserDataCleanupService {
       await remove(
         FunnelcakeCreatorHighlightsRepository.inviteKey(userPubkey),
         diagnosticKey: FunnelcakeCreatorHighlightsRepository.invitePrefix,
+      );
+      // The cache holds the account's email address. A plain switch keeps
+      // it so a returning account stays locked until Keycast answers.
+      await remove(
+        EmailConfirmationRepository.storageKey(userPubkey),
+        diagnosticKey: EmailConfirmationRepository.storagePrefix,
       );
       for (final key in BadgeRepository.localAccountKeys(userPubkey)) {
         await remove(key);

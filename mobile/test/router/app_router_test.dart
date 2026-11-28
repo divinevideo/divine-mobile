@@ -13,8 +13,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
+import 'package:openvine/features/guest_classics/guest_classics_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -513,35 +512,6 @@ void main() {
       expect(container.read(supporterApiConfiguredProvider), isTrue);
       expect(supporterRedirectIfUnavailable(container), isNull);
     });
-
-    test('monetization settings route redirects when flag is off', () {
-      final container = ProviderContainer(
-        overrides: [
-          featureFlagStateProvider.overrideWithValue(const {
-            FeatureFlag.profileMonetizationLinks: false,
-          }),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      expect(
-        monetizationLinksRedirectIfDisabled(container),
-        SettingsScreen.path,
-      );
-    });
-
-    test('monetization settings route stays available when flag is on', () {
-      final container = ProviderContainer(
-        overrides: [
-          featureFlagStateProvider.overrideWithValue(const {
-            FeatureFlag.profileMonetizationLinks: true,
-          }),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      expect(monetizationLinksRedirectIfDisabled(container), isNull);
-    });
   });
 
   group('NIP-46 signer callbacks', () {
@@ -927,5 +897,63 @@ void main() {
 
       expect(restored, same(extra));
     });
+  });
+
+  group('guest Classics initialLocation', () {
+    Future<String> readInitialLocation({
+      Uri? guestBase,
+      String? explicitInitial,
+    }) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final sharedPreferences = await SharedPreferences.getInstance();
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+          guestClassicsBaseProvider.overrideWithValue(guestBase),
+          if (explicitInitial != null)
+            routerInitialLocationProvider.overrideWithValue(explicitInitial),
+          authServiceProvider.overrideWith((ref) {
+            final authService = _MockAuthService();
+            when(
+              () => authService.authStateStream,
+            ).thenAnswer((_) => const Stream<AuthState>.empty());
+            when(
+              () => authService.authState,
+            ).thenReturn(AuthState.unauthenticated);
+            return authService;
+          }),
+        ],
+      );
+      addTearDown(container.dispose);
+      return container
+          .read(goRouterProvider)
+          .routeInformationProvider
+          .value
+          .uri
+          .toString();
+    }
+
+    test(
+      'opts into guest welcome when guestClassicsBaseProvider is set',
+      () async {
+        expect(
+          await readInitialLocation(
+            guestBase: Uri.parse('https://example.test/seeds/'),
+          ),
+          WelcomeScreen.guestEntryPath,
+        );
+        expect(
+          await readInitialLocation(),
+          WelcomeScreen.path,
+        );
+        expect(
+          await readInitialLocation(
+            guestBase: Uri.parse('https://example.test/seeds/'),
+            explicitInitial: '/explore',
+          ),
+          '/explore',
+        );
+      },
+    );
   });
 }

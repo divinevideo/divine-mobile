@@ -2,28 +2,39 @@
 // ABOUTME: FCM messaging, push registration, in-app prefs sync, dirty-state retry
 
 import 'dart:async';
+import 'dart:convert';
 
+import 'package:dm_repository/dm_repository.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:openvine/l10n/current_app_l10n.dart';
 import 'package:openvine/models/notification_preferences.dart';
+import 'package:openvine/notifications/routing/dm_message_visibility.dart';
 import 'package:openvine/notifications/services/notification_refresh_coordinator.dart';
 import 'package:openvine/providers/account_preferences_provider.dart';
+import 'package:openvine/providers/app_version_provider.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/environment_provider.dart';
+import 'package:openvine/providers/install_source_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/official_accounts_providers.dart';
+import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:openvine/providers/repository_providers.dart';
+import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/services/app_badge_service.dart';
+import 'package:openvine/services/locale_preference_service.dart';
 import 'package:openvine/services/notification_background_preloader.dart';
 import 'package:openvine/services/notification_content_preloader.dart';
 import 'package:openvine/services/notification_helpers.dart';
 import 'package:openvine/services/notification_preferences_service.dart';
 import 'package:openvine/services/notification_service.dart';
 import 'package:openvine/services/notification_target_resolver.dart';
+import 'package:openvine/services/push_device_metadata.dart';
 import 'package:openvine/services/push_notification_service.dart';
 import 'package:openvine/services/push_notification_session_coordinator.dart';
 import 'package:openvine/utils/platform_support.dart';
@@ -100,6 +111,11 @@ final pushNotificationServiceProvider = Provider<PushNotificationService?>((
   final notificationService = ref.watch(notificationServiceProvider);
   final envConfig = ref.watch(currentEnvironmentProvider);
   final firebaseMessaging = ref.watch(firebaseMessagingProvider);
+  final preferencesStore = ref.watch(notificationPreferencesStoreProvider);
+  final hivePreferencesStore =
+      preferencesStore is HiveNotificationPreferencesStore
+      ? preferencesStore
+      : null;
 
   final pushService = PushNotificationService(
     authService: authService,
@@ -107,6 +123,15 @@ final pushNotificationServiceProvider = Provider<PushNotificationService?>((
     notificationService: notificationService,
     environmentConfig: envConfig,
     getToken: firebaseMessaging.getToken,
+    deviceMetadata: PushDeviceMetadata.resolve(
+      platform: defaultTargetPlatform,
+      source: ref.watch(installSourceProvider),
+      appVersion: ref.watch(appVersionProvider),
+    ),
+    readLastPreferencesCreatedAt:
+        hivePreferencesStore?.loadLastPublishedCreatedAt,
+    writeLastPreferencesCreatedAt:
+        hivePreferencesStore?.saveLastPublishedCreatedAt,
     isCurrent: () {
       final currentReadiness = ref.read(nostrSessionProvider);
       return currentReadiness.isReadyForActiveClient &&
@@ -344,6 +369,11 @@ PushNotificationSessionCoordinator? pushNotificationSync(Ref ref) {
   final onMessageSubscription = ref.read(firebaseOnMessageProvider).listen((
     message,
   ) {
+    if (message.data[NotificationPayloadKeys.wireType] ==
+        NotificationWireValues.directMessage) {
+      unawaited(_handleForegroundDm(ref, message));
+      return;
+    }
     unawaited(
       ref.read(notificationContentPreloaderProvider).preload(message.data),
     );
@@ -375,4 +405,105 @@ PushNotificationSessionCoordinator? pushNotificationSync(Ref ref) {
   });
 
   return coordinator;
+}
+
+Future<void> _handleForegroundDm(Ref ref, RemoteMessage message) async {
+  final data = fcmPayloadWithMessageId(message.data, message.messageId);
+  final parsed = parseFcmPayload(data);
+  final owner = parsed?.receiverPubkey?.toLowerCase();
+  final wrap = parsed?.eventId?.toLowerCase();
+  final hex = RegExp(r'^[0-9a-f]{64}$');
+  if (owner == null ||
+      wrap == null ||
+      !hex.hasMatch(owner) ||
+      !hex.hasMatch(wrap)) {
+    return;
+  }
+  bool current() =>
+      ref.mounted &&
+      ref.read(authServiceProvider).currentPublicKeyHex == owner &&
+      ref.read(accountPreferenceStoreProvider).boundPubkey == owner &&
+      ref.read(nostrSessionProvider).pubkey == owner;
+  if (!current()) return;
+  StreamSubscription<DmWrapLookup>? subscription;
+  VoidCallback? removeDisposeListener;
+  void stopWatching() {
+    subscription?.cancel().ignore();
+    subscription = null;
+  }
+
+  try {
+    final service = ref.read(notificationServiceProvider);
+    final prefs = ref.read(notificationPreferencesServiceProvider);
+    if (!service.hasPermissions ||
+        !(await prefs.loadPreferences()).directMessagesEnabled ||
+        !current()) {
+      return;
+    }
+    final firstResult = Completer<void>();
+    DmWrapLookup lookup = const DmWrapPending();
+    void receive(DmWrapLookup result) {
+      // A known result that loses its evidence during the consent read cannot
+      // use the timeout exception for a wrap that has never settled.
+      lookup = firstResult.isCompleted && result is DmWrapPending
+          ? const DmWrapSuppressed()
+          : result;
+      if (result is! DmWrapPending && !firstResult.isCompleted) {
+        firstResult.complete();
+      }
+    }
+
+    subscription = ref
+        .read(dmRepositoryProvider)
+        .watchWrapLookup(ownerPubkey: owner, giftWrapId: wrap)
+        .listen(
+          receive,
+          onError: (Object _) => receive(const DmWrapSuppressed()),
+          onDone: () {
+            if (!firstResult.isCompleted) receive(const DmWrapSuppressed());
+          },
+          cancelOnError: true,
+        );
+    removeDisposeListener = ref.onDispose(() {
+      receive(const DmWrapSuppressed());
+      stopWatching();
+    });
+    await firstResult.future.timeout(
+      const Duration(seconds: 10),
+      onTimeout: () {},
+    );
+    if (!current() || !service.hasPermissions) return;
+    if (!(await prefs.loadPreferences()).directMessagesEnabled ||
+        !current() ||
+        !service.hasPermissions) {
+      return;
+    }
+    // The account, the visible row, and minor restrictions can change while
+    // the final consent read is in flight. There is no await before sendLocal.
+    if (!shouldDisplayDmAlert(
+      lookup,
+      owner: owner,
+      restricted: ref.read(isDmRestrictedProvider),
+      allowedPeer: ref
+          .read(officialAccountsServiceProvider)
+          .isReadableByProtectedMinor,
+    )) {
+      return;
+    }
+    final languageCode = LocalePreferenceService(
+      sharedPreferences: ref.read(sharedPreferencesProvider),
+      accountPreferences: ref.read(accountPreferenceStoreProvider),
+    ).getLocale();
+    await service.sendLocal(
+      title: 'Divine',
+      body: appL10nForLanguage(languageCode).newMessageTitle,
+      payload: jsonEncode(localNotificationTapPayload(data)),
+    );
+  } on Object {
+    // A retired account scope or unavailable private state cannot authorize an alert.
+    return;
+  } finally {
+    removeDisposeListener?.call();
+    stopWatching();
+  }
 }

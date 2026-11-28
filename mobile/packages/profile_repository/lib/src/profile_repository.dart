@@ -51,13 +51,17 @@ typedef _ProfileRead = FreshProfileRead;
 const _nip50SearchTimeout = Duration(seconds: 5);
 const _nip50RelayQueryTimeout = Duration(milliseconds: 4500);
 
+// How long people search waits for Funnelcake before the cache and NIP-50
+// relays stand in. Shorter than the client's own timeout, which also spans its
+// retries, so a stalled backend falls back within seconds.
+const _restSearchTimeout = Duration(seconds: 5);
+
 // Caps each step of the people-search lookup of who owns a typed Divine
 // username: the name server's NIP-05 answer, which runs beside the local and
 // REST phases, and the search that confirms the owner is discoverable.
 const _usernameOwnerSearchTimeout = Duration(seconds: 3);
 
-// /api/users/bulk accepts at most 100 pubkeys per request.
-const _searchProfileRecheckBatchSize = 100;
+const int _searchProfileRecheckBatchSize = ProfileApiCache.maxBulkBatchSize;
 
 // Divine usernames resolve as `<username>@divine.video` and are published as
 // `_@<username>.divine.video`.
@@ -1054,6 +1058,7 @@ class ProfileRepository implements ProfileReader {
     required String pubkey,
     bool requireRawKind0 = false,
     List<Duration> rawKind0RetryDelays = const [],
+    bool recheckMissingRawProfile = false,
   }) {
     if (_vanished.contains(pubkey)) {
       revalidateVanishOnce(pubkey);
@@ -1064,6 +1069,7 @@ class ProfileRepository implements ProfileReader {
       pubkey: pubkey,
       requireRawKind0: requireRawKind0,
       rawKind0RetryDelays: rawKind0RetryDelays,
+      recheckMissingRawProfile: recheckMissingRawProfile,
     );
   }
 
@@ -1082,8 +1088,11 @@ class ProfileRepository implements ProfileReader {
     required String pubkey,
     bool requireRawKind0 = false,
     List<Duration> rawKind0RetryDelays = const [],
+    bool recheckMissingRawProfile = false,
   }) {
-    if (requireRawKind0 && _rawKind0ConfirmedMissing.contains(pubkey)) {
+    if (requireRawKind0 &&
+        !recheckMissingRawProfile &&
+        _rawKind0ConfirmedMissing.contains(pubkey)) {
       return Future.value((profile: null, conclusive: true));
     }
 
@@ -1448,8 +1457,9 @@ class ProfileRepository implements ProfileReader {
       if (requireRawKind0) {
         // A raw read can seed a republish, so it waits for every connected
         // relay to settle and reports whether each did: an empty answer from
-        // a relay that stayed silent, refused, or was never asked proves
-        // nothing about the copy a publish would replace.
+        // a relay that stayed silent or refused proves nothing about the copy
+        // a publish would replace. A relay that never took the REQ is not
+        // counted, so the read can look conclusive without it (#11317).
         final read = await _nostrClient.queryEventsDetailed(
           [
             Filter(kinds: [0], authors: [pubkey], limit: 1),
@@ -1557,14 +1567,19 @@ class ProfileRepository implements ProfileReader {
   /// default relay's `OK true`: remix consent readers settle on that relay's
   /// kind 0, so a save other relays accepted but it did not is a failure.
   ///
+  /// Set [useLatestProfileFields] for a settings-only save that should take
+  /// display name, bio, website, picture and banner from the resolved seed.
+  ///
+  /// Throws [ProfileSaveCancelledException] if [shouldPublish] returns false
+  /// after the preparatory reads, before sending the event.
   /// Throws [NoRelaysConnectedException] when no relays are connected.
   /// Throws [ProfilePublishFailedException] when relays were reached but none
   /// confirmed the event (rejection, timeout, or a send failure such as the
-  /// signer returning null), and — before publishing anything — when the
-  /// current Kind 0 could not be read from the connected relays. A Kind 0
-  /// replaces the previous one whole, so publishing from a local copy that
-  /// cannot carry its tags would erase them; the save is deferred for the
-  /// caller, or the durable pending-save retry, to try again.
+  /// signer returning null). Throws [ProfilePublishSeedUnavailableException]
+  /// before publishing when the current Kind 0 cannot safely seed the save.
+  /// A Kind 0 replaces the previous one whole, so publishing from a local
+  /// copy that cannot carry its tags would erase them. The save is deferred
+  /// for the caller or the durable pending-save retry to try again.
   Future<UserProfile> saveProfileEvent({
     required String displayName,
     String? about,
@@ -1577,6 +1592,8 @@ class ProfileRepository implements ProfileReader {
     Iterable<MonetizationLink>? monetizationLinks,
     bool? allowVideoReuse,
     UserProfile? currentProfile,
+    bool useLatestProfileFields = false,
+    bool Function()? shouldPublish,
   }) async {
     // External NIP-05 takes precedence when provided.
     final resolvedNip05 =
@@ -1592,31 +1609,52 @@ class ProfileRepository implements ProfileReader {
     // otherwise the cached profile for the signing key — competes with the
     // relay copy on recency. A relay read that fails or times out defers the
     // save instead (see [_resolvePublishSeed]).
-    final seed = await _resolvePublishSeed(currentProfile);
+    final seed = await _resolvePublishSeed(
+      currentProfile,
+      recheckMissingRawProfile: useLatestProfileFields,
+    );
 
     final newContent = Map<String, dynamic>.from(seed?.rawData ?? const {});
 
-    // Editable fields — caller's value is authoritative. Empty / null means
-    // "user cleared this field" → remove the key. The form pre-populates
-    // these fields so the user sees what they're editing; an empty submit
-    // is intentional.
-    newContent['display_name'] = displayName;
-    if (about != null && about.isNotEmpty) {
+    // A settings-only save applies the normalized fields from the resolved
+    // seed so it keeps changes made to the profile since the caller's read.
+    // For editor saves, the submitted form fields are authoritative.
+    final fields = useLatestProfileFields
+        ? (
+            displayName: seed?.displayName ?? '',
+            about: seed?.about,
+            website: seed?.website,
+            picture: seed?.picture,
+            banner: seed?.banner,
+          )
+        : (
+            displayName: displayName,
+            about: about,
+            website: website,
+            picture: picture,
+            banner: banner,
+          );
+    if (!useLatestProfileFields || newContent.containsKey('display_name')) {
+      newContent['display_name'] = fields.displayName;
+    }
+    if (fields.about case final about? when about.isNotEmpty) {
       newContent['about'] = about;
     } else {
       newContent.remove('about');
     }
-    if (website != null && website.isNotEmpty) {
-      newContent['website'] = website;
-    } else if (website != null) {
-      newContent.remove('website');
+    if (fields.website case final website?) {
+      if (website.isNotEmpty) {
+        newContent['website'] = website;
+      } else {
+        newContent.remove('website');
+      }
     }
-    if (picture != null && picture.isNotEmpty) {
+    if (fields.picture case final picture? when picture.isNotEmpty) {
       newContent['picture'] = picture;
     } else {
       newContent.remove('picture');
     }
-    if (banner != null && banner.isNotEmpty) {
+    if (fields.banner case final banner? when banner.isNotEmpty) {
       newContent['banner'] = banner;
     } else {
       newContent.remove('banner');
@@ -1653,12 +1691,16 @@ class ProfileRepository implements ProfileReader {
     // custom client fields, future NIPs — flows through from the seed
     // untouched. Adding new editable fields here MUST keep that invariant.
 
-    final rawTags = (seed?.rawTags.isNotEmpty ?? false)
-        ? seed!.rawTags
+    final seedTags = seed?.rawTags ?? const <List<String>>[];
+    final rawTags = useLatestProfileFields || seedTags.isNotEmpty
+        ? seedTags
         : currentProfile?.rawTags ?? const <List<String>>[];
     // Remix consent readers trust the default relay's kind 0 on its own, so
     // a save that sets the block only counts once the default relay has it.
     final requireDefaultRelay = allowVideoReuse != null;
+    if (shouldPublish?.call() == false) {
+      throw const ProfileSaveCancelledException();
+    }
     final result = rawTags.isEmpty
         ? await _nostrClient.sendProfileAwaitOk(
             profileContent: newContent,
@@ -1878,13 +1920,16 @@ class ProfileRepository implements ProfileReader {
   /// - the local seed is strictly newer and can carry the relay copy's tags,
   ///   or carries the same timestamp and strictly more meaningful keys.
   ///
-  /// Throws [ProfilePublishFailedException], before anything is published,
-  /// when the relay read is inconclusive — it timed out, was refused, reached
-  /// no relay, threw, or ran past [_publishSeedRelayTimeout] — or when the
-  /// local seed is newer but has no tags while the relay copy does, meaning
+  /// Throws [ProfilePublishSeedUnavailableException] before anything is
+  /// published when the relay read is inconclusive (timeout, refusal, no
+  /// relay, exception, or [_publishSeedRelayTimeout]). It also throws when
+  /// the local seed is newer but has no tags while the relay copy does, meaning
   /// the relays have not indexed the newer copy yet. The profile cache stores
   /// no tags, so publishing in either case could erase the tags on relays.
-  Future<UserProfile?> _resolvePublishSeed(UserProfile? currentProfile) async {
+  Future<UserProfile?> _resolvePublishSeed(
+    UserProfile? currentProfile, {
+    required bool recheckMissingRawProfile,
+  }) async {
     // `??` short-circuits, so the signer is consulted only when the caller gave
     // us no profile to take a pubkey from.
     final pubkey = currentProfile?.pubkey ?? _signerPubkeyOrNull();
@@ -1901,6 +1946,9 @@ class ProfileRepository implements ProfileReader {
         await _readFreshProfile(
           pubkey: pubkey,
           requireRawKind0: true,
+          // A remix setting load can cache a miss before the creator
+          // publishes their first Kind 0 on another device.
+          recheckMissingRawProfile: recheckMissingRawProfile,
         ).timeout(
           _publishSeedRelayTimeout,
           onTimeout: () => (profile: null, conclusive: false),
@@ -1959,14 +2007,17 @@ class ProfileRepository implements ProfileReader {
   ///
   /// [drivePendingSave] maps it to a retryable outcome, so an editor save
   /// stays queued and the durable retry tries again later.
-  ProfilePublishFailedException _deferSave(String pubkey, String reason) {
+  ProfilePublishSeedUnavailableException _deferSave(
+    String pubkey,
+    String reason,
+  ) {
     Log.warning(
       'Deferring profile save for ${pubkeyForLogs(pubkey)}: $reason. '
       'Publishing now could erase what only the relay copy holds.',
       name: 'ProfileRepository.saveProfileEvent',
       category: LogCategory.relay,
     );
-    return const ProfilePublishFailedException(
+    return const ProfilePublishSeedUnavailableException(
       'Failed to publish profile. Please try again.',
     );
   }
@@ -2480,18 +2531,22 @@ class ProfileRepository implements ProfileReader {
   /// - a per-source outcome map ([ProgressiveSearchResult.sources])
   /// - an [ProgressiveSearchResult.isComplete] flag on the terminal yield
   ///
-  /// Starts local cache, Funnelcake REST and NIP-50 WebSocket searches
-  /// concurrently, emitting each available answer without waiting for the
-  /// other sources. Local and relay searches run on the first page only;
-  /// NIP-50 retains [_nip50SearchTimeout]. Remote requests start while durable
-  /// vanish policy loads, but no results are emitted before it is loaded.
+  /// Funnelcake REST is the result whenever it answers: its page is published
+  /// once, in the server's order, and the NIP-50 relays are not asked
+  /// ([SearchSourceSkipped]). The local cache search runs beside it on the
+  /// first page, but only to supply newer revisions of profiles on the page.
+  ///
+  /// When Funnelcake fails, takes longer than [_restSearchTimeout] or is
+  /// unconfigured, the cache matches and a NIP-50 WebSocket search (bounded
+  /// by [_nip50SearchTimeout]) stand in, published as each answers. Both run
+  /// on the first page only. Remote requests start while durable vanish
+  /// policy loads, but no results are emitted before it is loaded.
   ///
   /// On [offset] > 0 the local and NIP-50 phases are recorded as
   /// [SearchSourceSkipped]. When Funnelcake is unconfigured it is also
   /// recorded as [SearchSourceSkipped]. Any phase that throws (REST as
   /// an [Exception], NIP-50 as an [Object] since WebSocket errors
-  /// surface as [Error]) is recorded as [SearchSourceFailed]; the stream
-  /// continues to publish the other sources.
+  /// surface as [Error]) is recorded as [SearchSourceFailed].
   ///
   /// When [boostPubkeys] is non-empty, profiles whose pubkey is in the set
   /// are promoted to the front of each emission while preserving the
@@ -2529,8 +2584,17 @@ class ProfileRepository implements ProfileReader {
 
     Future<void> searchAll() async {
       if (isCancelled()) return;
-      final visibilityReady = loadVanishedPubkeys();
+      // Each source awaits the policy before it publishes, and a failure then
+      // fails the stream. ignore() only keeps a failure that arrives before
+      // any source awaits it from also being reported as unhandled.
+      final visibilityReady = loadVanishedPubkeys()..ignore();
       final resultMap = <String, UserProfile>{};
+      // Cache matches, published only when REST does not answer.
+      final localResults = <String, UserProfile>{};
+      SearchSourceStatus? localOutcome;
+      var localApplied = false;
+      var restAnswered = false;
+      // Cache matches published as results, which REST did not vouch for.
       final localPubkeys = <String>{};
       final restResultsByPubkey = <String, ProfileSearchResult>{};
       final serverSelectedPubkeys = <String>{};
@@ -2592,9 +2656,7 @@ class ProfileRepository implements ProfileReader {
       // cleared.
       void mergeRestResult(ProfileSearchResult result) {
         if (isVanished(result.pubkey)) revalidateVanishOnce(result.pubkey);
-        final cached = localPubkeys.contains(result.pubkey)
-            ? resultMap[result.pubkey]
-            : null;
+        final cached = localResults[result.pubkey];
         final serverRevision = result.createdAt;
         // Compare event revisions before conversion: an older API can omit
         // created_at, and toUserProfile's fallback is not an event timestamp.
@@ -2630,21 +2692,15 @@ class ProfileRepository implements ProfileReader {
           );
           await visibilityReady;
           if (isCancelled()) return;
-          final preCount = resultMap.length;
           for (final profile in local) {
-            localPubkeys.add(profile.pubkey);
-            resultMap[profile.pubkey] = profile;
-            // A cache answer may arrive after REST. Apply the same revision
-            // comparison in either completion order, retaining REST counts.
-            final rest = restResultsByPubkey[profile.pubkey];
-            if (rest != null) mergeRestResult(rest);
+            localResults[profile.pubkey] = profile;
           }
-          sources[SearchSource.localCache] = SearchSourceSuccess(
-            resultCount: resultMap.length - preCount,
+          localOutcome = SearchSourceSuccess(
+            resultCount: 0,
             latencyMs: watch.elapsedMilliseconds,
           );
         } on Object catch (e) {
-          sources[SearchSource.localCache] = SearchSourceFailed(
+          localOutcome = SearchSourceFailed(
             reason: SearchSourceFailureReason.other,
             latencyMs: watch.elapsedMilliseconds,
           );
@@ -2654,29 +2710,63 @@ class ProfileRepository implements ProfileReader {
             category: LogCategory.api,
           );
         }
-        emit();
       }
 
-      Future<void> searchRest() async {
+      // Records the cache answer once it and REST have both settled. Beside a
+      // REST page the cache only replaces revisions of the page's profiles, in
+      // either completion order; without one its matches become results.
+      // Returns whether anything was applied.
+      bool applyLocal() {
+        final outcome = localOutcome;
+        if (localApplied || outcome == null || isCancelled()) return false;
+        localApplied = true;
+        final preCount = resultMap.length;
+        for (final profile in localResults.values) {
+          final rest = restResultsByPubkey[profile.pubkey];
+          if (rest != null) {
+            mergeRestResult(rest);
+          } else if (!restAnswered) {
+            localPubkeys.add(profile.pubkey);
+            resultMap[profile.pubkey] = profile;
+          }
+        }
+        sources[SearchSource.localCache] = switch (outcome) {
+          SearchSourceSuccess(:final latencyMs) => SearchSourceSuccess(
+            resultCount: resultMap.length - preCount,
+            latencyMs: latencyMs,
+          ),
+          _ => outcome,
+        };
+        return true;
+      }
+
+      // Returns whether REST answered with a page; the other sources then
+      // stay out of the results.
+      Future<bool> searchRest() async {
         if (sources[SearchSource.funnelcakeApi] is SearchSourceSkipped ||
             isCancelled()) {
-          return;
+          return false;
         }
         final watch = Stopwatch()..start();
-        var restResults = <ProfileSearchResult>[];
-        SearchSourceStatus? failure;
+        final List<ProfileSearchResult> restResults;
         try {
-          restResults = await _funnelcakeApiClient!.searchProfiles(
-            query: trimmed,
-            limit: limit,
-            offset: offset,
-            sortBy: sortBy,
-            hasVideos: hasVideos,
-          );
-          if (isCancelled()) return;
+          restResults = await _funnelcakeApiClient!
+              .searchProfiles(
+                query: trimmed,
+                limit: limit,
+                offset: offset,
+                sortBy: sortBy,
+                hasVideos: hasVideos,
+              )
+              .timeout(_restSearchTimeout);
+          if (isCancelled()) return false;
         } on Exception catch (e) {
-          failure = SearchSourceFailed(
-            reason: SearchSourceFailureReason.network,
+          // The owner is pinned only onto a REST page, which there is none of.
+          ownerLookup?.ignore();
+          sources[SearchSource.funnelcakeApi] = SearchSourceFailed(
+            reason: e is TimeoutException
+                ? SearchSourceFailureReason.timeout
+                : SearchSourceFailureReason.network,
             latencyMs: watch.elapsedMilliseconds,
           );
           Log.warning(
@@ -2684,23 +2774,22 @@ class ProfileRepository implements ProfileReader {
             name: 'ProfileRepository.searchUsersProgressive',
             category: LogCategory.api,
           );
+          return false;
         }
-        // Resolve the exact owner before publishing the REST page, as before.
-        // Other sources continue to publish while this request is pending.
+        // Resolve the exact owner before publishing the REST page.
         final candidate = await ownerLookup;
-        if (isCancelled()) return;
+        if (isCancelled()) return false;
         ProfileSearchResult? discovered;
         if (candidate != null &&
             !restResults.any((r) => r.pubkey == candidate.pubkey)) {
           discovered = await _discoverableUsernameOwner(candidate);
         }
         await visibilityReady;
-        if (isCancelled()) return;
+        if (isCancelled()) return false;
+        restAnswered = true;
         final preCount = resultMap.length;
-        if (failure == null) {
-          nextRestOffset = offset + restResults.length;
-          restHasMore = restResults.length == limit;
-        }
+        nextRestOffset = offset + restResults.length;
+        restHasMore = restResults.length == limit;
         for (final result in restResults) {
           restPubkeys.add(result.pubkey);
           restPositions.putIfAbsent(result.pubkey, () => restPositions.length);
@@ -2715,13 +2804,16 @@ class ProfileRepository implements ProfileReader {
         if (candidate != null && restPubkeys.contains(candidate.pubkey)) {
           ownerPubkey = candidate.pubkey;
         }
-        sources[SearchSource.funnelcakeApi] =
-            failure ??
-            SearchSourceSuccess(
-              resultCount: resultMap.length - preCount,
-              latencyMs: watch.elapsedMilliseconds,
-            );
+        sources[SearchSource.funnelcakeApi] = SearchSourceSuccess(
+          resultCount: resultMap.length - preCount,
+          latencyMs: watch.elapsedMilliseconds,
+        );
+        if (offset == 0) {
+          sources[SearchSource.nip50Relay] = const SearchSourceSkipped();
+        }
+        applyLocal();
         emit();
+        return true;
       }
 
       Future<void> searchRelay() async {
@@ -2773,8 +2865,7 @@ class ProfileRepository implements ProfileReader {
         emit();
       }
 
-      Future<void> recheckCached(Future<void> localAndRest) async {
-        await localAndRest;
+      Future<void> recheckCached() async {
         if (offset != 0 ||
             isCancelled() ||
             !(_funnelcakeApiClient?.isAvailable ?? false)) {
@@ -2819,12 +2910,21 @@ class ProfileRepository implements ProfileReader {
         }
       }
 
-      final localAndRest = Future.wait([searchLocal(), searchRest()]);
-      await Future.wait([
-        recheckCached(localAndRest),
-        searchRelay(),
-        visibilityReady,
-      ]);
+      final localSearch = searchLocal();
+      if (await searchRest()) {
+        // A revision the cache supplies now reaches the final yield.
+        await localSearch;
+        applyLocal();
+      } else {
+        Future<void> fallBackToCache() async {
+          await localSearch;
+          if (!applyLocal()) return;
+          emit();
+          await recheckCached();
+        }
+
+        await Future.wait([fallBackToCache(), searchRelay(), visibilityReady]);
+      }
       if (isCancelled()) return;
       final enriched = await _enrichFromCache(
         resultMap.values.toList(),
@@ -3016,10 +3116,10 @@ class ProfileRepository implements ProfileReader {
   /// A [profileSearchSortRelevance] search keeps Funnelcake's order for the
   /// matching profiles it returned: the server already weighs match strength
   /// against creator activity, so an active near match can lead an empty
-  /// exact one. Profiles only a local source found follow, by textual
-  /// relevance, as does everything before the server answers. A follower
-  /// sort orders by textual relevance before the REST counts, so an exact
-  /// account match is never buried beneath popular substring matches.
+  /// exact one. Without a REST page, the cache and NIP-50 matches standing in
+  /// for it are ordered by textual relevance. A follower sort orders by
+  /// textual relevance before the REST counts, so an exact account match is
+  /// never buried beneath popular substring matches.
   static List<UserProfile> _rankSearchResults(
     String query,
     List<UserProfile> profiles,
@@ -3048,12 +3148,12 @@ class ProfileRepository implements ProfileReader {
         profile.pubkey: _searchRelevance(profile, normalizedQuery, queryHex),
     };
     return matching..sort((a, b) {
-      if (serverOrdered) {
-        final first = serverPositions[a.pubkey];
-        final second = serverPositions[b.pubkey];
-        if (first != null && second != null) return first.compareTo(second);
-        if (first != null) return -1;
-        if (second != null) return 1;
+      // Beside a REST page the results are the page's own rows.
+      if (serverOrdered && serverPositions.isNotEmpty) {
+        final last = serverPositions.length;
+        return (serverPositions[a.pubkey] ?? last).compareTo(
+          serverPositions[b.pubkey] ?? last,
+        );
       }
       final relevance = relevanceByPubkey[b.pubkey]!.compareTo(
         relevanceByPubkey[a.pubkey]!,
@@ -3334,7 +3434,7 @@ class ProfileRepository implements ProfileReader {
   /// Does nothing when the API is unavailable. API and cache errors propagate
   /// so callers can decide when to retry this background refresh.
   Future<void> refreshStatsForPubkeys(List<String> pubkeys) async {
-    const batchSize = 100;
+    const batchSize = ProfileApiCache.maxBulkBatchSize;
     for (var start = 0; start < pubkeys.length; start += batchSize) {
       final end = start + batchSize < pubkeys.length
           ? start + batchSize

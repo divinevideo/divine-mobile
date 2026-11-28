@@ -6,6 +6,7 @@ import 'dart:ui' show ImageFilter;
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:equatable/equatable.dart';
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/widgets.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
@@ -96,7 +97,11 @@ const double _thumbnailWidth = 180;
 const double _thumbnailHeight = 240;
 
 /// How long a replies sticker shows each of the latest thumbnails in turn.
-const Duration repliesThumbnailInterval = Duration(seconds: 2);
+const Duration repliesThumbnailInterval = Duration(seconds: 3);
+
+/// How long a replies sticker's next thumbnail takes to fade in over the one
+/// before.
+const Duration repliesThumbnailFade = Duration(milliseconds: 250);
 
 /// A question, Add yours or replies sticker on the white card every
 /// interactive sticker is drawn on.
@@ -115,6 +120,7 @@ class InteractiveStickerCard extends StatelessWidget {
     this.onAnswer,
     this.onJoin,
     this.onOpenResponses,
+    this.watchOnly = false,
     super.key,
   });
 
@@ -122,6 +128,11 @@ class InteractiveStickerCard extends StatelessWidget {
 
   /// Whether the card is drawn again over itself in a video's frames.
   final bool overFrames;
+
+  /// Whether an Add yours is shown to a viewer who may not join it: in place
+  /// of who joined and its button, it shows the latest answers and invites
+  /// them to watch the series through [onOpenResponses].
+  final bool watchOnly;
 
   /// Who joined or replied, or `null` to show no one.
   final StickerResponses? responses;
@@ -162,6 +173,11 @@ class InteractiveStickerCard extends StatelessWidget {
                 data: data,
                 onAnswer: onAnswer,
               ),
+              SocialStickerKind.addYours when watchOnly => _AddYoursSeries(
+                data: data,
+                responses: responses,
+                onOpen: onOpenResponses,
+              ),
               SocialStickerKind.addYours => _AddYours(
                 data: data,
                 responses: responses,
@@ -195,6 +211,7 @@ class InteractiveStickerCopy extends StatelessWidget {
     this.onAnswer,
     this.onJoin,
     this.onOpenResponses,
+    this.watchOnly = false,
     super.key,
   });
 
@@ -203,6 +220,9 @@ class InteractiveStickerCopy extends StatelessWidget {
   final VoidCallback? onAnswer;
   final VoidCallback? onJoin;
   final VoidCallback? onOpenResponses;
+
+  /// See [InteractiveStickerCard.watchOnly].
+  final bool watchOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -216,6 +236,7 @@ class InteractiveStickerCopy extends StatelessWidget {
           onAnswer: onAnswer,
           onJoin: onJoin,
           onOpenResponses: onOpenResponses,
+          watchOnly: watchOnly,
         ),
       ),
     );
@@ -409,6 +430,106 @@ class _AddYours extends StatelessWidget {
   }
 }
 
+/// How many answers' thumbnails an Add yours shows to a viewer who may not
+/// join it.
+const int _seriesThumbnails = 3;
+
+/// How tall each of those thumbnails is: what is left of the card the
+/// viewer who may join sees once the prompt and the invitation to watch take
+/// theirs, so both are the same size and fill the same box.
+const double _seriesThumbnailHeight = 123;
+
+/// How wide each of them is, upright like a video.
+const double _seriesThumbnailWidth = _seriesThumbnailHeight * 3 / 4;
+
+/// An Add yours shown to a viewer who may not join it: its prompt over the
+/// latest answers' thumbnails and an invitation to watch the series, which
+/// [onOpen] opens. Its hashtag is left out to give the thumbnails room.
+class _AddYoursSeries extends StatelessWidget {
+  const _AddYoursSeries({
+    required this.data,
+    required this.responses,
+    required this.onOpen,
+  });
+
+  final SocialStickerData data;
+  final StickerResponses? responses;
+  final VoidCallback? onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final responses = this.responses;
+    final shown = (responses?.latest ?? const <StickerResponsePreview>[])
+        .take(_seriesThumbnails)
+        .toList();
+    // The answers beyond the thumbnails, counted on the last one.
+    final more = (responses?.count ?? 0) - shown.length + 1;
+    final card = Column(
+      mainAxisSize: .min,
+      crossAxisAlignment: .stretch,
+      spacing: 16,
+      children: [
+        StickerTextLine(
+          text: data.prompt ?? '',
+          style: interactiveCardTextStyle(54),
+          maxLines: 2,
+          textAlign: .center,
+        ),
+        Row(
+          mainAxisAlignment: .center,
+          spacing: 12,
+          children: [
+            for (final (index, response) in shown.indexed)
+              _ResponseThumbnail(
+                response: response,
+                width: _seriesThumbnailWidth,
+                height: _seriesThumbnailHeight,
+                radius: 16,
+                moreCount: index == shown.length - 1 && more > 1 ? more : null,
+              ),
+          ],
+        ),
+        // A longer translation is made smaller rather than cut short.
+        FittedBox(
+          fit: .scaleDown,
+          child: Row(
+            mainAxisSize: .min,
+            spacing: 8,
+            children: [
+              const DivineIcon(
+                icon: .play,
+                size: 40,
+                color: VineTheme.vineGreenDark,
+              ),
+              StickerTextLine(
+                text: l10n.videoStickerAddYoursWatchSeries,
+                style: interactiveCardTextStyle(40),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+    final onOpen = this.onOpen;
+    if (onOpen == null) return card;
+    return Semantics(
+      button: true,
+      label: l10n.videoStickerAddYoursWatchSeriesSemanticLabel(
+        data.prompt ?? '',
+      ),
+      excludeSemantics: true,
+      // excludeSemantics drops the detector's own tap action with it.
+      onTap: onOpen,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onOpen,
+        child: card,
+      ),
+    );
+  }
+}
+
 /// A replies sticker: the latest reply's thumbnail beside its title, who
 /// replied and how many did.
 class _Replies extends StatelessWidget {
@@ -563,8 +684,10 @@ class _Avatar extends StatelessWidget {
 }
 
 /// The thumbnails of the latest [responses] one after another, each for
-/// [repliesThumbnailInterval]; the newest one held still when the viewer
-/// asked for less motion, and a pale frame while there is none.
+/// [repliesThumbnailInterval], and each fading in over the one before once
+/// its picture is loaded, so the card never shows one half drawn; the newest
+/// loaded held still when the viewer asked for less motion, and a pale frame
+/// while none is loaded.
 class _CyclingThumbnail extends StatefulWidget {
   const _CyclingThumbnail({required this.responses});
 
@@ -574,57 +697,214 @@ class _CyclingThumbnail extends StatefulWidget {
   State<_CyclingThumbnail> createState() => _CyclingThumbnailState();
 }
 
-class _CyclingThumbnailState extends State<_CyclingThumbnail> {
-  Timer? _timer;
-  int _index = 0;
+class _CyclingThumbnailState extends State<_CyclingThumbnail>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _fade = AnimationController(
+    vsync: this,
+    duration: repliesThumbnailFade,
+    value: 1,
+  )..addStatusListener(_onFadeStatus);
 
-  List<StickerResponsePreview> get _withThumbnail => [
-    for (final response in widget.responses)
-      if (response.thumbnailUrl != null) response,
+  Timer? _timer;
+  bool _reduceMotion = false;
+
+  /// The thumbnails asked for, loaded or not.
+  final Set<String> _requested = {};
+
+  /// The thumbnails whose picture is loaded.
+  final Set<String> _loaded = {};
+
+  /// The thumbnails whose picture could not be loaded.
+  final Set<String> _failed = {};
+
+  /// The response shown, or `null` for the pale frame.
+  StickerResponsePreview? _current;
+
+  /// The response, or the pale frame for `null`, [_current] fades in over.
+  StickerResponsePreview? _previous;
+
+  /// Whether [_current] is fading in over [_previous].
+  bool _isFading = false;
+
+  /// The responses with a thumbnail, newest first, each thumbnail once.
+  List<StickerResponsePreview> get _withThumbnail {
+    final urls = <String>{};
+    return [
+      for (final response in widget.responses)
+        if (response.thumbnailUrl case final url? when urls.add(url)) response,
+    ];
+  }
+
+  /// Those of [_withThumbnail] whose picture is loaded, newest first.
+  List<StickerResponsePreview> get _ready => [
+    for (final response in _withThumbnail)
+      if (_loaded.contains(response.thumbnailUrl)) response,
   ];
+
+  /// The newest of [_withThumbnail] whose picture is loaded, once none newer
+  /// is still loading; `null` until then.
+  StickerResponsePreview? get _newest {
+    for (final response in _withThumbnail) {
+      final url = response.thumbnailUrl!;
+      if (_loaded.contains(url)) return response;
+      if (!_failed.contains(url)) return null;
+    }
+    return null;
+  }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _restart();
+    _reduceMotion = MediaQuery.disableAnimationsOf(context);
+    _sync();
   }
 
   @override
   void didUpdateWidget(_CyclingThumbnail oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.responses != widget.responses) {
-      _index = 0;
-      _restart();
-    }
+    if (!listEquals(oldWidget.responses, widget.responses)) _sync();
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _fade.dispose();
     super.dispose();
   }
 
-  void _restart() {
-    _timer?.cancel();
-    _timer = null;
-    final reduceMotion = MediaQuery.disableAnimationsOf(context);
-    if (reduceMotion || _withThumbnail.length < 2) return;
-    _timer = Timer.periodic(repliesThumbnailInterval, (_) {
-      if (!mounted) return;
-      setState(() => _index = (_index + 1) % _withThumbnail.length);
+  /// Loads the thumbnails not asked for yet, keeps the one shown while it is
+  /// still among them, and cycles while there is more than one.
+  void _sync() {
+    final withThumbnail = _withThumbnail;
+    StickerResponsePreview? latest(StickerResponsePreview? response) =>
+        response == null
+        ? null
+        : withThumbnail
+              .where((other) => other.thumbnailUrl == response.thumbnailUrl)
+              .firstOrNull;
+    final current = latest(_current);
+    if (current == null && _current != null) {
+      _fade.value = 1;
+      _isFading = false;
+      _previous = null;
+    } else if (_isFading) {
+      _previous = latest(_previous);
+    }
+    _current = current;
+    for (final response in withThumbnail) {
+      final url = response.thumbnailUrl!;
+      if (_requested.add(url)) {
+        unawaited(_load(url));
+      }
+    }
+    if (_current == null || _reduceMotion) _showNewest();
+    if (_reduceMotion || withThumbnail.length < 2) {
+      _timer?.cancel();
+      _timer = null;
+    } else {
+      _timer ??= Timer.periodic(repliesThumbnailInterval, (_) => _next());
+    }
+  }
+
+  Future<void> _load(String url) async {
+    final loaded = await VineCachedImage.precache(context, url);
+    if (!mounted) return;
+    (loaded ? _loaded : _failed).add(url);
+    if (_current == null || _reduceMotion) _showNewest();
+  }
+
+  /// Shows [_newest]: first, and held still for less motion.
+  void _showNewest() {
+    final newest = _newest;
+    if (newest != null && newest.thumbnailUrl != _current?.thumbnailUrl) {
+      _show(newest);
+    }
+  }
+
+  /// Fades the loaded thumbnail after the one shown in over it.
+  void _next() {
+    if (!mounted || _isFading || _current == null) return;
+    final ready = _ready;
+    if (ready.length < 2) return;
+    final at = ready.indexWhere(
+      (response) => response.thumbnailUrl == _current?.thumbnailUrl,
+    );
+    _show(ready[(at + 1) % ready.length]);
+  }
+
+  void _show(StickerResponsePreview response) {
+    setState(() {
+      _previous = _current;
+      _current = response;
+      _isFading = !_reduceMotion;
+    });
+    if (_isFading) {
+      _fade.forward(from: 0);
+    } else {
+      _fade.value = 1;
+      _previous = null;
+    }
+  }
+
+  void _onFadeStatus(AnimationStatus status) {
+    if (status != AnimationStatus.completed || !_isFading || !mounted) return;
+    setState(() {
+      _isFading = false;
+      _previous = null;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final shown = _withThumbnail;
-    final response = shown.isEmpty ? null : shown[_index % shown.length];
+    // Keyed by thumbnail, so the one fading in keeps its picture when the
+    // next fades in over it in turn; the pale frame is the one for `null`.
+    return Stack(
+      children: [
+        for (final (response, isIncoming) in [
+          if (_isFading) (_previous, false),
+          (_current, true),
+        ])
+          FadeTransition(
+            key: ValueKey(response?.thumbnailUrl),
+            opacity: isIncoming ? _fade : kAlwaysCompleteAnimation,
+            child: _ResponseThumbnail(
+              response: response,
+              width: _thumbnailWidth,
+              height: _thumbnailHeight,
+              radius: 28,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// The thumbnail of [response], blurred when it carries a content warning,
+/// or a pale frame with a play mark while there is none; with [moreCount],
+/// darkened under `+moreCount`, the answers it stands for.
+class _ResponseThumbnail extends StatelessWidget {
+  const _ResponseThumbnail({
+    required this.response,
+    required this.width,
+    required this.height,
+    required this.radius,
+    this.moreCount,
+  });
+
+  final StickerResponsePreview? response;
+  final double width;
+  final double height;
+  final double radius;
+  final int? moreCount;
+
+  @override
+  Widget build(BuildContext context) {
     final placeholder = ColoredBox(
       color: interactiveCardInk.withValues(alpha: 0.08),
       child: Center(
         child: DivineIcon(
           icon: .play,
-          size: 72,
+          size: width * 0.4,
           color: interactiveCardInk.withValues(alpha: 0.4),
         ),
       ),
@@ -644,12 +924,29 @@ class _CyclingThumbnailState extends State<_CyclingThumbnail> {
         child: picture,
       );
     }
+    final moreCount = this.moreCount;
     return ClipRRect(
-      borderRadius: BorderRadius.circular(28),
+      borderRadius: BorderRadius.circular(radius),
       child: SizedBox(
-        width: _thumbnailWidth,
-        height: _thumbnailHeight,
-        child: picture,
+        width: width,
+        height: height,
+        child: moreCount == null
+            ? picture
+            : Stack(
+                fit: .expand,
+                children: [
+                  picture,
+                  const ColoredBox(color: VineTheme.scrim50),
+                  Center(
+                    child: StickerTextLine(
+                      text: '+$moreCount',
+                      style: interactiveCardTextStyle(
+                        34,
+                      ).copyWith(color: interactiveCardColor),
+                    ),
+                  ),
+                ],
+              ),
       ),
     );
   }

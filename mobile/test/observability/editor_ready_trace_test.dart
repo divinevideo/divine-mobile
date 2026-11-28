@@ -97,6 +97,28 @@ void main() {
       });
     });
 
+    group('pre_route_ms', () {
+      test('adds the time before the route for an editor the recorder '
+          'asked for', () {
+        fakeAsync((async) {
+          final request = EditorOpenRequest();
+          async.elapse(const Duration(milliseconds: 450));
+          final ready = EditorReadyTrace(
+            monitor,
+            entry: EditorEntry.recording,
+            openRequest: request,
+          );
+          async.elapse(const Duration(milliseconds: 100));
+          ready.clipsLoaded(clipCount: 1, stopMotion: true);
+
+          final trace = onlyTrace();
+          expect(trace.metrics['pre_route_ms'], 450);
+          expect(trace.metrics['total_ms'], 100);
+          expect(trace.attributes['entry'], 'recording');
+        });
+      });
+    });
+
     group('failed', () {
       test('ends the trace when the preview fails to load', () {
         EditorReadyTrace(monitor, entry: EditorEntry.recording)

@@ -1,6 +1,7 @@
 // ABOUTME: Riverpod provider that wires SubtitleRepository with its
 // ABOUTME: infrastructure dependencies (Blossom, VideoEventPublisher, auth,
-// ABOUTME: Nostr, HTTP client, and poll-delay function).
+// ABOUTME: videos repository, personal event cache, Nostr, HTTP client, and
+// ABOUTME: poll-delay function).
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/providers/auth_providers.dart';
@@ -15,6 +16,8 @@ final subtitleRepositoryProvider = Provider<SubtitleRepository>((ref) {
   return SubtitleRepository(
     blossomUploadService: ref.watch(blossomUploadServiceProvider),
     videoEventPublisher: ref.watch(videoEventPublisherProvider),
+    videosRepository: ref.watch(videosRepositoryProvider),
+    personalEventCache: ref.watch(personalEventCacheServiceProvider),
     authService: ref.watch(authServiceProvider),
     nostrClient: ref.watch(nostrServiceProvider),
     httpClient: ref.watch(subtitleHttpClientProvider),

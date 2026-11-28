@@ -43,6 +43,7 @@ import 'package:pro_video_editor/pro_video_editor.dart';
 
 import '../../helpers/divine_video_player_channel.dart';
 import '../../helpers/go_router.dart';
+import '../../helpers/large_screen_layout.dart';
 
 class _MockClipsLibraryBloc
     extends MockBloc<ClipsLibraryEvent, ClipsLibraryState>
@@ -142,6 +143,23 @@ void main() {
         ),
       );
     }
+
+    /// The clips tab with the large-screen layouts on or off, in a window
+    /// the caller sized.
+    Widget wideWidget({required bool largeScreenLayout}) =>
+        largeScreenLayoutApp(
+          enabled: largeScreenLayout,
+          theme: VineTheme.theme,
+          home: Scaffold(
+            body: BlocProvider<ClipsLibraryBloc>.value(
+              value: mockBloc,
+              child: const ClipsTab(
+                showRecordButton: false,
+                backgroundColor: VineTheme.surfaceBackground,
+              ),
+            ),
+          ),
+        );
 
     group('renders', () {
       testWidgets('the clips of the scope it stands for', (tester) async {
@@ -466,6 +484,28 @@ void main() {
         );
       });
 
+      testWidgets('a column more per breakpoint on a wide window', (
+        tester,
+      ) async {
+        when(() => mockBloc.state).thenReturn(
+          ClipsLibraryState(
+            status: ClipsLibraryStatus.loaded,
+            clips: [clip1, clip2],
+            sortedClips: [clip1, clip2],
+          ),
+        );
+        setTestWindowSize(tester, 1000);
+
+        await tester.pumpWidget(wideWidget(largeScreenLayout: true));
+
+        // The default 3 plus 2 for the two breakpoints 1000 px crosses, less
+        // four 4px gutters.
+        expect(
+          tester.getSize(find.byType(VideoClipThumbnailCard).first).width,
+          closeTo((1000 - 16) / 5, 0.5),
+        );
+      });
+
       testWidgets('keeps the persisted column count across a filter switch', (
         tester,
       ) async {
@@ -709,6 +749,12 @@ void main() {
     });
 
     group('interactions', () {
+      setUpAll(
+        () => registerFallbackValue(
+          const ClipsLibraryGridColumnsChanged(3),
+        ),
+      );
+
       testWidgets('toggles selection when clip is tapped', (tester) async {
         when(() => mockBloc.state).thenReturn(
           ClipsLibraryState(
@@ -777,6 +823,96 @@ void main() {
         ).called(1);
         expect(announcements, [en.libraryGridSizeColumns(2)]);
       });
+
+      testWidgets('pinching on a wide window keeps the choice in phone terms', (
+        tester,
+      ) async {
+        when(() => mockBloc.state).thenReturn(
+          ClipsLibraryState(
+            status: ClipsLibraryStatus.loaded,
+            clips: [clip1, clip2],
+            sortedClips: [clip1, clip2],
+          ),
+        );
+        setTestWindowSize(tester, 1000);
+        await tester.pumpWidget(wideWidget(largeScreenLayout: true));
+
+        // The window shows 3 + 2 columns. Pinching them to 7, the most it
+        // allows, stores 5, the most a phone shows.
+        final centre = tester.getCenter(find.byType(ClipsTab));
+        final first = await tester.startGesture(centre - const Offset(80, 0));
+        final second = await tester.startGesture(centre + const Offset(80, 0));
+        await tester.pump();
+        await first.moveTo(centre - const Offset(46, 0));
+        await second.moveTo(centre + const Offset(46, 0));
+        await tester.pump();
+        await first.up();
+        await second.up();
+        await tester.pumpAndSettle();
+
+        verify(
+          () => mockBloc.add(const ClipsLibraryGridColumnsChanged(5)),
+        ).called(1);
+      });
+
+      for (final echoBeforeResize in [false, true]) {
+        testWidgets(
+          'resizes during pinch settle with the persistence echo '
+          '${echoBeforeResize ? 'before' : 'after'} the resize',
+          (tester) async {
+            final initialState = ClipsLibraryState(
+              status: ClipsLibraryStatus.loaded,
+              clips: [clip1, clip2],
+              sortedClips: [clip1, clip2],
+            );
+            final updates = StreamController<ClipsLibraryState>();
+            addTearDown(updates.close);
+            whenListen(mockBloc, updates.stream, initialState: initialState);
+            setTestWindowSize(tester, 550);
+            await tester.pumpWidget(wideWidget(largeScreenLayout: true));
+
+            final tile = find.byType(VideoClipThumbnailCard).first;
+            expect(tester.getSize(tile).width, closeTo((550 - 8) / 3, 0.5));
+
+            final centre = tester.getCenter(find.byType(ClipsTab));
+            final first = await tester.startGesture(
+              centre - const Offset(80, 0),
+            );
+            final second = await tester.startGesture(
+              centre + const Offset(80, 0),
+            );
+            await tester.pump();
+            await first.moveTo(centre - const Offset(60, 0));
+            await second.moveTo(centre + const Offset(60, 0));
+            await tester.pump();
+            await first.up();
+            await second.up();
+            verify(
+              () => mockBloc.add(const ClipsLibraryGridColumnsChanged(4)),
+            ).called(1);
+
+            final persistedState = initialState.copyWith(gridColumnCount: 4);
+            if (echoBeforeResize) {
+              updates.add(persistedState);
+              await tester.pump();
+            }
+            tester.view.physicalSize = const Size(650, 900);
+            await tester.pumpAndSettle();
+            expect(tester.getSize(tile).width, closeTo((650 - 16) / 5, 0.5));
+
+            if (!echoBeforeResize) {
+              updates.add(persistedState);
+              await tester.pumpAndSettle();
+              expect(tester.getSize(tile).width, closeTo((650 - 16) / 5, 0.5));
+            }
+            verifyNever(
+              () => mockBloc.add(
+                any(that: isA<ClipsLibraryGridColumnsChanged>()),
+              ),
+            );
+          },
+        );
+      }
 
       testWidgets('the grid still pinches after a filter switch', (
         tester,

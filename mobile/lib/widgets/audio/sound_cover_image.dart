@@ -3,6 +3,7 @@
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:models/models.dart' show SoundKind;
 import 'package:openvine/extensions/media_query_extensions.dart';
 import 'package:openvine/models/sound_cover.dart';
 import 'package:openvine/widgets/blurhash_display.dart';
@@ -11,21 +12,27 @@ import 'package:openvine/widgets/vine_cached_image.dart';
 /// Square artwork beside a sound.
 ///
 /// Shows [cover]'s image, its blurhash while the image loads or when there is
-/// no image, and a tile in one of the brand's accent colours with a note on
-/// it when the sound has no cover at all, or while an image without a
-/// blurhash loads. Each change fades in. It is decorative: the row it sits in
-/// names the sound.
+/// no image, and a tile in one of the brand's accent colours with an icon
+/// for the sound's [kind] on it when the sound has no cover at all, or while
+/// an image without a blurhash loads. Each change fades in. It is
+/// decorative: the row it sits in names the sound.
 class SoundCoverImage extends StatelessWidget {
   const SoundCoverImage({
     required this.size,
     this.cover,
     this.borderRadius = 8,
     this.colorSeed = '',
+    this.kind,
     super.key,
   });
 
   /// The artwork, or `null` for the colour tile.
   final SoundCover? cover;
+
+  /// Picks the colour tile's icon, the one the sound picker's kind filter
+  /// shows: notes for music, a flash for an effect, and a waveform, as for
+  /// all sounds, when the kind is unknown.
+  final SoundKind? kind;
 
   /// Picks the colour tile's colour, so a sound keeps the same one wherever
   /// it shows; pass its id.
@@ -60,10 +67,10 @@ class SoundCoverImage extends StatelessWidget {
         fadeOutDuration: fade,
         placeholder: (_, _) => hasBlurhash
             ? _SoundCoverBlurhash(blurhash: blurhash, size: size)
-            : _SoundCoverFallback(seed: colorSeed, size: size),
+            : _SoundCoverFallback(seed: colorSeed, kind: kind, size: size),
         errorWidget: (_, _, _) => hasBlurhash
             ? _SoundCoverBlurhash(blurhash: blurhash, size: size)
-            : _SoundCoverFallback(seed: colorSeed, size: size),
+            : _SoundCoverFallback(seed: colorSeed, kind: kind, size: size),
       );
     } else if (hasBlurhash) {
       content = _SoundCoverBlurhash(
@@ -75,6 +82,7 @@ class SoundCoverImage extends StatelessWidget {
       content = _SoundCoverFallback(
         key: const ValueKey('fallback'),
         seed: colorSeed,
+        kind: kind,
         size: size,
       );
     }
@@ -119,16 +127,18 @@ class _SoundCoverBlurhash extends StatelessWidget {
   }
 }
 
-/// A tile in one of the brand's accent colours, chosen by [seed], with a
-/// note on it.
+/// A tile in one of the brand's accent colours, chosen by [seed], with an
+/// icon for [kind] on it.
 class _SoundCoverFallback extends StatelessWidget {
   const _SoundCoverFallback({
     required this.seed,
+    required this.kind,
     required this.size,
     super.key,
   });
 
   final String seed;
+  final SoundKind? kind;
   final double size;
 
   /// Each accent on its own dark ground, as the brand pairs them.
@@ -152,7 +162,11 @@ class _SoundCoverFallback extends StatelessWidget {
       color: ground,
       child: Center(
         child: DivineIcon(
-          icon: DivineIconName.musicNotes,
+          icon: switch (kind) {
+            SoundKind.music => DivineIconName.musicNotes,
+            SoundKind.effect => DivineIconName.lightning,
+            null => DivineIconName.waveform,
+          },
           size: size * 0.45,
           color: accent,
         ),

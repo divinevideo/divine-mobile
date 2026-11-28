@@ -40,6 +40,8 @@
 		D10CF4A4F16A28D77A2562BE /* ParticlesVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = B21FA6EBE080CFE86289163E /* ParticlesVideoEffect.swift */; };
 		765648DCE1580C79DFD2D8C2 /* TiltShiftVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0DC7138111CEE574C94DA0 /* TiltShiftVideoEffect.swift */; };
 		80C7EABC180F0BC7AEB6D29B /* ZoomBlurVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C0F8A8FD7366FA259B65803 /* ZoomBlurVideoEffect.swift */; };
+		EF3B9005A2693CC990CDD734 /* BassHitVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3229B70D2972E07B89215BBD /* BassHitVideoEffect.swift */; };
+		3AB9F6EC20ED4504917DB4E8 /* BlastVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD7486E1B3888411D9554F10 /* BlastVideoEffect.swift */; };
 		CF75E49118A7711563ABB72A /* SpinBlurVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F5EB3DDB3E60DAFD729E6C7 /* SpinBlurVideoEffect.swift */; };
 		53E431152DE7CCEAA6128B73 /* ComicVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 268780AB3698779D32F72134 /* ComicVideoEffect.swift */; };
 		AF39B182970EB8C779C2E6C4 /* SwirlVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44196EC835A5B5EF919C2FFE /* SwirlVideoEffect.swift */; };
@@ -139,6 +141,8 @@
 		B21FA6EBE080CFE86289163E /* ParticlesVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ParticlesVideoEffect.swift; path = ../ios/Runner/ParticlesVideoEffect.swift; sourceTree = SOURCE_ROOT; };
 		AA0DC7138111CEE574C94DA0 /* TiltShiftVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TiltShiftVideoEffect.swift; path = ../ios/Runner/TiltShiftVideoEffect.swift; sourceTree = SOURCE_ROOT; };
 		2C0F8A8FD7366FA259B65803 /* ZoomBlurVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ZoomBlurVideoEffect.swift; path = ../ios/Runner/ZoomBlurVideoEffect.swift; sourceTree = SOURCE_ROOT; };
+		3229B70D2972E07B89215BBD /* BassHitVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BassHitVideoEffect.swift; path = ../ios/Runner/BassHitVideoEffect.swift; sourceTree = SOURCE_ROOT; };
+		CD7486E1B3888411D9554F10 /* BlastVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BlastVideoEffect.swift; path = ../ios/Runner/BlastVideoEffect.swift; sourceTree = SOURCE_ROOT; };
 		3F5EB3DDB3E60DAFD729E6C7 /* SpinBlurVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SpinBlurVideoEffect.swift; path = ../ios/Runner/SpinBlurVideoEffect.swift; sourceTree = SOURCE_ROOT; };
 		268780AB3698779D32F72134 /* ComicVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ComicVideoEffect.swift; path = ../ios/Runner/ComicVideoEffect.swift; sourceTree = SOURCE_ROOT; };
 		44196EC835A5B5EF919C2FFE /* SwirlVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SwirlVideoEffect.swift; path = ../ios/Runner/SwirlVideoEffect.swift; sourceTree = SOURCE_ROOT; };
@@ -286,6 +290,8 @@
 				B21FA6EBE080CFE86289163E /* ParticlesVideoEffect.swift */,
 				AA0DC7138111CEE574C94DA0 /* TiltShiftVideoEffect.swift */,
 				2C0F8A8FD7366FA259B65803 /* ZoomBlurVideoEffect.swift */,
+				3229B70D2972E07B89215BBD /* BassHitVideoEffect.swift */,
+				CD7486E1B3888411D9554F10 /* BlastVideoEffect.swift */,
 				3F5EB3DDB3E60DAFD729E6C7 /* SpinBlurVideoEffect.swift */,
 				268780AB3698779D32F72134 /* ComicVideoEffect.swift */,
 				44196EC835A5B5EF919C2FFE /* SwirlVideoEffect.swift */,
@@ -589,7 +595,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\n#!/bin/bash\nPATH=\"${PATH}:$FLUTTER_ROOT/bin:${PUB_CACHE}/bin:$HOME/.pub-cache/bin\"\n\nif ! command -v flutterfire >/dev/null 2>&1; then\n  echo \"warning: flutterfire CLI not found; skipping macOS Crashlytics dSYM upload\"\n  exit 0\nfi\n\nif [ -z \"$PODS_ROOT\" ] || [ ! -d \"$PODS_ROOT/FirebaseCrashlytics\" ]; then\n  # Cannot use \"BUILD_DIR%/Build/*\" as per Firebase documentation, it points to \"flutter-project/build/ios/*\" path which doesn't have run script\n  DERIVED_DATA_PATH=$(echo \"$BUILD_ROOT\" | sed -E 's|(.*DerivedData/[^/]+).*|\\1|')\n  PATH_TO_CRASHLYTICS_UPLOAD_SCRIPT=\"${DERIVED_DATA_PATH}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run\"\n  # Fallback: Flutter build uses build/macos/ instead of DerivedData\n  if [ ! -f \"$PATH_TO_CRASHLYTICS_UPLOAD_SCRIPT\" ]; then\n    FLUTTER_BUILD_PATH=$(echo \"$BUILD_ROOT\" | sed -E 's|(.*/build/macos)/Build/.*|\\1|')\n    PATH_TO_CRASHLYTICS_UPLOAD_SCRIPT=\"${FLUTTER_BUILD_PATH}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run\"\n  fi\nelse\n  PATH_TO_CRASHLYTICS_UPLOAD_SCRIPT=\"$PODS_ROOT/FirebaseCrashlytics/run\"\nfi\n\n# Command to upload symbols script used to upload symbols to Firebase server\nflutterfire upload-crashlytics-symbols --upload-symbols-script-path=\"$PATH_TO_CRASHLYTICS_UPLOAD_SCRIPT\" --platform=macos --apple-project-path=\"${SRCROOT}\" --env-platform-name=\"${PLATFORM_NAME}\" --env-configuration=\"${CONFIGURATION}\" --env-project-dir=\"${PROJECT_DIR}\" --env-built-products-dir=\"${BUILT_PRODUCTS_DIR}\" --env-dwarf-dsym-folder-path=\"${DWARF_DSYM_FOLDER_PATH}\" --env-dwarf-dsym-file-name=\"${DWARF_DSYM_FILE_NAME}\" --env-infoplist-path=\"${INFOPLIST_PATH}\" --default-config=default\n";
+			shellScript = "\n#!/bin/bash\n# Debug and unsigned compilation do not publish release symbols.\nif [ \"${CONFIGURATION:-}\" = Debug ] || [ \"${CODE_SIGNING_ALLOWED:-YES}\" = NO ]; then\n  exit 0\nfi\nPATH=\"${PATH}:$FLUTTER_ROOT/bin:${PUB_CACHE}/bin:$HOME/.pub-cache/bin\"\n\nif ! command -v flutterfire >/dev/null 2>&1; then\n  echo \"warning: flutterfire CLI not found; skipping macOS Crashlytics dSYM upload\"\n  exit 0\nfi\n\nif [ -z \"$PODS_ROOT\" ] || [ ! -d \"$PODS_ROOT/FirebaseCrashlytics\" ]; then\n  # Cannot use \"BUILD_DIR%/Build/*\" as per Firebase documentation, it points to \"flutter-project/build/ios/*\" path which doesn't have run script\n  DERIVED_DATA_PATH=$(echo \"$BUILD_ROOT\" | sed -E 's|(.*DerivedData/[^/]+).*|\\1|')\n  PATH_TO_CRASHLYTICS_UPLOAD_SCRIPT=\"${DERIVED_DATA_PATH}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run\"\n  # Fallback: Flutter build uses build/macos/ instead of DerivedData\n  if [ ! -f \"$PATH_TO_CRASHLYTICS_UPLOAD_SCRIPT\" ]; then\n    FLUTTER_BUILD_PATH=$(echo \"$BUILD_ROOT\" | sed -E 's|(.*/build/macos)/Build/.*|\\1|')\n    PATH_TO_CRASHLYTICS_UPLOAD_SCRIPT=\"${FLUTTER_BUILD_PATH}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run\"\n  fi\nelse\n  PATH_TO_CRASHLYTICS_UPLOAD_SCRIPT=\"$PODS_ROOT/FirebaseCrashlytics/run\"\nfi\n\n# Command to upload symbols script used to upload symbols to Firebase server\nflutterfire upload-crashlytics-symbols --upload-symbols-script-path=\"$PATH_TO_CRASHLYTICS_UPLOAD_SCRIPT\" --platform=macos --apple-project-path=\"${SRCROOT}\" --env-platform-name=\"${PLATFORM_NAME}\" --env-configuration=\"${CONFIGURATION}\" --env-project-dir=\"${PROJECT_DIR}\" --env-built-products-dir=\"${BUILT_PRODUCTS_DIR}\" --env-dwarf-dsym-folder-path=\"${DWARF_DSYM_FOLDER_PATH}\" --env-dwarf-dsym-file-name=\"${DWARF_DSYM_FILE_NAME}\" --env-infoplist-path=\"${INFOPLIST_PATH}\" --default-config=default\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -617,6 +623,8 @@
 				D10CF4A4F16A28D77A2562BE /* ParticlesVideoEffect.swift in Sources */,
 				765648DCE1580C79DFD2D8C2 /* TiltShiftVideoEffect.swift in Sources */,
 				80C7EABC180F0BC7AEB6D29B /* ZoomBlurVideoEffect.swift in Sources */,
+				EF3B9005A2693CC990CDD734 /* BassHitVideoEffect.swift in Sources */,
+				3AB9F6EC20ED4504917DB4E8 /* BlastVideoEffect.swift in Sources */,
 				CF75E49118A7711563ABB72A /* SpinBlurVideoEffect.swift in Sources */,
 				53E431152DE7CCEAA6128B73 /* ComicVideoEffect.swift in Sources */,
 				AF39B182970EB8C779C2E6C4 /* SwirlVideoEffect.swift in Sources */,

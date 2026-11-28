@@ -33,6 +33,57 @@ void main() {
       );
       expect(merged!.videoEventIds, [b, c]);
     });
+    test('a membership edit waits for review if the list became a series', () {
+      final series = base.copyWith(
+        preservedTags: const [
+          ['series', 'true'],
+        ],
+      );
+
+      expect(replay(base.copyWith(videoEventIds: [a, b, c]), series), isNull);
+
+      final renamed = replay(base.copyWith(name: 'Renamed'), series)!;
+      expect(renamed.name, 'Renamed');
+      expect(renamed.isSeries, isTrue);
+      expect(renamed.videoEventIds, [a, b]);
+    });
+    test('an edit to a list that already was a series still replays', () {
+      final series = base.copyWith(
+        preservedTags: const [
+          ['series', 'true'],
+        ],
+      );
+      final merged = CuratedListDraftReconciler.reconcile(
+        CuratedListDraftReconciler.stage(
+          series,
+          series.copyWith(videoEventIds: [b, a, c]),
+        ),
+        series,
+      );
+
+      expect(merged!.videoEventIds, [b, a, c]);
+      expect(merged.isSeries, isTrue);
+    });
+    test('replaying an edit to a private list keeps its sealed tags', () {
+      final person = 'e' * 64;
+      final private = base.copyWith(isPublic: false);
+      final merged = CuratedListDraftReconciler.reconcile(
+        CuratedListDraftReconciler.stage(
+          private,
+          private.copyWith(name: 'Renamed'),
+        ),
+        private.copyWith(
+          preservedPrivateTags: [
+            ['p', person],
+          ],
+        ),
+      );
+
+      expect(merged!.name, 'Renamed');
+      expect(merged.preservedPrivateTags, [
+        ['p', person],
+      ]);
+    });
     test('an unchanged local member never resurrects a remote deletion', () {
       final merged = replay(
         base.copyWith(name: 'Renamed'),

@@ -96,6 +96,10 @@ class QueryOutcomeTracker {
   /// Keyed by relay url, in the order the relays turned up.
   final Map<String, _RelayTally> _tallies = {};
 
+  /// The object that took the query over for each url a relay was replaced
+  /// under; see [recordTakeover].
+  final Map<String, Relay> _takenOverBy = {};
+
   bool _fanoutFinished = false;
   bool _reported = false;
 
@@ -104,9 +108,23 @@ class QueryOutcomeTracker {
     _tallyFor(relay);
   }
 
+  /// Records that [relay] took over the `REQ` an earlier object for its url
+  /// took, and will ask for it again on a new socket (#11343).
+  ///
+  /// The new socket answers the whole request afresh, so what the old one
+  /// sent is forgotten rather than counted twice. Taking the saved query over
+  /// commits [relay] to answering it (`tookReq = true`), even if the old
+  /// object's write was still in flight. From here on only [relay] reports
+  /// for its url: a write still in flight on the old object must not hand the
+  /// tally back.
+  void recordTakeover(Relay relay) {
+    _takenOverBy[relay.url] = relay;
+    _tallies[relay.url] = _RelayTally(relay, _filters.length)..tookReq = true;
+  }
+
   /// Records whether [relay] took the `REQ` the fan-out wrote to it.
   void recordReqTaken(Relay relay, {required bool taken}) {
-    _tallyFor(relay).tookReq = taken;
+    _tallyFor(relay)?.tookReq = taken;
   }
 
   /// Records that the fan-out has heard back from every relay it asked.
@@ -126,7 +144,7 @@ class QueryOutcomeTracker {
   /// [event] has already passed the query's filters, so a single-filter query
   /// counts it without matching it again.
   void recordEvent(Relay relay, Event event) {
-    _tallyFor(relay).recordEvent(event, _filters);
+    _tallyFor(relay)?.recordEvent(event, _filters);
   }
 
   /// Records an `EVENT` frame [relay] sent for the query that matched none of
@@ -136,21 +154,21 @@ class QueryOutcomeTracker {
   /// neither NIP-50 `search` nor a tag filter it does not parse, so an event
   /// the relay returned for one of those still counts as matching.
   void recordOffFilterEvent(Relay relay) {
-    _tallyFor(relay).outsideFilter += 1;
+    _tallyFor(relay)?.outsideFilter += 1;
   }
 
   /// Records an `EVENT` frame [relay] sent for the query that the pool
   /// rejected: its payload is not an event, its id does not match its
   /// content, or its signature is missing or does not verify.
   void recordRejectedEvent(Relay relay) {
-    _tallyFor(relay).rejected += 1;
+    _tallyFor(relay)?.rejected += 1;
   }
 
   /// Records [relay]'s `EOSE` [frame] for the query, keeping the NIP-67
   /// hints it carries; see [RelayAnswerTally.recordEoseHints].
   void recordEose(Relay relay, List<dynamic> frame) {
     _tallyFor(relay)
-      ..terminalFrame = _TerminalFrame.eose
+      ?..terminalFrame = _TerminalFrame.eose
       ..closedReason = null
       ..recordEoseHints(frame);
   }
@@ -159,7 +177,7 @@ class QueryOutcomeTracker {
   /// reason's NIP-01 prefix, never the relay's own text.
   void recordClosed(Relay relay, String reasonCategory) {
     _tallyFor(relay)
-      ..terminalFrame = _TerminalFrame.closed
+      ?..terminalFrame = _TerminalFrame.closed
       ..closedReason = reasonCategory
       ..hints = const <String>{};
   }
@@ -192,6 +210,14 @@ class QueryOutcomeTracker {
                 entry.key.relay.relayStatus.relayType != RelayType.cache,
           )
           .length,
+      unsentNetworkRelayCount: _tallies.values
+          .where(
+            (tally) =>
+                !tally.tookPart &&
+                tally.relay.relayStatus.readAccess &&
+                tally.relay.relayStatus.relayType != RelayType.cache,
+          )
+          .length,
       unansweredRelayCount: judgements.values
           .where((judgement) => judgement.standing == _Standing.noAnswer)
           .length,
@@ -210,6 +236,13 @@ class QueryOutcomeTracker {
             tally.relay.url: tally.closedReason!,
       },
       possiblyCapped: judgements.keys.any(_isCapped),
+      hasCapEvidence: judgements.keys.any(
+        (tally) => tally.mayBeCapped(
+          tally.relay,
+          _filters,
+          includeUnknownLimit: false,
+        ),
+      ),
       confirmedExhaustive: _confirmedExhaustive(judgements),
       relays: [
         for (final tally in _tallies.values)
@@ -246,9 +279,15 @@ class QueryOutcomeTracker {
     );
   }
 
-  _RelayTally _tallyFor(Relay relay) =>
-      (_tallies[relay.url] ??= _RelayTally(relay, _filters.length))
-        ..relay = relay;
+  /// The tally for [relay]'s url, or null when [relay] is an object a
+  /// takeover has replaced for that url: what its write or its closed socket
+  /// still reports belongs to a request nobody waits on any more.
+  _RelayTally? _tallyFor(Relay relay) {
+    final takenOverBy = _takenOverBy[relay.url];
+    if (takenOverBy != null && !identical(takenOverBy, relay)) return null;
+    return (_tallies[relay.url] ??= _RelayTally(relay, _filters.length))
+      ..relay = relay;
+  }
 
   static _Judgement _judge(
     _RelayTally tally,

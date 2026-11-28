@@ -48,10 +48,12 @@ import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/share_sheet.dart';
 import 'package:openvine/utils/user_identifier_line_resolver.dart';
+import 'package:openvine/widgets/modal_progress_overlay.dart';
 import 'package:openvine/widgets/supporter_membership.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:unified_logger/unified_logger.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   static const routeName = 'settings';
@@ -373,26 +375,36 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             // so the video would be missing from both the queue and the library
             // until a later launch swept it up. Park it for the same reason the
             // switch above does, under the same warning this sheet opened with.
-            if (!await _parkUploadsBeforeAccountChange(publishBloc)) return;
-            if (!mounted) return;
-            final messenger = ScaffoldMessenger.of(context);
-            final cleanupFailedMessage = context.l10n.authAccountCleanupFailed;
+            //
+            // Signing out takes seconds while this screen stays up. The
+            // blocking spinner shows it is working and keeps the header button
+            // from starting a second sign-out on top of it.
+            final progress = ModalProgressOverlay.show(context);
             try {
-              await _accountCubit.addNewAccount();
-            } catch (error, stackTrace) {
-              Log.error(
-                'Adding an account could not complete sign-out',
-                name: 'SettingsScreen',
-                error: error,
-                stackTrace: stackTrace,
-              );
-              if (!messenger.mounted) return;
-              messenger.showSnackBar(
-                DivineSnackbarContainer.snackBar(
-                  cleanupFailedMessage,
-                  error: true,
-                ),
-              );
+              if (!await _parkUploadsBeforeAccountChange(publishBloc)) return;
+              if (!mounted) return;
+              final messenger = ScaffoldMessenger.of(context);
+              final cleanupFailedMessage =
+                  context.l10n.authAccountCleanupFailed;
+              try {
+                await _accountCubit.addNewAccount();
+              } catch (error, stackTrace) {
+                Log.error(
+                  'Adding an account could not complete sign-out',
+                  name: 'SettingsScreen',
+                  error: error,
+                  stackTrace: stackTrace,
+                );
+                if (!messenger.mounted) return;
+                messenger.showSnackBar(
+                  DivineSnackbarContainer.snackBar(
+                    cleanupFailedMessage,
+                    error: true,
+                  ),
+                );
+              }
+            } finally {
+              progress.dismiss();
             }
           },
         ),
@@ -550,6 +562,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     subtitle: context.l10n.settingsHelpAboutSubtitle,
                     onTap: () => context.push(HelpAboutSettingsScreen.path),
                   ),
+                  DivineListTile(
+                    icon: DivineIconName.chats,
+                    title: context.l10n.settingsDiscordTitle,
+                    subtitle: context.l10n.settingsDiscordSubtitle,
+                    trailingIcon: DivineIconName.arrowUpRight,
+                    trailingIconSize: 20,
+                    trailingColor: context.vineColors.accentBrand,
+                    onTap: () => _openDiscord(context),
+                  ),
                 ],
                 const SizedBox(height: 24),
                 _VersionTile(appVersion: _appVersion),
@@ -557,6 +578,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+Future<void> _openDiscord(BuildContext context) async {
+  var opened = false;
+  try {
+    opened = await launchUrl(
+      Uri.parse(AppConstants.discordInviteUrl),
+      mode: LaunchMode.externalApplication,
+    );
+  } catch (e, stackTrace) {
+    Log.error(
+      'Failed to open Discord invite link',
+      name: 'SettingsScreen',
+      category: LogCategory.ui,
+      error: e,
+      stackTrace: stackTrace,
+    );
+  }
+  if (!opened && context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      DivineSnackbarContainer.snackBar(
+        context.l10n.settingsDiscordOpenError,
+        error: true,
       ),
     );
   }

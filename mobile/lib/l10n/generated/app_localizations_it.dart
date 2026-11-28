@@ -10,6 +10,22 @@ class AppLocalizationsIt extends AppLocalizations {
   AppLocalizationsIt([String locale = 'it']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'Passare a $account per aprire questo messaggio?';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'Messaggi diretti';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'Mostra una notifica senza il nome del mittente o il testo del messaggio.';
+
+  @override
+  String get dmNotificationMessageUnavailable =>
+      'Questo messaggio non è disponibile.';
+
+  @override
   String get devOptionsClipRecovery => 'Recupero clip';
 
   @override
@@ -319,7 +335,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get privacySettingsShareUsageSubtitle =>
-      'Ci aiuta a capire cosa si usa davvero. Se lo disattivi, i dati in coda su questo dispositivo vengono eliminati.';
+      'Ci aiuta a capire cosa si usa davvero. Se lo disattivi, i dati in coda su questo dispositivo vengono eliminati. I report degli arresti anomali vengono comunque inviati, così possiamo correggere i bug.';
 
   @override
   String get privacySettingsSaveFailed =>
@@ -1852,51 +1868,8 @@ class AppLocalizationsIt extends AppLocalizations {
   String get shareVideoLabel => 'Condividi video';
 
   @override
-  String sharePostSharedWith(String recipientName) {
-    return 'Post condiviso con $recipientName';
-  }
-
-  @override
-  String sharePostSharedWithCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Post condiviso con $count persone',
-      one: 'Post condiviso con $count persona',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String shareStillTryingToSendTo(String recipientName) {
-    return 'Stiamo ancora provando a inviare a $recipientName';
-  }
-
-  @override
-  String shareStillTryingToSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Stiamo ancora provando a inviare a $count persone',
-      one: 'Stiamo ancora provando a inviare a $count persona',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String shareCouldNotSendTo(String recipientName) {
     return 'Impossibile inviare a $recipientName';
-  }
-
-  @override
-  String shareCouldNotSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Impossibile inviare a $count persone',
-      one: 'Impossibile inviare a $count persona',
-    );
-    return '$_temp0';
   }
 
   @override
@@ -1932,11 +1905,32 @@ class AppLocalizationsIt extends AppLocalizations {
   String get shareFindPeopleMultiline => 'Trova\npersone';
 
   @override
+  String get shareDeliveryFailed => 'Invio non ancora riuscito';
+
+  @override
+  String shareDeliveryHeld(String name) {
+    return 'Verrà inviato quando $name sarà raggiungibile';
+  }
+
+  @override
+  String shareDeliveryForRecipient(String name, String status) {
+    return '$name — $status';
+  }
+
+  @override
   String get shareSent => 'Inviato';
 
   @override
   String shareSelectedRecipientAnnouncement(String name) {
     return '$name selezionato';
+  }
+
+  @override
+  String get shareRecipientSend => 'Invia';
+
+  @override
+  String shareRecipientSendTo(String name) {
+    return 'Invia a $name';
   }
 
   @override
@@ -2164,6 +2158,28 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get videoStickerAddYoursButton => 'Tocca a te';
+
+  @override
+  String get videoStickerAddYoursWatchSeries => 'Guarda la serie';
+
+  @override
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'Guarda la serie: $prompt';
+  }
+
+  @override
+  String videoSeriesChipEpisode(String episode, String total) {
+    return 'Ep. $episode di $total';
+  }
+
+  @override
+  String videoSeriesChipSemanticLabel(
+    String seriesName,
+    String episode,
+    String total,
+  ) {
+    return 'Serie $seriesName, episodio $episode di $total';
+  }
 
   @override
   String videoStickerAddYoursJoined(int count) {
@@ -3506,6 +3522,9 @@ class AppLocalizationsIt extends AppLocalizations {
       'Accedere qui nasconderà quelle bozze e quei clip';
 
   @override
+  String get authWatchClassicsAsGuest => 'Guarda i classici come ospite';
+
+  @override
   String get authTermsPrefix =>
       'Scegliendo un\'opzione qui sotto, confermi di avere almeno 16 anni (o di aver completato l\'';
 
@@ -4140,6 +4159,10 @@ class AppLocalizationsIt extends AppLocalizations {
   String get remixStartFailed => 'Impossibile avviare il remix. Riprova.';
 
   @override
+  String get remixSettingSaveFailed =>
+      'Impossibile aggiornare la tua impostazione per i remix. Riprova.';
+
+  @override
   String get remixSettingAllowTitle =>
       'Permetti ad altri di remixare i miei video';
 
@@ -4551,6 +4574,10 @@ class AppLocalizationsIt extends AppLocalizations {
       'Il relay non ha accettato la modifica. Riprova tra poco.';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      'Questo video è stato modificato su un altro dispositivo e ora ha troppi tag o troppe persone che collaborano. Riaprilo e fai un po\' di pulizia.';
+
+  @override
   String get videoUpdateErrorGeneric =>
       'Impossibile aggiornare questo video. Riprova.';
 
@@ -4643,6 +4670,19 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get soundsNoSoundsFoundDescription =>
       'Prova un termine di ricerca diverso';
+
+  @override
+  String soundsSearchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count suoni trovati',
+      many: '$count di suoni trovati',
+      one: '$count suono trovato',
+      zero: 'Nessun suono trovato',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get soundsSavedToLibrary => 'Salvato in Suoni';
@@ -6427,6 +6467,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get inboxCollabInviteSentStatus => 'Invito inviato';
 
   @override
+  String get inboxSharedVideoPreview => 'Ha condiviso un video';
+
+  @override
   String get inboxConversationCollabInvitePreview => 'Invito a collaborare';
 
   @override
@@ -7249,6 +7292,55 @@ class AppLocalizationsIt extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'Duplica';
 
   @override
+  String get libraryDraftActionConvertToClip => 'Converti in clip';
+
+  @override
+  String get libraryDraftConvertingToClip => 'Conversione in clip...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar => 'Bozza convertita in clip';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar =>
+      'Conversione bozza non riuscita';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'Non è stato possibile preparare testo e sticker di questa bozza. Aprila nell’editor e riprova.';
+
+  @override
+  String get libraryDraftActionShare => 'Condividi bozza';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return 'Inviare una bozza modificabile a $name?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'Condividi le clip originali e la cronologia delle modifiche. Chi le riceve può vedere le parti tagliate, modificare la propria copia, pubblicarla o rimandartela.';
+
+  @override
+  String get libraryDraftShareFailed =>
+      'Non è stato possibile inviare la bozza.';
+
+  @override
+  String get libraryDraftShareTooLarge =>
+      'La bozza è troppo grande per essere inviata.';
+
+  @override
+  String get dmSharedDraft => 'Bozza condivisa';
+
+  @override
+  String get dmOpenDraft => 'Importa e modifica';
+
+  @override
+  String get dmDraftImportFailed => 'Non è stato possibile importare la bozza.';
+
+  @override
+  String get libraryDraftSent => 'Bozza inviata';
+
+  @override
   String get libraryDraftActionDelete => 'Elimina bozza';
 
   @override
@@ -7890,6 +7982,14 @@ class AppLocalizationsIt extends AppLocalizations {
   ) {
     return '$displayName vuole scriverti, ha inviato $messageText.';
   }
+
+  @override
+  String messageRequestGroupWantsToMessageYou(String messageText) {
+    return 'Questo gruppo vuole scriverti, hanno inviato $messageText.';
+  }
+
+  @override
+  String get messageRequestGroupMembersHeading => 'In questo gruppo';
 
   @override
   String get deleteAccountAccountChanged =>
@@ -9640,6 +9740,21 @@ class AppLocalizationsIt extends AppLocalizations {
   String get videoEditorEffectSpinBlur => 'Sfocatura rotatoria';
 
   @override
+  String get videoEditorEffectShockwave => 'Onda d\'urto';
+
+  @override
+  String get videoEditorEffectSubwoofer => 'Subwoofer';
+
+  @override
+  String get videoEditorEffectPlasma => 'Plasma';
+
+  @override
+  String get videoEditorEffectEnergyWave => 'Onda di energia';
+
+  @override
+  String get videoEditorEffectSmokeBurst => 'Esplosione di fumo';
+
+  @override
   String get videoEditorEffectComic => 'Fumetto';
 
   @override
@@ -9836,9 +9951,6 @@ class AppLocalizationsIt extends AppLocalizations {
   String get videoEditorFilterCategoryTints => 'Tinte';
 
   @override
-  String get videoEditorDropsSettingsTitle => 'Regola le gocce';
-
-  @override
   String get videoEditorDropsCountLabel => 'Numero';
 
   @override
@@ -9885,6 +9997,203 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get videoEditorEffectsOnBeatNoSound =>
       'Aggiungi musica o attiva l\'audio di una clip';
+
+  @override
+  String get videoEditorEffectSettingsOpen => 'Impostazioni effetto';
+
+  @override
+  String videoEditorEffectSettingsTitle(String effect) {
+    return 'Impostazioni: $effect';
+  }
+
+  @override
+  String videoEditorEffectSeconds(String seconds) {
+    return '$seconds s';
+  }
+
+  @override
+  String get videoEditorEffectHitDuration => 'Durata';
+
+  @override
+  String get videoEditorEffectHitRepeat => 'Ripeti';
+
+  @override
+  String get videoEditorEffectHitOnce =>
+      'Una volta, dove l\'effetto inizia sulla timeline';
+
+  @override
+  String get videoEditorEffectHitInterval => 'Intervallo';
+
+  @override
+  String get videoEditorEffectLookTitle => 'Aspetto';
+
+  @override
+  String get videoEditorEffectHitHorizontal => 'Posizione orizzontale';
+
+  @override
+  String get videoEditorEffectHitVertical => 'Posizione verticale';
+
+  @override
+  String get videoEditorEffectHitReach => 'Portata';
+
+  @override
+  String get videoEditorEffectHitShake => 'Scossa';
+
+  @override
+  String get videoEditorEffectHitPunch => 'Colpo di zoom';
+
+  @override
+  String get videoEditorEffectLookReset => 'Ripristina aspetto';
+
+  @override
+  String get videoEditorEffectTimingTitle => 'Tempi';
+
+  @override
+  String get videoEditorEffectTimingReset => 'Ripristina tempi';
+
+  @override
+  String get videoEditorEffectMotionTitle => 'Movimento';
+
+  @override
+  String get videoEditorEffectMotionReset => 'Ripristina movimento';
+
+  @override
+  String get videoEditorEffectSettingFocus => 'Messa a fuoco';
+
+  @override
+  String get videoEditorEffectSettingWidth => 'Larghezza';
+
+  @override
+  String get videoEditorEffectSettingDirection => 'Direzione';
+
+  @override
+  String get videoEditorEffectSettingHorizontal => 'Orizzontale';
+
+  @override
+  String get videoEditorEffectSettingVertical => 'Verticale';
+
+  @override
+  String get videoEditorEffectSettingClockwise => 'Orario';
+
+  @override
+  String get videoEditorEffectSettingAnticlockwise => 'Antiorario';
+
+  @override
+  String get videoEditorEffectSettingZoomIn => 'Zoom avanti';
+
+  @override
+  String get videoEditorEffectSettingZoomOut => 'Zoom indietro';
+
+  @override
+  String get videoEditorEffectSettingSpacing => 'Spaziatura';
+
+  @override
+  String get videoEditorEffectSettingAngle => 'Angolo';
+
+  @override
+  String get videoEditorEffectSettingHue => 'Tonalità';
+
+  @override
+  String get videoEditorEffectSettingLength => 'Lunghezza';
+
+  @override
+  String get videoEditorEffectSettingSensitivity => 'Sensibilità';
+
+  @override
+  String get videoEditorEffectSettingPosition => 'Posizione';
+
+  @override
+  String get videoEditorEffectSettingWind => 'Vento';
+
+  @override
+  String get videoEditorEffectSettingDotSize => 'Dimensione dei punti';
+
+  @override
+  String get videoEditorEffectSettingOutline => 'Contorno';
+
+  @override
+  String get videoEditorEffectSettingLevels => 'Livelli';
+
+  @override
+  String get videoEditorEffectSettingPixelSize => 'Dimensione pixel';
+
+  @override
+  String get videoEditorEffectSettingOffset => 'Spostamento';
+
+  @override
+  String get videoEditorEffectSettingBrushSize => 'Dimensione pennello';
+
+  @override
+  String get videoEditorEffectSettingDensity => 'Densità';
+
+  @override
+  String get videoEditorEffectSettingGrain => 'Grana';
+
+  @override
+  String get videoEditorEffectSettingGrid => 'Griglia';
+
+  @override
+  String get videoEditorEffectSettingLayers => 'Strati';
+
+  @override
+  String get videoEditorEffectSettingShadow => 'Ombra';
+
+  @override
+  String get videoEditorEffectSettingFirstInk => 'Primo inchiostro';
+
+  @override
+  String get videoEditorEffectSettingSecondInk => 'Secondo inchiostro';
+
+  @override
+  String get videoEditorEffectSettingColors => 'Colori';
+
+  @override
+  String get videoEditorEffectSettingOriginalColors => 'Originali';
+
+  @override
+  String get videoEditorEffectSettingSingleColor => 'Un colore';
+
+  @override
+  String get videoEditorEffectSettingDelay => 'Ritardo';
+
+  @override
+  String get videoEditorEffectSettingDown => 'Verso il basso';
+
+  @override
+  String get videoEditorEffectSettingUp => 'Verso l\'alto';
+
+  @override
+  String get videoEditorEffectSettingRight => 'Verso destra';
+
+  @override
+  String get videoEditorEffectSettingLeft => 'Verso sinistra';
+
+  @override
+  String get videoEditorEffectSettingFrequency => 'Frequenza';
+
+  @override
+  String get videoEditorEffectSettingDistance => 'Distanza';
+
+  @override
+  String get videoEditorEffectSettingScanlines => 'Linee di scansione';
+
+  @override
+  String get videoEditorEffectSettingGrainSize => 'Dimensione della grana';
+
+  @override
+  String get videoEditorEffectSettingSepia => 'Seppia';
+
+  @override
+  String get videoEditorEffectSettingFlicker => 'Sfarfallio';
+
+  @override
+  String get videoEditorEffectSettingVignette => 'Vignettatura';
+
+  @override
+  String get videoEditorEffectSettingTempo => 'Tempo';
+
+  @override
+  String get videoEditorEffectSettingWavelength => 'Lunghezza d\'onda';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {
@@ -11748,6 +12057,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get videoEditorAudioUseSound => 'Usa';
 
   @override
+  String get videoEditorAudioOpenSoundDetails => 'Apri dettagli del suono';
+
+  @override
   String get videoEditorAudioFileMissing =>
       'File audio non più su questo dispositivo';
 
@@ -11778,6 +12090,9 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get videoEditorAudioCategoryMySounds => 'I miei suoni';
+
+  @override
+  String get videoEditorAudioCategorySongs => 'Songs';
 
   @override
   String get videoEditorAudioFilterEffects => 'Effetti';
@@ -12003,6 +12318,34 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get videoEditorSocialStickerRepliesNote =>
       'Mostra chi ha risposto a questo video con un video. Chi guarda lo tocca per vedere le risposte.';
+
+  @override
+  String get videoEditorSocialStickerAudienceTitle => 'Chi può rispondere';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => 'Chiunque';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => 'Chi segui';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => 'Solo io';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      'Possono partecipare solo le persone che segui. Le altre vedono lo sticker non appena qualcuno ha partecipato.';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      'Lo sticker mostra solo le risposte video delle persone che segui. Le altre persone lo vedono non appena una di loro ha risposto.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      'Puoi partecipare solo tu. Lo sticker resta invisibile a chiunque altro finché non partecipi.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      'Lo sticker mostra solo le tue risposte video. Resta invisibile a chiunque altro finché non rispondi.';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>
@@ -13832,6 +14175,29 @@ class AppLocalizationsIt extends AppLocalizations {
       'Forzatura minore protetto azzerata';
 
   @override
+  String get devOptionsConfirmationAccessTitle => 'Divine Confirmation access';
+
+  @override
+  String get devOptionsConfirmationAccessReal => 'Real answer';
+
+  @override
+  String get devOptionsConfirmationAccessHas => 'Has Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessHasNot => 'Doesn\'t have Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessUnknown => 'Couldn\'t check';
+
+  @override
+  String get devOptionsConfirmationRequirementSimulatedTitle =>
+      'Act as if Confirmation is required';
+
+  @override
+  String get devOptionsConfirmationRequirementSimulatedSubtitle =>
+      'Treats signing in as needing Confirmation even when the verifier doesn\'t. Needs the Confirmation Sign-in flag; choose \"Doesn\'t have Confirmation\" above to see the offer. The verifier still approves sign-ins.';
+
+  @override
   String get commentsRecordVideoButtonLabel => 'Registra un commento video';
 
   @override
@@ -14899,6 +15265,65 @@ class AppLocalizationsIt extends AppLocalizations {
   String get verifyStatusAccountChanged => 'Account changed';
 
   @override
+  String get verifyStatusNeedsConfirmation => 'Needs Confirmation';
+
+  @override
+  String get verifyConfirmationTitle => 'Divine Confirmation';
+
+  @override
+  String get verifyConfirmationHeroBody =>
+      'Divine Confirmation lets you link your accounts on other platforms by signing in to them.';
+
+  @override
+  String get verifyConfirmationIncludedTitle => 'What\'s included';
+
+  @override
+  String get verifyConfirmationIncludedSignIn => 'Link accounts by signing in';
+
+  @override
+  String get verifyConfirmationComingSoon => 'Coming soon';
+
+  @override
+  String get verifyConfirmationSmallPrint =>
+      'Details will appear here when Divine Confirmation is ready.';
+
+  @override
+  String get verifyConfirmationStoreOnly =>
+      'Divine Confirmation is available in the App Store and Google Play versions of Divine.';
+
+  @override
+  String get verifyConfirmationBuySemantic =>
+      'Divine Confirmation, coming soon, unavailable';
+
+  @override
+  String get verifyConfirmationRestoreSemantic =>
+      'Restore purchases, unavailable';
+
+  @override
+  String get verifyConfirmationCardTitle => 'Link by signing in';
+
+  @override
+  String get verifyConfirmationCardBody =>
+      'One-tap linking is part of Divine Confirmation.';
+
+  @override
+  String get verifyGetConfirmation => 'Get Divine Confirmation';
+
+  @override
+  String get verifyProofAlwaysAvailable => 'Proof posts are always available';
+
+  @override
+  String get verifyConfirmationSheetTitle =>
+      'Linking by signing in needs Divine Confirmation';
+
+  @override
+  String get verifyConfirmationSheetSubtitle =>
+      'You can still link this account with a proof post.';
+
+  @override
+  String get verifyConfirmationSheetUseProof => 'Use a proof post';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return 'Scollega l\'account $platform $identity';
   }
@@ -14930,7 +15355,26 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
+  String verifyLinkNeedsConfirmationSemanticLabel(String platform) {
+    return 'Link your $platform account. Signing in needs Divine Confirmation';
+  }
+
+  @override
   String get verifyOneTapBadge => 'Un tap';
+
+  @override
+  String get verifyOneTapWithConfirmationBadge => 'One tap with Confirmation';
+
+  @override
+  String get verifyRenewConfirmation => 'Renew Confirmation';
+
+  @override
+  String verifyRenewConfirmationSemanticLabel(
+    String platform,
+    String identity,
+  ) {
+    return 'Renew Divine Confirmation to restore $platform account $identity';
+  }
 
   @override
   String verifyConnectSignInLifetime(int days) {
@@ -15042,6 +15486,18 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get verifyErrorPublishFailed =>
       'Verificato, ma nessun relay ha accettato l\'aggiornamento. Riprova.';
+
+  @override
+  String get verifyErrorConfirmationRequired =>
+      'Linking by signing in needs Divine Confirmation. You can still link with a proof post.';
+
+  @override
+  String get verifyErrorConfirmationUnavailable =>
+      'Couldn\'t check Divine Confirmation right now. Try again in a few minutes.';
+
+  @override
+  String get verifyErrorConfirmationPending =>
+      'This can take a minute after buying. Try again shortly.';
 
   @override
   String get verifyErrorOauthUnavailable =>
@@ -15332,7 +15788,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get changeEmailSubtitle =>
-      'Mandiamo un link di conferma al nuovo indirizzo e a quello del tuo account. L\'e-mail cambia quando confermi da entrambi.';
+      'Ti manderemo un link al tuo nuovo indirizzo. Se al tuo account è già associato un indirizzo email, manderemo un link anche lì.';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -15352,18 +15808,18 @@ class AppLocalizationsIt extends AppLocalizations {
   String get changeEmailWrongPassword => 'Questa non è la tua password.';
 
   @override
-  String get changeEmailSubmit => 'Invia i link di conferma';
+  String get changeEmailSubmit => 'Richiedi conferma';
 
   @override
-  String get changeEmailSentTitle => 'Due link sono in arrivo';
+  String get changeEmailSentTitle => 'Controlla la tua email';
 
   @override
   String changeEmailSentMessage(String email) {
-    return 'Conferma da $email e dall\'indirizzo del tuo account. L\'e-mail cambia quando hai fatto entrambi.';
+    return 'Apri il link ricevuto a $email. Se al tuo account è già associato un indirizzo email, apri anche il link ricevuto lì.';
   }
 
   @override
-  String get changeEmailSentExpiry => 'I link scadono dopo 24 ore.';
+  String get changeEmailSentExpiry => 'Ogni link scade dopo 24 ore.';
 
   @override
   String get changeEmailSentDone => 'Ok, capito';
@@ -15649,6 +16105,13 @@ class AppLocalizationsIt extends AppLocalizations {
   String get updateAction => 'Aggiorna';
 
   @override
+  String get announcementViewContest => 'Vedi il concorso';
+
+  @override
+  String get featuredFeedUnavailable =>
+      'Questo feed in evidenza non è più disponibile.';
+
+  @override
   String updateNewIn(String version) {
     return 'Novità nella versione $version:';
   }
@@ -15799,6 +16262,16 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get settingsHelpAboutSubtitle =>
       'Assistenza, informazioni legali e dettagli dell’app';
+
+  @override
+  String get settingsDiscordTitle => 'Unisciti al nostro server Discord';
+
+  @override
+  String get settingsDiscordSubtitle =>
+      'Parla con il team e la community di Divine';
+
+  @override
+  String get settingsDiscordOpenError => 'Impossibile aprire Discord';
 
   @override
   String listLoopsCount(int count, String formatted) {
@@ -17098,4 +17571,113 @@ class AppLocalizationsIt extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return 'Video di $badgeName';
   }
+
+  @override
+  String get menuBarEdit => 'Composizione';
+
+  @override
+  String get menuBarUndo => 'Annulla';
+
+  @override
+  String get menuBarRedo => 'Ripristina';
+
+  @override
+  String get menuBarCut => 'Taglia';
+
+  @override
+  String get menuBarCopy => 'Copia';
+
+  @override
+  String get menuBarPaste => 'Incolla';
+
+  @override
+  String get menuBarSelectAll => 'Seleziona tutto';
+
+  @override
+  String get menuBarView => 'Vista';
+
+  @override
+  String get menuBarVideo => 'Video';
+
+  @override
+  String get menuBarPreviousVideo => 'Video precedente';
+
+  @override
+  String get menuBarNextVideo => 'Video successivo';
+
+  @override
+  String get menuBarPlayPause => 'Riproduci/Pausa';
+
+  @override
+  String get menuBarMute => 'Disattiva audio';
+
+  @override
+  String get menuBarUnmute => 'Riattiva audio';
+
+  @override
+  String get menuBarWindow => 'Finestra';
+
+  @override
+  String get menuBarHelp => 'Aiuto';
+
+  @override
+  String get emailConfirmationTitle => 'Conferma la tua email';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return 'Abbiamo inviato un link a $email. Toccalo per sbloccare i messaggi e assicurarti di poter sempre rientrare nel tuo account.';
+  }
+
+  @override
+  String get emailConfirmationResendButton => 'Invia di nuovo l\'email';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return 'Ci sei! Controlla $email per confermare il tuo account.';
+  }
+
+  @override
+  String get emailConfirmationResendSent =>
+      'Conferma richiesta. Controlla la posta in arrivo.';
+
+  @override
+  String get emailConfirmationResendFailed =>
+      'Invio non riuscito. Riprova tra poco.';
+
+  @override
+  String get emailConfirmationMessagesTitle =>
+      'Conferma la tua email per iniziare a scrivere messaggi';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return 'Tocca il link che abbiamo inviato a $email. Poi i messaggi sono tutti tuoi.';
+  }
+
+  @override
+  String get emailConfirmationCheckInbox =>
+      'Cerca il link di conferma nella tua posta in arrivo.';
+
+  @override
+  String get emailConfirmationDone => 'Email confermata. Messaggi sbloccati.';
+
+  @override
+  String get emailConfirmationLinkConfirmed => 'Email confermata.';
+
+  @override
+  String get emailConfirmationAddEmailTitle => 'Aggiungi un\'email';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      'Al momento il tuo account non ha un\'email. Aggiungine una per poter sempre rientrare.';
+
+  @override
+  String get emailConfirmationAddEmailButton => 'Aggiungi email';
+
+  @override
+  String get emailConfirmationSendBlocked =>
+      'Conferma la tua email per inviare messaggi.';
+
+  @override
+  String get emailConfirmationCapReached =>
+      'Hai raggiunto il limite orario per i nuovi account. Conferma la tua email per toglierlo.';
 }

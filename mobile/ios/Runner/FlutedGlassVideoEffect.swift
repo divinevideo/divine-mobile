@@ -6,22 +6,31 @@ import pro_video_editor
 /// squeezed slice of it.
 ///
 /// Upright ribs, each 8% of the frame's shorter side wide and one centred on
-/// the frame, show a slice of the picture up to two and a half ribs wide, so
-/// neighbouring ribs repeat parts of it. A slice reaching past the left or
-/// right edge of the frame is mirrored back, rather than smearing the edge
-/// pixels. Each rib darkens towards its edges, by up to 15%, and carries a
-/// soft highlight left of its middle, so it reads as rounded glass.
+/// the frame, unless the user widens or turns them, show a slice of the picture
+/// up to two and a half ribs wide, so neighbouring ribs repeat parts of it. A
+/// slice reaching past an edge of the frame is mirrored back, rather than
+/// smearing the edge pixels. Each rib darkens towards its edges, by up to 15%,
+/// and carries a soft highlight beside its middle, so it reads as rounded
+/// glass.
 ///
-/// Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1: how
-/// much the ribs squeeze and shade the picture).
+/// Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how
+/// much the ribs squeeze and shade the picture), `width` (0.3–3: how wide the
+/// ribs are, as a share of the default) and `angle` (0–180: how far the ribs
+/// are turned from upright, in degrees, anticlockwise).
 final class FlutedGlassVideoEffect: ShaderVideoEffect {
   /// The id the Dart `CustomVideoEffect` names.
   static let id = "divine.flutedGlass"
 
   private let intensity: Double
+  private let rib: Double
+  /// The direction across the ribs, with y up.
+  private let axis: [Double]
 
   init(params: [String: Any]) {
     intensity = Self.readIntensity(params)
+    rib = Self.readNumber(params, "width", fallback: 1, in: 0.3...3)
+    let angle = Self.readNumber(params, "angle", fallback: 0, in: 0...180) * .pi / 180
+    axis = [cos(angle), sin(angle)]
     super.init(function: Self.function, source: Self.source)
   }
 
@@ -34,7 +43,7 @@ final class FlutedGlassVideoEffect: ShaderVideoEffect {
   }
 
   override func values(effectTimeUs: Int64) -> [Double]? {
-    intensity > 0 ? [intensity] : nil
+    intensity > 0 ? [intensity, rib] + axis : nil
   }
 
   static let function = "divineFlutedGlass"
@@ -49,14 +58,17 @@ final class FlutedGlassVideoEffect: ShaderVideoEffect {
     ) {
       if (gid.x >= target.get_width() || gid.y >= target.get_height()) return;
       Frame f = frameOf(u);
-      float intensity = u[3].x;
+      float2 uSize = f.size;
+      float uIntensity = u[3].x;
+      float uRib = u[3].y;
+      float2 uAxis = u[3].zw;
       float2 p = pixelOf(u, gid, target.get_height());
-      float rib = 0.08 * min(f.size.x, f.size.y);
-      float across = fract((p.x - 0.5 * f.size.x) / rib + 0.5) - 0.5;
-      float x = abs(p.x + 1.5 * intensity * across * rib);
-      float3 color = tap(frame, f, float2(f.size.x - abs(f.size.x - x), p.y));
-      color *= 1.0 - 0.6 * intensity * across * across;
-      color += 0.1 * intensity * (1.0 - smoothstep(0.0, 0.15, abs(across + 0.22)));
+      float rib = 0.08 * uRib * min(uSize.x, uSize.y);
+      float across = fract(dot(p - 0.5 * uSize, uAxis) / rib + 0.5) - 0.5;
+      float2 q = abs(p + 1.5 * uIntensity * across * rib * uAxis);
+      float3 color = tap(frame, f, uSize - abs(uSize - q));
+      color *= 1.0 - 0.6 * uIntensity * across * across;
+      color += 0.1 * uIntensity * (1.0 - smoothstep(0.0, 0.15, abs(across + 0.22)));
       target.write(float4(clamp(color, 0.0, 1.0), 1.0), gid);
     }
     """

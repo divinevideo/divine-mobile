@@ -13,6 +13,7 @@ import 'package:openvine/features/feature_flags/providers/feature_flag_providers
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/notification_preferences.dart';
 import 'package:openvine/notifications/providers/notification_repository_provider.dart';
+import 'package:openvine/providers/account_preferences_provider.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/route_paths.dart';
@@ -58,6 +59,7 @@ class NotificationSettingsScreen extends ConsumerWidget {
         return cubit;
       },
       child: NotificationSettingsView(
+        showDirectMessages: ref.watch(accountPreferenceSyncProvider) != null,
         showNewPosts: ref.watch(
           isFeatureEnabledProvider(FeatureFlag.newPostNotifications),
         ),
@@ -69,7 +71,13 @@ class NotificationSettingsScreen extends ConsumerWidget {
 /// View: renders the notification settings UI from the Cubit state.
 class NotificationSettingsView extends StatelessWidget {
   @visibleForTesting
-  const NotificationSettingsView({required this.showNewPosts, super.key});
+  const NotificationSettingsView({
+    required this.showNewPosts,
+    required this.showDirectMessages,
+    super.key,
+  });
+
+  final bool showDirectMessages;
 
   /// Whether to offer the new-post ("bell") toggle. Hidden until the push
   /// service delivers kind 34236, since there is no bell to switch off and
@@ -176,6 +184,21 @@ class NotificationSettingsView extends StatelessWidget {
                           value,
                         ),
                       ),
+                      if (showDirectMessages)
+                        _NotificationCard(
+                          icon: DivineIconName.envelopeSimple,
+                          iconColor: VineTheme.vineGreen,
+                          title:
+                              context.l10n.notificationSettingsDirectMessages,
+                          subtitle: context
+                              .l10n
+                              .notificationSettingsDirectMessagesSubtitle,
+                          value: prefs.directMessagesEnabled,
+                          onChanged: (value) => cubit.setPreference(
+                            NotificationPreference.directMessagesEnabled,
+                            value,
+                          ),
+                        ),
                       if (showNewPosts)
                         _NotificationCard(
                           icon: DivineIconName.bellSimple,

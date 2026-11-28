@@ -9,12 +9,14 @@ import 'package:bloc/bloc.dart';
 import 'package:clock/clock.dart';
 import 'package:equatable/equatable.dart';
 import 'package:openvine/blocs/close_guard.dart';
+import 'package:openvine/blocs/verify/confirmation_requirement.dart';
 import 'package:openvine/blocs/verify/verify_proof_input.dart';
 import 'package:openvine/blocs/verify/verify_rejection.dart';
 import 'package:openvine/utils/async_utils.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
+import 'package:verifier_client/verifier_client.dart' show SigninRequirement;
 
 part 'verify_connect_state.dart';
 
@@ -43,6 +45,18 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
   /// form starts with it, and a sign-in that returns another handle on the
   /// same platform replaces that link rather than sitting beside it, as long
   /// as sign-in is all that links that handle.
+  ///
+  /// [confirmationSignIn] is the internal flag of the same name. With it on,
+  /// access to Divine Confirmation is read for a platform whose sign-in needs
+  /// it, through [readConfirmationAccess], and a sign-in refused for it is
+  /// kept to approve again. With it off, no access is read and that refusal
+  /// ends the sign-in: there is nowhere to buy, and a waiting sign-in keeps
+  /// the proof post closed.
+  ///
+  /// [simulateConfirmationRequirement] is the developer setting that treats
+  /// [platform], and the platform [loadPlatform] reads, as requiring Divine
+  /// Confirmation whenever its sign-in is on, as the verifier reports while
+  /// its requirement is on.
   VerifyConnectCubit({
     required IdentityClaimsRepository repository,
     required String pubkey,
@@ -50,6 +64,9 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
     required VerifyOAuthLauncher launchOAuth,
     required String oauthReturnUrl,
     required AnalyticsEventSink analytics,
+    required bool confirmationSignIn,
+    required ConfirmationAccessReader readConfirmationAccess,
+    bool simulateConfirmationRequirement = false,
     String? replacingIdentity,
     Random? random,
     Future<void> Function(Duration)? wait,
@@ -58,11 +75,16 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
        _pubkey = pubkey,
        _launchOAuth = launchOAuth,
        _oauthReturnUrl = oauthReturnUrl,
+       _confirmationSignIn = confirmationSignIn,
+       _readConfirmationAccess = readConfirmationAccess,
+       _simulateConfirmationRequirement = simulateConfirmationRequirement,
        _random = random ?? Random.secure(),
        _wait = wait,
        super(
          VerifyConnectState(
-           platform: platform,
+           platform: simulateConfirmationRequirement
+               ? withSimulatedConfirmationRequirement(platform)
+               : platform,
            identity: replacingIdentity ?? '',
            replacingIdentity: replacingIdentity,
          ),
@@ -73,6 +95,9 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
   final VerifyOAuthLauncher _launchOAuth;
   final AnalyticsEventSink _analytics;
   final String _oauthReturnUrl;
+  final bool _confirmationSignIn;
+  final ConfirmationAccessReader _readConfirmationAccess;
+  final bool _simulateConfirmationRequirement;
   final Random _random;
   // Tests pass their own; otherwise the wait is [_async]'s, so closing the
   // cubit ends it.
@@ -82,6 +107,12 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
   // The sign-in waiting for approval. Kept out of state: its code and secret
   // never go into state, logs or analytics.
   _PendingSignIn? _pending;
+
+  // Bumped by every refresh of Confirmation access, and by a refusal for it.
+  // A read started before the latest of those is dropped when it answers:
+  // the refresh asked the verifier afresh, and the refusal is the verifier's
+  // own newer answer, whenever the older read lands.
+  int _accessRefreshes = 0;
 
   // About ten seconds of waiting for a sign-in the verifier hasn't seen yet,
   // however long each answer takes.
@@ -96,10 +127,17 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
   /// link straight to this screen). The repository decides what an
   /// unanswered or unlisted platform offers. An answer it can't read is
   /// reported, and the screen keeps the platform it opened with.
+  ///
+  /// With the `confirmationSignIn` flag on and a platform whose sign-in needs
+  /// Divine Confirmation, also reads whether the user holds it, from the
+  /// remembered answer when there is one.
   Future<void> loadPlatform() async {
     final VerifierPlatform platform;
     try {
-      platform = await _repository.platform(state.platform.key);
+      final read = await _repository.platform(state.platform.key);
+      platform = _simulateConfirmationRequirement
+          ? withSimulatedConfirmationRequirement(read)
+          : read;
     } on Object catch (error, stackTrace) {
       if (isClosed) return;
       addError(error, stackTrace);
@@ -110,10 +148,24 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
     // proof form stays closed until it is. The browser is open while
     // authorizing; from its return until the account is linked or let go,
     // the sign-in is pending.
-    if (state.status == VerifyConnectStatus.authorizing || _pending != null) {
-      return;
+    if (state.status != VerifyConnectStatus.authorizing && _pending == null) {
+      emitIfOpen(state.copyWith(platform: platform));
     }
-    emitIfOpen(state.copyWith(platform: platform));
+    // Read even while a sign-in is under way: the answer is about the
+    // account, not the platform, and the screen needs it once that ends.
+    if (_confirmationSignIn &&
+        platform.signinRequires == SigninRequirement.confirmation) {
+      await _readAccess(refresh: false);
+    }
+  }
+
+  /// Asks the verifier again whether the user holds Divine Confirmation,
+  /// skipping any remembered answer, and takes the answer. For a return from
+  /// buying it, or a re-check after a refusal. Reads nothing with the
+  /// `confirmationSignIn` flag off.
+  Future<void> refreshConfirmationAccess() async {
+    if (!_confirmationSignIn) return;
+    await _readAccess(refresh: true);
   }
 
   /// Records the account handle the user is claiming. Ignored once the handle
@@ -311,6 +363,7 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
             supported: platform.supported,
             oauth: false,
             signinExpiresAfterDays: platform.signinExpiresAfterDays,
+            signinRequires: platform.signinRequires,
           ),
         ),
       );
@@ -438,6 +491,64 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
         '(${error.refusal.name})',
         name: 'VerifyConnectCubit',
       );
+      switch (error.refusal) {
+        case SignInRefusal.confirmationRequired:
+          // A refusal right after access read "has" is a purchase the gate
+          // hasn't caught up with. The refusal below sets access to "no",
+          // so the next refusal starts over.
+          final pendingPurchase =
+              state.confirmationAccess == ConfirmationAccess.has;
+          // With the flag on, the sign-in stays so it can be approved once
+          // Confirmation is bought, without signing in at the platform
+          // again. With it off there is nowhere to buy, and a waiting
+          // sign-in keeps the proof post closed, so it ends.
+          if (!_confirmationSignIn) {
+            return _fail(
+              VerifyConnectError.confirmationRequired,
+              confirmationRefused: true,
+            );
+          }
+          // The refusal is the verifier's newest word on access, so the
+          // screen offers Confirmation rather than a sign-in that would be
+          // refused the same way. It isn't a read: a re-check that answers
+          // "has" still brings the sign-in back, and an answer to a read
+          // asked before the refusal is older and is dropped.
+          _accessRefreshes++;
+          // The refusal also says the platform's sign-in needs
+          // Confirmation, which a stale or failed platform list may not.
+          final platform = state.platform;
+          emitIfOpen(
+            state.copyWith(
+              platform: VerifierPlatform(
+                key: platform.key,
+                label: platform.label,
+                supported: platform.supported,
+                oauth: platform.oauth,
+                signinExpiresAfterDays: platform.signinExpiresAfterDays,
+                signinRequires: SigninRequirement.confirmation,
+              ),
+            ),
+          );
+          return _failKeepingSignIn(
+            pendingPurchase
+                ? VerifyConnectError.confirmationPending
+                : VerifyConnectError.confirmationRequired,
+            confirmationRefused: true,
+            confirmationAccess: ConfirmationAccess.hasNot,
+          );
+        case SignInRefusal.confirmationUnavailable:
+          // Already retried inside the confirm window. It says nothing
+          // about the sign-in, so it stays to approve again later.
+          return _failKeepingSignIn(VerifyConnectError.confirmationUnavailable);
+        case SignInRefusal.notFound:
+        case SignInRefusal.used:
+        case SignInRefusal.wrongAccount:
+        case SignInRefusal.notYours:
+        case SignInRefusal.claimMismatch:
+        case SignInRefusal.invalidEvent:
+        case SignInRefusal.other:
+          break;
+      }
       // Too many requests says nothing about the sign-in, so it stays to
       // approve again, as on the verifier's own page.
       if (error.statusCode == 429) {
@@ -525,13 +636,44 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
     }
   }
 
-  // A sign-in the verifier hasn't seen yet, or a request that got no usable
-  // answer. Every other answer is final for this attempt.
+  // A sign-in the verifier hasn't seen yet, a Divine Confirmation check it
+  // couldn't make just now (a 5xx carrying confirmation_unavailable), or a
+  // request that got no usable answer. Every other answer
+  // is final for this attempt.
   static bool _worthRetrying(VerifierClientException error) => switch (error) {
-    SignInConfirmException(:final refusal) => refusal == SignInRefusal.notFound,
+    SignInConfirmException(:final refusal) =>
+      refusal == SignInRefusal.notFound ||
+          refusal == SignInRefusal.confirmationUnavailable,
     VerifierApiException(:final statusCode) => statusCode >= 500,
     VerifierTimeoutException() || VerifierNetworkException() => true,
   };
+
+  // Reads Confirmation access and takes the answer, unless the cubit closed
+  // or a refresh started after this read did. A read that throws counts as
+  // unknown, which shows sign-in as before: a failed check never breaks the
+  // flow, and the verifier stays the backstop.
+  //
+  // Relies on the reader for one ordering: a plain read started after a
+  // refresh answers no later than that refresh unless it answers the same.
+  // IdentityClaimsRepository.confirmationAccess holds to it, since a plain
+  // read there answers from memory at once or shares the check in flight.
+  Future<void> _readAccess({required bool refresh}) async {
+    if (refresh) _accessRefreshes++;
+    final refreshes = _accessRefreshes;
+    ConfirmationAccess access;
+    try {
+      access = await _readConfirmationAccess(refresh: refresh);
+    } on Object catch (error) {
+      // Only the type: a signer's message can name the account.
+      Log.warning(
+        'Confirmation access read failed: ${error.runtimeType}',
+        name: 'VerifyConnectCubit',
+      );
+      access = ConfirmationAccess.unknown;
+    }
+    if (isClosed || refreshes != _accessRefreshes) return;
+    emit(state.copyWith(confirmationAccess: access));
+  }
 
   // The cubit closed, or [pending] is no longer the sign-in waiting, so an
   // approve still running for it must not publish or emit.
@@ -613,7 +755,11 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
   );
 
   // Back to editing, so any sign-in waiting for approval goes too.
-  void _fail(VerifyConnectError error, {bool signInFailedToStart = false}) {
+  void _fail(
+    VerifyConnectError error, {
+    bool signInFailedToStart = false,
+    bool confirmationRefused = false,
+  }) {
     if (isClosed) return;
     _pending = null;
     emit(
@@ -621,22 +767,34 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
         status: VerifyConnectStatus.editing,
         // A renewal locks its handle once the proof post is on offer, so a
         // handle typed before then goes back to the renewed one.
-        identity: signInFailedToStart ? state.replacingIdentity : null,
+        identity: signInFailedToStart || confirmationRefused
+            ? state.replacingIdentity
+            : null,
         error: error,
         errorAttempt: state.errorAttempt + 1,
         clearSignedInAccount: true,
         signInFailedToStart: signInFailedToStart ? true : null,
+        confirmationRefused: confirmationRefused ? true : null,
       ),
     );
   }
 
-  void _failKeepingSignIn(VerifyConnectError error) {
+  void _failKeepingSignIn(
+    VerifyConnectError error, {
+    bool confirmationRefused = false,
+    ConfirmationAccess? confirmationAccess,
+  }) {
     if (isClosed) return;
     emit(
       state.copyWith(
         status: VerifyConnectStatus.awaitingApproval,
+        // As in [_fail]: a refused renewal puts the proof post on offer, so
+        // its handle goes back to the renewed one.
+        identity: confirmationRefused ? state.replacingIdentity : null,
         error: error,
         errorAttempt: state.errorAttempt + 1,
+        confirmationRefused: confirmationRefused ? true : null,
+        confirmationAccess: confirmationAccess,
       ),
     );
   }

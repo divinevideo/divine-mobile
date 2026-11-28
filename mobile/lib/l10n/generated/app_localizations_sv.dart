@@ -10,6 +10,22 @@ class AppLocalizationsSv extends AppLocalizations {
   AppLocalizationsSv([String locale = 'sv']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'Byt till $account för att öppna det här meddelandet?';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'Direktmeddelanden';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'Visa en avisering utan avsändarens namn eller meddelandets innehåll.';
+
+  @override
+  String get dmNotificationMessageUnavailable =>
+      'Det här meddelandet är inte tillgängligt.';
+
+  @override
   String get devOptionsClipRecovery => 'Klippåterställning';
 
   @override
@@ -303,7 +319,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get privacySettingsShareUsageSubtitle =>
-      'Hjälper oss att se vad folk faktiskt använder. Stänger du av raderas data som väntar på den här enheten.';
+      'Hjälper oss att se vad folk faktiskt använder. Stänger du av raderas data som väntar på den här enheten. Kraschrapporter skickas fortfarande så att vi kan rätta buggar.';
 
   @override
   String get privacySettingsSaveFailed =>
@@ -1815,51 +1831,8 @@ class AppLocalizationsSv extends AppLocalizations {
   String get shareVideoLabel => 'Dela video';
 
   @override
-  String sharePostSharedWith(String recipientName) {
-    return 'Inlägg delat med $recipientName';
-  }
-
-  @override
-  String sharePostSharedWithCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Inlägg delat med $count personer',
-      one: 'Inlägg delat med $count person',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String shareStillTryingToSendTo(String recipientName) {
-    return 'Vi försöker fortfarande skicka till $recipientName';
-  }
-
-  @override
-  String shareStillTryingToSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Vi försöker fortfarande skicka till $count personer',
-      one: 'Vi försöker fortfarande skicka till $count person',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String shareCouldNotSendTo(String recipientName) {
     return 'Det gick inte att skicka till $recipientName';
-  }
-
-  @override
-  String shareCouldNotSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Det gick inte att skicka till $count personer',
-      one: 'Det gick inte att skicka till $count person',
-    );
-    return '$_temp0';
   }
 
   @override
@@ -1894,11 +1867,32 @@ class AppLocalizationsSv extends AppLocalizations {
   String get shareFindPeopleMultiline => 'Hitta\npersoner';
 
   @override
+  String get shareDeliveryFailed => 'Det gick inte att skicka ännu';
+
+  @override
+  String shareDeliveryHeld(String name) {
+    return 'Skickas när $name går att nå';
+  }
+
+  @override
+  String shareDeliveryForRecipient(String name, String status) {
+    return '$name — $status';
+  }
+
+  @override
   String get shareSent => 'Skickat';
 
   @override
   String shareSelectedRecipientAnnouncement(String name) {
     return '$name vald';
+  }
+
+  @override
+  String get shareRecipientSend => 'Skicka';
+
+  @override
+  String shareRecipientSendTo(String name) {
+    return 'Skicka till $name';
   }
 
   @override
@@ -2124,6 +2118,28 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get videoStickerAddYoursButton => 'Din tur';
+
+  @override
+  String get videoStickerAddYoursWatchSeries => 'Se serien';
+
+  @override
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'Se serien: $prompt';
+  }
+
+  @override
+  String videoSeriesChipEpisode(String episode, String total) {
+    return 'Avsn. $episode av $total';
+  }
+
+  @override
+  String videoSeriesChipSemanticLabel(
+    String seriesName,
+    String episode,
+    String total,
+  ) {
+    return 'Serie $seriesName, avsnitt $episode av $total';
+  }
 
   @override
   String videoStickerAddYoursJoined(int count) {
@@ -3453,6 +3469,9 @@ class AppLocalizationsSv extends AppLocalizations {
       'Loggar du in här döljs de utkasten och klippen';
 
   @override
+  String get authWatchClassicsAsGuest => 'Titta på klassiker som gäst';
+
+  @override
   String get authTermsPrefix =>
       'Genom att välja ett alternativ nedan bekräftar du att du är minst 16 år (eller har genomfört ';
 
@@ -4080,6 +4099,10 @@ class AppLocalizationsSv extends AppLocalizations {
   String get remixStartFailed => 'Kunde inte starta remixen. Försök igen.';
 
   @override
+  String get remixSettingSaveFailed =>
+      'Det gick inte att uppdatera din remixinställning. Försök igen.';
+
+  @override
   String get remixSettingAllowTitle => 'Låt andra remixa mina videor';
 
   @override
@@ -4489,6 +4512,10 @@ class AppLocalizationsSv extends AppLocalizations {
       'Relät accepterade inte ändringen. Försök igen om en stund.';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      'Videon har ändrats på en annan enhet och har nu för många taggar eller samarbetspartner. Öppna den igen och ta bort några.';
+
+  @override
   String get videoUpdateErrorGeneric =>
       'Kunde inte uppdatera videon. Försök igen.';
 
@@ -4579,6 +4606,18 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get soundsNoSoundsFoundDescription => 'Testa en annan sökterm';
+
+  @override
+  String soundsSearchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ljud hittades',
+      one: '$count ljud hittades',
+      zero: 'Inga ljud hittades',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get soundsSavedToLibrary => 'Sparat i Ljud';
@@ -6346,6 +6385,9 @@ class AppLocalizationsSv extends AppLocalizations {
   String get inboxCollabInviteSentStatus => 'Inbjudan skickad';
 
   @override
+  String get inboxSharedVideoPreview => 'Delade en video';
+
+  @override
   String get inboxConversationCollabInvitePreview => 'Inbjudan att samarbeta';
 
   @override
@@ -7160,6 +7202,55 @@ class AppLocalizationsSv extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'Duplicera';
 
   @override
+  String get libraryDraftActionConvertToClip => 'Gör om till klipp';
+
+  @override
+  String get libraryDraftConvertingToClip => 'Gör om till klipp...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar =>
+      'Utkastet har gjorts om till ett klipp';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar =>
+      'Det gick inte att göra om utkastet';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'Texten och dekalerna i det här utkastet kunde inte förberedas. Öppna det i redigeraren och försök igen.';
+
+  @override
+  String get libraryDraftActionShare => 'Dela utkast';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return 'Skicka ett redigerbart utkast till $name?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'Du delar originalklippen och redigeringshistoriken. Mottagaren kan se vad du har klippt bort, redigera sin kopia, publicera den eller skicka tillbaka den.';
+
+  @override
+  String get libraryDraftShareFailed => 'Det gick inte att skicka utkastet.';
+
+  @override
+  String get libraryDraftShareTooLarge =>
+      'Utkastet är för stort för att skicka.';
+
+  @override
+  String get dmSharedDraft => 'Delat utkast';
+
+  @override
+  String get dmOpenDraft => 'Importera och redigera';
+
+  @override
+  String get dmDraftImportFailed => 'Det gick inte att importera utkastet.';
+
+  @override
+  String get libraryDraftSent => 'Utkastet skickades';
+
+  @override
   String get libraryDraftActionDelete => 'Ta bort utkast';
 
   @override
@@ -7791,6 +7882,14 @@ class AppLocalizationsSv extends AppLocalizations {
   ) {
     return '$displayName vill skicka meddelanden till dig och har skickat $messageText.';
   }
+
+  @override
+  String messageRequestGroupWantsToMessageYou(String messageText) {
+    return 'Den här gruppen vill skicka meddelanden till dig och har skickat $messageText.';
+  }
+
+  @override
+  String get messageRequestGroupMembersHeading => 'I den här gruppen';
 
   @override
   String get deleteAccountAccountChanged =>
@@ -9523,6 +9622,21 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorEffectSpinBlur => 'Rotationsoskärpa';
 
   @override
+  String get videoEditorEffectShockwave => 'Tryckvåg';
+
+  @override
+  String get videoEditorEffectSubwoofer => 'Subwoofer';
+
+  @override
+  String get videoEditorEffectPlasma => 'Plasma';
+
+  @override
+  String get videoEditorEffectEnergyWave => 'Energivåg';
+
+  @override
+  String get videoEditorEffectSmokeBurst => 'Rökexplosion';
+
+  @override
   String get videoEditorEffectComic => 'Serie';
 
   @override
@@ -9718,9 +9832,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorFilterCategoryTints => 'Toner';
 
   @override
-  String get videoEditorDropsSettingsTitle => 'Justera droppar';
-
-  @override
   String get videoEditorDropsCountLabel => 'Antal';
 
   @override
@@ -9767,6 +9878,203 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get videoEditorEffectsOnBeatNoSound =>
       'Lägg till musik eller slå på ljudet i ett klipp';
+
+  @override
+  String get videoEditorEffectSettingsOpen => 'Effektinställningar';
+
+  @override
+  String videoEditorEffectSettingsTitle(String effect) {
+    return 'Inställningar: $effect';
+  }
+
+  @override
+  String videoEditorEffectSeconds(String seconds) {
+    return '$seconds s';
+  }
+
+  @override
+  String get videoEditorEffectHitDuration => 'Längd';
+
+  @override
+  String get videoEditorEffectHitRepeat => 'Upprepa';
+
+  @override
+  String get videoEditorEffectHitOnce =>
+      'En gång, där effekten börjar på tidslinjen';
+
+  @override
+  String get videoEditorEffectHitInterval => 'Intervall';
+
+  @override
+  String get videoEditorEffectLookTitle => 'Utseende';
+
+  @override
+  String get videoEditorEffectHitHorizontal => 'Horisontell position';
+
+  @override
+  String get videoEditorEffectHitVertical => 'Vertikal position';
+
+  @override
+  String get videoEditorEffectHitReach => 'Räckvidd';
+
+  @override
+  String get videoEditorEffectHitShake => 'Skakning';
+
+  @override
+  String get videoEditorEffectHitPunch => 'Zoomstöt';
+
+  @override
+  String get videoEditorEffectLookReset => 'Återställ utseende';
+
+  @override
+  String get videoEditorEffectTimingTitle => 'Timing';
+
+  @override
+  String get videoEditorEffectTimingReset => 'Återställ timing';
+
+  @override
+  String get videoEditorEffectMotionTitle => 'Rörelse';
+
+  @override
+  String get videoEditorEffectMotionReset => 'Återställ rörelse';
+
+  @override
+  String get videoEditorEffectSettingFocus => 'Fokus';
+
+  @override
+  String get videoEditorEffectSettingWidth => 'Bredd';
+
+  @override
+  String get videoEditorEffectSettingDirection => 'Riktning';
+
+  @override
+  String get videoEditorEffectSettingHorizontal => 'Vågrät';
+
+  @override
+  String get videoEditorEffectSettingVertical => 'Lodrät';
+
+  @override
+  String get videoEditorEffectSettingClockwise => 'Medurs';
+
+  @override
+  String get videoEditorEffectSettingAnticlockwise => 'Moturs';
+
+  @override
+  String get videoEditorEffectSettingZoomIn => 'Zooma in';
+
+  @override
+  String get videoEditorEffectSettingZoomOut => 'Zooma ut';
+
+  @override
+  String get videoEditorEffectSettingSpacing => 'Avstånd';
+
+  @override
+  String get videoEditorEffectSettingAngle => 'Vinkel';
+
+  @override
+  String get videoEditorEffectSettingHue => 'Nyans';
+
+  @override
+  String get videoEditorEffectSettingLength => 'Längd';
+
+  @override
+  String get videoEditorEffectSettingSensitivity => 'Känslighet';
+
+  @override
+  String get videoEditorEffectSettingPosition => 'Position';
+
+  @override
+  String get videoEditorEffectSettingWind => 'Vind';
+
+  @override
+  String get videoEditorEffectSettingDotSize => 'Punktstorlek';
+
+  @override
+  String get videoEditorEffectSettingOutline => 'Kontur';
+
+  @override
+  String get videoEditorEffectSettingLevels => 'Nivåer';
+
+  @override
+  String get videoEditorEffectSettingPixelSize => 'Pixelstorlek';
+
+  @override
+  String get videoEditorEffectSettingOffset => 'Förskjutning';
+
+  @override
+  String get videoEditorEffectSettingBrushSize => 'Penselstorlek';
+
+  @override
+  String get videoEditorEffectSettingDensity => 'Täthet';
+
+  @override
+  String get videoEditorEffectSettingGrain => 'Korn';
+
+  @override
+  String get videoEditorEffectSettingGrid => 'Rutnät';
+
+  @override
+  String get videoEditorEffectSettingLayers => 'Lager';
+
+  @override
+  String get videoEditorEffectSettingShadow => 'Skugga';
+
+  @override
+  String get videoEditorEffectSettingFirstInk => 'Första färgen';
+
+  @override
+  String get videoEditorEffectSettingSecondInk => 'Andra färgen';
+
+  @override
+  String get videoEditorEffectSettingColors => 'Färger';
+
+  @override
+  String get videoEditorEffectSettingOriginalColors => 'Original';
+
+  @override
+  String get videoEditorEffectSettingSingleColor => 'En färg';
+
+  @override
+  String get videoEditorEffectSettingDelay => 'Fördröjning';
+
+  @override
+  String get videoEditorEffectSettingDown => 'Nedåt';
+
+  @override
+  String get videoEditorEffectSettingUp => 'Uppåt';
+
+  @override
+  String get videoEditorEffectSettingRight => 'Åt höger';
+
+  @override
+  String get videoEditorEffectSettingLeft => 'Åt vänster';
+
+  @override
+  String get videoEditorEffectSettingFrequency => 'Frekvens';
+
+  @override
+  String get videoEditorEffectSettingDistance => 'Avstånd';
+
+  @override
+  String get videoEditorEffectSettingScanlines => 'Bildlinjer';
+
+  @override
+  String get videoEditorEffectSettingGrainSize => 'Kornstorlek';
+
+  @override
+  String get videoEditorEffectSettingSepia => 'Sepia';
+
+  @override
+  String get videoEditorEffectSettingFlicker => 'Flimmer';
+
+  @override
+  String get videoEditorEffectSettingVignette => 'Vinjett';
+
+  @override
+  String get videoEditorEffectSettingTempo => 'Tempo';
+
+  @override
+  String get videoEditorEffectSettingWavelength => 'Våglängd';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {
@@ -11616,6 +11924,9 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorAudioUseSound => 'Använd';
 
   @override
+  String get videoEditorAudioOpenSoundDetails => 'Öppna ljuddetaljer';
+
+  @override
   String get videoEditorAudioFileMissing =>
       'Ljudfilen finns inte kvar på enheten';
 
@@ -11645,6 +11956,9 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get videoEditorAudioCategoryMySounds => 'Mina ljud';
+
+  @override
+  String get videoEditorAudioCategorySongs => 'Songs';
 
   @override
   String get videoEditorAudioFilterEffects => 'Ljudeffekter';
@@ -11868,6 +12182,34 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get videoEditorSocialStickerRepliesNote =>
       'Visar vilka som har svarat på den här videon med en video. Tittarna trycker på den för att se svaren.';
+
+  @override
+  String get videoEditorSocialStickerAudienceTitle => 'Vem kan svara';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => 'Alla';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => 'Vänner';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => 'Bara jag';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      'Bara personer du följer kan vara med. Alla andra ser klistermärket så fort någon har varit med.';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      'Klistermärket visar bara videosvar från personer du följer. Alla andra ser det så fort någon av dem har svarat.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      'Bara du kan vara med. Ingen annan ser klistermärket förrän du har varit med.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      'Klistermärket visar bara dina egna videosvar. Ingen annan ser det förrän du har svarat.';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>
@@ -13665,6 +14007,29 @@ class AppLocalizationsSv extends AppLocalizations {
       'Överstyrningen för skyddad minderårig rensad';
 
   @override
+  String get devOptionsConfirmationAccessTitle => 'Divine Confirmation access';
+
+  @override
+  String get devOptionsConfirmationAccessReal => 'Real answer';
+
+  @override
+  String get devOptionsConfirmationAccessHas => 'Has Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessHasNot => 'Doesn\'t have Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessUnknown => 'Couldn\'t check';
+
+  @override
+  String get devOptionsConfirmationRequirementSimulatedTitle =>
+      'Act as if Confirmation is required';
+
+  @override
+  String get devOptionsConfirmationRequirementSimulatedSubtitle =>
+      'Treats signing in as needing Confirmation even when the verifier doesn\'t. Needs the Confirmation Sign-in flag; choose \"Doesn\'t have Confirmation\" above to see the offer. The verifier still approves sign-ins.';
+
+  @override
   String get commentsRecordVideoButtonLabel => 'Spela in videokommentar';
 
   @override
@@ -14715,6 +15080,65 @@ class AppLocalizationsSv extends AppLocalizations {
   String get verifyStatusAccountChanged => 'Account changed';
 
   @override
+  String get verifyStatusNeedsConfirmation => 'Needs Confirmation';
+
+  @override
+  String get verifyConfirmationTitle => 'Divine Confirmation';
+
+  @override
+  String get verifyConfirmationHeroBody =>
+      'Divine Confirmation lets you link your accounts on other platforms by signing in to them.';
+
+  @override
+  String get verifyConfirmationIncludedTitle => 'What\'s included';
+
+  @override
+  String get verifyConfirmationIncludedSignIn => 'Link accounts by signing in';
+
+  @override
+  String get verifyConfirmationComingSoon => 'Coming soon';
+
+  @override
+  String get verifyConfirmationSmallPrint =>
+      'Details will appear here when Divine Confirmation is ready.';
+
+  @override
+  String get verifyConfirmationStoreOnly =>
+      'Divine Confirmation is available in the App Store and Google Play versions of Divine.';
+
+  @override
+  String get verifyConfirmationBuySemantic =>
+      'Divine Confirmation, coming soon, unavailable';
+
+  @override
+  String get verifyConfirmationRestoreSemantic =>
+      'Restore purchases, unavailable';
+
+  @override
+  String get verifyConfirmationCardTitle => 'Link by signing in';
+
+  @override
+  String get verifyConfirmationCardBody =>
+      'One-tap linking is part of Divine Confirmation.';
+
+  @override
+  String get verifyGetConfirmation => 'Get Divine Confirmation';
+
+  @override
+  String get verifyProofAlwaysAvailable => 'Proof posts are always available';
+
+  @override
+  String get verifyConfirmationSheetTitle =>
+      'Linking by signing in needs Divine Confirmation';
+
+  @override
+  String get verifyConfirmationSheetSubtitle =>
+      'You can still link this account with a proof post.';
+
+  @override
+  String get verifyConfirmationSheetUseProof => 'Use a proof post';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return 'Ta bort länken till $platform-kontot $identity';
   }
@@ -14746,7 +15170,26 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
+  String verifyLinkNeedsConfirmationSemanticLabel(String platform) {
+    return 'Link your $platform account. Signing in needs Divine Confirmation';
+  }
+
+  @override
   String get verifyOneTapBadge => 'Ett tryck';
+
+  @override
+  String get verifyOneTapWithConfirmationBadge => 'One tap with Confirmation';
+
+  @override
+  String get verifyRenewConfirmation => 'Renew Confirmation';
+
+  @override
+  String verifyRenewConfirmationSemanticLabel(
+    String platform,
+    String identity,
+  ) {
+    return 'Renew Divine Confirmation to restore $platform account $identity';
+  }
 
   @override
   String verifyConnectSignInLifetime(int days) {
@@ -14858,6 +15301,18 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get verifyErrorPublishFailed =>
       'Verifierat, men ingen relä tog emot uppdateringen. Försök igen.';
+
+  @override
+  String get verifyErrorConfirmationRequired =>
+      'Linking by signing in needs Divine Confirmation. You can still link with a proof post.';
+
+  @override
+  String get verifyErrorConfirmationUnavailable =>
+      'Couldn\'t check Divine Confirmation right now. Try again in a few minutes.';
+
+  @override
+  String get verifyErrorConfirmationPending =>
+      'This can take a minute after buying. Try again shortly.';
 
   @override
   String get verifyErrorOauthUnavailable =>
@@ -15147,7 +15602,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get changeEmailSubtitle =>
-      'Vi mejlar en bekräftelselänk till din nya adress och till den på kontot. E-postadressen byts när du bekräftat från båda.';
+      'Vi skickar en länk till din nya adress. Om du redan har en e-postadress på kontot skickar vi en länk dit också.';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -15167,19 +15622,19 @@ class AppLocalizationsSv extends AppLocalizations {
   String get changeEmailWrongPassword => 'Det är inte ditt lösenord.';
 
   @override
-  String get changeEmailSubmit => 'Skicka bekräftelselänkar';
+  String get changeEmailSubmit => 'Begär bekräftelse';
 
   @override
-  String get changeEmailSentTitle => 'Två länkar är på väg';
+  String get changeEmailSentTitle => 'Kolla din e-post';
 
   @override
   String changeEmailSentMessage(String email) {
-    return 'Bekräfta från $email och från adressen på ditt konto. E-posten byts när båda är klara.';
+    return 'Öppna länken som kom till $email. Om du redan har en e-postadress på kontot, öppna länken där också.';
   }
 
   @override
   String get changeEmailSentExpiry =>
-      'Länkarna slutar fungera efter 24 timmar.';
+      'Varje länk upphör att gälla efter 24 timmar.';
 
   @override
   String get changeEmailSentDone => 'Okej';
@@ -15465,6 +15920,13 @@ class AppLocalizationsSv extends AppLocalizations {
   String get updateAction => 'Uppdatera';
 
   @override
+  String get announcementViewContest => 'Visa tävlingen';
+
+  @override
+  String get featuredFeedUnavailable =>
+      'Det här utvalda flödet är inte längre tillgängligt.';
+
+  @override
   String updateNewIn(String version) {
     return 'Nytt i $version:';
   }
@@ -15614,6 +16076,16 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get settingsHelpAboutSubtitle =>
       'Support, juridisk information och appdetaljer';
+
+  @override
+  String get settingsDiscordTitle => 'Gå med i vår Discord-server';
+
+  @override
+  String get settingsDiscordSubtitle =>
+      'Prata med Divine-teamet och communityn';
+
+  @override
+  String get settingsDiscordOpenError => 'Det gick inte att öppna Discord';
 
   @override
   String listLoopsCount(int count, String formatted) {
@@ -16895,4 +17367,114 @@ class AppLocalizationsSv extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return 'Videor från $badgeName';
   }
+
+  @override
+  String get menuBarEdit => 'Redigera';
+
+  @override
+  String get menuBarUndo => 'Ångra';
+
+  @override
+  String get menuBarRedo => 'Gör om';
+
+  @override
+  String get menuBarCut => 'Klipp ut';
+
+  @override
+  String get menuBarCopy => 'Kopiera';
+
+  @override
+  String get menuBarPaste => 'Klistra in';
+
+  @override
+  String get menuBarSelectAll => 'Markera allt';
+
+  @override
+  String get menuBarView => 'Innehåll';
+
+  @override
+  String get menuBarVideo => 'Video';
+
+  @override
+  String get menuBarPreviousVideo => 'Föregående video';
+
+  @override
+  String get menuBarNextVideo => 'Nästa video';
+
+  @override
+  String get menuBarPlayPause => 'Spela upp/pausa';
+
+  @override
+  String get menuBarMute => 'Stäng av ljudet';
+
+  @override
+  String get menuBarUnmute => 'Slå på ljudet';
+
+  @override
+  String get menuBarWindow => 'Fönster';
+
+  @override
+  String get menuBarHelp => 'Hjälp';
+
+  @override
+  String get emailConfirmationTitle => 'Bekräfta din e-post';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return 'Vi har skickat en länk till $email. Tryck på den för att låsa upp meddelanden och se till att du alltid kan ta dig tillbaka in på ditt konto.';
+  }
+
+  @override
+  String get emailConfirmationResendButton => 'Skicka mejlet igen';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return 'Du är inne! Kolla $email för att bekräfta ditt konto.';
+  }
+
+  @override
+  String get emailConfirmationResendSent =>
+      'Bekräftelse begärd. Kolla din inkorg.';
+
+  @override
+  String get emailConfirmationResendFailed =>
+      'Det gick inte att skicka. Försök igen om en stund.';
+
+  @override
+  String get emailConfirmationMessagesTitle =>
+      'Bekräfta din e-post för att börja skicka meddelanden';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return 'Tryck på länken vi skickade till $email. Sen är meddelandena dina.';
+  }
+
+  @override
+  String get emailConfirmationCheckInbox =>
+      'Leta efter bekräftelselänken i din inkorg.';
+
+  @override
+  String get emailConfirmationDone =>
+      'E-post bekräftad. Meddelanden är upplåsta.';
+
+  @override
+  String get emailConfirmationLinkConfirmed => 'E-post bekräftad.';
+
+  @override
+  String get emailConfirmationAddEmailTitle => 'Lägg till e-post';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      'Ditt konto har ingen e-post just nu. Lägg till en e-postadress så att du alltid kan ta dig tillbaka in.';
+
+  @override
+  String get emailConfirmationAddEmailButton => 'Lägg till e-post';
+
+  @override
+  String get emailConfirmationSendBlocked =>
+      'Bekräfta din e-post för att skicka meddelanden.';
+
+  @override
+  String get emailConfirmationCapReached =>
+      'Det är timgränsen för nya konton. Bekräfta din e-post för att ta bort den.';
 }

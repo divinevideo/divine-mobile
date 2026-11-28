@@ -151,7 +151,7 @@ class PublishOutcome {
 /// Completion waits for **every** relay the publish reached, so the outcome
 /// describes what the relays actually said rather than whichever answered
 /// first. It resolves when:
-///  * every reached relay has answered, or
+///  * every reached relay has answered or been lost (see [onRelayLost]), or
 ///  * [settleWindow] elapses after the first answer, counted no earlier than
 ///    the [setReachable] call that reports the fan-out's target set, or
 ///  * [timeout] elapses — deferred until [setReachable] arrives, and by at
@@ -272,6 +272,9 @@ class PublishTracker {
   final Map<String, String> _rejected = {};
   final Map<String, String> _deferredRejections = {};
   final Set<String> _accepted = {};
+
+  /// Relays that can no longer answer; see [onRelayLost].
+  final Set<String> _lost = {};
   final Completer<PublishOutcome> _completer = Completer<PublishOutcome>();
   late final Timer _timer;
   Timer? _settleTimer;
@@ -290,6 +293,14 @@ class PublishTracker {
   bool isTarget(String relayUrl) =>
       expectedRelays.contains(relayUrl) ||
       (_reachable?.contains(relayUrl) ?? false);
+
+  /// Whether this publish is still waiting for [relayUrl] to answer.
+  bool isAwaiting(String relayUrl) =>
+      !_closed &&
+      isTarget(relayUrl) &&
+      !_accepted.contains(relayUrl) &&
+      !_rejected.containsKey(relayUrl) &&
+      !_lost.contains(relayUrl);
 
   /// Record which relays the fan-out managed to write to.
   ///
@@ -349,6 +360,20 @@ class PublishTracker {
     _deferredRejections.remove(relayUrl);
   }
 
+  /// Call when [relayUrl] can no longer answer: it left the pool, or the
+  /// object replacing it could not connect, so no socket is left to resend the
+  /// event on.
+  ///
+  /// The relay stops holding up completion but is still reported in
+  /// [PublishOutcome.noResponseFrom]: it may have stored the event before its
+  /// socket went. Losing a relay is not an answer, so it does not start the
+  /// settle window for the relays still answering.
+  void onRelayLost(String relayUrl) {
+    if (_closed) return;
+    _lost.add(relayUrl);
+    _maybeComplete();
+  }
+
   /// Start the settle window on the first answer, then re-test completion.
   void _onAnswered() {
     _armSettleWindow();
@@ -372,7 +397,10 @@ class PublishTracker {
     // let that answer fill an awaited relay's quota and settle the publish
     // while that relay was still silent.
     final allAnswered = _awaitable.every(
-      (relay) => _accepted.contains(relay) || _rejected.containsKey(relay),
+      (relay) =>
+          _accepted.contains(relay) ||
+          _rejected.containsKey(relay) ||
+          _lost.contains(relay),
     );
     if (allAnswered) {
       _complete();

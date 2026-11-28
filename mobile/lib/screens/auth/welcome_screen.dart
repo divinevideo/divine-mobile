@@ -13,6 +13,8 @@ import 'package:models/models.dart';
 import 'package:openvine/blocs/social_sign_in/social_sign_in_cubit.dart';
 import 'package:openvine/blocs/welcome/welcome_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
+import 'package:openvine/features/guest_classics/guest_classics_entry.dart';
+import 'package:openvine/features/guest_classics/guest_classics_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
@@ -73,7 +75,17 @@ class WelcomeScreen extends ConsumerWidget {
     ).toString();
   }
 
-  const WelcomeScreen({this.initialSelectedPubkeyHex, super.key});
+  /// Only ordinary first launch uses this entry. Protected-link redirects and
+  /// recovery flows retain the plain welcome route.
+  static const guestEntryPath = '$path?guestClassics=1';
+
+  const WelcomeScreen({
+    this.initialSelectedPubkeyHex,
+    this.guestEntry = false,
+    super.key,
+  });
+
+  final bool guestEntry;
 
   /// Optional pubkey to pre-select on the welcome screen.
   final String? initialSelectedPubkeyHex;
@@ -109,6 +121,13 @@ class WelcomeScreen extends ConsumerWidget {
             ),
         child: _WelcomeView(
           isAuthLoading: isAuthLoading,
+          guestEntry:
+              guestEntry &&
+              initialSelectedPubkeyHex == null &&
+              authState == AuthState.unauthenticated &&
+              deletionPendingPubkeyHex == null &&
+              authService.lastError == null &&
+              ref.watch(guestClassicsBaseProvider) != null,
           cleanupRequired:
               authService.lastFailureReason ==
               AuthFailureReason.accountCleanupFailed,
@@ -127,10 +146,12 @@ class WelcomeScreen extends ConsumerWidget {
 class _WelcomeView extends ConsumerWidget {
   const _WelcomeView({
     required this.isAuthLoading,
+    required this.guestEntry,
     required this.lastError,
     required this.cleanupRequired,
   });
 
+  final bool guestEntry;
   final bool cleanupRequired;
 
   /// Whether the global auth state is in a loading state.
@@ -141,6 +162,12 @@ class _WelcomeView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final guestLoader = guestEntry
+        ? ref.watch(guestClassicsManifestProvider)
+        : null;
+    final guestObserver = guestEntry
+        ? ref.watch(guestClassicsObserverProvider)
+        : null;
     return BlocConsumer<WelcomeBloc, WelcomeState>(
       listenWhen: (prev, current) =>
           current.status == WelcomeStatus.navigatingToLoginOptions ||
@@ -208,7 +235,7 @@ class _WelcomeView extends ConsumerWidget {
         final isLoading = isAuthLoading || state.isAccepting;
 
         final isReturningUser = state.hasReturningUsers;
-        return Scaffold(
+        Widget welcome(VoidCallback? openClassics) => Scaffold(
           backgroundColor: isReturningUser
               ? context.vineColors.nav
               : context.vineColors.background,
@@ -243,6 +270,7 @@ class _WelcomeView extends ConsumerWidget {
                           state.status == WelcomeStatus.accountCleanupFailed,
                     )
                   : _NewUserLayout(
+                      openClassics: openClassics,
                       isLoading: isLoading,
                       lastError: lastError,
                       cleanupRequired:
@@ -252,6 +280,21 @@ class _WelcomeView extends ConsumerWidget {
             ),
           ),
         );
+        if (guestLoader != null &&
+            state.status == WelcomeStatus.loaded &&
+            !isReturningUser &&
+            !state.hasRecoveryAnchor &&
+            !cleanupRequired &&
+            ModalRoute.isCurrentOf(context) == true) {
+          return GuestClassicsEntry(
+            acceptTerms: () => ref.read(authServiceProvider).acceptTerms(),
+            load: guestLoader,
+            now: DateTime.now,
+            onObservation: guestObserver,
+            welcome: welcome,
+          );
+        }
+        return welcome(null);
       },
     );
   }
@@ -260,11 +303,13 @@ class _WelcomeView extends ConsumerWidget {
 /// Default layout for new users — AuthHeroSection with create/login buttons.
 class _NewUserLayout extends StatelessWidget {
   const _NewUserLayout({
+    required this.openClassics,
     required this.isLoading,
     required this.lastError,
     required this.cleanupRequired,
   });
 
+  final VoidCallback? openClassics;
   final bool cleanupRequired;
 
   final bool isLoading;
@@ -275,9 +320,16 @@ class _NewUserLayout extends StatelessWidget {
     final socialSignInBusy = context.select(
       (SocialSignInCubit cubit) => cubit.state.isBusy,
     );
-    return Column(
+    final content = Column(
       children: [
-        const Expanded(child: _FittedHero()),
+        // The guest layout scrolls instead, and its SliverFillRemaining asks
+        // the column for an intrinsic height, which _FittedHero's
+        // LayoutBuilder cannot report.
+        Expanded(
+          child: openClassics == null
+              ? const _FittedHero()
+              : const Center(child: AuthHeroSection()),
+        ),
         const SizedBox(height: 16),
 
         if (lastError != null) ...[
@@ -303,6 +355,15 @@ class _NewUserLayout extends StatelessWidget {
           const SizedBox(height: 16),
           const _TermsNotice(),
           const SizedBox(height: 20),
+          if (openClassics != null) ...[
+            DivineButton(
+              label: context.l10n.authWatchClassicsAsGuest,
+              expanded: true,
+              maxLines: 2,
+              onPressed: openClassics,
+            ),
+            const SizedBox(height: 12),
+          ],
           const SocialSignInButtons(),
           DivineButton(
             label: context.l10n.authCreateNewAccount,
@@ -329,6 +390,12 @@ class _NewUserLayout extends StatelessWidget {
         ],
 
         const SizedBox(height: 32),
+      ],
+    );
+    if (openClassics == null) return content;
+    return CustomScrollView(
+      slivers: [
+        SliverFillRemaining(hasScrollBody: false, child: content),
       ],
     );
   }

@@ -10,6 +10,21 @@ class AppLocalizationsZh extends AppLocalizations {
   AppLocalizationsZh([String locale = 'zh']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return '切换到 $account 以打开这条消息吗？';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => '私信';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      '显示通知，但不显示发送者姓名或消息内容。';
+
+  @override
+  String get dmNotificationMessageUnavailable => '这条消息无法查看。';
+
+  @override
   String get devOptionsClipRecovery => '片段恢复';
 
   @override
@@ -275,7 +290,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get privacySettingsShareUsageSubtitle =>
-      '帮我们了解大家实际在用什么。关闭后，这台设备上排队等待的数据会被删除。';
+      '帮我们了解大家实际在用什么。关闭后，这台设备上排队等待的数据会被删除。崩溃报告仍会发送，方便我们修复问题。';
 
   @override
   String get privacySettingsSaveFailed => '没能保存。使用数据暂时保持关闭。';
@@ -1683,51 +1698,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get shareVideoLabel => '分享视频';
 
   @override
-  String sharePostSharedWith(String recipientName) {
-    return '已分享给 $recipientName';
-  }
-
-  @override
-  String sharePostSharedWithCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '已分享给 $count 个人',
-      one: '已分享给 $count 个人',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String shareStillTryingToSendTo(String recipientName) {
-    return '仍在尝试发送给 $recipientName';
-  }
-
-  @override
-  String shareStillTryingToSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '仍在尝试发送给 $count 个人',
-      one: '仍在尝试发送给 $count 个人',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String shareCouldNotSendTo(String recipientName) {
     return '无法发送给 $recipientName';
-  }
-
-  @override
-  String shareCouldNotSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '无法发送给 $count 个人',
-      one: '无法发送给 $count 个人',
-    );
-    return '$_temp0';
   }
 
   @override
@@ -1761,11 +1733,32 @@ class AppLocalizationsZh extends AppLocalizations {
   String get shareFindPeopleMultiline => '寻找\n朋友';
 
   @override
+  String get shareDeliveryFailed => '暂时无法发送';
+
+  @override
+  String shareDeliveryHeld(String name) {
+    return '可联系到$name时将发送';
+  }
+
+  @override
+  String shareDeliveryForRecipient(String name, String status) {
+    return '$name — $status';
+  }
+
+  @override
   String get shareSent => '已发送';
 
   @override
   String shareSelectedRecipientAnnouncement(String name) {
     return '已选择 $name';
+  }
+
+  @override
+  String get shareRecipientSend => '发送';
+
+  @override
+  String shareRecipientSendTo(String name) {
+    return '发送给$name';
   }
 
   @override
@@ -1977,6 +1970,28 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoStickerAddYoursButton => '轮到你了';
+
+  @override
+  String get videoStickerAddYoursWatchSeries => '观看系列';
+
+  @override
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return '观看系列：$prompt';
+  }
+
+  @override
+  String videoSeriesChipEpisode(String episode, String total) {
+    return '第 $episode 集 / 共 $total 集';
+  }
+
+  @override
+  String videoSeriesChipSemanticLabel(
+    String seriesName,
+    String episode,
+    String total,
+  ) {
+    return '系列 $seriesName，第 $episode 集 / 共 $total 集';
+  }
 
   @override
   String videoStickerAddYoursJoined(int count) {
@@ -3240,6 +3255,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get authRecoveryOtherAccountWarning => '在这里登录会隐藏那些草稿和片段';
 
   @override
+  String get authWatchClassicsAsGuest => '以访客身份观看经典视频';
+
+  @override
   String get authTermsPrefix => '选择下方任一选项，即表示你确认自己已满 16 周岁（或已完成 ';
 
   @override
@@ -3817,6 +3835,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get remixStartFailed => '无法开始混剪。请重试。';
 
   @override
+  String get remixSettingSaveFailed => '无法更新你的混剪设置。请重试。';
+
+  @override
   String get remixSettingAllowTitle => '允许他人混剪我的视频';
 
   @override
@@ -4196,6 +4217,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoUpdateErrorPublishRejected => '中继未接受此次更新，请稍后重试。';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      '这个视频在另一台设备上被修改了，现在标签或协作者太多了。重新打开它，删掉一些吧。';
+
+  @override
   String get videoUpdateErrorGeneric => '无法更新这个视频，请重试。';
 
   @override
@@ -4280,6 +4305,17 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get soundsNoSoundsFoundDescription => '换个搜索词试试';
+
+  @override
+  String soundsSearchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '找到 $count 个声音',
+      zero: '没有找到声音',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get soundsSavedToLibrary => '已存入声音库';
@@ -5969,6 +6005,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get inboxCollabInviteSentStatus => '邀请已发送';
 
   @override
+  String get inboxSharedVideoPreview => '分享了一个视频';
+
+  @override
   String get inboxConversationCollabInvitePreview => '合作邀请';
 
   @override
@@ -6748,6 +6787,52 @@ class AppLocalizationsZh extends AppLocalizations {
   String get libraryDraftActionDuplicate => '创建副本';
 
   @override
+  String get libraryDraftActionConvertToClip => '转换为片段';
+
+  @override
+  String get libraryDraftConvertingToClip => '正在转换为片段...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar => '草稿已转换为片段';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar => '转换草稿失败';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      '这份草稿上的文字和贴纸没能准备好。到编辑器里打开，然后再试一次。';
+
+  @override
+  String get libraryDraftActionShare => '分享草稿';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return '向$name发送可编辑的草稿？';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      '你将分享原始片段和编辑记录。对方可以看到你剪掉的部分，也可以编辑、发布或发回自己的副本。';
+
+  @override
+  String get libraryDraftShareFailed => '无法发送草稿。';
+
+  @override
+  String get libraryDraftShareTooLarge => '草稿太大，无法发送。';
+
+  @override
+  String get dmSharedDraft => '已分享的草稿';
+
+  @override
+  String get dmOpenDraft => '导入并编辑';
+
+  @override
+  String get dmDraftImportFailed => '无法导入草稿。';
+
+  @override
+  String get libraryDraftSent => '草稿已发送';
+
+  @override
   String get libraryDraftActionDelete => '删除草稿';
 
   @override
@@ -7340,6 +7425,14 @@ class AppLocalizationsZh extends AppLocalizations {
   ) {
     return '$displayName 想给你发消息，TA 发送了$messageText。';
   }
+
+  @override
+  String messageRequestGroupWantsToMessageYou(String messageText) {
+    return '这个群组想给你发消息，他们发送了$messageText。';
+  }
+
+  @override
+  String get messageRequestGroupMembersHeading => '群组成员';
 
   @override
   String get deleteAccountAccountChanged =>
@@ -8979,6 +9072,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorEffectSpinBlur => '旋转模糊';
 
   @override
+  String get videoEditorEffectShockwave => '冲击波';
+
+  @override
+  String get videoEditorEffectSubwoofer => '低音炮';
+
+  @override
+  String get videoEditorEffectPlasma => '等离子';
+
+  @override
+  String get videoEditorEffectEnergyWave => '能量波';
+
+  @override
+  String get videoEditorEffectSmokeBurst => '烟雾爆发';
+
+  @override
   String get videoEditorEffectComic => '漫画';
 
   @override
@@ -9174,9 +9282,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorFilterCategoryTints => '色调';
 
   @override
-  String get videoEditorDropsSettingsTitle => '调节水滴';
-
-  @override
   String get videoEditorDropsCountLabel => '数量';
 
   @override
@@ -9221,6 +9326,202 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorEffectsOnBeatNoSound => '添加音乐或打开某个片段的声音';
+
+  @override
+  String get videoEditorEffectSettingsOpen => '效果设置';
+
+  @override
+  String videoEditorEffectSettingsTitle(String effect) {
+    return '设置：$effect';
+  }
+
+  @override
+  String videoEditorEffectSeconds(String seconds) {
+    return '$seconds 秒';
+  }
+
+  @override
+  String get videoEditorEffectHitDuration => '时长';
+
+  @override
+  String get videoEditorEffectHitRepeat => '重复';
+
+  @override
+  String get videoEditorEffectHitOnce => '仅一次，在时间轴上效果开始处';
+
+  @override
+  String get videoEditorEffectHitInterval => '间隔';
+
+  @override
+  String get videoEditorEffectLookTitle => '外观';
+
+  @override
+  String get videoEditorEffectHitHorizontal => '水平位置';
+
+  @override
+  String get videoEditorEffectHitVertical => '垂直位置';
+
+  @override
+  String get videoEditorEffectHitReach => '范围';
+
+  @override
+  String get videoEditorEffectHitShake => '震动';
+
+  @override
+  String get videoEditorEffectHitPunch => '缩放冲击';
+
+  @override
+  String get videoEditorEffectLookReset => '重置外观';
+
+  @override
+  String get videoEditorEffectTimingTitle => '时机';
+
+  @override
+  String get videoEditorEffectTimingReset => '重置时机';
+
+  @override
+  String get videoEditorEffectMotionTitle => '运动';
+
+  @override
+  String get videoEditorEffectMotionReset => '重置运动';
+
+  @override
+  String get videoEditorEffectSettingFocus => '焦点';
+
+  @override
+  String get videoEditorEffectSettingWidth => '宽度';
+
+  @override
+  String get videoEditorEffectSettingDirection => '方向';
+
+  @override
+  String get videoEditorEffectSettingHorizontal => '水平';
+
+  @override
+  String get videoEditorEffectSettingVertical => '垂直';
+
+  @override
+  String get videoEditorEffectSettingClockwise => '顺时针';
+
+  @override
+  String get videoEditorEffectSettingAnticlockwise => '逆时针';
+
+  @override
+  String get videoEditorEffectSettingZoomIn => '放大';
+
+  @override
+  String get videoEditorEffectSettingZoomOut => '缩小';
+
+  @override
+  String get videoEditorEffectSettingSpacing => '间距';
+
+  @override
+  String get videoEditorEffectSettingAngle => '角度';
+
+  @override
+  String get videoEditorEffectSettingHue => '色相';
+
+  @override
+  String get videoEditorEffectSettingLength => '长度';
+
+  @override
+  String get videoEditorEffectSettingSensitivity => '灵敏度';
+
+  @override
+  String get videoEditorEffectSettingPosition => '位置';
+
+  @override
+  String get videoEditorEffectSettingWind => '风';
+
+  @override
+  String get videoEditorEffectSettingDotSize => '圆点大小';
+
+  @override
+  String get videoEditorEffectSettingOutline => '轮廓';
+
+  @override
+  String get videoEditorEffectSettingLevels => '层级';
+
+  @override
+  String get videoEditorEffectSettingPixelSize => '像素大小';
+
+  @override
+  String get videoEditorEffectSettingOffset => '偏移';
+
+  @override
+  String get videoEditorEffectSettingBrushSize => '笔刷大小';
+
+  @override
+  String get videoEditorEffectSettingDensity => '密度';
+
+  @override
+  String get videoEditorEffectSettingGrain => '颗粒';
+
+  @override
+  String get videoEditorEffectSettingGrid => '网格';
+
+  @override
+  String get videoEditorEffectSettingLayers => '层数';
+
+  @override
+  String get videoEditorEffectSettingShadow => '阴影';
+
+  @override
+  String get videoEditorEffectSettingFirstInk => '第一种油墨';
+
+  @override
+  String get videoEditorEffectSettingSecondInk => '第二种油墨';
+
+  @override
+  String get videoEditorEffectSettingColors => '颜色';
+
+  @override
+  String get videoEditorEffectSettingOriginalColors => '原色';
+
+  @override
+  String get videoEditorEffectSettingSingleColor => '单色';
+
+  @override
+  String get videoEditorEffectSettingDelay => '延迟';
+
+  @override
+  String get videoEditorEffectSettingDown => '向下';
+
+  @override
+  String get videoEditorEffectSettingUp => '向上';
+
+  @override
+  String get videoEditorEffectSettingRight => '向右';
+
+  @override
+  String get videoEditorEffectSettingLeft => '向左';
+
+  @override
+  String get videoEditorEffectSettingFrequency => '频率';
+
+  @override
+  String get videoEditorEffectSettingDistance => '距离';
+
+  @override
+  String get videoEditorEffectSettingScanlines => '扫描线';
+
+  @override
+  String get videoEditorEffectSettingGrainSize => '颗粒大小';
+
+  @override
+  String get videoEditorEffectSettingSepia => '棕褐色';
+
+  @override
+  String get videoEditorEffectSettingFlicker => '闪烁';
+
+  @override
+  String get videoEditorEffectSettingVignette => '暗角';
+
+  @override
+  String get videoEditorEffectSettingTempo => '节奏';
+
+  @override
+  String get videoEditorEffectSettingWavelength => '波长';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {
@@ -10949,6 +11250,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorAudioUseSound => '使用';
 
   @override
+  String get videoEditorAudioOpenSoundDetails => '打开声音详情';
+
+  @override
   String get videoEditorAudioFileMissing => '音频文件已经不在这台设备上了';
 
   @override
@@ -10974,6 +11278,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorAudioCategoryMySounds => '我的声音';
+
+  @override
+  String get videoEditorAudioCategorySongs => 'Songs';
 
   @override
   String get videoEditorAudioFilterEffects => '音效';
@@ -11180,6 +11487,34 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get videoEditorSocialStickerRepliesNote =>
       '显示谁用视频回复了这个视频。观众点一下就能观看这些回复。';
+
+  @override
+  String get videoEditorSocialStickerAudienceTitle => '谁可以回应';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => '所有人';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => '好友';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => '仅自己';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      '只有你关注的人可以参与。其他人会在有人参与后看到这个贴纸。';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      '贴纸只显示你关注的人发布的视频回复。其他人会在其中有人回复后看到这个贴纸。';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      '只有你可以参与。在你参与之前，其他人看不到这个贴纸。';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      '贴纸只显示你自己的视频回复。在你回复之前，其他人看不到这个贴纸。';
 
   @override
   String get videoEditorInteractiveCardAreaHint => '这个贴纸会留在这个框内，方便观众点按';
@@ -12855,6 +13190,29 @@ class AppLocalizationsZh extends AppLocalizations {
   String get devOptionsProtectedMinorClearedToast => '未成年保护覆盖已清除';
 
   @override
+  String get devOptionsConfirmationAccessTitle => 'Divine Confirmation access';
+
+  @override
+  String get devOptionsConfirmationAccessReal => 'Real answer';
+
+  @override
+  String get devOptionsConfirmationAccessHas => 'Has Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessHasNot => 'Doesn\'t have Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessUnknown => 'Couldn\'t check';
+
+  @override
+  String get devOptionsConfirmationRequirementSimulatedTitle =>
+      'Act as if Confirmation is required';
+
+  @override
+  String get devOptionsConfirmationRequirementSimulatedSubtitle =>
+      'Treats signing in as needing Confirmation even when the verifier doesn\'t. Needs the Confirmation Sign-in flag; choose \"Doesn\'t have Confirmation\" above to see the offer. The verifier still approves sign-ins.';
+
+  @override
   String get commentsRecordVideoButtonLabel => '录制视频评论';
 
   @override
@@ -13829,6 +14187,65 @@ class AppLocalizationsZh extends AppLocalizations {
   String get verifyStatusAccountChanged => 'Account changed';
 
   @override
+  String get verifyStatusNeedsConfirmation => 'Needs Confirmation';
+
+  @override
+  String get verifyConfirmationTitle => 'Divine Confirmation';
+
+  @override
+  String get verifyConfirmationHeroBody =>
+      'Divine Confirmation lets you link your accounts on other platforms by signing in to them.';
+
+  @override
+  String get verifyConfirmationIncludedTitle => 'What\'s included';
+
+  @override
+  String get verifyConfirmationIncludedSignIn => 'Link accounts by signing in';
+
+  @override
+  String get verifyConfirmationComingSoon => 'Coming soon';
+
+  @override
+  String get verifyConfirmationSmallPrint =>
+      'Details will appear here when Divine Confirmation is ready.';
+
+  @override
+  String get verifyConfirmationStoreOnly =>
+      'Divine Confirmation is available in the App Store and Google Play versions of Divine.';
+
+  @override
+  String get verifyConfirmationBuySemantic =>
+      'Divine Confirmation, coming soon, unavailable';
+
+  @override
+  String get verifyConfirmationRestoreSemantic =>
+      'Restore purchases, unavailable';
+
+  @override
+  String get verifyConfirmationCardTitle => 'Link by signing in';
+
+  @override
+  String get verifyConfirmationCardBody =>
+      'One-tap linking is part of Divine Confirmation.';
+
+  @override
+  String get verifyGetConfirmation => 'Get Divine Confirmation';
+
+  @override
+  String get verifyProofAlwaysAvailable => 'Proof posts are always available';
+
+  @override
+  String get verifyConfirmationSheetTitle =>
+      'Linking by signing in needs Divine Confirmation';
+
+  @override
+  String get verifyConfirmationSheetSubtitle =>
+      'You can still link this account with a proof post.';
+
+  @override
+  String get verifyConfirmationSheetUseProof => 'Use a proof post';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return '解除关联 $platform 账号 $identity';
   }
@@ -13860,7 +14277,26 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String verifyLinkNeedsConfirmationSemanticLabel(String platform) {
+    return 'Link your $platform account. Signing in needs Divine Confirmation';
+  }
+
+  @override
   String get verifyOneTapBadge => '一键';
+
+  @override
+  String get verifyOneTapWithConfirmationBadge => 'One tap with Confirmation';
+
+  @override
+  String get verifyRenewConfirmation => 'Renew Confirmation';
+
+  @override
+  String verifyRenewConfirmationSemanticLabel(
+    String platform,
+    String identity,
+  ) {
+    return 'Renew Divine Confirmation to restore $platform account $identity';
+  }
 
   @override
   String verifyConnectSignInLifetime(int days) {
@@ -13969,6 +14405,18 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get verifyErrorPublishFailed => '验证通过了，但没有中继接受这次更新。再试一次。';
+
+  @override
+  String get verifyErrorConfirmationRequired =>
+      'Linking by signing in needs Divine Confirmation. You can still link with a proof post.';
+
+  @override
+  String get verifyErrorConfirmationUnavailable =>
+      'Couldn\'t check Divine Confirmation right now. Try again in a few minutes.';
+
+  @override
+  String get verifyErrorConfirmationPending =>
+      'This can take a minute after buying. Try again shortly.';
 
   @override
   String get verifyErrorOauthUnavailable => '这个还没接一键登录。用下面的证明帖吧。';
@@ -14236,7 +14684,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get changePasswordSuccess => '密码已更改。';
 
   @override
-  String get changeEmailSubtitle => '我们会向新地址和账号上的地址各发一封确认邮件。两边都确认后邮箱才会更改。';
+  String get changeEmailSubtitle => '我们会向你的新邮箱发送链接。如果你的账号已绑定邮箱，我们也会向那个邮箱发送链接。';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -14256,18 +14704,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get changeEmailWrongPassword => '这不是你的密码。';
 
   @override
-  String get changeEmailSubmit => '发送确认链接';
+  String get changeEmailSubmit => '请求确认';
 
   @override
-  String get changeEmailSentTitle => '两封确认邮件已在路上';
+  String get changeEmailSentTitle => '查看你的邮箱';
 
   @override
   String changeEmailSentMessage(String email) {
-    return '请在 $email 和账号上的地址两边都确认。两边都完成后邮箱就会切换。';
+    return '打开 $email 收到的链接。如果你的账号已绑定邮箱，也请打开那个邮箱收到的链接。';
   }
 
   @override
-  String get changeEmailSentExpiry => '链接 24 小时后失效。';
+  String get changeEmailSentExpiry => '每条链接在 24 小时后失效。';
 
   @override
   String get changeEmailSentDone => '知道了';
@@ -14544,6 +14992,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get updateAction => '更新';
 
   @override
+  String get announcementViewContest => '查看比赛';
+
+  @override
+  String get featuredFeedUnavailable => '此精选动态已不可用。';
+
+  @override
   String updateNewIn(String version) {
     return '$version 新增内容：';
   }
@@ -14682,6 +15136,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsHelpAboutSubtitle => '支持、法律信息和应用详情';
+
+  @override
+  String get settingsDiscordTitle => '加入我们的 Discord 服务器';
+
+  @override
+  String get settingsDiscordSubtitle => '与 Divine 团队和社区交流';
+
+  @override
+  String get settingsDiscordOpenError => '无法打开 Discord';
 
   @override
   String listLoopsCount(int count, String formatted) {
@@ -15894,4 +16357,107 @@ class AppLocalizationsZh extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return '$badgeName的视频';
   }
+
+  @override
+  String get menuBarEdit => '编辑';
+
+  @override
+  String get menuBarUndo => '撤销';
+
+  @override
+  String get menuBarRedo => '重做';
+
+  @override
+  String get menuBarCut => '剪切';
+
+  @override
+  String get menuBarCopy => '拷贝';
+
+  @override
+  String get menuBarPaste => '粘贴';
+
+  @override
+  String get menuBarSelectAll => '全选';
+
+  @override
+  String get menuBarView => '显示';
+
+  @override
+  String get menuBarVideo => '视频';
+
+  @override
+  String get menuBarPreviousVideo => '上一个视频';
+
+  @override
+  String get menuBarNextVideo => '下一个视频';
+
+  @override
+  String get menuBarPlayPause => '播放/暂停';
+
+  @override
+  String get menuBarMute => '静音';
+
+  @override
+  String get menuBarUnmute => '取消静音';
+
+  @override
+  String get menuBarWindow => '窗口';
+
+  @override
+  String get menuBarHelp => '帮助';
+
+  @override
+  String get emailConfirmationTitle => '确认你的邮箱';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return '我们已向 $email 发送了一个链接。点击它即可解锁私信，并确保你随时都能回到自己的账号。';
+  }
+
+  @override
+  String get emailConfirmationResendButton => '重新发送邮件';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return '你已加入！去 $email 查收邮件，确认你的账号。';
+  }
+
+  @override
+  String get emailConfirmationResendSent => '已请求确认。请查看你的收件箱。';
+
+  @override
+  String get emailConfirmationResendFailed => '这封没发出去，稍后再试试。';
+
+  @override
+  String get emailConfirmationMessagesTitle => '确认邮箱后即可开始发私信';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return '点击我们发送到 $email 的链接，私信就全归你啦。';
+  }
+
+  @override
+  String get emailConfirmationCheckInbox => '请在收件箱中查找确认链接。';
+
+  @override
+  String get emailConfirmationDone => '邮箱已确认，私信已解锁。';
+
+  @override
+  String get emailConfirmationLinkConfirmed => '邮箱已确认。';
+
+  @override
+  String get emailConfirmationAddEmailTitle => '添加邮箱';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      '你的账号目前没有绑定邮箱。添加一个，确保你随时都能回到自己的账号。';
+
+  @override
+  String get emailConfirmationAddEmailButton => '添加邮箱';
+
+  @override
+  String get emailConfirmationSendBlocked => '确认邮箱后才能发私信。';
+
+  @override
+  String get emailConfirmationCapReached => '新账号每小时的上限就是这些。确认邮箱即可解除限制。';
 }

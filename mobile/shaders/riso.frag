@@ -17,6 +17,13 @@ uniform vec2 uSize;
 // How far the picture turns into the print, 0 to 1.
 uniform float uIntensity;
 
+// The colours of the two inks.
+uniform vec3 uInkA;
+uniform vec3 uInkB;
+
+// How far the second ink slips from the first, as a share of the default.
+uniform float uSlip;
+
 uniform sampler2D uTexture;
 
 out vec4 fragColor;
@@ -40,10 +47,10 @@ void main() {
   float s = min(uSize.x, uSize.y);
   vec2 g = floor(p / max(1.0, s / 360.0));
   vec3 color = tap(p);
-  vec3 slipped = tap(p + vec2(0.006, -0.004) * s);
+  vec3 slipped = tap(p + vec2(0.006, -0.004) * s * uSlip);
   float pink = cover(1.0 - color.g, grain(g));
   float blue = cover(1.0 - slipped.r, grain(g + vec2(19.0, 7.0)));
-  vec3 riso = vec3(0.96, 0.94, 0.9) * mix(vec3(1.0), vec3(1.0, 0.28, 0.69), pink) *
-    mix(vec3(1.0), vec3(0.0, 0.47, 0.75), blue);
+  vec3 riso = vec3(0.96, 0.94, 0.9) * mix(vec3(1.0), uInkA, pink) *
+    mix(vec3(1.0), uInkB, blue);
   fragColor = vec4(mix(color, riso, uIntensity), 1.0);
 }

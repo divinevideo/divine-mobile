@@ -7,11 +7,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/models/divine_video_clip.dart';
-import 'package:openvine/models/video_editor/drops_effect_settings.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
+import 'package:openvine/models/video_editor/effect_setting.dart';
+import 'package:openvine/models/video_editor/effect_settings_catalog.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/services/video_editor/video_editor_beat_resolver.dart';
-import 'package:pro_video_editor/pro_video_editor.dart' show CustomVideoEffect;
+import 'package:pro_video_editor/pro_video_editor.dart'
+    show CustomVideoEffect, VideoEffect;
 import 'package:unified_logger/unified_logger.dart';
 import 'package:uuid/uuid.dart';
 
@@ -109,10 +111,9 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
         clearSelectedType: current == null,
         intensity: current?.intensity ?? defaultIntensity,
         leftIntensities: const {},
-        dropsSettings: current?.type == EditorEffectType.drops
-            ? DropsEffectSettings.fromParams(current!.custom!.params)
-            : const DropsEffectSettings(),
+        settingValues: current == null ? const {} : _storedSettingsOf(current),
         onBeat: current?.onBeat ?? false,
+        isSettingsOpen: false,
         startedPlayback: startedPlayback,
       ),
     );
@@ -128,11 +129,15 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
   /// kind was left at earlier in this editor (see
   /// [VideoEditorEffectsState.leftIntensities]), or, as for the first pick,
   /// starts at [startingIntensityOf] it.
+  ///
+  /// The settings the user set are kept where the new type has the very same
+  /// setting, with the same range and default, and dropped elsewhere.
   void selectType(EditorEffectType type) {
     final previous = state.selectedType;
     final look = type.introOutroLook;
+    final settingValues = _carriedOver(state.settingValues, previous, type);
     if (previous != null && previous.introOutroLook == look) {
-      emit(state.copyWith(selectedType: type));
+      emit(state.copyWith(selectedType: type, settingValues: settingValues));
     } else {
       final left = {
         ...state.leftIntensities,
@@ -143,6 +148,7 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
           selectedType: type,
           intensity: left[look] ?? startingIntensityOf(type),
           leftIntensities: Map.unmodifiable(left),
+          settingValues: settingValues,
         ),
       );
     }
@@ -163,25 +169,71 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
     emit(state.copyWith(intensity: intensity.clamp(0.0, 1.0)));
   }
 
-  /// Sets how the drops look.
-  void setDropsSettings(DropsEffectSettings settings) {
-    emit(state.copyWith(dropsSettings: settings));
+  /// Sets the setting of the picked effect stored under [key] to [value],
+  /// brought into its range; a key the picked effect has no setting for
+  /// changes nothing.
+  void setSetting(String key, Object value) {
+    final type = state.selectedType;
+    final setting = type == null ? null : effectSettingOf(type, key);
+    if (setting == null) return;
+    emit(
+      state.copyWith(
+        settingValues: Map.unmodifiable({
+          ...state.settingValues,
+          key: setting.read(value),
+        }),
+      ),
+    );
   }
 
-  /// Gives the drops another arrangement and other paths.
-  void shuffleDrops() {
-    final current = state.dropsSettings.seed;
+  /// Puts the settings of the picked effect in [group] back to their
+  /// defaults.
+  void resetSettings(EffectSettingGroup group) {
+    final type = state.selectedType;
+    if (type == null) return;
+    final keys = {
+      for (final setting in effectSettingsOf(type))
+        if (setting.group == group) setting.key,
+    };
+    emit(
+      state.copyWith(
+        settingValues: Map.unmodifiable({
+          for (final MapEntry(:key, :value) in state.settingValues.entries)
+            if (!keys.contains(key)) key: value,
+        }),
+      ),
+    );
+  }
+
+  /// Gives the picked effect another random arrangement, by a new seed for
+  /// its [EffectShuffleSetting] under [key].
+  void shuffle(String key) {
+    final type = state.selectedType;
+    if (type == null || effectSettingOf(type, key) is! EffectShuffleSetting) {
+      return;
+    }
+    final current = state.selectedSettings[key];
     var seed = _createSeed();
     while (seed == current) {
       seed = _createSeed();
     }
-    emit(
-      state.copyWith(dropsSettings: state.dropsSettings.copyWith(seed: seed)),
-    );
+    setSetting(key, seed);
+  }
+
+  /// Shows the settings of the picked effect in place of the effects picker,
+  /// or the picker again.
+  void setSettingsOpen({required bool open}) {
+    emit(state.copyWith(isSettingsOpen: open));
   }
 
   /// Closes the editor without changing the committed effects.
-  void cancel() => emit(state.copyWith(isEditing: false, clearEditingId: true));
+  void cancel() => emit(
+    state.copyWith(
+      isEditing: false,
+      clearEditingId: true,
+      isSettingsOpen: false,
+    ),
+  );
 
   /// Closes the editor and returns the effects to commit to the history.
   ///
@@ -213,6 +265,17 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
       }
       committedId = entry.id;
       if (picked == null) continue;
+      final settings = state.settingsFor(picked.type);
+      if (entry.type == picked.type &&
+          entry.intensity == picked.intensity &&
+          entry.onBeat == picked.onBeat &&
+          mapEquals(
+            settings,
+            effectSettingValuesOf(entry.type, _paramsOf(entry)),
+          )) {
+        effects.add(entry);
+        continue;
+      }
       final keepsWindow = entry.type.placement == picked.type.placement;
       effects.add(
         EditorVideoEffect.of(
@@ -222,7 +285,7 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
           startTime: keepsWindow ? entry.startTime : picked.startTime,
           endTime: keepsWindow ? entry.endTime : picked.endTime,
           onBeat: picked.onBeat,
-          settings: state.settingsFor(picked.type),
+          settings: settings,
         ),
       );
     }
@@ -244,6 +307,7 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
       state.copyWith(
         isEditing: false,
         clearEditingId: true,
+        isSettingsOpen: false,
         applied: List.unmodifiable(effects),
       ),
     );
@@ -251,6 +315,39 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
       effects: effects,
       replaced: separated == null ? null : picked?.type.exclusiveGroup,
     );
+  }
+
+  /// The settings [effect] stores, as its type reads them: a custom effect's
+  /// in its params, a built-in one's in its [VideoEffect.params].
+  static EffectSettingValues _storedSettingsOf(EditorVideoEffect effect) {
+    final params = _paramsOf(effect);
+    return Map.unmodifiable({
+      for (final setting in effectSettingsOf(effect.type))
+        if (params.containsKey(setting.key))
+          setting.key: setting.read(params[setting.key]),
+    });
+  }
+
+  static Map<String, Object?> _paramsOf(EditorVideoEffect effect) =>
+      effect.custom?.params ?? effect.effect!.params;
+
+  /// The [values] the user set for [from] that [to] has the very same setting
+  /// for: the same param, range and default.
+  static EffectSettingValues _carriedOver(
+    EffectSettingValues values,
+    EditorEffectType? from,
+    EditorEffectType to,
+  ) {
+    if (from == null || values.isEmpty) return const {};
+    final previous = {
+      for (final setting in effectSettingsOf(from)) setting.key: setting,
+    };
+    return Map.unmodifiable({
+      for (final setting in effectSettingsOf(to))
+        if (values[setting.key] case final value?
+            when identical(previous[setting.key], setting))
+          setting.key: value,
+    });
   }
 
   /// Finds the beats when an effect needs them: right away when their music

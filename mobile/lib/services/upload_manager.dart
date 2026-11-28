@@ -30,13 +30,13 @@ export 'package:upload_repository/upload_repository.dart'
         UploadStatus,
         videoProgressShare;
 
-/// Extracts a thumbnail frame as a file, the shape
-/// [VideoThumbnailService.extractThumbnail] already has.
+/// Extracts a thumbnail frame as encoded image bytes, the way
+/// [VideoThumbnailService.extractThumbnailBytes] does.
 ///
 /// Deliberately not named `ThumbnailExtractor`: the package declares its own
 /// under that name, and two same-named typedefs would make the name ambiguous
 /// in any file importing both libraries.
-typedef VideoThumbnailExtractor = Future<ThumbnailFileResult?> Function({
+typedef VideoThumbnailExtractor = Future<ThumbnailResult?> Function({
   required String videoPath,
   required Duration targetTimestamp,
   required int quality,
@@ -92,7 +92,7 @@ class UploadManager extends UploadRepository implements BackgroundAwareService {
          crashReporter:
              crashReporter ?? CrashReportingUploadReporter(crashReporting),
          thumbnailExtractor: _adaptThumbnailExtractor(
-           thumbnailExtractor ?? VideoThumbnailService.extractThumbnail,
+           thumbnailExtractor ?? _extractThumbnailBytes,
          ),
          blurhashGenerator: _generateBlurhash,
          transientRenderCleaner:
@@ -136,8 +136,20 @@ class UploadManager extends UploadRepository implements BackgroundAwareService {
           targetTimestamp: targetTimestamp,
           quality: quality,
         );
-        return result == null ? null : (path: result.path);
+        return result == null ? null : (bytes: result.bytes);
       };
+
+  /// The frame stays in memory: the upload sends bytes, so writing it to a
+  /// file first would only add a write that can fail.
+  static Future<ThumbnailResult?> _extractThumbnailBytes({
+    required String videoPath,
+    required Duration targetTimestamp,
+    required int quality,
+  }) => VideoThumbnailService.extractThumbnailBytes(
+    videoPath: videoPath,
+    timestamp: targetTimestamp,
+    quality: quality,
+  );
 
   static Future<String?> _generateBlurhash(Uint8List bytes) =>
       BlurhashService.generateBlurhash(bytes);

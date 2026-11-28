@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:divine_video_player/divine_video_player.dart';
 import 'package:divine_video_player/src/linux/linux_video_player_backend.dart';
 import 'package:divine_video_player/src/web/web_video_player_backend.dart';
@@ -107,6 +109,156 @@ void main() {
   }
 
   group(DivineVideoPlayer, () {
+    testWidgets('ignores a retired output that reports a late frame', (
+      tester,
+    ) async {
+      final player = await initLinuxController();
+      addTearDown(player.dispose);
+      final backend = _FakeLinuxBackend.instance!;
+      final retired = backend.frame;
+      await tester.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(disableAnimations: true),
+          child: Directionality(
+            textDirection: TextDirection.ltr,
+            child: DivineVideoPlayer(
+              controller: player,
+              placeholder: const Text('Waiting for current output'),
+            ),
+          ),
+        ),
+      );
+      expect(find.text('Waiting for current output'), findsOneWidget);
+      backend
+        ..frame = Completer<bool>()
+        ..emitState(
+          const DivineVideoPlayerState(status: PlaybackStatus.buffering),
+        );
+      retired.complete(true);
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('Waiting for current output'), findsOneWidget);
+      backend.emitState(
+        const DivineVideoPlayerState(isFirstFrameRendered: true),
+      );
+      await tester.pump();
+      await tester.pump();
+      expect(find.text('Waiting for current output'), findsNothing);
+    });
+
+    testWidgets('keeps a cancelled poster until a later output renders', (
+      tester,
+    ) async {
+      final player = await initLinuxController();
+      addTearDown(player.dispose);
+      final backend = _FakeLinuxBackend.instance!;
+      await tester.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(disableAnimations: true),
+          child: Directionality(
+            textDirection: TextDirection.ltr,
+            child: DivineVideoPlayer(
+              controller: player,
+              placeholder: const Text('Waiting for video'),
+            ),
+          ),
+        ),
+      );
+      expect(find.text('Waiting for video'), findsOneWidget);
+      backend.frame.complete(false);
+      await tester.pump();
+      await tester.pump();
+
+      expect(player.state.isFirstFrameRendered, isFalse);
+      expect(find.text('Waiting for video'), findsOneWidget);
+      backend
+        ..frame = Completer<bool>()
+        ..emitState(
+          const DivineVideoPlayerState(status: PlaybackStatus.buffering),
+        );
+      await tester.pump();
+      expect(find.text('Waiting for video'), findsOneWidget);
+      backend.emitState(
+        const DivineVideoPlayerState(isFirstFrameRendered: true),
+      );
+      await tester.pump();
+      await tester.pump();
+      expect(find.text('Waiting for video'), findsNothing);
+    });
+
+    testWidgets(
+      'updates a mounted desktop surface and removes it on disposal',
+      (tester) async {
+        final linuxController = await initLinuxController();
+        final backend = _FakeLinuxBackend.instance!;
+        await tester.pumpWidget(
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: DivineVideoPlayer(controller: linuxController),
+          ),
+        );
+        expect(find.text('Linux player view'), findsOneWidget);
+
+        backend
+          ..viewLabel = 'Replacement desktop view'
+          ..emitState(
+            const DivineVideoPlayerState(status: PlaybackStatus.buffering),
+          );
+        expect(linuxController.state.status, PlaybackStatus.buffering);
+        // Drain broadcast delivery before checking the rebuilt surface.
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.text('Replacement desktop view'), findsOneWidget);
+        expect(find.text('Linux player view'), findsNothing);
+        await linuxController.dispose();
+        await tester.pump();
+        await tester.pump();
+        expect(tester.takeException(), isNull);
+        expect(find.text('Replacement desktop view'), findsNothing);
+      },
+    );
+
+    testWidgets('renders the native texture on Windows', (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      try {
+        final nextId = DivineVideoPlayerController.nextId;
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(
+              const MethodChannel('divine_video_player'),
+              (call) async {
+                if (call.method != 'create') return null;
+                TestDefaultBinaryMessengerBinding
+                    .instance
+                    .defaultBinaryMessenger
+                    .setMockStreamHandler(
+                      EventChannel('divine_video_player/player_$nextId/events'),
+                      _FirstFrameStreamHandler(),
+                    );
+                return <Object?, Object?>{'textureId': 7};
+              },
+            );
+        // Windows renders into a texture even when none was asked for.
+        final windowsController = DivineVideoPlayerController();
+        await windowsController.initialize();
+        addTearDown(windowsController.dispose);
+
+        await tester.pumpWidget(
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: DivineVideoPlayer(controller: windowsController),
+          ),
+        );
+
+        expect(find.byType(Texture), findsOneWidget);
+        expect(find.text('Linux player view'), findsNothing);
+        expect(find.text('Platform not supported'), findsNothing);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+
     testWidgets('renders Linux backend view on Linux', (tester) async {
       final linuxController = await initLinuxController();
 
@@ -135,20 +287,6 @@ void main() {
 
     testWidgets('renders Text for unsupported fuchsia', (tester) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.fuchsia;
-
-      await tester.pumpWidget(
-        Directionality(
-          textDirection: TextDirection.ltr,
-          child: DivineVideoPlayer(controller: controller),
-        ),
-      );
-
-      expect(find.text('Platform not supported'), findsOneWidget);
-      debugDefaultTargetPlatformOverride = null;
-    });
-
-    testWidgets('renders Text for unsupported windows', (tester) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
 
       await tester.pumpWidget(
         Directionality(
@@ -664,12 +802,18 @@ void main() {
   });
 }
 
-class _FakeLinuxBackend implements LinuxVideoPlayerBackend {
+class _FakeLinuxBackend
+    implements LinuxVideoPlayerBackend, DesktopVideoFrameReadiness {
   _FakeLinuxBackend() {
     instance = this;
   }
 
   static _FakeLinuxBackend? instance;
+  String viewLabel = 'Linux player view';
+  Completer<bool> frame = Completer<bool>();
+
+  @override
+  Future<bool> get firstFrameRendered => frame.future;
 
   late void Function(DivineVideoPlayerState state) _onStateChanged;
 
@@ -681,10 +825,13 @@ class _FakeLinuxBackend implements LinuxVideoPlayerBackend {
     _onStateChanged = onStateChanged;
   }
 
-  void emitState(DivineVideoPlayerState state) => _onStateChanged(state);
+  void emitState(DivineVideoPlayerState state) {
+    if (state.isFirstFrameRendered && !frame.isCompleted) frame.complete(true);
+    _onStateChanged(state);
+  }
 
   @override
-  Widget buildView() => const Text('Linux player view');
+  Widget buildView() => Text(viewLabel);
 
   @override
   Future<void> dispose() async {}

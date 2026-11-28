@@ -1,0 +1,125 @@
+name: Desktop CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "mobile/**"
+      - ".github/workflows/desktop_ci.yaml"
+  push:
+    branches: [main]
+    paths:
+      - "mobile/**"
+      - ".github/workflows/desktop_ci.yaml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build ${{ matrix.platform }} (${{ matrix.architecture }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux
+            architecture: x64
+            runner: ubuntu-24.04
+            bundle: build/linux/x64/release/bundle
+          - platform: windows
+            architecture: x64
+            # The locked C++/WinRT plugins require Visual Studio 2022;
+            # MSVC 18 rejects their experimental coroutine headers.
+            runner: windows-2022
+            bundle: build/windows/x64/runner/Release
+          - platform: macos
+            architecture: arm64
+            runner: macos-15
+            bundle: build/macos/Build/Products/Release/Divine.app
+    defaults:
+      run:
+        working-directory: mobile
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Select Xcode 26.2 for the macOS 26 SDK
+        if: matrix.platform == 'macos'
+        env:
+          DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
+        run: |
+          test -d "$DEVELOPER_DIR"
+          echo "DEVELOPER_DIR=$DEVELOPER_DIR" >> "$GITHUB_ENV"
+          xcodebuild -version
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.9"
+          channel: stable
+          cache: true
+      - uses: actions/setup-python@v7
+        if: matrix.platform == 'linux'
+        with:
+          python-version: "3.12"
+      - name: Install Linux native build dependencies
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential clang cmake ninja-build pkg-config xvfb xauth \
+            libgtk-3-dev liblzma-dev libsecret-1-dev libjsoncpp-dev \
+            libwebkit2gtk-4.1-dev libmpv-dev libepoxy-dev \
+            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+            libasound2-dev libsqlite3-dev
+      - name: Resolve dependencies
+        run: flutter pub get
+      - name: Verify macOS tooling against native signing commands
+        if: matrix.platform == 'macos'
+        run: |
+          flutter test --no-pub \
+            test/tools/unsigned_macos_build_test.dart \
+            test/tools/macos_distribution_validation_test.dart
+      - name: Build production desktop entrypoint
+        run: |
+          if [[ "${{ matrix.platform }}" == macos ]]; then
+            bash scripts/desktop/build_unsigned_macos.sh
+          else
+            flutter build "${{ matrix.platform }}" --release --no-pub
+          fi
+      # Windows plays through Media Foundation, not libmpv; its native player
+      # is compiled by the release build above.
+      - name: Verify Linux media against native libmpv
+        if: matrix.platform == 'linux'
+        working-directory: mobile/packages/divine_video_player
+        env:
+          DIVINE_LINUX_NO_VIDEO_OUTPUT: "1"
+        run: |
+          flutter test --no-pub \
+            test/src/linux/linux_video_player_backend_native_smoke.dart
+      - name: Verify Linux release playback pixels and paused replacement
+        if: matrix.platform == 'linux'
+        working-directory: mobile/packages/divine_video_player
+        run: |
+          python3 tool/native_playback_harness_test.py
+          python3 tool/native_playback_harness.py --platform linux
+      # These unsigned bundles prove native compilation, not signing, store
+      # acceptance or working camera hardware. Distribution validates those
+      # separately against the reviewed source and candidate receipts.
+      - name: Archive native bundle with permissions and symlinks
+        env:
+          DESKTOP_BUNDLE: ${{ matrix.bundle }}
+        run: |
+          tar -czf "../desktop-${{ matrix.platform }}-${{ matrix.architecture }}.tar.gz" \
+            -C "$(dirname "$DESKTOP_BUNDLE")" "$(basename "$DESKTOP_BUNDLE")"
+      - name: Preserve native build for validation
+        uses: actions/upload-artifact@v7
+        with:
+          name: desktop-${{ matrix.platform }}-${{ matrix.architecture }}-${{ github.sha }}
+          retention-days: 7
+          if-no-files-found: error
+          path: desktop-${{ matrix.platform }}-${{ matrix.architecture }}.tar.gz

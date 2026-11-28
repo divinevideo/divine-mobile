@@ -28,9 +28,10 @@ class FirebaseHttpMetricRecorder implements HttpMetricRecorder {
   }) : _isEnabled = isEnabled,
        _newHttpMetric = newHttpMetric ?? _firebaseHttpMetric;
 
-  /// Whether performance collection has initialised. Sampled per request, not
-  /// captured, because clients are built during startup — before
-  /// `PerformanceMonitoringService.initialize` completes.
+  /// Whether performance collection has initialised and the person has not
+  /// opted out of analytics. Sampled per request, not captured: clients are
+  /// built during startup, before `PerformanceMonitoringService.initialize`
+  /// completes, and the person can opt out mid-session.
   final bool Function() _isEnabled;
 
   final HttpMetricFactory _newHttpMetric;

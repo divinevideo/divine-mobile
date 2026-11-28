@@ -548,7 +548,7 @@ class CommentsRepository {
   ///   (format: `kind:pubkey:d-tag`). When provided, counts comments from both
   ///   E and A tag queries to get an accurate total.
   /// - [includeVideoReplies]: Whether to include Kind 34236 video replies in
-  ///   the count. Defaults to `false` so flag-off callers do not inflate the
+  ///   the count. Defaults to `false` so text-only callers do not inflate the
   ///   comment badge with reply-only videos.
   ///
   /// Returns the number of comments on the event, or `null` when the count is
@@ -556,6 +556,9 @@ class CommentsRepository {
   /// needed and only one answers, the result is `null` too: the answer is the
   /// larger of the two, and one side alone is only a floor. Nothing is cached
   /// for an unknown count, so the next call asks again.
+  ///
+  /// A count some relay did not settle is returned but not cached, so the next
+  /// call asks again.
   ///
   /// Throws [CountCommentsFailedException] if counting fails for any other
   /// reason.
@@ -578,6 +581,7 @@ class CommentsRepository {
       );
 
       int count;
+      bool isComplete;
 
       // If we have an addressable ID, also query by uppercase A tag
       if (rootAddressableId != null && rootAddressableId.isNotEmpty) {
@@ -586,10 +590,8 @@ class CommentsRepository {
           uppercaseA: [rootAddressableId],
         );
 
-        // Run both COUNT queries in parallel
-        // Note: This may over-count if a comment has both E and A tags,
-        // but that's rare and the count is still useful for UI purposes.
-        // For exact count, use loadComments which deduplicates.
+        // Run both COUNT queries in parallel. The larger count avoids
+        // counting overlapping tags twice, but can miss disjoint matches.
         final results = await Future.wait([
           _nostrClient.countEvents([filterByE]),
           _nostrClient.countEvents([filterByA]),
@@ -600,16 +602,21 @@ class CommentsRepository {
         final countByE = results[0].count;
         final countByA = results[1].count;
         count = countByE > countByA ? countByE : countByA;
+        isComplete = results.every((result) => result.isComplete);
       } else {
         final result = await _nostrClient.countEvents([filterByE]);
         count = result.count;
+        isComplete = result.isComplete;
       }
 
-      _writeCachedCommentCount(
-        rootEventId,
-        count,
-        rootAddressableId: rootAddressableId,
-      );
+      // A COUNT a relay did not settle is a floor: show it, then ask again.
+      if (isComplete) {
+        _writeCachedCommentCount(
+          rootEventId,
+          count,
+          rootAddressableId: rootAddressableId,
+        );
+      }
       return count;
     } on CountUnavailableException {
       return null;

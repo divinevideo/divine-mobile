@@ -10,15 +10,16 @@
 #
 # Required environment variables:
 #   BUNDLE_ID                - macOS bundle identifier (e.g. co.openvine.app)
-#   CERTIFICATE_PRIVATE_KEY  - RSA PEM private key matching the team's Apple
-#                              Mac App Distribution / Mac Installer Distribution
-#                              certificates (set in Codemagic App/Team env vars).
+#   CERTIFICATE_PRIVATE_KEY  - RSA PEM private key from the app-level
+#                              `macos_signing_credentials` group matching the
+#                              team's Mac App Distribution / Mac Installer
+#                              Distribution certificates.
 #   App Store Connect API credentials (injected automatically by Codemagic's
 #   `integrations: app_store_connect: API key for Codemagic`).
 set -euo pipefail
 
 BUNDLE_ID="${BUNDLE_ID:-co.openvine.app}"
-PROFILES_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+PROFILES_DIR="${PROFILES_DIR:-$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles}"
 LOCAL_RELEASE_XCCONFIG="macos/Runner/Configs/LocalRelease.xcconfig"
 EXPORT_OPTIONS_PLIST="build/macos/ExportOptions.plist"
 
@@ -31,42 +32,90 @@ Codemagic can match (or create once) the team's Mac App Distribution and Mac
 Installer Distribution certificates without exhausting Apple's certificate limit.
 
 One-time Codemagic setup:
-  1. Generate a 2048-bit RSA key (or extract the private key from an existing
-     Mac Distribution .p12):
-       ssh-keygen -t rsa -b 2048 -m PEM -f macos_dist_key -q -N ""
-  2. In Codemagic UI -> App (or Team) Settings -> Environment variables, add a
-     secure variable named CERTIFICATE_PRIVATE_KEY containing the full PEM text.
+  1. Generate a 2048-bit RSA key outside any git checkout (or extract the
+     private key from an existing Mac Distribution .p12):
+       ssh-keygen -t rsa -b 2048 -m PEM -f "$HOME/.ssh/divine_macos_dist_key" -q -N ""
+  2. In Codemagic UI -> App Settings -> Environment variables, create the
+     app-level group `macos_signing_credentials` with a secure variable named
+     `CERTIFICATE_PRIVATE_KEY` containing the full PEM text.
   3. Ensure bundle ID co.openvine.app has macOS enabled in Apple Developer
      Portal / App Store Connect, then re-run macos-build.
 EOF
   exit 1
 fi
 
+find_app_signing_identity() {
+  security find-identity -v -p codesigning \
+    | sed -En 's/.*"((Apple Distribution|3rd Party Mac Developer Application):[^"]*)".*/\1/p' \
+    | head -1
+}
+
+find_installer_signing_identity() {
+  security find-identity -v \
+    | sed -En 's/.*"((Mac Installer Distribution|3rd Party Mac Developer Installer):[^"]*)".*/\1/p' \
+    | head -1
+}
+
+mkdir -p "$PROFILES_DIR"
 keychain initialize
 
 echo "Fetching Mac App Distribution certificate and Mac App Store profile for $BUNDLE_ID..."
 app-store-connect fetch-signing-files "$BUNDLE_ID" \
   --platform MAC_OS \
   --type MAC_APP_STORE \
+  --profiles-dir "$PROFILES_DIR" \
   --certificate-key="@env:CERTIFICATE_PRIVATE_KEY" \
   --create
 
-echo "Fetching or creating Mac Installer Distribution certificate..."
-if ! app-store-connect certificates list \
+echo "Fetching Mac Installer Distribution certificate..."
+app-store-connect certificates list \
   --type MAC_INSTALLER_DISTRIBUTION \
   --certificate-key="@env:CERTIFICATE_PRIVATE_KEY" \
-  --save; then
+  --save
+
+# `keychain add-certificates` defaults to allowing only `codesign` and
+# `productsign`. Mac App Store `.pkg` export invokes `/usr/bin/productbuild`,
+# which fails headlessly unless it is on the key ACL and partition list.
+keychain add-certificates --allow-app codesign productsign productbuild
+
+# `certificates list --save` exits 0 with an empty list when no matching
+# installer certificate exists yet for this private key. Inspect the keychain
+# after import and create the certificate on demand.
+INSTALLER_SIGNING_IDENTITY="$(find_installer_signing_identity)"
+if [ -z "$INSTALLER_SIGNING_IDENTITY" ]; then
+  echo "No matching Mac Installer Distribution certificate found; creating one..."
   app-store-connect certificates create \
     --type MAC_INSTALLER_DISTRIBUTION \
     --certificate-key="@env:CERTIFICATE_PRIVATE_KEY" \
     --save
+  keychain add-certificates --allow-app codesign productsign productbuild
+  INSTALLER_SIGNING_IDENTITY="$(find_installer_signing_identity)"
 fi
 
-keychain add-certificates
+if [ -z "$INSTALLER_SIGNING_IDENTITY" ]; then
+  echo "ERROR: No Mac Installer Distribution or 3rd Party Mac Developer Installer certificate found in keychain." >&2
+  security find-identity -v >&2 || true
+  exit 1
+fi
+
+APP_SIGNING_IDENTITY="$(find_app_signing_identity)"
+if [ -z "$APP_SIGNING_IDENTITY" ]; then
+  echo "ERROR: No Apple Distribution or 3rd Party Mac Developer Application certificate found in keychain." >&2
+  security find-identity -v -p codesigning >&2 || true
+  exit 1
+fi
+
+# Authorize Apple signing tools (`codesign`, `productbuild`, `productsign`) to
+# access the imported private key non-interactively (`keychain initialize` uses
+# an empty password by default). `keychain get-default` prints the raw path on
+# stdout without mangling paths that contain spaces.
+BUILD_KEYCHAIN="$(keychain get-default)"
+security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" "$BUILD_KEYCHAIN" >/dev/null
+
 xcode-project use-profiles --project macos/Runner.xcodeproj
 
-# Inspect installed macOS provisioning profiles and find the Mac App Store
-# profile matching BUNDLE_ID.
+# Inspect installed macOS provisioning profiles in PROFILES_DIR and find the
+# Mac App Store profile matching BUNDLE_ID.
 PROFILE_INFO=$(python3 - "$PROFILES_DIR" "$BUNDLE_ID" <<'PY'
 import glob
 import os
@@ -110,30 +159,6 @@ PY
 )
 
 IFS='|' read -r TEAM_ID PROFILE_NAME PROFILE_UUID <<<"$PROFILE_INFO"
-
-APP_SIGNING_IDENTITY=$(
-  security find-identity -v -p codesigning \
-    | sed -n 's/.*"\(\(Apple Distribution\|3rd Party Mac Developer Application\):[^"]*\)".*/\1/p' \
-    | head -1
-)
-
-if [ -z "$APP_SIGNING_IDENTITY" ]; then
-  echo "ERROR: No Apple Distribution or 3rd Party Mac Developer Application certificate found in keychain." >&2
-  security find-identity -v -p codesigning >&2 || true
-  exit 1
-fi
-
-INSTALLER_SIGNING_IDENTITY=$(
-  security find-identity -v \
-    | sed -n 's/.*"\(\(Mac Installer Distribution\|3rd Party Mac Developer Installer\):[^"]*\)".*/\1/p' \
-    | head -1
-)
-
-if [ -z "$INSTALLER_SIGNING_IDENTITY" ]; then
-  echo "ERROR: No Mac Installer Distribution or 3rd Party Mac Developer Installer certificate found in keychain." >&2
-  security find-identity -v >&2 || true
-  exit 1
-fi
 
 echo "Configured Mac App Store signing:"
 echo "  Team ID:   $TEAM_ID"

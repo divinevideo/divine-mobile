@@ -6,7 +6,7 @@ Seamless multi-clip video player using native platform APIs.
 
 - Seamless playback across multiple video clips with no delay
 - Continuous timeline with global position tracking
-- Native implementations: Media3/ExoPlayer (Android), AVFoundation (iOS/macOS); Dart backends on media_kit/mpv (Linux) and an `HTMLVideoElement` (web), each with fewer features (see the backend notes below)
+- Native implementations: Media3/ExoPlayer (Android), AVFoundation (iOS/macOS) and Media Foundation (Windows); Dart backends on media_kit/mpv (Linux) and an `HTMLVideoElement` (web). Windows, Linux and web have fewer features (see the backend notes below)
 - Buffering handled natively, plus a best-effort `preload` of upcoming clips (see below)
 - Looping, clip jumping, and playback speed control
 - Multi-track audio overlays synced to the video timeline, each at its own playback speed with unchanged pitch (`AudioTrack.playbackSpeed`; Android, iOS and macOS)
@@ -85,7 +85,9 @@ await controller.setVolume(0.5);              // video audio
 await controller.setAudioTrackVolume(0, 0.8); // overlay track at index
 
 // Equalizer bands, applied in order and changeable while playing (Android,
-// iOS and macOS). On Android a clip's equalizer needs a player created with
+// iOS, macOS and Windows; on Windows a clip's equalizer needs a player
+// created with VideoBufferProfile.full and the manifest entry in the Windows
+// backend notes). On Android a clip's equalizer needs a player created with
 // VideoBufferProfile.full, except for a single looping clip whose audio plays
 // from a decoded loop, which applies it on any profile; an overlay track's
 // needs no particular profile. On iOS and macOS an
@@ -162,9 +164,11 @@ await DivineVideoPlayerController.preload([
 temporary ExoPlayer and releases it as soon as that player is first ready,
 idle or failed, and on iOS and macOS it only makes a best-effort metadata
 request. It does not send a clip's `httpHeaders`, so it cannot warm an
-authenticated source. Linux and web register no platform channel, and
-`preload` does not check for them, so a call there throws a
-`MissingPluginException`.
+authenticated source. On Windows it fetches the first MiB of each HTTP(S) MP4
+that has no app headers into memory, where a player opening the same URL
+starts from it, and answers once those requests end. Linux and web register no
+platform channel, and `preload` does not check for them, so a call there throws
+a `MissingPluginException`.
 
 The disk cache exists on Android only. ExoPlayer streams HTTP(S) sources
 through a write-through `SimpleCache` at `<cacheDir>/divine_video_cache`
@@ -221,10 +225,10 @@ DivineVideoPlayerController(
   player's picture, such as a chroma-key backdrop.
 - `setClips(clips, startPosition: ...)` starts at a point on the combined
   timeline without a separate seek. `setClipVolumes` changes each clip's
-  volume cheaply enough to follow a slider, and `setFrameEffects` draws
-  effects the app registered natively over a window of the timeline (both
-  Android, iOS and macOS).
-- On Android, iOS and macOS, errors arrive in
+  volume cheaply enough to follow a slider (Android, iOS, macOS and Windows),
+  and `setFrameEffects` draws effects the app registered natively over a
+  window of the timeline (Android, iOS and macOS).
+- On Android, iOS, macOS and Windows, errors arrive in
   `DivineVideoPlayerState.errorCode` as a `NativePlayerErrorCode`, with
   `shouldFailover` and `isTransient` to decide whether to try another
   source or retry. The Linux and web backends leave `errorCode` unset.
@@ -241,13 +245,16 @@ await controller.initialize();
 ```
 
 The widget automatically uses a `Texture` widget when `useTexture` is
-enabled and falls back to the platform view otherwise.
+enabled and falls back to the platform view otherwise. Windows has no
+platform views, so its players always render into a texture.
 
 ## Platform Requirements
 
 - Android: API 28+
 - iOS: 16.0+
 - macOS: 13.0+
+- Windows: 10 version 1903 or later. Plays through Windows' own Media
+  Foundation, so nothing is bundled.
 - Linux: plays through `media_kit` against the system `libmpv`;
   `media_kit_libs_linux` enables that backend but does not bundle `libmpv`.
   Install `libmpv-dev` and `libepoxy-dev` before building (see
@@ -255,11 +262,75 @@ enabled and falls back to the platform view otherwise.
 - Web: an `HTMLVideoElement` shown through `HtmlElementView`; see the web
   notes below.
 
+## Windows Backend Notes
+
+Windows plays through the plugin's native code in `windows/`, which speaks the
+same platform channels as Android and Apple platforms. It drives Windows'
+`MediaPlayer` (Media Foundation) in frame-server mode and copies each frame
+into shared D3D11 textures that Flutter samples directly, so decoding and
+rendering stay on the GPU.
+
+The Windows backend supports:
+
+- HLS and MP4, from local files and http(s) URLs. A video whose header asks
+  for a rotation plays upright: Media Foundation rotates the frames it hands
+  over, so `rotationDegrees` stays 0 and the reported size is the upright one
+- A clip's `httpHeaders` on every request, HLS playlists and segments
+  included: HLS goes through `AdaptiveMediaSource`, and an MP4 through Range
+  requests of 1 MiB, each chunk fetched once and the next one ahead of the
+  decoder. Chunks of files without app headers are shared by every player in
+  a 64 MiB in-memory cache, which `preload` fills with a file's first MiB
+- Multi-clip timelines using a `MediaPlaybackList` with per-clip `start` and
+  `end`, each clip at its own speed times the player's speed, and
+  `trimToCommonTrackEnd` read from the file's `moov` before the first frame
+- Play, pause, stop, seek, jump to clip, loop, volume, speed, per-clip volume,
+  and disposal; playing players pause while the window is minimized and resume
+  when it is restored, as Android does in the background
+- Equalizers and volumes above 1.0, for clips and overlay tracks, through the
+  plugin's own audio effect with the same filters and -1 dBFS limiter as
+  Android (see below)
+- Overlay audio tracks with their timeline window, fades, volume curve and
+  speed, kept in step with the video as on Android (moved back when they drift
+  more than 250 ms)
+- Playback telemetry: a clip's `X-Playback-Load-Id` correlates its requests,
+  each reported as `playback_network` events like Android's, until
+  `clearPlaybackTelemetryContext` revokes it
+- `errorCode` mapped from the HTTP status or Windows error as on Android, and
+  native diagnostics forwarded to the app's logger
+
+It does not support frame effects (`setFrameEffects` does nothing), and
+`bufferedPositionMs` of an MP4 read through Range requests reports the whole
+clip as buffered. There is no disk cache; `configureCache` is Android's.
+
+### The audio effect needs a manifest entry
+
+Windows creates the equalizer and volume-boost effect by name inside each
+player's audio pipeline, which an unpackaged app allows only for classes its
+manifest registers. Add this to the app's `windows/runner/runner.exe.manifest`,
+inside `<assembly>`:
+
+```xml
+<file name="divine_video_player_plugin.dll">
+  <activatableClass
+      name="DivineVideoPlayer.AudioShapingEffect"
+      threadingModel="both"
+      xmlns="urn:schemas-microsoft-com:winrt.v1"/>
+</file>
+```
+
+Without it, playback is unchanged except that equalizers are not applied and
+volumes above 1.0 play at 1.0; the plugin logs this once.
+
 ## Linux Backend Notes
 
 Linux uses a Dart backend built on `media_kit` rather than the package's
-platform-channel plugin path. That keeps the public `DivineVideoPlayer`
-API consistent without introducing a separate C++ Linux plugin to maintain.
+platform-channel plugin path, against the system or application package's
+libmpv.
+
+Linux uses mpv's `auto-safe` decoder selection with software texture output.
+This retains allowlisted hardware decoding while avoiding unrestricted codec
+probing, which can report a failed decoder attempt after a successful software
+fallback and leave paused preview readiness in error.
 
 The Linux backend supports:
 
@@ -269,14 +340,48 @@ The Linux backend supports:
 
 The Linux backend does not yet support overlay audio tracks via
 `setAudioTracks`. Callers that need mixed timeline audio should continue to
-use the existing mobile/macOS native backends.
+use the native backends.
 
 It also ignores a clip's `httpHeaders`, `volume`, `equalizer` and
 `trimToCommonTrackEnd`: the playlist carries only each clip's URI, `start`
-and `end`, so a source that needs request headers cannot play on Linux.
+and `end`, so a source that needs request headers cannot play on this backend.
 `setClipVolumes`, `setClipEqualizers`, `setAudioTrackEqualizer` and
 `setFrameEffects` do nothing there, and the backend does not pause when the
 app goes to the background.
+
+### Native desktop playback verification
+
+With Flutter 3.47.9 and the platform's native build dependencies installed,
+run on Linux:
+
+```sh
+python3 tool/native_playback_harness_test.py
+python3 tool/native_playback_harness.py --platform linux
+```
+
+and on Windows:
+
+```sh
+python tool/native_playback_harness.py --platform windows
+```
+
+The harness builds a separate Release consumer with the application's locked
+dependencies and launches it (under Xvfb on Linux). It checks actual Flutter
+pixels for a
+green local clip, a paused red HTTP replacement at position zero, and blue after
+explicit playback advances. A synthetic invalid source must still report an
+error and must never report a rendered frame. The HTTP server is loopback-only;
+the probe uses no account or remote media. Desktop CI runs the same checks.
+
+The four-second changing fixture is synthetic H.264, generated with:
+
+```sh
+ffmpeg -f lavfi -i color=c=red:s=128x240:r=12:d=2 \
+  -f lavfi -i color=c=blue:s=128x240:r=12:d=2 \
+  -filter_complex '[0:v][1:v]concat=n=2:v=1:a=0[v]' -map '[v]' \
+  -c:v libx264 -pix_fmt yuv420p -movflags +faststart -map_metadata -1 \
+  test/fixtures/desktop_changing_portrait.mp4
+```
 
 ## Web Backend Notes
 

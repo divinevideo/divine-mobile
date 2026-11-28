@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:db_client/db_client.dart';
-import 'package:drift/drift.dart' show Variable;
+import 'package:drift/drift.dart' show DatabaseConnection, Variable;
 import 'package:drift_dev/api/migrations_native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -19,6 +19,23 @@ void main() {
     setUp(() {
       verifier = SchemaVerifier(GeneratedHelper());
     });
+
+    // Validate the historical repair at v27, then reopen the same database
+    // through today's migration before using today's DAOs to replay messages.
+    Future<AppDatabase> openAfterFollowerMigration(
+      DatabaseConnection Function() newConnection,
+    ) async {
+      final historical = AppDatabase(newConnection());
+      try {
+        await verifier.migrateAndValidate(historical, 27);
+      } finally {
+        await historical.close();
+      }
+      final current = AppDatabase(newConnection());
+      addTearDown(current.close);
+      await verifier.migrateAndValidate(current, current.schemaVersion);
+      return current;
+    }
 
     test('canonical v25 retains account dismissals and sound jobs', () async {
       final schema = await verifier.schemaAt(25);
@@ -53,9 +70,7 @@ void main() {
           [account, 'jobs', 'pending', 'queued workflow'],
         );
       }
-      final db = AppDatabase(schema.newConnection());
-      addTearDown(db.close);
-      await verifier.migrateAndValidate(db, 27);
+      final db = await openAfterFollowerMigration(schema.newConnection);
 
       for (final account in [owner, otherOwner]) {
         final sound = await db.soundRequestStateDao.readAccount(account);
@@ -98,13 +113,14 @@ void main() {
       expect(await db.myFollowersDao.followersOf(otherOwner), isEmpty);
     });
 
-    test('canonical v26 retains read state, replay ids and queued work', () async {
+    test('v26 retains read state, replay ids and queued work', () async {
       final schema = await verifier.schemaAt(26);
       for (final account in [owner, otherOwner]) {
         schema.rawDatabase.execute(
           'INSERT INTO conversations (id, participant_pubkeys, created_at, '
-          'last_message_timestamp, last_message_created_at, retained_message_ids, '
-          'owner_pubkey, is_read, is_dismissed, last_read_timestamp) '
+          'last_message_timestamp, last_message_created_at, '
+          'retained_message_ids, owner_pubkey, is_read, is_dismissed, '
+          'last_read_timestamp) '
           'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
           [
             conversation,
@@ -135,9 +151,7 @@ void main() {
           [account, 'jobs', 'pending', 'queued workflow'],
         );
       }
-      final db = AppDatabase(schema.newConnection());
-      addTearDown(db.close);
-      await verifier.migrateAndValidate(db, 27);
+      final db = await openAfterFollowerMigration(schema.newConnection);
       for (final account in [owner, otherOwner]) {
         final row = (await db.conversationsDao.getConversation(
           conversation,
@@ -229,9 +243,7 @@ void main() {
             ],
           );
 
-          final db = AppDatabase(schema.newConnection());
-          addTearDown(db.close);
-          await verifier.migrateAndValidate(db, 27);
+          final db = await openAfterFollowerMigration(schema.newConnection);
           if (version == 24) {
             // The historical preview has no sound store to preserve. Confirm
             // the repaired store accepts account-owned jobs after upgrading.

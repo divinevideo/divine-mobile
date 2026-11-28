@@ -2976,10 +2976,28 @@ void main() {
     const blockedByOther =
         '0000000000000000000000000000000000000000000000000000000000000005';
 
+    test('first account adoption wakes owner-scoped DM listeners', () async {
+      final service = ContentBlocklistRepository();
+      final client = _MockNostrClient();
+      when(() => client.subscribe(any())).thenAnswer(
+        (_) => const Stream<Event>.empty(),
+      );
+      final snapshots = <Set<String>?>[];
+      final subscription = service.stateStream.listen((_) {
+        snapshots.add(service.dmHiddenPubkeysForAccount(ourPubkey));
+      });
+      await service.syncMuteListsInBackground(client, ourPubkey);
+      await pumpEventQueue();
+      expect(snapshots, contains(isEmpty));
+      await subscription.cancel();
+      service.dispose();
+    });
+
     test('is empty before any identity is adopted', () async {
       final service = ContentBlocklistRepository();
       await service.blockUser(runtimeBlocked);
 
+      expect(service.dmHiddenPubkeysForAccount(ourPubkey), isNull);
       expect(service.blockedPubkeys, contains(runtimeBlocked));
       expect(service.blockedPubkeysForAccount(ourPubkey), isEmpty);
     });
@@ -3042,6 +3060,12 @@ void main() {
         await service.syncMuteListsInBackground(mockClient, ourPubkey);
         await service.blockUser(runtimeBlocked, ourPubkey: ourPubkey);
 
+        expect(service.dmHiddenPubkeysForAccount(''), isNull);
+        expect(service.dmHiddenPubkeysForAccount(otherAccount), isNull);
+        expect(
+          service.dmHiddenPubkeysForAccount(ourPubkey),
+          contains(runtimeBlocked),
+        );
         expect(
           service.blockedPubkeysForAccount(ourPubkey),
           contains(runtimeBlocked),

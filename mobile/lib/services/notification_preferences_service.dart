@@ -66,6 +66,7 @@ class HiveNotificationPreferencesStore implements NotificationPreferencesStore {
   static const _prefsKey = 'push_preferences';
   static const _dirtyPrefix = 'push_preferences_dirty_';
   static const _schemaVersionPrefix = 'push_preferences_schema_';
+  static const _createdAtPrefix = 'push_preferences_created_at_';
 
   Future<NotificationPreferences?> loadExplicitPreferences() async {
     final box = await _openBox();
@@ -245,6 +246,35 @@ class HiveNotificationPreferencesStore implements NotificationPreferencesStore {
     }
   }
 
+  /// Highest kind-3083 `created_at` previously signed and handed to a relay
+  /// for [pubkey], or `null` when none has been recorded yet.
+  Future<int?> loadLastPublishedCreatedAt(String pubkey) async {
+    try {
+      final box = await _openDirtyBox();
+      return box.get(_createdAtKey(pubkey)) as int?;
+    } on Object catch (error) {
+      Log.warning(
+        'Failed to load published preferences timestamp: $error',
+        name: 'NotificationPreferencesService',
+        category: LogCategory.system,
+      );
+      return null;
+    }
+  }
+
+  Future<void> saveLastPublishedCreatedAt(String pubkey, int createdAt) async {
+    try {
+      final box = await _openDirtyBox();
+      await box.put(_createdAtKey(pubkey), createdAt);
+    } on Object catch (error) {
+      Log.warning(
+        'Failed to persist published preferences timestamp: $error',
+        name: 'NotificationPreferencesService',
+        category: LogCategory.system,
+      );
+    }
+  }
+
   static Future<Box<dynamic>> openBox() =>
       HiveBoxOpener.open<dynamic>(_boxName);
   static Future<Box<dynamic>> openDirtyBox() =>
@@ -254,6 +284,8 @@ class HiveNotificationPreferencesStore implements NotificationPreferencesStore {
 
   static String _schemaVersionKey(String pubkey) =>
       '$_schemaVersionPrefix$pubkey';
+
+  static String _createdAtKey(String pubkey) => '$_createdAtPrefix$pubkey';
 }
 
 enum NotificationPreferencesSyncOutcome {
@@ -394,7 +426,13 @@ class NotificationPreferencesService {
   /// mutations retain their own initiating-account lease.
   Future<NotificationPreferences> loadPreferences() async {
     final account = _accountPreferences;
-    if (account == null || !account.isBound) return _store.loadPreferences();
+    if (account == null || !account.isBound) {
+      // The legacy cache is shared by every account on this installation.
+      // It can never grant consent to private-message notifications.
+      return (await _store.loadPreferences()).copyWith(
+        directMessagesEnabled: false,
+      );
+    }
     final write = account.captureWrite();
     if (!(_migrationOwner?.isCurrent ?? false)) {
       _migration = null;
@@ -415,15 +453,20 @@ class NotificationPreferencesService {
           await account.seedLegacyNotificationPreferences({
             if (legacy != null)
               for (final entry in legacy.toJson().entries)
-                if (entry.value != defaults[entry.key])
+                if (entry.key !=
+                        NotificationPreference.directMessagesEnabled.name &&
+                    entry.value != defaults[entry.key])
                   'notifications/${entry.key}': entry.value,
           });
         }
       }());
     }
+    final owner = _currentPubkey();
+    final ownsConsent = owner != null && account.boundPubkey == owner;
     return NotificationPreferences.fromJson({
       for (final field in AccountPreferenceRegistry.notificationFields)
-        if (account.read('notifications/$field') is bool)
+        if (field != NotificationPreference.directMessagesEnabled.name ||
+            ownsConsent)
           field: account.read('notifications/$field'),
     });
   }
@@ -445,6 +488,19 @@ class NotificationPreferencesService {
     final account = _accountPreferences;
     final write = account?.captureWrite();
     final owner = _currentPubkey();
+    // A shared legacy preference has no evidence of who opted in. An account
+    // swap also invalidates a tap that belonged to the previous settings page.
+    if (requested.containsKey(
+      NotificationPreference.directMessagesEnabled.name,
+    )) {
+      final boundOwner = account?.boundPubkey;
+      if (boundOwner != null && boundOwner != owner) return;
+      if (boundOwner == null &&
+          requested[NotificationPreference.directMessagesEnabled.name] ==
+              true) {
+        return;
+      }
+    }
     if (account != null && account.isBound) {
       ++_localMutations;
       final generation = ++_generation;
@@ -521,6 +577,7 @@ class NotificationPreferencesService {
       final prefs = NotificationPreferences.fromJson({
         if (!replaceAll) ...(await _store.loadPreferences()).toJson(),
         ...requested,
+        'directMessagesEnabled': false,
       });
       write?.ensureCurrent();
       await _store.savePreferences(prefs);
@@ -553,7 +610,8 @@ class NotificationPreferencesService {
   /// list that predates the change.
   ///
   /// * 1 — added kind 34236 (new-post / "bell" notifications).
-  static const int publishedKindsSchemaVersion = 1;
+  /// * 2 — added kind 1059 for accounts that explicitly enable DM alerts.
+  static const int publishedKindsSchemaVersion = 2;
 
   /// Marks preferences dirty when the last published kind list predates
   /// [publishedKindsSchemaVersion].

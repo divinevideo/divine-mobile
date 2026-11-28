@@ -93,6 +93,9 @@ void main() {
     setUpAll(() {
       registerFallbackValue(File(''));
       registerFallbackValue(_metadata);
+      registerFallbackValue(
+        const DmVideoUpload(fileUrl: '', fileMetadata: _metadata),
+      );
     });
 
     setUp(() {
@@ -690,7 +693,10 @@ void main() {
               mimeType: any(named: 'mimeType'),
             ),
           ).thenAnswer(
-            (_) async => (url: 'https://media.example/a', metadata: _metadata),
+            (_) async => const DmVideoUpload(
+              fileUrl: 'https://media.example/a',
+              fileMetadata: _metadata,
+            ),
           );
 
       test('sends a member part to the author as a video message', () async {
@@ -709,10 +715,9 @@ void main() {
         ]))!;
         stubUpload();
         when(
-          () => videos.sendUploadedVideo(
+          () => videos.publishVideo(
             recipientPubkey: any(named: 'recipientPubkey'),
-            url: any(named: 'url'),
-            metadata: any(named: 'metadata'),
+            uploaded: any(named: 'uploaded'),
             extraTags: any(named: 'extraTags'),
           ),
         ).thenAnswer((_) async => _sent(_author));
@@ -720,15 +725,17 @@ void main() {
         await service().sendPart(room, File('part.mp4'));
 
         final captured = verify(
-          () => videos.sendUploadedVideo(
+          () => videos.publishVideo(
             recipientPubkey: _author,
-            url: 'https://media.example/a',
-            metadata: _metadata,
+            uploaded: captureAny(named: 'uploaded'),
             extraTags: captureAny(named: 'extraTags'),
           ),
         ).captured;
+        final uploaded = captured.first as DmVideoUpload;
+        expect(uploaded.fileUrl, 'https://media.example/a');
+        expect(uploaded.fileMetadata, _metadata);
         expect(
-          captured.single,
+          captured.last,
           anyElement(equals(['collab-room', _roomId, 'part', _author])),
         );
       });
@@ -748,10 +755,9 @@ void main() {
         ]))!;
         stubUpload();
         when(
-          () => videos.sendUploadedVideo(
+          () => videos.publishVideo(
             recipientPubkey: any(named: 'recipientPubkey'),
-            url: any(named: 'url'),
-            metadata: any(named: 'metadata'),
+            uploaded: any(named: 'uploaded'),
             extraTags: any(named: 'extraTags'),
           ),
         ).thenAnswer((_) async => const NIP17SendResult.failure('offline'));
@@ -780,7 +786,10 @@ void main() {
             mimeType: any(named: 'mimeType'),
           ),
         ).thenAnswer(
-          (_) async => (url: 'https://media.example/a', metadata: _metadata),
+          (_) async => const DmVideoUpload(
+            fileUrl: 'https://media.example/a',
+            fileMetadata: _metadata,
+          ),
         );
 
         await service().sendPart(room, File('part.mp4'));
@@ -808,7 +817,7 @@ void main() {
             videoFile: any(named: 'videoFile'),
             mimeType: any(named: 'mimeType'),
           ),
-        ).thenAnswer((_) async => null);
+        ).thenAnswer((_) async => throw const DmVideoUploadFailed('offline'));
 
         await expectLater(
           service().sendPart(room, File('part.mp4')),

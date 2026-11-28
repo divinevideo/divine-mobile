@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:mocktail/mocktail.dart';
@@ -296,6 +298,197 @@ void main() {
 
         await browser.getClassicVideos(skipCache: true);
         expect(archiveReads, greaterThan(firstOpening));
+      },
+    );
+
+    test(
+      'an account the gate rejects reads the archive for browsing and playback',
+      () async {
+        final nostr = _Nostr();
+        when(() => nostr.publicKey).thenReturn('');
+        var allowed = false;
+        final repository = VideosRepository(
+          nostrClient: nostr,
+          funnelcakeApiClient: api,
+          classicRecommendationsEnabled: true,
+          classicRecommendationsAllowed: () => allowed,
+        );
+        var archiveReads = 0;
+        when(
+          () => api.getClassicVines(
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+          ),
+        ).thenAnswer((_) async {
+          archiveReads++;
+          return [_stats(1)];
+        });
+        when(
+          () => api.getClassicRecommendations(
+            request: any(named: 'request'),
+            userPubkey: any(named: 'userPubkey'),
+          ),
+        ).thenAnswer(
+          (_) async =>
+              RecommendationsResponse(videos: [_stats(2)], source: 'mixed'),
+        );
+
+        await repository.getClassicVideos(skipCache: true);
+        await repository.getClassicRecommendations(request: request);
+        expect(archiveReads, greaterThan(0));
+        verifyNever(
+          () => api.getClassicRecommendations(
+            request: any(named: 'request'),
+            userPubkey: any(named: 'userPubkey'),
+          ),
+        );
+
+        // The gate is read per request: once the account is confirmed, the
+        // same repository uses the endpoint without being rebuilt.
+        allowed = true;
+        await repository.getClassicRecommendations(request: request);
+        verify(
+          () => api.getClassicRecommendations(
+            request: any(named: 'request'),
+            userPubkey: any(named: 'userPubkey'),
+          ),
+        ).called(1);
+      },
+    );
+
+    test(
+      'archive-only browsing stays on the archive for an eligible account',
+      () async {
+        final nostr = _Nostr();
+        when(() => nostr.publicKey).thenReturn('');
+        final repository = VideosRepository(
+          nostrClient: nostr,
+          funnelcakeApiClient: api,
+          classicRecommendationsEnabled: true,
+          classicRecommendationsAllowed: () => true,
+        );
+        when(
+          () => api.getClassicVines(
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+          ),
+        ).thenAnswer((_) async => [_stats(9)]);
+
+        final page = await repository.getClassicVideos(archiveOnly: true);
+
+        expect(page.videos.map((video) => video.id), [_id(9)]);
+        verifyNever(
+          () => api.getClassicRecommendations(
+            request: any(named: 'request'),
+            userPubkey: any(named: 'userPubkey'),
+          ),
+        );
+      },
+    );
+
+    test(
+      'closing the gate while a playable reply is in flight drops the reply '
+      'instead of showing or replacing it',
+      () async {
+        final nostr = _Nostr();
+        when(() => nostr.publicKey).thenReturn('');
+        var allowed = true;
+        final repository = VideosRepository(
+          nostrClient: nostr,
+          funnelcakeApiClient: api,
+          classicRecommendationsEnabled: true,
+          classicRecommendationsAllowed: () => allowed,
+        );
+        var archiveReads = 0;
+        when(
+          () => api.getClassicVines(
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+          ),
+        ).thenAnswer((_) async {
+          archiveReads++;
+          return [_stats(9)];
+        });
+        final reply = Completer<RecommendationsResponse>();
+        when(
+          () => api.getClassicRecommendations(
+            request: any(named: 'request'),
+            userPubkey: any(named: 'userPubkey'),
+          ),
+        ).thenAnswer((_) => reply.future);
+
+        final inFlight = repository.getClassicRecommendations(request: request);
+        await pumpEventQueue();
+
+        allowed = false;
+        reply.complete(
+          RecommendationsResponse(videos: [_stats(1)], source: 'mixed'),
+        );
+
+        await expectLater(inFlight, throwsA(isA<FunnelcakeException>()));
+        expect(archiveReads, isZero);
+      },
+    );
+
+    test(
+      'closing the gate mid-flight supersedes recommendations and stops '
+      'top-up reads',
+      () async {
+        final nostr = _Nostr();
+        when(() => nostr.publicKey).thenReturn('');
+        var allowed = true;
+        final repository = VideosRepository(
+          nostrClient: nostr,
+          funnelcakeApiClient: api,
+          classicRecommendationsEnabled: true,
+          classicRecommendationsAllowed: () => allowed,
+        );
+        final firstReply = Completer<RecommendationsResponse>();
+        var calls = 0;
+        when(
+          () => api.getClassicRecommendations(
+            request: any(named: 'request'),
+            userPubkey: any(named: 'userPubkey'),
+          ),
+        ).thenAnswer((_) {
+          calls++;
+          return firstReply.future;
+        });
+
+        final inFlight = repository.getClassicRecommendations(request: request);
+        await pumpEventQueue();
+        expect(calls, 1);
+
+        allowed = false;
+        firstReply.complete(
+          RecommendationsResponse(
+            videos: [_stats(1, classic: false)],
+            source: 'mixed',
+            hasMore: true,
+            nextCursor: 'page-2',
+          ),
+        );
+
+        await expectLater(inFlight, throwsA(isA<FunnelcakeException>()));
+        expect(calls, 1);
+
+        // Browsing also supersedes when the gate closes with unchanged viewer.
+        allowed = true;
+        final browseReply = Completer<RecommendationsResponse>();
+        when(
+          () => api.getClassicRecommendations(
+            request: any(named: 'request'),
+            userPubkey: any(named: 'userPubkey'),
+          ),
+        ).thenAnswer((_) => browseReply.future);
+
+        final browseInFlight = repository.getClassicVideos();
+        await pumpEventQueue();
+        allowed = false;
+        browseReply.complete(
+          RecommendationsResponse(videos: [_stats(2)], source: 'mixed'),
+        );
+        await expectLater(browseInFlight, throwsA(isA<FunnelcakeException>()));
       },
     );
 

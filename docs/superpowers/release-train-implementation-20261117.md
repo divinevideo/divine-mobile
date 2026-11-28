@@ -5,7 +5,7 @@ Both levels default to `off`; merging this implementation does not enable it.
 Patches and livestreams remain under their existing holds.
 
 The main-only `Store release train` workflow runs hourly at :17 UTC and accepts
-manual dispatch. Automatic iOS builds are spaced at least six hours apart,
+manual dispatch. Automatic iOS builds are spaced at least twelve hours apart,
 including retries, and require app-affecting changes. The hourly tick still
 observes testing exposure and store reviews; it is not an hourly native build.
 The explicit manual iOS release workflow remains an operator-triggered path.
@@ -119,6 +119,52 @@ and a separate no-bypass update/deletion ruleset for `release-candidate/*`.
 The normal workflow token has contents read, actions read, checks read, and
 deployments write. Third-party Actions are pinned to commit SHAs.
 
+## Production store review preflight
+
+When the train selects a production candidate, it compares that build’s
+verified source commit with the currently published build on the same store.
+The Actions summary names the checks to run before App Store submission or
+Play production promotion. A dry run reports the same source findings without
+submitting. TestFlight and Play internal testing stay available to test fixes.
+
+- **Apple** blocks the return of unsupported audio or Bluetooth background
+  modes, which caused review trouble before. Changes to supported devices or
+  store assets prompt an iPad screenshot check. Permission purpose strings, App
+  Transport Security, entitlements, privacy manifests, export declarations and
+  dependency or Flutter upgrades prompt a review of the applicable App Store
+  Connect answers. Use the documented past
+  [Apple review resolutions](../../mobile/docs/APPLE_REVIEW_RESPONSE.md#appendix-a-historical-review-resolutions)
+  and the [App Review Guidelines](https://developer.apple.com/app-store/review/guidelines/).
+- **Google Play** flags Android manifest, app Gradle, fastlane configuration,
+  dependency lockfile and Flutter version changes for checking the merged
+  bundle’s permissions, target API and App content declarations. The
+  production track edit must pass the
+  [Android Publisher edit validation](https://developers.google.com/android-publisher/api-ref/rest/v3/edits/validate)
+  before the coordinator commits it. A refused validation discards the edit and
+  leaves the build available for retry after the issue is fixed. Check Play Console’s
+  [pre-review checks](https://support.google.com/googleplay/android-developer/answer/14807773)
+  when reviewing the listing and the candidate.
+- **Both stores** flag changes to the screens and code behind moderation
+  (filtering, reporting and blocking), reviewer access, account deletion,
+  consent and legal/support flows. Exercise the affected flows on the selected
+  build and update reviewer access instructions or disclosures as needed.
+
+Fix confirmed problems before submitting. When the flagged flows and store
+listing are ready, copy the summary’s `approve_store_review` value into a
+manual `Store release train` dispatch with `dry_run=false`. The confirmation
+applies to one platform, build, production baseline and set of findings. The
+coordinator keeps it until that store accepts the build, so a deferred or
+refused attempt is retried by later ticks without another dispatch. A different
+candidate, baseline or set of findings needs its own report. Scheduled runs and
+dry runs never accept a new value. Missing provenance, a production commit
+outside the candidate’s history, other comparison failures and known
+regressions offer no value to confirm: they stop that store’s submission until
+fixed, while builds, betas and the other store continue.
+
+Check screenshots, reviewer login and declarations changed directly in the
+store consoles as part of the console change. Exercise remotely enabled
+features and live moderation on the candidate when applicable.
+
 ## Bootstrap and activation
 
 Dispatch with `setup_codemagic=true`, `dry_run=true` to preview, then
@@ -140,11 +186,29 @@ Record the Android rejection-email operator at activation. Use the Play
 lifecycle hold, rejection emails and the Android kill switch to stop and
 investigate a rejected release.
 
-A public iOS beta submission needs four-hour spacing and fewer than six beta
-submissions in the trailing 24 hours. App Store submission has no TestFlight
-waiting period; it preserves the limit of one submission in the trailing
-24 hours and leaves an existing review queued unless a real bug requires
-withdrawal. Android replacement preserves the current internal candidate's
+Scheduled iOS builds, including retries, are spaced at least twelve hours apart.
+Public TestFlight releases also require twelve-hour spacing and fewer than two
+beta review submissions in the trailing 24 hours. The durable operation journal
+preserves that spacing when an already-approved build needs no new review or an
+accepted request is recovered after interruption. First public group attachment
+uses the same budget whether it is fresh or recovered, with at most one build
+starting public distribution per tick. Completing missing groups for an
+already-public build preserves its original cadence clock.
+
+App Store submissions must be at least 48 hours apart. The coordinator checks
+App Store Connect for the prior version's state and leaves pending review or
+publication alone. If the prior version becomes available after 48 hours, the
+next eligible build can submit on that tick. If it becomes available earlier,
+the next submission waits until the interval from the prior submission ends.
+Google Play promotions require at least 48 hours since the preceding promotion
+or newly observed production availability. Accepted operations preserve the
+cadence across recovery and acknowledgement on both stores.
+App Store submission has no additional TestFlight soak requirement and leaves
+an existing review queued unless a real bug requires withdrawal. The coordinator
+keeps polling hourly and crash monitoring/fix work continues independently.
+These limits govern automated actions: they do not recall accepted reviews,
+control store approval timing, or prevent direct manual console releases.
+Android replacement preserves the current internal candidate's
 full continuous six hours, including when a manual build supersedes a
 scheduled candidate.
 
@@ -162,7 +226,7 @@ rejection stays in the audit when its build has a provenance record.
 
 The first complete lifecycle read initializes versioned publication evidence.
 Published internal builds start a fresh six-hour exposure period. The highest
-published production build starts the daily wait, preserving any later recorded
+published production build starts the 48-hour wait, preserving any later recorded
 promotion time. A later observation of the same or an older production build
 preserves that clock. Incomplete lifecycle reads leave both timers untouched.
 
@@ -221,6 +285,10 @@ completed. Preserved artifacts remain subject to Codemagic retention.
 Dispatch `acknowledge` with the exact item from the run summary: an
 `ios-build:<store-id>` beta rejection, `ios-version:<store-id>` store rejection,
 or a failed operation identity. Resolve the provider failure before acknowledging.
+For an App Store rejection, use the [App Review reply template](../../mobile/docs/APPLE_REVIEW_RESPONSE.md#replying-to-a-rejection)
+to address each finding and tell the reviewer how to verify the fix. Reply in
+App Store Connect before acknowledging a rejection that requires resubmission.
+
 The acknowledgement is durable and recorded in the deployment history. Version
 acknowledgements are bound to the observed marketing version as well as the store
 record ID. Positive submission acceptance consumes the grant, and a newer review

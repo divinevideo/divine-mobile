@@ -9,13 +9,16 @@ import 'package:divine_video_player/divine_video_player.dart';
 import 'package:flutter/gestures.dart' show kDoubleTapTimeout;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:follow_repository/follow_repository.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/info_sticker.dart';
-import 'package:openvine/providers/notifications_providers.dart';
+import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/sticker_responses_filter_provider.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/services/notification_service.dart';
@@ -26,10 +29,21 @@ import 'package:openvine/widgets/video_feed_item/interactive_sticker_overlay.dar
 import 'package:openvine/widgets/video_feed_item/link_sticker_sheet.dart';
 import 'package:openvine/widgets/video_feed_item/player_gesture_surface.dart';
 import 'package:openvine/widgets/video_feed_item/video_sticker_tap_areas.dart';
+import 'package:video_responses_repository/video_responses_repository.dart';
 
 class _MockController extends Mock implements DivineVideoPlayerController {}
 
 class _MockNotificationService extends Mock implements NotificationService {}
+
+class _MockVideoResponsesRepository extends Mock
+    implements VideoResponsesRepository {}
+
+class _MockFollowRepository extends Mock implements FollowRepository {}
+
+class _SignedOut extends NostrSession {
+  @override
+  NostrSessionReadiness build() => const NostrSessionReadiness.signedOut();
+}
 
 const _link = VideoStickerRegion(
   kind: VideoStickerKind.link,
@@ -235,8 +249,17 @@ void main() {
     late int playerTaps;
     late int playerDoubleTaps;
     late int playerHolds;
+    late _MockVideoResponsesRepository responsesRepository;
 
     setUp(() {
+      responsesRepository = _MockVideoResponsesRepository();
+      when(
+        () => responsesRepository.fetchReplies(
+          videoId: any(named: 'videoId'),
+          videoAddress: any(named: 'videoAddress'),
+          limit: any(named: 'limit'),
+        ),
+      ).thenAnswer((_) async => const VideoResponses());
       controller = _MockController();
       states = StreamController<DivineVideoPlayerState>.broadcast();
       opened = [];
@@ -255,6 +278,7 @@ void main() {
       String? audioEventId,
       bool canSetReminders = true,
       bool isActive = true,
+      bool isAddYoursSeries = false,
     }) async {
       tester.view.physicalSize = const Size(360, 640);
       tester.view.devicePixelRatio = 1;
@@ -266,6 +290,15 @@ void main() {
             notificationServiceProvider.overrideWithValue(
               _MockNotificationService(),
             ),
+            // An Add yours or replies sticker reads who joined or replied.
+            videoResponsesRepositoryProvider.overrideWithValue(
+              responsesRepository,
+            ),
+            followRepositoryProvider.overrideWithValue(_MockFollowRepository()),
+            stickerResponsesFilterProvider.overrideWithValue(
+              (videos) => videos,
+            ),
+            nostrSessionProvider.overrideWith(_SignedOut.new),
           ],
           child: MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
@@ -288,6 +321,7 @@ void main() {
                     onOpen: (_, region, _) => opened.add(region),
                     canSetReminders: canSetReminders,
                     isActive: isActive,
+                    isAddYoursSeries: isAddYoursSeries,
                   ),
                 ),
               ],
@@ -502,6 +536,35 @@ void main() {
         await tester.tap(find.text('Ask me anything'), warnIfMissed: false);
         await tester.pump(kDoubleTapTimeout);
         expect(opened, isEmpty);
+      });
+
+      testWidgets('leaves an Add yours only some may answer out of its '
+          'series, and keeps one in the frames', (tester) async {
+        VideoStickerRegion addYours(VideoStickerAudience audience) =>
+            VideoStickerRegion(
+              kind: VideoStickerKind.prompt,
+              target: '',
+              centerX: 0.5,
+              centerY: audience.isRestricted ? 0.3 : 0.7,
+              width: 0.6,
+              height: 0.16,
+              style: audience.isRestricted ? null : 'light',
+              label: audience.isRestricted
+                  ? 'Show your desk\ndesksetup'
+                  : 'Show your car\ncarsetup',
+              audience: audience,
+            );
+        final regions = [
+          addYours(VideoStickerAudience.following),
+          addYours(VideoStickerAudience.everyone),
+        ];
+
+        await pump(tester, regions, isActive: false);
+        expect(find.byType(InteractiveStickerOverlay), findsNWidgets(2));
+
+        await pump(tester, regions, isActive: false, isAddYoursSeries: true);
+        expect(find.byType(InteractiveStickerOverlay), findsOneWidget);
+        expect(find.text('Show your car'), findsOneWidget);
       });
 
       testWidgets('draws the sticker sharp over its area', (tester) async {

@@ -423,15 +423,13 @@ void main() {
         await archive.replaceOwner(owner, [row(owner)]);
         await prefs.remove(CuratedListService.listsStorageKey);
         when(
-          () => client.queryEventsDetailed(
-            any(),
-            useCache: false,
-            requireAllRelaysSettled: true,
+          () => client.readCurrentVersion(
+            kind: 30005,
+            pubkey: any(named: 'pubkey'),
+            dTag: any(named: 'dTag'),
             timeout: any(named: 'timeout'),
           ),
-        ).thenAnswer(
-          (_) async => (events: <Event>[], timedOut: true, noRelays: false),
-        );
+        ).thenAnswer((_) async => const CurrentVersionFailed(noRelay: false));
         final service = open();
         expect(await service.addVideoToList('$owner:retained', third), isFalse);
         expect(service.getListById('$owner:retained')!.videoEventIds, [

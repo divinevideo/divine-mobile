@@ -3,9 +3,11 @@ package co.openvine.app
 import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.StatFs
@@ -18,6 +20,8 @@ import co.openvine.app.videoeffects.AdjustVideoEffect
 import co.openvine.app.videoeffects.AnaglyphVideoEffect
 import co.openvine.app.videoeffects.AnamorphicVideoEffect
 import co.openvine.app.videoeffects.AsciiVideoEffect
+import co.openvine.app.videoeffects.BassHitVideoEffect
+import co.openvine.app.videoeffects.BlastVideoEffect
 import co.openvine.app.videoeffects.BricksVideoEffect
 import co.openvine.app.videoeffects.ComicVideoEffect
 import co.openvine.app.videoeffects.CrossStitchVideoEffect
@@ -93,6 +97,15 @@ class MainActivity : FlutterFragmentActivity() {
         private const val INSTALL_SOURCE_TAG = "OpenVineInstallSource"
         private const val DEVICE_MEMORY_CHANNEL = "divine/device_memory"
         private const val DEVICE_STORAGE_CHANNEL = "divine/device_storage"
+        private const val LARGE_SCREEN_LAYOUT_CHANNEL = "divine/large_screen_layout"
+
+        // AdaptiveBreakpoints.large in lib/ui/adaptive_layout.dart.
+        private const val LARGE_SCREEN_MIN_SMALLEST_WIDTH_DP = 600
+
+        // Where shared_preferences keeps FeatureFlagService's override of
+        // FeatureFlag.largeScreenLayout ('ff_largeScreenLayout').
+        private const val FLUTTER_PREFERENCES = "FlutterSharedPreferences"
+        private const val LARGE_SCREEN_LAYOUT_PREFERENCE = "flutter.ff_largeScreenLayout"
     }
 
     private var navigationChannel: MethodChannel? = null
@@ -111,6 +124,30 @@ class MainActivity : FlutterFragmentActivity() {
 
     // Nostr bridge per-frame origin attestation plugin (#4105)
     private var nostrBridgeAttestationPlugin: NostrBridgeAttestationPlugin? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        allowRotationForLargeScreenLayout()
+        super.onCreate(savedInstanceState)
+    }
+
+    /**
+     * Lets a large screen rotate from the first frame while the large-screen
+     * layouts are on, as they are by default (#11472).
+     *
+     * The manifest keeps the activity in portrait, which phones need. Left to
+     * Dart, a tablet held in landscape started in portrait and turned once
+     * AdaptiveLayoutScope allowed rotation. Only someone who turned the
+     * layouts off keeps the manifest's portrait here; a build that turns them
+     * off by default turns to portrait once Dart applies it.
+     */
+    private fun allowRotationForLargeScreenLayout() {
+        if (resources.configuration.smallestScreenWidthDp < LARGE_SCREEN_MIN_SMALLEST_WIDTH_DP) {
+            return
+        }
+        val preferences = getSharedPreferences(FLUTTER_PREFERENCES, Context.MODE_PRIVATE)
+        if (!preferences.getBoolean(LARGE_SCREEN_LAYOUT_PREFERENCE, true)) return
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_FULL_USER
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -134,6 +171,10 @@ class MainActivity : FlutterFragmentActivity() {
 
         // Disk capacity and free space, which size the media caches.
         setupDeviceStorageChannel(flutterEngine)
+
+        // Whether the system ignores the portrait lock on large displays,
+        // which turns on the large-screen layouts there (#11471).
+        setupLargeScreenLayoutChannel(flutterEngine)
 
         // Set up NIP-55 Android Signer plugin
         nostrSignerPlugin = NostrSignerPlugin(this, flutterEngine)
@@ -163,6 +204,8 @@ class MainActivity : FlutterFragmentActivity() {
         TunnelVideoEffect.register()
         ZoomBlurVideoEffect.register()
         SpinBlurVideoEffect.register()
+        BassHitVideoEffect.register()
+        BlastVideoEffect.register()
         ComicVideoEffect.register()
         EightBitVideoEffect.register()
         AnaglyphVideoEffect.register()
@@ -287,6 +330,26 @@ class MainActivity : FlutterFragmentActivity() {
             }
         }
         Log.d(INSTALL_SOURCE_TAG, "Install source channel registered")
+    }
+
+    private fun setupLargeScreenLayoutChannel(flutterEngine: FlutterEngine) {
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            LARGE_SCREEN_LAYOUT_CHANNEL,
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                // Android 16 ignores the orientation, resizability and
+                // aspect-ratio restrictions of apps that target API 36 on
+                // displays at least 600 dp across, so the manifest's
+                // portrait lock no longer holds there. Dart checks the
+                // display size, which changes as a foldable folds.
+                "ignoresOrientationLockOnLargeScreens" -> result.success(
+                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA &&
+                        applicationInfo.targetSdkVersion >= Build.VERSION_CODES.BAKLAVA,
+                )
+                else -> result.notImplemented()
+            }
+        }
     }
 
     private fun setupDeviceMemoryChannel(flutterEngine: FlutterEngine) {

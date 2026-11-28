@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- What TalkBack says for the shutter; the same copy as the Apple Watch app. -->
+    <string name="divine_watch_start_recording">Start recording</string>
+    <string name="divine_watch_stop_recording">Stop recording</string>
+    <!-- Name of the notification channel for the ongoing activity that offers the remote while the phone camera is open. Shown in the watch's notification settings. -->
+    <string name="divine_watch_notification_channel">Camera remote</string>
+</resources>

@@ -17,6 +17,13 @@ uniform vec2 uSize;
 // How far the picture turns into pixel art, 0 to 1.
 uniform float uIntensity;
 
+// How large the pixels are, as a share of the default.
+uniform float uPixel;
+
+// How many shades red and green each take, 1 to 15; blue takes three
+// sevenths as many.
+uniform float uLevels;
+
 uniform sampler2D uTexture;
 
 out vec4 fragColor;
@@ -35,7 +42,7 @@ void main() {
   vec2 fragCoord = FlutterFragCoord().xy;
   vec2 p = vec2(fragCoord.x, uSize.y - fragCoord.y);
   float s = min(uSize.x, uSize.y);
-  float cell = max(1.0, s / 100.0);
+  float cell = max(1.0, s / 100.0 * uPixel);
   vec2 index = floor(p / cell);
   vec2 centre = (index + 0.5) * cell;
   float q = 0.25 * cell;
@@ -43,7 +50,7 @@ void main() {
   vec3 block = 0.25 * (tap(centre + vec2(-q, -q)) + tap(centre + vec2(q, -q)) +
     tap(centre + vec2(-q, q)) + tap(centre + vec2(q, q)));
   float threshold = 0.25 * bayer(0.5 * index) + bayer(index);
-  vec3 levels = vec3(7.0, 7.0, 3.0);
+  vec3 levels = vec3(uLevels, uLevels, max(1.0, floor(uLevels * 3.0 / 7.0 + 0.5)));
   vec3 shade = clamp(floor(block * levels + threshold), vec3(0.0), levels) / levels;
   fragColor = vec4(mix(color, shade, uIntensity), 1.0);
 }

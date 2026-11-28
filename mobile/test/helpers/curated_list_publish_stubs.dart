@@ -129,15 +129,49 @@ void stubAuthoritativeListRead(
   registerFallbackValue(<Filter>[]);
   registerFallbackValue(Duration.zero);
   when(
-    () => client.queryEventsDetailed(
-      any(),
-      useCache: false,
-      requireAllRelaysSettled: true,
+    () => client.readCurrentVersion(
+      kind: any(named: 'kind'),
+      pubkey: any(named: 'pubkey'),
+      dTag: any(named: 'dTag'),
       timeout: any(named: 'timeout'),
     ),
-  ).thenAnswer(
-    (_) async => (events: events().toList(), timedOut: false, noRelays: false),
-  );
+  ).thenAnswer((i) async => currentVersionOf(events(), i));
 }
 
 Iterable<Event> _noListEvents() => const [];
+
+/// What `NostrClient.readCurrentVersion` answers, for the address [read]
+/// asked about, when every relay answered with [events]: the newest version
+/// by `created_at`, then the lowest id. Signatures are not checked.
+CurrentVersionRead currentVersionOf(Iterable<Event> events, Invocation read) {
+  final kind = read.namedArguments[#kind] as int;
+  final pubkey = read.namedArguments[#pubkey] as String;
+  final dTag = read.namedArguments[#dTag] as String?;
+  Event? newest;
+  for (final event in events) {
+    if (event.kind != kind ||
+        event.pubkey != pubkey ||
+        (dTag != null && event.dTagValue != dTag)) {
+      continue;
+    }
+    if (newest == null ||
+        event.createdAt > newest.createdAt ||
+        (event.createdAt == newest.createdAt &&
+            event.id.compareTo(newest.id) < 0)) {
+      newest = event;
+    }
+  }
+  return newest == null
+      ? const CurrentVersionAbsent()
+      : CurrentVersionFound(newest);
+}
+
+/// What `NostrClient.readCurrentVersion` answers for [read] when the relays
+/// gave [relays]: a read that timed out or reached no relay fails, whatever
+/// it collected.
+CurrentVersionRead currentVersionFromRelays(
+  ({List<Event> events, bool timedOut, bool noRelays}) relays,
+  Invocation read,
+) => relays.timedOut || relays.noRelays
+    ? CurrentVersionFailed(noRelay: relays.noRelays)
+    : currentVersionOf(relays.events, read);

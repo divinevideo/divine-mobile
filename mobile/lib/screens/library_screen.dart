@@ -12,6 +12,7 @@ import 'package:image_picker/image_picker.dart' show XFile;
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/clip_gallery_save/clip_gallery_save_cubit.dart';
 import 'package:openvine/blocs/clips_library/clips_library_bloc.dart';
+import 'package:openvine/blocs/drafts_library/draft_clip_conversion_cubit.dart';
 import 'package:openvine/blocs/drafts_library/drafts_library_bloc.dart';
 import 'package:openvine/blocs/gallery_clip_import/gallery_clip_import_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -23,6 +24,8 @@ import 'package:openvine/models/video_publish/video_publish_state.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/database_provider.dart';
+import 'package:openvine/providers/draft_clip_conversions_provider.dart';
+import 'package:openvine/providers/layer_rasterizer_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
@@ -33,6 +36,9 @@ import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/screens/gallery_clip_import/gallery_clip_import_page.dart';
 import 'package:openvine/screens/video_editor/video_editor_screen.dart';
 import 'package:openvine/services/clip_provenance_verifier.dart';
+import 'package:openvine/services/video_editor/draft_render_parameters_service.dart';
+import 'package:openvine/services/video_editor/video_editor_clip_library_save_service.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/widgets/library/library.dart';
@@ -292,6 +298,33 @@ class LibraryScreen extends ConsumerWidget {
             includeAutosaveDraft: includeAutosaveDraft,
           )..add(const DraftsLibraryLoadRequested()),
         ),
+        BlocProvider<DraftClipConversionCubit>(
+          key: ValueKey((draftStorageService, clipLibraryService)),
+          create: (_) {
+            // Read now: the render outlives this screen when the user leaves
+            // mid-conversion, and `ref` is unusable once it unmounts.
+            final renderParameters = DraftRenderParametersService(
+              rasterizer: ref.read(layerRasterizerProvider),
+            );
+            final bakeCapturedChromaKey = ref
+                .read(clipManagerProvider.notifier)
+                .bakeCapturedChromaKey;
+            return DraftClipConversionCubit(
+              conversions: ref.read(draftClipConversionsProvider),
+              loadDraft: draftStorageService.getValidatedDraftById,
+              renderDraft: (draft) =>
+                  VideoEditorClipLibrarySaveService.renderDraftForLibrary(
+                    draft: draft,
+                    renderParameters: renderParameters,
+                    renderId: '${draft.id}_clip_library_convert',
+                    bakeCapturedChromaKey: bakeCapturedChromaKey,
+                  ),
+              saveClip: clipLibraryService.saveClip,
+              discardClip:
+                  VideoEditorClipLibrarySaveService.cleanupFlattenedClip,
+            );
+          },
+        ),
         if (_offersGalleryImport(selectionMode: selectionMode))
           const GalleryClipImportProvider(),
         const ClipGallerySaveProvider(),
@@ -339,6 +372,8 @@ class _LibraryView extends ConsumerStatefulWidget {
 class _LibraryViewState extends ConsumerState<_LibraryView>
     with TickerProviderStateMixin, ReducedMotionTabControllerMixin {
   static const _logName = 'LibraryScreen';
+
+  final GlobalKey _libraryContentKey = GlobalKey();
 
   late int _activeTabIndex;
 
@@ -479,7 +514,6 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
     BuildContext context,
     ClipsLibraryBloc clipsBloc,
     ClipSort currentSort,
-    int currentColumns,
   ) async {
     final selected = await VineBottomSheetSelectionMenu.show(
       context: context,
@@ -528,12 +562,25 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
 
     if (selected == null || !context.mounted) return;
     if (selected == _gridSizeMenuValue) {
-      await _openGridSizeMenu(context, clipsBloc, currentColumns);
+      await _openGridSizeMenu(context, clipsBloc);
       return;
     }
     clipsBloc.add(
       ClipsLibrarySortChanged(ClipSort.fromPersistenceKey(selected)),
     );
+  }
+
+  int? _gridColumnOffset(BuildContext context) {
+    // The tab body fills the library content after panel and safe-area
+    // insets. Read its current width in case the window was resized while a
+    // menu was open.
+    final width = _libraryContentKey.currentContext?.size?.width;
+    if (width == null) return null;
+    return context.adaptiveLayout.gridColumns(
+          compact: ClipGridColumns.initial,
+          width: width,
+        ) -
+        ClipGridColumns.initial;
   }
 
   /// The way to the column count that does not need a pinch.
@@ -545,11 +592,12 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
   Future<void> _openGridSizeMenu(
     BuildContext context,
     ClipsLibraryBloc clipsBloc,
-    int currentColumns,
   ) async {
+    final extraColumns = _gridColumnOffset(context);
+    if (extraColumns == null) return;
     final selected = await VineBottomSheetSelectionMenu.show(
       context: context,
-      selectedValue: '$currentColumns',
+      selectedValue: '${clipsBloc.state.gridColumnCount}',
       options: [
         for (
           var columns = ClipGridColumns.min;
@@ -557,7 +605,7 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
           columns++
         )
           VineBottomSheetSelectionOptionData(
-            label: context.l10n.libraryGridSizeColumns(columns),
+            label: context.l10n.libraryGridSizeColumns(columns + extraColumns),
             value: '$columns',
             leadingIcon: .gridNine,
           ),
@@ -568,9 +616,11 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
     if (columns == null) return;
     if (!context.mounted) return;
     clipsBloc.add(ClipsLibraryGridColumnsChanged(columns));
+    final currentOffset = _gridColumnOffset(context);
+    if (currentOffset == null) return;
     announceDetached(
       context,
-      context.l10n.libraryGridSizeColumns(columns),
+      context.l10n.libraryGridSizeColumns(columns + currentOffset),
       description: 'announce library grid columns',
       logName: _logName,
     );
@@ -714,6 +764,10 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
     final isSavingToGallery = context.select(
       (ClipGallerySaveCubit cubit) => cubit.state.isSaving,
     );
+    final isConvertingDraft = context.select(
+      (DraftClipConversionCubit cubit) =>
+          cubit.state == DraftClipConversionStatus.converting,
+    );
     final offersGalleryImport = _offersGalleryImport(
       selectionMode: widget.selectionMode,
     );
@@ -727,6 +781,33 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
 
     return MultiBlocListener(
       listeners: [
+        BlocListener<DraftClipConversionCubit, DraftClipConversionStatus>(
+          listenWhen: (_, curr) =>
+              curr != DraftClipConversionStatus.idle &&
+              curr != DraftClipConversionStatus.converting,
+          listener: (context, status) {
+            if (status == DraftClipConversionStatus.converted) {
+              clipsBloc.add(const ClipsLibraryClipsChanged());
+            }
+            final l10n = context.l10n;
+            _showSnackBar(
+              context,
+              label: switch (status) {
+                DraftClipConversionStatus.converted =>
+                  l10n.libraryDraftConvertedToClipSnackbar,
+                DraftClipConversionStatus.overlaysUnavailable =>
+                  l10n.libraryDraftConvertOverlaysUnavailable,
+                DraftClipConversionStatus.lowStorage =>
+                  l10n.publishErrorLowStorage,
+                DraftClipConversionStatus.idle ||
+                DraftClipConversionStatus.converting ||
+                DraftClipConversionStatus.failed =>
+                  l10n.libraryDraftConvertToClipFailedSnackbar,
+              },
+              error: status != DraftClipConversionStatus.converted,
+            );
+          },
+        ),
         // The import outlives its page, so the grid follows it from here:
         // every clip that passes shows up as soon as it is added.
         if (offersGalleryImport)
@@ -903,7 +984,6 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
                                 context,
                                 clipsBloc,
                                 clipsState.clipSort,
-                                clipsState.gridColumnCount,
                               ),
                               'open library sort menu',
                             ),
@@ -964,6 +1044,7 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
                           ),
                         Expanded(
                           child: _LibraryContent(
+                            key: _libraryContentKey,
                             tabs: _tabs,
                             tabController: tabController,
                             selectionMode: widget.selectionMode,
@@ -1005,7 +1086,17 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
                 // screen reader acts on nodes directly, so the library also
                 // has to leave the semantics tree while one is up.
                 if (isPreparing)
-                  const BlockSemantics(child: _PreparingVideoProgress())
+                  BlockSemantics(
+                    child: _ProgressScrim(
+                      label: context.l10n.libraryPreparingVideo,
+                    ),
+                  )
+                else if (isConvertingDraft)
+                  BlockSemantics(
+                    child: _ProgressScrim(
+                      label: context.l10n.libraryDraftConvertingToClip,
+                    ),
+                  )
                 else if (isSavingToGallery)
                   const BlockSemantics(child: _GallerySaveProgress()),
               ],
@@ -1043,6 +1134,7 @@ class _LibraryContent extends StatelessWidget {
     required this.onCreateVideo,
     this.scrollController,
     this.targetAspectRatio,
+    super.key,
   });
 
   /// Forwarded to [DraftsTab.showScheduledSection] (#3538).
@@ -1134,9 +1226,12 @@ class _LibraryContent extends StatelessWidget {
   }
 }
 
-/// Covers the library while the selected clips are prepared for the editor.
-class _PreparingVideoProgress extends StatelessWidget {
-  const _PreparingVideoProgress();
+/// Covers the library while it works on a video, saying what it is doing.
+class _ProgressScrim extends StatelessWidget {
+  const _ProgressScrim({required this.label});
+
+  /// What the library is busy with.
+  final String label;
 
   @override
   Widget build(BuildContext context) {
@@ -1155,7 +1250,8 @@ class _PreparingVideoProgress extends StatelessWidget {
             Semantics(
               liveRegion: true,
               child: Text(
-                context.l10n.libraryPreparingVideo,
+                label,
+                textAlign: TextAlign.center,
                 style: VineTheme.bodyMediumFont(
                   color: context.vineColors.primaryText,
                 ),

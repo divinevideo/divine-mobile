@@ -3,7 +3,8 @@
 //
 // The renderers draw the effect natively, with `SpinBlurVideoEffect` on
 // Android, iOS and macOS. This is the same shader: each pixel averages taps
-// along the arc through it around the centre.
+// along the arc through it around the centre, the middle of the frame unless
+// the settings move it.
 //
 // Distances are in pixels with y up, from the bottom left, as natively;
 // Flutter counts y down, so it is flipped on the way in.
@@ -15,6 +16,10 @@ uniform vec2 uSize;
 
 // How long the streaks are, 0 to 1.
 uniform float uStrength;
+
+// Where the effect sits, as shares of the width from the left and of the
+// height from the top.
+uniform vec2 uCenter;
 
 uniform sampler2D uTexture;
 
@@ -32,7 +37,7 @@ void main() {
     fragColor = vec4(tap(p), 1.0);
     return;
   }
-  vec2 c = uSize * 0.5;
+  vec2 c = vec2(uCenter.x, 1.0 - uCenter.y) * uSize;
   vec2 d = p - c;
   float jitter = fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715))));
   vec3 color = vec3(0.0);

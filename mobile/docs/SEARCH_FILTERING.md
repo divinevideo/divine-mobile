@@ -55,7 +55,7 @@ than being duplicated at each call site.
 
 WebSocket-streamed surfaces additionally re-filter on arrival because
 streamed events are not pre-filtered by a repository search call — e.g.
-`HashtagFeedScreen._filterBlockedAuthors`, which also re-runs when
+`HashtagFeedScreen._applyFeedFilters`, which also re-runs when
 `blocklistVersionProvider` changes so a newly blocked author disappears
 immediately (see #4782).
 
@@ -66,9 +66,9 @@ immediately (see #4782).
 | **People search** | `ProfileRepository.searchUsersLocally` / `searchUsersFromApi` / `searchUsers` / `searchUsersProgressive` each apply `blockFilter` | `packages/profile_repository/test/src/profile_repository_test.dart` (block-filter group) |
 | **Mention autocomplete, new-message (DM) search** | inherit filtering — both call the filtered `ProfileRepository` (`searchUsersFromApi` / `searchUsers`) | covered transitively by the people-search block tests |
 | **Video search** | `VideosRepository.searchVideosLocally` / `searchVideosOnRelays` / `searchVideosViaApi` each apply `blockFilter` via `_transformVideoStats`; composed `searchVideos` delegates only to those three | `packages/videos_repository/test/src/videos_repository_test.dart` |
-| **Hashtag search → hashtag feed** | hashtag *search* returns hashtag strings (no author content). The hashtag *feed* (`VideosRepository.getHashtagFeedVideos → getVideosByHashtag`) filters at the repository layer; `HashtagFeedScreen._filterBlockedAuthors` re-filters WebSocket updates and reacts to `blocklistVersionProvider` | `test/screens/hashtag_feed_blocklist_filter_test.dart` |
-| **List search (curated lists)** | `CuratedListRepository.searchAllLists` filters blocked owners (local + relay) | `packages/curated_list_repository/test/src/curated_list_repository_test.dart` |
-| **List search (people lists)** | `PeopleListsRepository.searchPublicLists` filters blocked owners and excludes the app block list (`d=block`) itself | `packages/people_lists_repository/test/people_lists_repository_impl_test.dart` |
+| **Hashtag search → hashtag feed** | hashtag *search* returns hashtag strings (no author content). The hashtag *feed* (`VideosRepository.getHashtagFeedVideos → FunnelcakeApiClient.getVideosByHashtagPage`) filters at the repository layer; `HashtagFeedScreen._applyFeedFilters` re-filters WebSocket updates and the pages the screen holds and reacts to `blocklistVersionProvider` | `test/screens/hashtag_feed_blocklist_filter_test.dart` |
+| **List search (curated lists)** | `CuratedListRepository.searchAllLists` filters blocked owners on every path: FunnelCake's list index (`GET /api/v2/search/lists`) when it answers, else local + relay. Index results get their previews only after each list's own event is read by coordinate, so the viewer's video filters apply to them | `packages/curated_list_repository/test/src/curated_list_repository_test.dart` |
+| **List search (people lists)** | `PeopleListsRepository.searchPublicLists` filters blocked owners and excludes the app block list (`d=block`) itself, whether the results come from FunnelCake's list index or, when it does not answer, the relays | `packages/people_lists_repository/test/people_lists_repository_impl_test.dart` |
 | **Detail / by-id render surfaces** | `shouldHideVideo` chokepoint — video detail, sound detail, curated/liked grid providers, notifications | `test/unit/services/video_event_service_search_test.dart` (#948 group) |
 
 ## Known exceptions (out of this contract's search/result scope)

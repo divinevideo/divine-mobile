@@ -5,6 +5,7 @@
 
 import 'package:db_client/db_client.dart';
 import 'package:db_client/src/database/daos/held_pool_wraps.dart';
+import 'package:db_client/src/database/daos/outgoing_wrap_status_parser.dart';
 import 'package:drift/drift.dart';
 
 part 'direct_messages_dao.g.dart';
@@ -32,10 +33,186 @@ enum DmDedupCounterpart {
   unconstrained,
 }
 
+/// What the local outbox and verified recipient acknowledgment establish.
+enum DmDeliveryState {
+  /// Queued or retrying, including after a failure caused by being offline.
+  queued,
+
+  /// A fallback-pool relay holds the wrap while the recipient's inbox is
+  /// unreadable.
+  held,
+
+  /// The recipient's route accepted the wrap in this environment.
+  accepted,
+
+  /// The last attempt failed and may be retried.
+  failed,
+
+  /// Stopped, blocked, or neither a live outbox row nor an acceptance mark.
+  cancelled,
+}
+
+/// Minimal routing evidence read atomically for a single account and wrap.
+typedef DmWrapRecord = ({
+  bool hasLedger,
+  bool hasAlias,
+  String? messageId,
+  String? conversationId,
+  String? sender,
+  String? participantsJson,
+  bool isDeleted,
+  bool isHidden,
+  bool hasSent,
+});
+
 @DriftAccessor(tables: [DirectMessages])
 class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
     with _$DirectMessagesDaoMixin {
   DirectMessagesDao(super.attachedDatabase);
+
+  /// Records that the recipient's route accepted [rumorId] in [environment].
+  ///
+  /// Marks the sender's own row for the rumor, including a self-copy that
+  /// history sync inserted before this device's publish settled.
+  Future<void> markRecipientAccepted({
+    required String ownerPubkey,
+    required String rumorId,
+    required String environment,
+  }) async {
+    await (update(directMessages)..where(
+          (row) =>
+              row.ownerPubkey.equals(ownerPubkey) &
+              row.senderPubkey.equals(ownerPubkey) &
+              row.id.equals(rumorId),
+        ))
+        .write(
+          DirectMessagesCompanion(
+            recipientAcceptedEnvironment: Value(environment),
+          ),
+        );
+  }
+
+  /// Emits the [DmDeliveryState] of [rumorId] for [ownerPubkey] in
+  /// [environment], and again each time it changes.
+  ///
+  /// Reads both tables in one SQLite snapshot, so the transition that removes
+  /// a completed 1:1 outbox row and marks its local message is seen at once.
+  ///
+  /// Emits an [UnknownOutgoingWrapStatusException] error when the outbox row
+  /// carries a recipient status this build does not know, rather than
+  /// guessing a state for it.
+  Stream<DmDeliveryState> watchDeliveryState({
+    required String ownerPubkey,
+    required String rumorId,
+    required String? environment,
+  }) {
+    final query = customSelect(
+      '''
+      SELECT o.recipient_wrap_status AS status, o.recipient_wrap_event_id AS held,
+             o.recipient_wrap_last_error AS error,
+             EXISTS (SELECT 1 FROM direct_messages m
+                      WHERE m.owner_pubkey = ?1 AND m.id = ?2 AND m.sender_pubkey = ?1
+                        AND m.is_deleted = 0 AND m.recipient_accepted_environment = ?3) AS accepted
+        FROM (SELECT 1)
+        LEFT JOIN outgoing_dms o ON o.owner_pubkey = ?1 AND o.id = ?2
+              AND (o.environment IS NULL OR o.environment = ?3)
+      ''',
+      variables: [
+        Variable.withString(ownerPubkey),
+        Variable.withString(rumorId),
+        Variable.withString(environment ?? ''),
+      ],
+      readsFrom: {directMessages, attachedDatabase.outgoingDms},
+    );
+    return query.watchSingle().map((row) {
+      final rawStatus = row.readNullable<String>('status');
+      final status = rawStatus == null
+          ? null
+          : parseOutgoingWrapStatus(rawStatus);
+      final accepted = row.read<bool>('accepted');
+      final held = row.readNullable<String>('held') != null;
+      return switch (status) {
+        null => accepted ? DmDeliveryState.accepted : DmDeliveryState.cancelled,
+        OutgoingWrapStatus.blocked ||
+        OutgoingWrapStatus.cancelled => DmDeliveryState.cancelled,
+        OutgoingWrapStatus.sent => DmDeliveryState.accepted,
+        OutgoingWrapStatus.pending ||
+        OutgoingWrapStatus.failed when accepted => DmDeliveryState.accepted,
+        OutgoingWrapStatus.pending ||
+        OutgoingWrapStatus.failed when held => DmDeliveryState.held,
+        OutgoingWrapStatus.pending => DmDeliveryState.queued,
+        // Matches the exact stored text of `outgoingDmOfflineError`: that
+        // failure is still queued, waiting for a relay route.
+        OutgoingWrapStatus.failed
+            when row.readNullable<String>('error') == outgoingDmOfflineError =>
+          DmDeliveryState.queued,
+        OutgoingWrapStatus.failed => DmDeliveryState.failed,
+      };
+    }).distinct();
+  }
+
+  /// Reads the message, verified alias, and room eligibility in one snapshot.
+  /// A legacy ledger row settles the wait but never resolves a target.
+  Stream<DmWrapRecord> watchWrapTarget({
+    required String ownerPubkey,
+    required String giftWrapId,
+  }) {
+    if (ownerPubkey.isEmpty) {
+      throw ArgumentError.value(ownerPubkey, 'ownerPubkey');
+    }
+    final db = attachedDatabase;
+    return customSelect(
+          '''
+      WITH ledger AS (
+        SELECT verified_message_id FROM processed_gift_wraps
+        WHERE owner_pubkey = ?1 AND gift_wrap_id = ?2
+      ), target AS (
+        SELECT id FROM direct_messages WHERE owner_pubkey = ?1 AND gift_wrap_id = ?2
+        UNION ALL SELECT verified_message_id FROM ledger
+      )
+      SELECT EXISTS(SELECT 1 FROM processed_gift_wraps WHERE owner_pubkey IN (?1, '')
+                    AND gift_wrap_id = ?2) AS has_ledger,
+             EXISTS(SELECT 1 FROM ledger WHERE verified_message_id IS NOT NULL) AS has_alias,
+             m.id, m.conversation_id, m.sender_pubkey, m.is_deleted,
+             c.participant_pubkeys, c.current_user_has_sent,
+             (c.id IS NULL OR c.is_dismissed OR m.id = m.gift_wrap_id OR m.message_kind NOT IN (14, 15)
+              OR r.removed_at >= m.created_at OR (c.is_group AND r.removed_at IS NOT NULL
+                AND (r.rejoined_at IS NULL OR r.rejoined_at > m.created_at))
+              OR EXISTS(SELECT 1 FROM removed_message_ids WHERE owner_pubkey = ?1 AND rumor_id = m.id)
+             ) AS hidden
+      FROM (SELECT 1)
+      LEFT JOIN direct_messages m ON m.owner_pubkey = ?1 AND m.id = (SELECT id FROM target LIMIT 1)
+      LEFT JOIN conversations c ON c.owner_pubkey = ?1 AND c.id = m.conversation_id
+      LEFT JOIN removed_conversations r ON r.owner_pubkey = ?1 AND r.conversation_id = m.conversation_id
+      ''',
+          variables: [
+            Variable.withString(ownerPubkey),
+            Variable.withString(giftWrapId),
+          ],
+          readsFrom: {
+            directMessages,
+            db.conversations,
+            db.processedGiftWraps,
+            db.removedMessageIds,
+            db.removedConversations,
+          },
+        )
+        .watchSingle()
+        .map(
+          (row) => (
+            hasLedger: row.read<bool>('has_ledger'),
+            hasAlias: row.read<bool>('has_alias'),
+            messageId: row.readNullable<String>('id'),
+            conversationId: row.readNullable<String>('conversation_id'),
+            sender: row.readNullable<String>('sender_pubkey'),
+            participantsJson: row.readNullable<String>('participant_pubkeys'),
+            isDeleted: row.readNullable<bool>('is_deleted') ?? false,
+            isHidden: row.readNullable<bool>('hidden') ?? false,
+            hasSent: row.readNullable<bool>('current_user_has_sent') ?? false,
+          ),
+        )
+        .distinct();
+  }
 
   /// Soft-deleted locally; the kind-5 wrap still needs a confirmed delivery.
   static const String deletionPending = 'deletion_pending';

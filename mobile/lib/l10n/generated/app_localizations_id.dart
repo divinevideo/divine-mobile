@@ -10,6 +10,21 @@ class AppLocalizationsId extends AppLocalizations {
   AppLocalizationsId([String locale = 'id']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'Beralih ke $account untuk membuka pesan ini?';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'Pesan langsung';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'Tampilkan notifikasi tanpa nama pengirim atau isi pesan.';
+
+  @override
+  String get dmNotificationMessageUnavailable => 'Pesan ini tidak tersedia.';
+
+  @override
   String get devOptionsClipRecovery => 'Pemulihan klip';
 
   @override
@@ -255,7 +270,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get privacySettingsShareUsageSubtitle =>
-      'Membantu kami melihat apa yang benar-benar dipakai orang. Kalau kamu matikan, data yang masih antre di perangkat ini dihapus.';
+      'Membantu kami melihat apa yang benar-benar dipakai orang. Kalau kamu matikan, data yang masih antre di perangkat ini dihapus. Laporan crash tetap dikirim supaya kami bisa memperbaiki bug.';
 
   @override
   String get privacySettingsSaveFailed =>
@@ -1756,48 +1771,8 @@ class AppLocalizationsId extends AppLocalizations {
   String get shareVideoLabel => 'Bagikan video';
 
   @override
-  String sharePostSharedWith(String recipientName) {
-    return 'Postingan dibagikan dengan $recipientName';
-  }
-
-  @override
-  String sharePostSharedWithCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Postingan dibagikan dengan $count orang',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String shareStillTryingToSendTo(String recipientName) {
-    return 'Masih mencoba mengirim ke $recipientName';
-  }
-
-  @override
-  String shareStillTryingToSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Masih mencoba mengirim ke $count orang',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String shareCouldNotSendTo(String recipientName) {
     return 'Tidak dapat mengirim ke $recipientName';
-  }
-
-  @override
-  String shareCouldNotSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Tidak dapat mengirim ke $count orang',
-    );
-    return '$_temp0';
   }
 
   @override
@@ -1832,11 +1807,32 @@ class AppLocalizationsId extends AppLocalizations {
   String get shareFindPeopleMultiline => 'Cari\norang';
 
   @override
+  String get shareDeliveryFailed => 'Belum bisa dikirim';
+
+  @override
+  String shareDeliveryHeld(String name) {
+    return 'Akan dikirim saat $name dapat dihubungi';
+  }
+
+  @override
+  String shareDeliveryForRecipient(String name, String status) {
+    return '$name — $status';
+  }
+
+  @override
   String get shareSent => 'Terkirim';
 
   @override
   String shareSelectedRecipientAnnouncement(String name) {
     return '$name dipilih';
+  }
+
+  @override
+  String get shareRecipientSend => 'Kirim';
+
+  @override
+  String shareRecipientSendTo(String name) {
+    return 'Kirim ke $name';
   }
 
   @override
@@ -2057,6 +2053,28 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get videoStickerAddYoursButton => 'Giliranmu';
+
+  @override
+  String get videoStickerAddYoursWatchSeries => 'Tonton serinya';
+
+  @override
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'Tonton serinya: $prompt';
+  }
+
+  @override
+  String videoSeriesChipEpisode(String episode, String total) {
+    return 'Ep $episode dari $total';
+  }
+
+  @override
+  String videoSeriesChipSemanticLabel(
+    String seriesName,
+    String episode,
+    String total,
+  ) {
+    return 'Seri $seriesName, episode $episode dari $total';
+  }
 
   @override
   String videoStickerAddYoursJoined(int count) {
@@ -3379,6 +3397,9 @@ class AppLocalizationsId extends AppLocalizations {
       'Masuk di sini akan menyembunyikan draf dan klip tersebut';
 
   @override
+  String get authWatchClassicsAsGuest => 'Tonton video klasik sebagai tamu';
+
+  @override
   String get authTermsPrefix =>
       'Dengan memilih salah satu opsi di bawah, kamu mengonfirmasi bahwa usiamu minimal 16 tahun (atau sudah menyelesaikan ';
 
@@ -4006,6 +4027,10 @@ class AppLocalizationsId extends AppLocalizations {
   String get remixStartFailed => 'Tidak bisa memulai remix. Coba lagi.';
 
   @override
+  String get remixSettingSaveFailed =>
+      'Pengaturan remix kamu gagal diperbarui. Coba lagi.';
+
+  @override
   String get remixSettingAllowTitle => 'Izinkan orang lain me-remix videoku';
 
   @override
@@ -4414,6 +4439,10 @@ class AppLocalizationsId extends AppLocalizations {
       'Relay tidak menerima pembaruan. Coba lagi sebentar lagi.';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      'Video ini diubah di perangkat lain dan sekarang punya terlalu banyak tag atau kolaborator. Buka lagi dan hapus beberapa.';
+
+  @override
   String get videoUpdateErrorGeneric =>
       'Gagal memperbarui video ini. Coba lagi.';
 
@@ -4504,6 +4533,17 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get soundsNoSoundsFoundDescription => 'Coba istilah pencarian lain';
+
+  @override
+  String soundsSearchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count suara ditemukan',
+      zero: 'Tidak ada suara ditemukan',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get soundsSavedToLibrary => 'Disimpan ke Suara';
@@ -6272,6 +6312,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get inboxCollabInviteSentStatus => 'Undangan terkirim';
 
   @override
+  String get inboxSharedVideoPreview => 'Membagikan video';
+
+  @override
   String get inboxConversationCollabInvitePreview => 'Undangan kolaborasi';
 
   @override
@@ -7083,6 +7126,52 @@ class AppLocalizationsId extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'Duplikat';
 
   @override
+  String get libraryDraftActionConvertToClip => 'Ubah jadi klip';
+
+  @override
+  String get libraryDraftConvertingToClip => 'Mengubah jadi klip...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar => 'Draf diubah jadi klip';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar => 'Gagal mengubah draf';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'Teks dan stiker di draf ini tidak bisa disiapkan. Buka di editor, lalu coba lagi.';
+
+  @override
+  String get libraryDraftActionShare => 'Bagikan draf';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return 'Kirim draf yang bisa diedit ke $name?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'Kamu membagikan klip asli dan riwayat edit. Penerima bisa melihat bagian yang kamu potong, mengedit salinannya, mempostingnya, atau mengirimkannya kembali.';
+
+  @override
+  String get libraryDraftShareFailed => 'Draf tidak dapat dikirim.';
+
+  @override
+  String get libraryDraftShareTooLarge => 'Draf terlalu besar untuk dikirim.';
+
+  @override
+  String get dmSharedDraft => 'Draf yang dibagikan';
+
+  @override
+  String get dmOpenDraft => 'Impor dan edit';
+
+  @override
+  String get dmDraftImportFailed => 'Draf tidak dapat diimpor.';
+
+  @override
+  String get libraryDraftSent => 'Draf terkirim';
+
+  @override
   String get libraryDraftActionDelete => 'Hapus draf';
 
   @override
@@ -7709,6 +7798,14 @@ class AppLocalizationsId extends AppLocalizations {
   ) {
     return '$displayName ingin mengirim pesan kepadamu, mereka mengirim $messageText.';
   }
+
+  @override
+  String messageRequestGroupWantsToMessageYou(String messageText) {
+    return 'Grup ini ingin mengirim pesan kepadamu, mereka mengirim $messageText.';
+  }
+
+  @override
+  String get messageRequestGroupMembersHeading => 'Di grup ini';
 
   @override
   String get deleteAccountAccountChanged =>
@@ -9431,6 +9528,21 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorEffectSpinBlur => 'Blur Putar';
 
   @override
+  String get videoEditorEffectShockwave => 'Gelombang Kejut';
+
+  @override
+  String get videoEditorEffectSubwoofer => 'Subwoofer';
+
+  @override
+  String get videoEditorEffectPlasma => 'Plasma';
+
+  @override
+  String get videoEditorEffectEnergyWave => 'Gelombang Energi';
+
+  @override
+  String get videoEditorEffectSmokeBurst => 'Ledakan Asap';
+
+  @override
   String get videoEditorEffectComic => 'Komik';
 
   @override
@@ -9626,9 +9738,6 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorFilterCategoryTints => 'Rona';
 
   @override
-  String get videoEditorDropsSettingsTitle => 'Sesuaikan tetesan';
-
-  @override
   String get videoEditorDropsCountLabel => 'Jumlah';
 
   @override
@@ -9675,6 +9784,202 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get videoEditorEffectsOnBeatNoSound =>
       'Tambahkan musik atau nyalakan suara klip';
+
+  @override
+  String get videoEditorEffectSettingsOpen => 'Pengaturan efek';
+
+  @override
+  String videoEditorEffectSettingsTitle(String effect) {
+    return 'Pengaturan: $effect';
+  }
+
+  @override
+  String videoEditorEffectSeconds(String seconds) {
+    return '$seconds dtk';
+  }
+
+  @override
+  String get videoEditorEffectHitDuration => 'Durasi';
+
+  @override
+  String get videoEditorEffectHitRepeat => 'Ulangi';
+
+  @override
+  String get videoEditorEffectHitOnce => 'Sekali, di awal efek pada linimasa';
+
+  @override
+  String get videoEditorEffectHitInterval => 'Jeda';
+
+  @override
+  String get videoEditorEffectLookTitle => 'Tampilan';
+
+  @override
+  String get videoEditorEffectHitHorizontal => 'Posisi horizontal';
+
+  @override
+  String get videoEditorEffectHitVertical => 'Posisi vertikal';
+
+  @override
+  String get videoEditorEffectHitReach => 'Jangkauan';
+
+  @override
+  String get videoEditorEffectHitShake => 'Guncangan';
+
+  @override
+  String get videoEditorEffectHitPunch => 'Hentakan zoom';
+
+  @override
+  String get videoEditorEffectLookReset => 'Atur ulang tampilan';
+
+  @override
+  String get videoEditorEffectTimingTitle => 'Waktu';
+
+  @override
+  String get videoEditorEffectTimingReset => 'Atur ulang waktu';
+
+  @override
+  String get videoEditorEffectMotionTitle => 'Gerakan';
+
+  @override
+  String get videoEditorEffectMotionReset => 'Atur ulang gerakan';
+
+  @override
+  String get videoEditorEffectSettingFocus => 'Fokus';
+
+  @override
+  String get videoEditorEffectSettingWidth => 'Lebar';
+
+  @override
+  String get videoEditorEffectSettingDirection => 'Arah';
+
+  @override
+  String get videoEditorEffectSettingHorizontal => 'Horizontal';
+
+  @override
+  String get videoEditorEffectSettingVertical => 'Vertikal';
+
+  @override
+  String get videoEditorEffectSettingClockwise => 'Searah jarum jam';
+
+  @override
+  String get videoEditorEffectSettingAnticlockwise => 'Berlawanan jarum jam';
+
+  @override
+  String get videoEditorEffectSettingZoomIn => 'Perbesar';
+
+  @override
+  String get videoEditorEffectSettingZoomOut => 'Perkecil';
+
+  @override
+  String get videoEditorEffectSettingSpacing => 'Jarak';
+
+  @override
+  String get videoEditorEffectSettingAngle => 'Sudut';
+
+  @override
+  String get videoEditorEffectSettingHue => 'Rona';
+
+  @override
+  String get videoEditorEffectSettingLength => 'Panjang';
+
+  @override
+  String get videoEditorEffectSettingSensitivity => 'Sensitivitas';
+
+  @override
+  String get videoEditorEffectSettingPosition => 'Posisi';
+
+  @override
+  String get videoEditorEffectSettingWind => 'Angin';
+
+  @override
+  String get videoEditorEffectSettingDotSize => 'Ukuran titik';
+
+  @override
+  String get videoEditorEffectSettingOutline => 'Garis tepi';
+
+  @override
+  String get videoEditorEffectSettingLevels => 'Tingkat';
+
+  @override
+  String get videoEditorEffectSettingPixelSize => 'Ukuran piksel';
+
+  @override
+  String get videoEditorEffectSettingOffset => 'Pergeseran';
+
+  @override
+  String get videoEditorEffectSettingBrushSize => 'Ukuran kuas';
+
+  @override
+  String get videoEditorEffectSettingDensity => 'Kepadatan';
+
+  @override
+  String get videoEditorEffectSettingGrain => 'Bintik';
+
+  @override
+  String get videoEditorEffectSettingGrid => 'Kisi';
+
+  @override
+  String get videoEditorEffectSettingLayers => 'Lapisan';
+
+  @override
+  String get videoEditorEffectSettingShadow => 'Bayangan';
+
+  @override
+  String get videoEditorEffectSettingFirstInk => 'Tinta pertama';
+
+  @override
+  String get videoEditorEffectSettingSecondInk => 'Tinta kedua';
+
+  @override
+  String get videoEditorEffectSettingColors => 'Warna';
+
+  @override
+  String get videoEditorEffectSettingOriginalColors => 'Asli';
+
+  @override
+  String get videoEditorEffectSettingSingleColor => 'Satu warna';
+
+  @override
+  String get videoEditorEffectSettingDelay => 'Jeda';
+
+  @override
+  String get videoEditorEffectSettingDown => 'Ke bawah';
+
+  @override
+  String get videoEditorEffectSettingUp => 'Ke atas';
+
+  @override
+  String get videoEditorEffectSettingRight => 'Ke kanan';
+
+  @override
+  String get videoEditorEffectSettingLeft => 'Ke kiri';
+
+  @override
+  String get videoEditorEffectSettingFrequency => 'Frekuensi';
+
+  @override
+  String get videoEditorEffectSettingDistance => 'Jarak';
+
+  @override
+  String get videoEditorEffectSettingScanlines => 'Garis pindai';
+
+  @override
+  String get videoEditorEffectSettingGrainSize => 'Ukuran bintik';
+
+  @override
+  String get videoEditorEffectSettingSepia => 'Sepia';
+
+  @override
+  String get videoEditorEffectSettingFlicker => 'Kedip';
+
+  @override
+  String get videoEditorEffectSettingVignette => 'Vinyet';
+
+  @override
+  String get videoEditorEffectSettingTempo => 'Tempo';
+
+  @override
+  String get videoEditorEffectSettingWavelength => 'Panjang gelombang';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {
@@ -11514,6 +11819,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorAudioUseSound => 'Gunakan';
 
   @override
+  String get videoEditorAudioOpenSoundDetails => 'Buka detail suara';
+
+  @override
   String get videoEditorAudioFileMissing =>
       'File audio sudah tidak ada di perangkat';
 
@@ -11543,6 +11851,9 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get videoEditorAudioCategoryMySounds => 'Suara Saya';
+
+  @override
+  String get videoEditorAudioCategorySongs => 'Songs';
 
   @override
   String get videoEditorAudioFilterEffects => 'Efek suara';
@@ -11764,6 +12075,35 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get videoEditorSocialStickerRepliesNote =>
       'Menampilkan siapa saja yang membalas video ini dengan video. Penonton mengetuknya untuk menonton balasannya.';
+
+  @override
+  String get videoEditorSocialStickerAudienceTitle =>
+      'Siapa yang bisa menjawab';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => 'Semua orang';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => 'Teman';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => 'Hanya aku';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      'Hanya orang yang kamu ikuti yang bisa ikut. Orang lain melihat stikernya setelah ada yang ikut.';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      'Stiker hanya menampilkan balasan video dari orang yang kamu ikuti. Orang lain melihatnya setelah salah satu dari mereka membalas.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      'Hanya kamu yang bisa ikut. Orang lain tidak akan melihat stikernya sampai kamu ikut.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      'Stiker hanya menampilkan balasan video darimu sendiri. Orang lain tidak akan melihatnya sampai kamu membalas.';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>
@@ -13558,6 +13898,29 @@ class AppLocalizationsId extends AppLocalizations {
       'Penggantian anak-dilindungi dibersihkan';
 
   @override
+  String get devOptionsConfirmationAccessTitle => 'Divine Confirmation access';
+
+  @override
+  String get devOptionsConfirmationAccessReal => 'Real answer';
+
+  @override
+  String get devOptionsConfirmationAccessHas => 'Has Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessHasNot => 'Doesn\'t have Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessUnknown => 'Couldn\'t check';
+
+  @override
+  String get devOptionsConfirmationRequirementSimulatedTitle =>
+      'Act as if Confirmation is required';
+
+  @override
+  String get devOptionsConfirmationRequirementSimulatedSubtitle =>
+      'Treats signing in as needing Confirmation even when the verifier doesn\'t. Needs the Confirmation Sign-in flag; choose \"Doesn\'t have Confirmation\" above to see the offer. The verifier still approves sign-ins.';
+
+  @override
   String get commentsRecordVideoButtonLabel => 'Rekam komentar video';
 
   @override
@@ -14600,6 +14963,65 @@ class AppLocalizationsId extends AppLocalizations {
   String get verifyStatusAccountChanged => 'Account changed';
 
   @override
+  String get verifyStatusNeedsConfirmation => 'Needs Confirmation';
+
+  @override
+  String get verifyConfirmationTitle => 'Divine Confirmation';
+
+  @override
+  String get verifyConfirmationHeroBody =>
+      'Divine Confirmation lets you link your accounts on other platforms by signing in to them.';
+
+  @override
+  String get verifyConfirmationIncludedTitle => 'What\'s included';
+
+  @override
+  String get verifyConfirmationIncludedSignIn => 'Link accounts by signing in';
+
+  @override
+  String get verifyConfirmationComingSoon => 'Coming soon';
+
+  @override
+  String get verifyConfirmationSmallPrint =>
+      'Details will appear here when Divine Confirmation is ready.';
+
+  @override
+  String get verifyConfirmationStoreOnly =>
+      'Divine Confirmation is available in the App Store and Google Play versions of Divine.';
+
+  @override
+  String get verifyConfirmationBuySemantic =>
+      'Divine Confirmation, coming soon, unavailable';
+
+  @override
+  String get verifyConfirmationRestoreSemantic =>
+      'Restore purchases, unavailable';
+
+  @override
+  String get verifyConfirmationCardTitle => 'Link by signing in';
+
+  @override
+  String get verifyConfirmationCardBody =>
+      'One-tap linking is part of Divine Confirmation.';
+
+  @override
+  String get verifyGetConfirmation => 'Get Divine Confirmation';
+
+  @override
+  String get verifyProofAlwaysAvailable => 'Proof posts are always available';
+
+  @override
+  String get verifyConfirmationSheetTitle =>
+      'Linking by signing in needs Divine Confirmation';
+
+  @override
+  String get verifyConfirmationSheetSubtitle =>
+      'You can still link this account with a proof post.';
+
+  @override
+  String get verifyConfirmationSheetUseProof => 'Use a proof post';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return 'Lepas tautan akun $platform $identity';
   }
@@ -14631,7 +15053,26 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
+  String verifyLinkNeedsConfirmationSemanticLabel(String platform) {
+    return 'Link your $platform account. Signing in needs Divine Confirmation';
+  }
+
+  @override
   String get verifyOneTapBadge => 'Sekali ketuk';
+
+  @override
+  String get verifyOneTapWithConfirmationBadge => 'One tap with Confirmation';
+
+  @override
+  String get verifyRenewConfirmation => 'Renew Confirmation';
+
+  @override
+  String verifyRenewConfirmationSemanticLabel(
+    String platform,
+    String identity,
+  ) {
+    return 'Renew Divine Confirmation to restore $platform account $identity';
+  }
 
   @override
   String verifyConnectSignInLifetime(int days) {
@@ -14743,6 +15184,18 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get verifyErrorPublishFailed =>
       'Terverifikasi, tapi tidak ada relay yang menerima pembaruan. Coba lagi.';
+
+  @override
+  String get verifyErrorConfirmationRequired =>
+      'Linking by signing in needs Divine Confirmation. You can still link with a proof post.';
+
+  @override
+  String get verifyErrorConfirmationUnavailable =>
+      'Couldn\'t check Divine Confirmation right now. Try again in a few minutes.';
+
+  @override
+  String get verifyErrorConfirmationPending =>
+      'This can take a minute after buying. Try again shortly.';
 
   @override
   String get verifyErrorOauthUnavailable =>
@@ -15026,7 +15479,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get changeEmailSubtitle =>
-      'Kami mengirim tautan konfirmasi ke alamat barumu dan ke alamat di akunmu. Emailmu berubah setelah kamu konfirmasi dari keduanya.';
+      'Kami akan mengirim tautan ke alamat email barumu. Kalau sudah ada email di akunmu, kami juga akan mengirim tautan ke sana.';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -15046,18 +15499,18 @@ class AppLocalizationsId extends AppLocalizations {
   String get changeEmailWrongPassword => 'Itu bukan kata sandimu.';
 
   @override
-  String get changeEmailSubmit => 'Kirim tautan konfirmasi';
+  String get changeEmailSubmit => 'Minta konfirmasi';
 
   @override
-  String get changeEmailSentTitle => 'Dua tautan sedang dikirim';
+  String get changeEmailSentTitle => 'Cek emailmu';
 
   @override
   String changeEmailSentMessage(String email) {
-    return 'Konfirmasi dari $email dan dari alamat di akunmu. Emailmu berganti setelah keduanya selesai.';
+    return 'Buka tautan di $email. Kalau sudah ada email di akunmu, buka juga tautan di sana.';
   }
 
   @override
-  String get changeEmailSentExpiry => 'Tautan berhenti berlaku setelah 24 jam.';
+  String get changeEmailSentExpiry => 'Setiap tautan berlaku selama 24 jam.';
 
   @override
   String get changeEmailSentDone => 'Oke';
@@ -15341,6 +15794,13 @@ class AppLocalizationsId extends AppLocalizations {
   String get updateAction => 'Perbarui';
 
   @override
+  String get announcementViewContest => 'Lihat kontes';
+
+  @override
+  String get featuredFeedUnavailable =>
+      'Feed unggulan ini sudah tidak tersedia.';
+
+  @override
   String updateNewIn(String version) {
     return 'Yang baru di $version:';
   }
@@ -15490,6 +15950,16 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get settingsHelpAboutSubtitle =>
       'Dukungan, informasi hukum, dan detail aplikasi';
+
+  @override
+  String get settingsDiscordTitle => 'Gabung ke server Discord kami';
+
+  @override
+  String get settingsDiscordSubtitle =>
+      'Ngobrol dengan tim dan komunitas Divine';
+
+  @override
+  String get settingsDiscordOpenError => 'Discord tidak bisa dibuka';
 
   @override
   String listLoopsCount(int count, String formatted) {
@@ -16767,4 +17237,114 @@ class AppLocalizationsId extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return 'Video dari $badgeName';
   }
+
+  @override
+  String get menuBarEdit => 'Edit';
+
+  @override
+  String get menuBarUndo => 'Urungkan';
+
+  @override
+  String get menuBarRedo => 'Ulangi';
+
+  @override
+  String get menuBarCut => 'Potong';
+
+  @override
+  String get menuBarCopy => 'Salin';
+
+  @override
+  String get menuBarPaste => 'Tempel';
+
+  @override
+  String get menuBarSelectAll => 'Pilih Semua';
+
+  @override
+  String get menuBarView => 'Tampilan';
+
+  @override
+  String get menuBarVideo => 'Video';
+
+  @override
+  String get menuBarPreviousVideo => 'Video Sebelumnya';
+
+  @override
+  String get menuBarNextVideo => 'Video Berikutnya';
+
+  @override
+  String get menuBarPlayPause => 'Putar/Jeda';
+
+  @override
+  String get menuBarMute => 'Bisukan';
+
+  @override
+  String get menuBarUnmute => 'Aktifkan Suara';
+
+  @override
+  String get menuBarWindow => 'Jendela';
+
+  @override
+  String get menuBarHelp => 'Bantuan';
+
+  @override
+  String get emailConfirmationTitle => 'Konfirmasi emailmu';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return 'Kami sudah mengirim tautan ke $email. Ketuk tautannya untuk membuka pesan dan memastikan kamu selalu bisa masuk lagi ke akunmu.';
+  }
+
+  @override
+  String get emailConfirmationResendButton => 'Kirim ulang email';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return 'Kamu sudah masuk! Cek $email untuk mengonfirmasi akunmu.';
+  }
+
+  @override
+  String get emailConfirmationResendSent =>
+      'Konfirmasi sudah diminta. Cek kotak masukmu.';
+
+  @override
+  String get emailConfirmationResendFailed =>
+      'Gagal mengirim. Coba lagi sebentar lagi.';
+
+  @override
+  String get emailConfirmationMessagesTitle =>
+      'Konfirmasi emailmu untuk mulai kirim pesan';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return 'Ketuk tautan yang kami kirim ke $email. Setelah itu, kamu bebas kirim pesan.';
+  }
+
+  @override
+  String get emailConfirmationCheckInbox =>
+      'Cari tautan konfirmasi di kotak masukmu.';
+
+  @override
+  String get emailConfirmationDone =>
+      'Email dikonfirmasi. Pesan sudah terbuka.';
+
+  @override
+  String get emailConfirmationLinkConfirmed => 'Email dikonfirmasi.';
+
+  @override
+  String get emailConfirmationAddEmailTitle => 'Tambahkan email';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      'Saat ini akunmu tidak punya email. Tambahkan email supaya kamu selalu bisa masuk lagi.';
+
+  @override
+  String get emailConfirmationAddEmailButton => 'Tambah email';
+
+  @override
+  String get emailConfirmationSendBlocked =>
+      'Konfirmasi emailmu untuk mengirim pesan.';
+
+  @override
+  String get emailConfirmationCapReached =>
+      'Itu batas per jam untuk akun baru. Konfirmasi emailmu untuk menghapus batas ini.';
 }

@@ -5,9 +5,10 @@
 # 1 - Create the Codemagic project with access to the repository.
 # 2 - Setup iOS publishing:
 #   2.1 - https://docs.codemagic.io/yaml-quick-start/building-a-flutter-app/#:~:text=Creating%20the%20App%20Store%20Connect%20API%20key
-#   2.2 - Every iOS app-extension target needs its own App Store provisioning
-#         profile in Codemagic Code signing identities. Keep
-#         IOS_EXTENSION_BUNDLE_IDS in sync with the Xcode app-extension targets.
+#   2.2 - Every iOS app-extension target and the Watch app need their own App
+#         Store provisioning profile in Codemagic Code signing identities. Add
+#         each bundle ID to IOS_EXTENSION_BUNDLE_IDS together with its profile;
+#         the signing check fails while a shipping target is missing.
 # 3 - Setup Android publishing:
 #   3.1 - Code signing: https://docs.codemagic.io/yaml-quick-start/building-a-flutter-app/#:~:text=Generating%20a%20keystore
 #   3.2 - Connect to Google Play: https://docs.codemagic.io/yaml-publishing/google-play/
@@ -60,6 +61,11 @@
 #   - Secure DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS forwarded from the repository policy
 #   - Application-scoped; native store workflows import it last. Other workflows keep github_credentials.
 #   - Public GitHub publishing retains github_credentials; candidate-tag credentials never enter a native build.
+# 13 - Create app-level environment variable group "macos_signing_credentials" with:
+#   - CERTIFICATE_PRIVATE_KEY (mark as secure) — persistent 2048-bit RSA private key in PEM format
+#     matching the team's Mac App Distribution and Mac Installer Distribution certificates.
+#   - Imported only by `macos-build` and `macos-scheduled-build`. Create this group in Codemagic UI before merging a YAML
+#     change that references it, or Codemagic rejects every workflow in this file.
 #
 # Public people-list discovery exclusions come from the GitHub repository
 # variable DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS (JSON array). Native store
@@ -469,6 +475,25 @@ definitions:
           --dart-define-from-file=build/shorebird/dart_defines.json \
           --public-key-path=build/shorebird/patch_public_key.pem \
           -- --extra-gen-snapshot-options=--no-strip
+    - &build_wear_aab
+      name: Build Wear OS AAB
+      # The Wear OS remote shutter ships in the phone app's Play listing, on
+      # the Wear OS track (mobile/android/wear/README.md). It is not uploaded
+      # here: it waits in the artifacts for a manual upload. A broken watch
+      # build must not hold up the phone release, which has everything it
+      # needs by now.
+      ignore_failure: true
+      script: |
+        set -euo pipefail
+        . build/shorebird/android_release.env
+        # The phone bundle's name and build number; the watch derives its own
+        # version code from the build number, so the two never collide.
+        # A Gradle build of its own, outside the Flutter Android project, on
+        # the phone build's wrapper and the same release keystore.
+        cd android/wear
+        ../gradlew bundleRelease \
+          -PdivineBuildName="$SHOREBIRD_BUILD_NAME" \
+          -PdivineBuildNumber="$SHOREBIRD_BUILD_NUMBER"
     - &confirm_patch
       name: Confirm patch to production
       script: |
@@ -547,6 +572,12 @@ definitions:
         APP_PATH="build/macos/Build/Products/Release"
         APP_NAME=$(ls "$APP_PATH" | grep '\.app$' | head -1)
         DMG_NAME="Divine-macOS.dmg"
+        # CI compilation may be unsigned. Never turn that output into a DMG
+        # that can also be published later through artifact recovery.
+        SIGNING_TEAM=$(awk '$1 == "DIVINE_RELEASE_DEVELOPMENT_TEAM" && $2 == "=" {print $3}' \
+          macos/Runner/Configs/Release.xcconfig)
+        python3 scripts/desktop/validate_macos_distribution.py \
+          "$APP_PATH/$APP_NAME" --bundle-id co.openvine.app --team-id "$SIGNING_TEAM"
         echo "Packaging $APP_NAME as $DMG_NAME"
         hdiutil create -volname "Divine" -srcfolder "$APP_PATH/$APP_NAME" \
           -ov -format UDZO "$APP_PATH/$DMG_NAME"
@@ -1041,6 +1072,7 @@ workflows:
         IOS_EXTENSION_BUNDLE_IDS: >-
           co.openvine.app.NotificationServiceExtension
           co.openvine.app.CameraQuickActionWidget
+          co.openvine.app.watchkitapp
         # firebase_analytics links FirebaseAnalyticsCore — no IDFA support, no
         # Google ads-measurement SDK — when this is present while Xcode
         # evaluates its Package.swift (#7303). Presence is what counts, not the
@@ -1224,6 +1256,7 @@ workflows:
       - *build_apk
       - *precache_shorebird_android_artifacts
       - *build_aab
+      - *build_wear_aab
       - *emit_shorebird_provenance
       - *publish_github_release
       - *publish_zapstore
@@ -1232,6 +1265,8 @@ workflows:
     artifacts:
       - build/app/outputs/apk/release/*.apk
       - build/app/outputs/bundle/release/*.aab
+      - android/wear/build/outputs/bundle/release/*.aab
+      - android/wear/build/outputs/mapping/release/mapping.txt
       - build/shorebird/android_release.env
       - build/shorebird/android_provenance.json
       - build/shorebird/android_upload.json
@@ -1355,6 +1390,7 @@ workflows:
         IOS_EXTENSION_BUNDLE_IDS: >-
           co.openvine.app.NotificationServiceExtension
           co.openvine.app.CameraQuickActionWidget
+          co.openvine.app.watchkitapp
         # Same analytics product as ios-build (#7303); see the comment there.
         FIREBASE_ANALYTICS_WITHOUT_ADID: "true"
       ios_signing:
@@ -1471,7 +1507,7 @@ workflows:
       - *precache_shorebird_android_artifacts
       - *patch_android
 
-  macos-build:
+  macos-build: &macos_build
     name: macOS App Store Build
     working_directory: mobile
     max_build_duration: 60
@@ -1487,20 +1523,6 @@ workflows:
           - PRODUCTION
           - STAGING
           - POC
-      RELEASE_CHANNEL:
-        description: GitHub release channel; publish ready direct downloads independently of store rollout. PRODUCTION sets Latest; existing clients may prompt before their store has the update.
-        type: choice
-        default: BETA
-        options:
-          - BETA
-          - PRODUCTION
-      PUBLISH_TO_GITHUB:
-        description: Upload DMG to GitHub Release (for direct distribution)
-        type: choice
-        default: "NO"
-        options:
-          - "NO"
-          - "YES"
     environment:
       flutter: 3.47.9
       xcode: latest
@@ -1509,11 +1531,10 @@ workflows:
         - zendesk_credentials
         - proofmode_credentials
         - github_credentials
+        - macos_signing_credentials
+        - store_release_credentials
       vars:
         BUNDLE_ID: co.openvine.app
-        # Same analytics product as ios-build (#7303): links FirebaseAnalyticsCore
-        # without Google ads-measurement SDKs.
-        FIREBASE_ANALYTICS_WITHOUT_ADID: "true"
     cache:
       cache_paths:
         - $HOME/Library/Caches/CocoaPods
@@ -1521,6 +1542,7 @@ workflows:
     triggering:
       events: []
     scripts:
+      - *verify_shorebird_release_source
       - *check_signing_endpoint
       - *check_supporters_config
       - name: Check macOS App Store configuration
@@ -1532,40 +1554,32 @@ workflows:
       - name: Allocate effective macOS distribution identity
         script: |
           set -euo pipefail
-          mkdir -p build/shorebird
-          git ls-remote --tags origin | awk '{print $2}' > build/shorebird/stable_tags.txt
-          LATEST_ASC_BUILD=$(
-            app-store-connect get-latest-testflight-build-number \
-              --platform MAC_OS \
-              "6747959501" 2>/dev/null || echo "0"
-          )
-          if ! [[ "$LATEST_ASC_BUILD" =~ ^[0-9]+$ ]]; then
-            LATEST_ASC_BUILD=0
-          fi
-          NEXT_ASC_BUILD=$((LATEST_ASC_BUILD + 1))
-          BUILD_NUM="$PROJECT_BUILD_NUMBER"
-          if [ "$NEXT_ASC_BUILD" -gt "$BUILD_NUM" ]; then
-            BUILD_NUM="$NEXT_ASC_BUILD"
-          fi
-          python3 scripts/release_identity.py direct \
-            --pubspec pubspec.yaml --source-sha "$(git rev-parse HEAD)" \
-            --stable-tags build/shorebird/stable_tags.txt \
-            --build-number "$BUILD_NUM" \
-            --output build/shorebird/macos_release.env
+          python3 scripts/allocate_build_identity.py macos
           echo SHOREBIRD_PLATFORM=macos >> "$CM_ENV"
       - *build_macos
       - *package_macos_mas_pkg
-      - *package_macos_dmg
-      - *publish_github_release
+      - name: Record macOS release provenance
+        script: DEFAULT_ENV="${{ inputs.DEFAULT_ENV }}" python3 scripts/record_macos_provenance.py
     artifacts:
       - build/macos/pkg/*.pkg
       - build/macos/archive/Runner.xcarchive/dSYMs/**
-      - build/macos/Build/Products/Release/*.dmg
       - build/shorebird/macos_release.env
+      - build/shorebird/macos_provenance.json
     publishing:
       app_store_connect:
         auth: integration
         submit_to_testflight: true
+        submit_to_app_store: false
+
+  # Scheduled uploads never submit to external audiences. The coordinator owns
+  # external TestFlight group attachment, beta review budget, and Mac App Store submission.
+  macos-scheduled-build:
+    <<: *macos_build
+    name: macOS scheduled internal release
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: false
         submit_to_app_store: false
 
   e2e-smoke-ios:

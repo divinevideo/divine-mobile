@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import json
+import math
 import os
 import re
 import shutil
@@ -19,16 +20,24 @@ from start_ios_release import APP_ID as CM_APP_ID
 from start_ios_release import TEAM_ID as CM_TEAM_ID
 
 from release_train.allocator import reconcile
+from release_train.campaign_drafts import publish_release_drafts
 from release_train.coordinator import (
     ACTIVE,
+    APPLE_PLATFORMS,
     affects_app,
     consume_version_acknowledgements,
     current_acknowledgements,
+    is_public_beta_release,
     observe,
     plan_tick,
     version_ack_key,
 )
-from release_train.ledger import GhLedgerStore, LedgerError, claim_path
+from release_train.ledger import (
+    GhLedgerStore,
+    LedgerError,
+    claim_path,
+    validate_macos_provenance,
+)
 from release_train.providers import (
     APP_ID,
     Apple,
@@ -43,6 +52,7 @@ from release_train.providers import (
     request_json,
     verify_bundle,
 )
+from release_train.store_review import STORE_ACTIONS, screen as screen_store_review
 from release_train.versions import parse_version
 
 STATE_PATH = "coordinator/state-v1.json"
@@ -52,7 +62,11 @@ DEFAULT_GROUPS = [
     "ddb77cbf-9fb9-4553-8363-b11572f2909c",
     "245e738b-b2d3-478e-9786-98511d085990",
 ]
-WORKFLOWS = {"ios": "ios-scheduled-build", "android": "android-build"}
+WORKFLOWS = {
+    "ios": "ios-scheduled-build",
+    "macos": "macos-scheduled-build",
+    "android": "android-build",
+}
 
 
 def beta_attributes(attributes, detail, legacy):
@@ -126,18 +140,31 @@ def reconcile_operations(state, snapshot):
             elif operation["status"] in {"started", "ambiguous"}:
                 state.setdefault("holds", {})[platform] = key
         elif operation["status"] in {"started", "ambiguous", "deferred"} or (
-            kind == "app-store" and operation["status"] == "acknowledged"
+            (kind == "app-store" or is_public_beta_release(action))
+            and operation["status"] == "acknowledged"
+        ) or (
+            is_public_beta_release(action)
+            and operation["status"] == "done"
+            and "cadence_at" not in operation
         ):
             build = action.get("build", action)
             observed = False
             if kind in {"public-beta", "attach-beta-groups"}:
                 matches = [
                     b
-                    for b in snapshot.get("ios", {}).get("builds", [])
+                    for b in snapshot.get(platform, {}).get("builds", [])
                     if b["id"] == build["id"]
                 ]
                 if matches:
                     current = matches[0]
+                    if is_public_beta_release(action) and current.get("public"):
+                        confirmed_at = operation.setdefault(
+                            "public_observed_at",
+                            snapshot.get(platform, {}).get("observed_at", snapshot["now"]),
+                        )
+                        operation["cadence_at"] = max(
+                            operation.get("cadence_at", 0), confirmed_at
+                        )
                     observed = current.get("public_complete", current.get("public"))
                     if not observed and (
                         current.get("groups")
@@ -150,12 +177,17 @@ def reconcile_operations(state, snapshot):
                         }
                     ):
                         operation["status"] = "deferred"
+                        if is_public_beta_release(action):
+                            operation.setdefault(
+                                "cadence_at",
+                                snapshot.get(platform, {}).get("observed_at", snapshot["now"]),
+                            )
                         if state.get("holds", {}).get(platform) == key:
                             state["holds"].pop(platform)
             elif kind == "app-store":
                 matching = [
                     v
-                    for v in snapshot.get("ios", {}).get("versions", [])
+                    for v in snapshot.get(platform, {}).get("versions", [])
                     if v.get("build_id") == build["id"]
                 ]
                 accepted_states = {
@@ -174,16 +206,17 @@ def reconcile_operations(state, snapshot):
                     and v.get("build_id")
                     and v["build_id"] != build["id"]
                     and parse_version(v["version"]) >= parse_version(build["version"])
-                    for v in snapshot.get("ios", {}).get("versions", [])
+                    for v in snapshot.get(platform, {}).get("versions", [])
                 )
                 if superseded:
                     consume_version_acknowledgements(
                         state,
                         {
                             v["id"]
-                            for v in snapshot.get("ios", {}).get("versions", [])
+                            for v in snapshot.get(platform, {}).get("versions", [])
                             if v["state"] in accepted_states
                         },
+                        platform,
                     )
                     operation["status"] = "superseded"
                     if state.get("holds", {}).get(platform) == key:
@@ -195,7 +228,7 @@ def reconcile_operations(state, snapshot):
                     (r["attributes"].get("submittedDate") or 0)
                     >= operation.get("started_at", snapshot.get("now", 0))
                     and any(i.get("version_id") in ids for i in r.get("items", []))
-                    for r in snapshot.get("ios", {}).get("review_submissions", [])
+                    for r in snapshot.get(platform, {}).get("review_submissions", [])
                 )
             elif kind in {"play-production", "retry-android-upload"}:
                 track = "production" if kind == "play-production" else "internal"
@@ -204,8 +237,15 @@ def reconcile_operations(state, snapshot):
                     for b in snapshot.get("android", {}).get(track, [])
                 )
             if observed:
+                if is_public_beta_release(action):
+                    operation.setdefault(
+                        "cadence_at",
+                        snapshot.get(platform, {}).get("observed_at", snapshot["now"]),
+                    )
                 if kind == "app-store":
-                    consume_version_acknowledgements(state, {v["id"] for v in matching})
+                    consume_version_acknowledgements(
+                        state, {v["id"] for v in matching}, platform
+                    )
                 operation["status"] = "done"
                 if kind == "retry-android-upload":
                     state.pop("deferred_android", None)
@@ -240,13 +280,20 @@ def execute_plan(plan, state, snapshot, store, provider):
             state.get("holds", {}).get(channel) is not None for channel in ("android", scope)
         ):
             continue
-        state.setdefault("operations", {})[key] = {
+        public_beta_release = is_public_beta_release(action)
+        operation = state.setdefault("operations", {})[key] = {
             # Notes already live in the immutable source/artifact ledger. Keep
             # only operation identity here, not another full copy on every save.
             "action": {name: value for name, value in action.items() if name != "release_notes"},
             "status": "started",
-            "started_at": snapshot.get("now", int(time.time())),
+            "started_at": (
+                int(time.time()) if public_beta_release or action["kind"] == "app-store"
+                else snapshot.get("now", int(time.time()))
+            ),
         }
+        if old and "cadence_at" in old:
+            # Retrying missing groups can replace the first attachment's entry.
+            operation["cadence_at"] = old["cadence_at"]
         if action["kind"] == "build":
             state.setdefault("attempts", {}).setdefault(action["platform"], {})[
                 action["sha"]
@@ -260,8 +307,11 @@ def execute_plan(plan, state, snapshot, store, provider):
             state["operations"][key]["status"] = (
                 "deferred" if action["kind"] == "android-distribution" else "done")
             state["operations"][key]["result"] = result
+            if action["kind"] in STORE_ACTIONS:
+                # The store took this build, so its review confirmation is spent.
+                state.get("store_review_confirmations", {}).pop(action["platform"], None)
         except BeforeStoreMutationError as error:
-            # No store request has occurred, so preserve the prior retryable
+            # Nothing was submitted or published, so preserve the prior retryable
             # intent rather than manufacturing an ambiguous submission hold.
             if old is None:
                 state["operations"].pop(key)
@@ -278,32 +328,44 @@ def execute_plan(plan, state, snapshot, store, provider):
             state["operations"][key]["error"] = str(error)
             state["operations"][key]["status"] = "ambiguous"
             state.setdefault("holds", {})[scope] = key
+        if public_beta_release and state.get("operations", {}).get(key) is operation:
+            # A request's duration can vary; its return is the safe clock bound.
+            operation["cadence_at"] = max(operation.get("cadence_at", 0), math.ceil(time.time()))
         store.save(state)
 
 
 def acknowledge(state, item, snapshot):
-    known = (
-        set(state.get("holds", {}).values())
-        | {
-            "ios-build:" + b["id"]
-            for b in snapshot.get("ios", {}).get("builds", [])
+    known = set(state.get("holds", {}).values())
+    for platform in APPLE_PLATFORMS:
+        known |= {
+            f"{platform}-build:" + b["id"]
+            for b in snapshot.get(platform, {}).get("builds", [])
             if b.get("external") in {"BETA_REJECTED", "REJECTED"}
         }
-        | {
-            "ios-version:" + v["id"]
-            for v in snapshot.get("ios", {}).get("versions", [])
+        known |= {
+            f"{platform}-version:" + v["id"]
+            for v in snapshot.get(platform, {}).get("versions", [])
             if v["state"]
             in {"REJECTED", "METADATA_REJECTED", "INVALID_BINARY", "DEVELOPER_REJECTED"}
         }
-    )
     if item not in known:
         raise ProviderError(
             "Acknowledgement must identify an observed rejection or current failure hold"
         )
-    versions = snapshot.get("ios", {}).get("versions", [])
-    acknowledged_item = next(
-        (version_ack_key(v) for v in versions if item == "ios-version:" + v["id"]), item
-    )
+    acknowledged_item = item
+    for platform in APPLE_PLATFORMS:
+        versions = snapshot.get(platform, {}).get("versions", [])
+        matched = next(
+            (
+                version_ack_key(v, platform)
+                for v in versions
+                if item == f"{platform}-version:" + v["id"]
+            ),
+            None,
+        )
+        if matched is not None:
+            acknowledged_item = matched
+            break
     state.setdefault("acknowledged", []).append(acknowledged_item)
     state.setdefault("acknowledgement_events", []).append(
         {
@@ -433,9 +495,9 @@ class Runtime:
             body,
         )
 
-    def list_builds(self):
+    def list_workflow_builds(self, workflows):
         entries = []
-        for workflow in ["ios-build", "ios-scheduled-build", "android-build", "zapstore-publish"]:
+        for workflow in workflows:
             cursor = None
             seen = set()
             while True:
@@ -463,12 +525,17 @@ class Runtime:
                         "skipped",
                     }:
                         raise ProviderError("Unknown Codemagic build state")
-                    platform = "android" if workflow == "android-build" else "ios"
+                    if workflow == "android-build":
+                        platform = "android"
+                    elif workflow in {"macos-build", "macos-scheduled-build"}:
+                        platform = "macos"
+                    else:
+                        platform = "ios"
                     labels = item.get("labels", [])
                     match = next(
                         (
                             re.fullmatch(
-                                r"release-train:(ios|android):([0-9a-f]{40}):([12])",
+                                r"release-train:(ios|macos|android):([0-9a-f]{40}):([12])",
                                 label,
                             )
                             for label in labels
@@ -510,6 +577,14 @@ class Runtime:
                     raise ProviderError("Codemagic pagination did not finish")
                 seen.add(text)
         return entries
+
+    def list_builds(self):
+        return self.list_workflow_builds(
+            ["ios-build", "ios-scheduled-build", "android-build", "zapstore-publish"]
+        )
+
+    def list_macos_builds(self):
+        return self.list_workflow_builds(["macos-build", "macos-scheduled-build"])
 
     def candidate(self):
         shas = subprocess.check_output(
@@ -593,23 +668,43 @@ class Runtime:
                     p,
                 )
             ]
-            if not matches and allow_historical and platform == "ios":
-                recorded = [
-                    int(m.group(1))
-                    for path in self.ledger.paths()
-                    if (
-                        m := re.fullmatch(
-                            r"releases/ios/[0-9]+\.[0-9]+\.[0-9]+\+([0-9]+)\.json", path
+            if not matches and allow_historical and platform in APPLE_PLATFORMS:
+                if platform == "macos":
+                    allocated = [
+                        int(m.group(1))
+                        for p in self.ledger.paths()
+                        if (
+                            m := re.fullmatch(
+                                r"allocations/builds/macos/([0-9]+)\.json",
+                                p,
+                            )
                         )
-                    )
-                ]
-                if recorded and int(number) < min(recorded):
-                    return {
-                        "number": int(number),
-                        "version": version,
-                        "sha": None,
-                        "legacy": True,
-                    }
+                    ]
+                    if not allocated or int(number) < min(allocated):
+                        return {
+                            "number": int(number),
+                            "version": version,
+                            "sha": None,
+                            "legacy": True,
+                        }
+                else:
+                    recorded = [
+                        int(m.group(1))
+                        for p in self.ledger.paths()
+                        if (
+                            m := re.fullmatch(
+                                r"releases/" + platform + r"/[0-9]+\.[0-9]+\.[0-9]+\+([0-9]+)\.json",
+                                p,
+                            )
+                        )
+                    ]
+                    if recorded and int(number) < min(recorded):
+                        return {
+                            "number": int(number),
+                            "version": version,
+                            "sha": None,
+                            "legacy": True,
+                        }
             if len(matches) != 1:
                 error_type = ProviderError if matches else UnmappedBuild
                 raise error_type(
@@ -636,21 +731,60 @@ class Runtime:
             raise ProviderError(f"{platform} build {number} has no verified source")
         if record.get("reservation_key"):
             # Allocation precedes the native build. It is not evidence that
-            # Shorebird registration and the provenance write both completed.
+            # native packaging and the provenance write both completed.
             completed = f"releases/{platform}/{name or version}+{number}.json"
             if completed not in self.ledger.paths():
                 return {"number": int(number), "version": name or version,
                         "sha": None, "legacy": True, "provenance_incomplete": True}
             provenance = self.ledger.read_json(completed)
+            if platform == "macos":
+                try:
+                    default_env = validate_macos_provenance(
+                        provenance,
+                        expected_version=name or version,
+                        expected_number=int(number),
+                        expected_source=source,
+                    )
+                except ValueError:
+                    raise ProviderError(
+                        f"{platform} build {number} has no matching completed provenance; "
+                        "reconcile the partial native release before promotion"
+                    ) from None
+                return {
+                    "number": int(number),
+                    "version": name or version,
+                    "sha": source,
+                    "default_env": default_env,
+                }
             if (provenance.get("platform") != platform
                     or provenance.get("release_version") != f"{name or version}+{number}"
                     or provenance.get("build_source_commit") != source
                     or provenance.get("patchable") is not True):
                 raise ProviderError(f"{platform} build {number} has no matching completed provenance; reconcile the partial native release before promotion")
+        elif platform == "macos":
+            try:
+                default_env = validate_macos_provenance(
+                    record,
+                    expected_version=name or version,
+                    expected_number=int(number),
+                    expected_source=source,
+                )
+            except ValueError:
+                raise ProviderError(
+                    f"{platform} build {number} has invalid macOS provenance; "
+                    "repair private provenance mapping"
+                ) from None
+            return {
+                "number": int(number),
+                "version": name or version,
+                "sha": source,
+                "default_env": default_env,
+            }
         return {"number": int(number), "version": name or version, "sha": source}
 
-    def apple_snapshot(self):
+    def apple_snapshot(self, platform="ios"):
         apple = self.apple
+        asc_platform = "MAC_OS" if platform == "macos" else "IOS"
         memberships = {}
         for identifier in apple.groups:
             group = apple.call("GET", "/betaGroups/" + identifier)["data"]["attributes"]
@@ -672,6 +806,7 @@ class Runtime:
             + urllib.parse.urlencode(
                 {
                     "filter[app]": APP_ID,
+                    "filter[preReleaseVersion.platform]": asc_platform,
                     "include": "preReleaseVersion,buildBetaDetail,betaAppReviewSubmission",
                     "limit": 200,
                 }
@@ -698,7 +833,7 @@ class Runtime:
                 return value
 
             version = related("preReleaseVersion")["attributes"]["version"]
-            identity = self.identity("ios", number, version, allow_historical=True)
+            identity = self.identity(platform, number, version, allow_historical=True)
             beta_detail = related("buildBetaDetail", optional=True)
             if (
                 beta_detail is None
@@ -732,10 +867,12 @@ class Runtime:
                     ),
                 }
             )
-        reviews = apple.pages("/apps/" + APP_ID + "/reviewSubmissions")
+        reviews = apple.pages(
+            "/apps/" + APP_ID + "/reviewSubmissions?filter[platform]=" + asc_platform
+        )
         versions = []
         for v in apple.pages(
-            "/apps/" + APP_ID + "/appStoreVersions?filter[platform]=IOS"
+            "/apps/" + APP_ID + "/appStoreVersions?filter[platform]=" + asc_platform
         ):
             attrs = v["attributes"]
             build = apple.call("GET", "/appStoreVersions/" + v["id"] + "/build").get(
@@ -833,11 +970,11 @@ class Runtime:
             "now": int(time.time()),
             "ci_passed": False,
             "changes": {},
-            "cm": self.list_builds(),
+            "cm": list(self.list_builds()),
         }
         snapshot["candidate"] = self.candidate()
         snapshot["ci_passed"] = bool(snapshot["candidate"])
-        for platform in ["ios", "android"]:
+        for platform in ["ios", "macos", "android"]:
             baseline = state.get("last_built_source", {}).get(platform)
             if baseline and snapshot["candidate"]:
                 paths = subprocess.check_output(
@@ -847,29 +984,36 @@ class Runtime:
                 snapshot["changes"][platform] = any(affects_app(p) for p in paths)
             else:
                 snapshot["changes"][platform] = True
-            if levels[platform] == "off":
+            if levels.get(platform, "off") == "off":
                 snapshot[platform] = {}
                 continue
             try:
-                if platform == "ios":
-                    group = (
-                        self.env.get("TESTFLIGHT_PUBLIC_GROUP_ID") or DEFAULT_GROUPS[0]
-                    )
-                    self.apple = Apple(apple_token(self.env), group)
-                    self.apple.groups = json.loads(
-                        self.env.get("TESTFLIGHT_GROUP_IDS")
-                        or json.dumps(DEFAULT_GROUPS)
-                    )
-                    if (
-                        not isinstance(self.apple.groups, list)
-                        or len(self.apple.groups) != 4
-                        or set(self.apple.groups) != set(DEFAULT_GROUPS)
-                        or group not in self.apple.groups
-                    ):
-                        raise ProviderError(
-                            "TestFlight groups must preserve the four existing external audiences"
+                if platform in APPLE_PLATFORMS:
+                    if getattr(self, "apple", None) is None:
+                        # Assign only once the groups validate, so a failed
+                        # iOS pass cannot leave macOS an unvalidated client.
+                        group = (
+                            self.env.get("TESTFLIGHT_PUBLIC_GROUP_ID") or DEFAULT_GROUPS[0]
                         )
-                    snapshot["ios"] = self.apple_snapshot()
+                        apple = Apple(apple_token(self.env), group)
+                        apple.groups = json.loads(
+                            self.env.get("TESTFLIGHT_GROUP_IDS")
+                            or json.dumps(DEFAULT_GROUPS)
+                        )
+                        if (
+                            not isinstance(apple.groups, list)
+                            or len(apple.groups) != 4
+                            or set(apple.groups) != set(DEFAULT_GROUPS)
+                            or group not in apple.groups
+                        ):
+                            raise ProviderError(
+                                "TestFlight groups must preserve the four existing external audiences"
+                            )
+                        self.apple = apple
+                    if platform == "macos":
+                        snapshot["cm"].extend(self.list_macos_builds())
+                    snapshot[platform] = self.apple_snapshot(platform)
+                    snapshot[platform]["observed_at"] = math.ceil(time.time())
                 else:
                     self.play = Play(
                         play_token(self.env["GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"])
@@ -882,12 +1026,12 @@ class Runtime:
                     if isinstance(error, ProviderError)
                     else "Missing credential, configuration, or malformed provider response"
                 }
-        for platform in ["ios", "android"]:
+        for platform in ["ios", "macos", "android"]:
             data = snapshot.get(platform, {})
             if data.get("error"):
                 continue
             try:
-                builds = (data.get("builds", []) if platform == "ios" else
+                builds = (data.get("builds", []) if platform in APPLE_PLATFORMS else
                           data.get("internal", []) + data.get("production", []))
                 for b in builds:
                     b["ci_verified"] = bool(b.get("sha")) and self.source_ci(b["sha"])
@@ -965,7 +1109,7 @@ class Runtime:
                         "payload": payload,
                         "transient_environment": False,
                         "production_environment": environment
-                        in {"ios-app-store", "android-play-production"},
+                        in {"ios-app-store", "macos-app-store", "android-play-production"},
                     },
                 )
             )
@@ -987,64 +1131,65 @@ class Runtime:
 
     def audit_observations(self, snapshot, state):
         acknowledged_items = current_acknowledgements(snapshot, state)
-        ios = snapshot.get("ios", {})
-        for build in ios.get("builds", []):
-            if not build.get("sha"):
-                continue
-            if build.get("valid") and build.get("internal_available"):
-                self.deploy(
-                    "ios-testflight-internal", build, "success", state, "available"
-                )
-            if build.get("public") and build.get("external") in {
-                "READY_FOR_BETA_TESTING",
-                "IN_BETA_TESTING",
-            }:
-                self.deploy(
-                    "ios-testflight-public", build, "success", state, "available"
-                )
-            elif build.get("external") in {"BETA_REJECTED", "REJECTED"}:
-                acknowledged = "ios-build:" + build["id"] in acknowledged_items
-                self.deploy(
-                    "ios-testflight-public",
-                    build,
-                    "inactive" if acknowledged else "failure",
-                    state,
-                    "acknowledged" if acknowledged else "rejected",
-                )
-        for version in ios.get("versions", []):
-            matches = [
-                b for b in ios.get("builds", []) if b["id"] == version.get("build_id")
-            ]
-            if not matches or not matches[0].get("sha"):
-                continue
-            status = version["state"]
-            acknowledged = version_ack_key(version) in acknowledged_items
-            if acknowledged and status in {
-                "REJECTED",
-                "METADATA_REJECTED",
-                "INVALID_BINARY",
-                "DEVELOPER_REJECTED",
-            }:
-                self.deploy(
-                    "ios-app-store", matches[0], "inactive", state, "acknowledged"
-                )
-            elif status in {
-                "REJECTED",
-                "METADATA_REJECTED",
-                "INVALID_BINARY",
-                "DEVELOPER_REJECTED",
-            }:
-                self.deploy("ios-app-store", matches[0], "failure", state, "rejected")
-            elif status in {"READY_FOR_SALE", "READY_FOR_DISTRIBUTION"}:
-                self.deploy("ios-app-store", matches[0], "success", state, "available")
-            elif status not in {"PREPARE_FOR_SUBMISSION", "READY_FOR_REVIEW"}:
-                self.deploy(
-                    "ios-app-store",
-                    matches[0],
-                    "in_progress",
-                    state,
-                    "in review or pending availability",
-                )
+        for platform in APPLE_PLATFORMS:
+            apple_data = snapshot.get(platform, {})
+            for build in apple_data.get("builds", []):
+                if not build.get("sha"):
+                    continue
+                if build.get("valid") and build.get("internal_available"):
+                    self.deploy(
+                        f"{platform}-testflight-internal", build, "success", state, "available"
+                    )
+                if build.get("public") and build.get("external") in {
+                    "READY_FOR_BETA_TESTING",
+                    "IN_BETA_TESTING",
+                }:
+                    self.deploy(
+                        f"{platform}-testflight-public", build, "success", state, "available"
+                    )
+                elif build.get("external") in {"BETA_REJECTED", "REJECTED"}:
+                    acknowledged = f"{platform}-build:" + build["id"] in acknowledged_items
+                    self.deploy(
+                        f"{platform}-testflight-public",
+                        build,
+                        "inactive" if acknowledged else "failure",
+                        state,
+                        "acknowledged" if acknowledged else "rejected",
+                    )
+            for version in apple_data.get("versions", []):
+                matches = [
+                    b for b in apple_data.get("builds", []) if b["id"] == version.get("build_id")
+                ]
+                if not matches or not matches[0].get("sha"):
+                    continue
+                status = version["state"]
+                acknowledged = version_ack_key(version, platform) in acknowledged_items
+                if acknowledged and status in {
+                    "REJECTED",
+                    "METADATA_REJECTED",
+                    "INVALID_BINARY",
+                    "DEVELOPER_REJECTED",
+                }:
+                    self.deploy(
+                        f"{platform}-app-store", matches[0], "inactive", state, "acknowledged"
+                    )
+                elif status in {
+                    "REJECTED",
+                    "METADATA_REJECTED",
+                    "INVALID_BINARY",
+                    "DEVELOPER_REJECTED",
+                }:
+                    self.deploy(f"{platform}-app-store", matches[0], "failure", state, "rejected")
+                elif status in {"READY_FOR_SALE", "READY_FOR_DISTRIBUTION"}:
+                    self.deploy(f"{platform}-app-store", matches[0], "success", state, "available")
+                elif status not in {"PREPARE_FOR_SUBMISSION", "READY_FOR_REVIEW"}:
+                    self.deploy(
+                        f"{platform}-app-store",
+                        matches[0],
+                        "in_progress",
+                        state,
+                        "in review or pending availability",
+                    )
         for track in ["internal", "production"]:
             for build in snapshot.get("android", {}).get(track, []):
                 if build.get("sha"):
@@ -1072,9 +1217,10 @@ class Runtime:
                 and operation["action"].get("build")
             ):
                 action = operation["action"]
+                action_platform = action.get("platform", "ios")
                 environment = {
-                    "public-beta": "ios-testflight-public",
-                    "app-store": "ios-app-store",
+                    "public-beta": f"{action_platform}-testflight-public",
+                    "app-store": f"{action_platform}-app-store",
                     "play-production": "android-play-production",
                 }.get(action["kind"])
                 if environment:
@@ -1100,7 +1246,7 @@ class Runtime:
     def refresh_store_authorization(self, platform):
         """Renew snapshot credentials after slow generation or artifact downloads."""
         try:
-            if platform == "ios" and isinstance(self.apple, Apple):
+            if platform in APPLE_PLATFORMS and isinstance(self.apple, Apple):
                 self.apple.headers["Authorization"] = "Bearer " + apple_token(self.env)
             elif platform == "android" and isinstance(self.play, Play):
                 self.play.headers["Authorization"] = "Bearer " + play_token(
@@ -1235,17 +1381,22 @@ class Runtime:
                 self.tags.call(
                     "POST", "/git/refs", {"ref": "refs/tags/" + tag, "sha": sha}
                 )
+            build_inputs = (
+                {"DEFAULT_ENV": "PRODUCTION"}
+                if platform == "macos"
+                else {
+                    "DEFAULT_ENV": "PRODUCTION",
+                    "RELEASE_CHANNEL": "BETA",
+                    "PUBLISH_TO_GITHUB": "NO",
+                }
+            )
             result = self.cm(
                 "POST",
                 "/apps/" + CM_APP_ID + "/builds",
                 {
                     "workflow_id": WORKFLOWS[platform],
                     "tag": tag,
-                    "inputs": {
-                        "DEFAULT_ENV": "PRODUCTION",
-                        "RELEASE_CHANNEL": "BETA",
-                        "PUBLISH_TO_GITHUB": "NO",
-                    },
+                    "inputs": build_inputs,
                     "environment": {
                         "variables": {
                             "RELEASE_EXPECTED_SHA": sha,
@@ -1269,7 +1420,7 @@ class Runtime:
             notes = notes_for(bundle, "testflight")
             self.refresh_store_authorization(platform)
             self.apple.submit_beta(build, notes)
-            self.deploy("ios-testflight-public", build, "in_progress", state)
+            self.deploy(f"{platform}-testflight-public", build, "in_progress", state)
             return {}
         if kind == "app-store":
             from release_train.release_notes import notes_for
@@ -1277,17 +1428,24 @@ class Runtime:
             bundle = self.prepared_bundle(action)
             notes = notes_for(bundle, "app_store")
             self.refresh_store_authorization(platform)
+            submit_kwargs = {"platform": platform} if platform != "ios" else {}
             identifier = self.apple.submit_store(
                 build,
-                snapshot["ios"]["versions"],
+                snapshot[platform]["versions"],
                 state.get("acknowledged", []),
-                reviews=snapshot["ios"].get("review_submissions", []),
+                reviews=snapshot[platform].get("review_submissions", []),
                 notes=notes,
+                **submit_kwargs,
             )
-            consume_version_acknowledgements(state, {identifier})
-            self.claim(build, "app-store")
-            state.setdefault("app_store_submissions", []).append(snapshot["now"])
-            self.deploy("ios-app-store", build, "in_progress", state)
+            submissions_key = (
+                "app_store_submissions"
+                if platform == "ios"
+                else f"{platform}_app_store_submissions"
+            )
+            state.setdefault(submissions_key, []).append(math.ceil(time.time()))
+            consume_version_acknowledgements(state, {identifier}, platform)
+            self.claim(build, "app-store" if platform == "ios" else "mac-app-store")
+            self.deploy(f"{platform}-app-store", build, "in_progress", state)
             return {"store_id": identifier}
         if kind == "play-production":
             from release_train.release_notes import notes_for
@@ -1421,6 +1579,7 @@ def main(env=os.environ):
         raise ProviderError("Coordinator source differs from trusted main workflow")
     levels = {
         "ios": env.get("RELEASE_TRAIN_IOS") or "off",
+        "macos": env.get("RELEASE_TRAIN_MACOS") or "off",
         "android": env.get("RELEASE_TRAIN_ANDROID") or "off",
     }
     runtime = Runtime(env)
@@ -1469,11 +1628,11 @@ def main(env=os.environ):
         acknowledge(state, acknowledgement, snapshot)
     # Repair claims after an accepted store mutation, including manual releases.
     if not dry:
-        for platform in ["ios", "android"]:
+        for platform in ["ios", "macos", "android"]:
             data = snapshot.get(platform, {})
             if levels[platform] in {"off", "dry-run"} or data.get("error"):
                 continue
-            if platform == "ios":
+            if platform in APPLE_PLATFORMS:
                 from release_train.versions import parse_version
 
                 versions = [
@@ -1482,7 +1641,7 @@ def main(env=os.environ):
                     if v["state"] not in {"PREPARE_FOR_SUBMISSION", "READY_FOR_REVIEW"}
                 ]
                 reconcile(
-                    "ios",
+                    platform,
                     ledger=runtime.ledger,
                     store_versions=versions,
                     now=datetime.now(UTC),
@@ -1536,19 +1695,31 @@ def main(env=os.environ):
                         record["number"]
                     )
     plan = plan_tick(snapshot, state, levels)
+    store_review_approval = (
+        env.get("RELEASE_APPROVE_STORE_REVIEW", "")
+        if env.get("GITHUB_EVENT_NAME") == "workflow_dispatch" else ""
+    )
+    confirmations = screen_store_review(
+        plan, snapshot, store_review_approval, dry=dry,
+        confirmed=state.get("store_review_confirmations", {}),
+    )
     if not dry:
+        if confirmations:
+            state.setdefault("store_review_confirmations", {}).update(confirmations)
         runtime.store.save(state)
         audit_snapshot = dict(snapshot)
-        for platform in ["ios", "android"]:
+        for platform in ["ios", "macos", "android"]:
             if levels[platform] in {"off", "dry-run"}:
                 audit_snapshot[platform] = {}
         runtime.audit_observations(audit_snapshot, state)
         runtime.store.save(state)
         execute_plan(plan, state, snapshot, runtime.store, runtime)
+    draft_messages = publish_release_drafts(snapshot, env, levels, dry_run=dry)
     summary = [
         "Release train " + ("dry run" if dry else "tick"),
         *plan["reasons"],
         *plan["errors"],
+        *draft_messages,
     ]
     summary += [a["platform"] + ": " + a["kind"] for a in plan["actions"]]
     summary += [

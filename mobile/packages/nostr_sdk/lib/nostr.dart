@@ -862,10 +862,12 @@ class Nostr {
           events: eventBox.all(),
           endedBy: outcome.endedBy,
           answeredNetworkRelayCount: outcome.answeredNetworkRelayCount,
+          unsentNetworkRelayCount: outcome.unsentNetworkRelayCount,
           unansweredRelayCount: outcome.unansweredRelayCount,
           rateLimitedRelayCount: outcome.rateLimitedRelayCount,
           closedRelayReasons: outcome.closedRelayReasons,
           possiblyCapped: collectionLimited || outcome.possiblyCapped,
+          hasCapEvidence: collectionLimited || outcome.hasCapEvidence,
           confirmedExhaustive:
               !collectionLimited && outcome.confirmedExhaustive,
         ),

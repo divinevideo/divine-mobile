@@ -356,6 +356,17 @@ void main() {
         expect(container.onDismissPressed, equals(onDismiss));
         expect(container.dismissSemanticLabel, 'Close');
       });
+
+      testWidgets('passes onVisible through to the SnackBar', (tester) async {
+        void onVisible() {}
+
+        final snackBar = DivineSnackbarContainer.snackBar(
+          'Saved',
+          onVisible: onVisible,
+        );
+
+        expect(snackBar.onVisible, equals(onVisible));
+      });
     });
 
     group('sizing', () {

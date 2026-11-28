@@ -848,7 +848,9 @@ void main() {
         () async {
           when(
             () => mockNostrClient.countEvents(any()),
-          ).thenAnswer((_) async => const CountResult(count: 4));
+          ).thenAnswer(
+            (_) async => const CountResult(isComplete: true, count: 4),
+          );
           when(
             () => mockNostrClient.sendGenericRepost(
               addressableId: any(named: 'addressableId'),
@@ -893,7 +895,9 @@ void main() {
       test('rolls back record + count + stream when publish throws', () async {
         when(
           () => mockNostrClient.countEvents(any()),
-        ).thenAnswer((_) async => const CountResult(count: 4));
+        ).thenAnswer(
+          (_) async => const CountResult(isComplete: true, count: 4),
+        );
         when(
           () => mockNostrClient.sendGenericRepost(
             addressableId: any(named: 'addressableId'),
@@ -1189,7 +1193,9 @@ void main() {
         () async {
           when(
             () => mockNostrClient.countEvents(any()),
-          ).thenAnswer((_) async => const CountResult(count: 7));
+          ).thenAnswer(
+            (_) async => const CountResult(isComplete: true, count: 7),
+          );
           when(
             () => mockNostrClient.deleteEvent(any()),
           ).thenAnswer((_) async => null);
@@ -1226,7 +1232,9 @@ void main() {
       test('rolls back record + count + stream when deletion throws', () async {
         when(
           () => mockNostrClient.countEvents(any()),
-        ).thenAnswer((_) async => const CountResult(count: 7));
+        ).thenAnswer(
+          (_) async => const CountResult(isComplete: true, count: 7),
+        );
         when(
           () => mockNostrClient.deleteEvent(any()),
         ).thenThrow(Exception('relay unreachable'));
@@ -1381,6 +1389,26 @@ void main() {
     });
 
     group('getRepostCount', () {
+      test(
+        'returns a count another relay did not settle without caching it',
+        () async {
+          var calls = 0;
+          when(() => mockNostrClient.countEvents(any())).thenAnswer((_) async {
+            calls++;
+            return calls == 1
+                ? const CountResult(count: 3, isComplete: false)
+                : const CountResult(count: 7, isComplete: true);
+          });
+
+          final repository = RepostsRepository(nostrClient: mockNostrClient);
+
+          expect(await repository.getRepostCount(testAddressableId), equals(3));
+          expect(await repository.getRepostCount(testAddressableId), equals(7));
+          expect(await repository.getRepostCount(testAddressableId), equals(7));
+          verify(() => mockNostrClient.countEvents(any())).called(2);
+        },
+      );
+
       test('returns null and caches nothing when no relay answered', () async {
         when(() => mockNostrClient.countEvents(any())).thenThrow(
           const CountUnavailableException('No relay responded to COUNT'),
@@ -1396,7 +1424,9 @@ void main() {
       test('queries relays for repost count', () async {
         when(
           () => mockNostrClient.countEvents(any()),
-        ).thenAnswer((_) async => const CountResult(count: 42));
+        ).thenAnswer(
+          (_) async => const CountResult(isComplete: true, count: 42),
+        );
 
         final repository = RepostsRepository(nostrClient: mockNostrClient);
 
@@ -1409,7 +1439,9 @@ void main() {
       test('returns zero when no reposts exist', () async {
         when(
           () => mockNostrClient.countEvents(any()),
-        ).thenAnswer((_) async => const CountResult(count: 0));
+        ).thenAnswer(
+          (_) async => const CountResult(isComplete: true, count: 0),
+        );
 
         final repository = RepostsRepository(nostrClient: mockNostrClient);
 
@@ -1421,7 +1453,9 @@ void main() {
       test('returns cached count incremented after toggleRepost', () async {
         when(
           () => mockNostrClient.countEvents(any()),
-        ).thenAnswer((_) async => const CountResult(count: 6));
+        ).thenAnswer(
+          (_) async => const CountResult(isComplete: true, count: 6),
+        );
 
         final repository = RepostsRepository(nostrClient: mockNostrClient);
 
@@ -1445,7 +1479,9 @@ void main() {
         // countEvents returns 0 so the seeded cache starts at 0.
         when(
           () => mockNostrClient.countEvents(any()),
-        ).thenAnswer((_) async => const CountResult(count: 0));
+        ).thenAnswer(
+          (_) async => const CountResult(isComplete: true, count: 0),
+        );
         when(() => mockNostrClient.deleteEvent(any())).thenAnswer(
           (_) async => createMockEvent(
             id: 'deletion_event_id',
@@ -1477,7 +1513,9 @@ void main() {
       test('caches relay-fetched count and reuses on second call', () async {
         when(
           () => mockNostrClient.countEvents(any()),
-        ).thenAnswer((_) async => const CountResult(count: 15));
+        ).thenAnswer(
+          (_) async => const CountResult(isComplete: true, count: 15),
+        );
 
         final repository = RepostsRepository(nostrClient: mockNostrClient);
 
@@ -1494,7 +1532,9 @@ void main() {
       test('caches relay-fetched count and reuses on second call', () async {
         when(
           () => mockNostrClient.countEvents(any()),
-        ).thenAnswer((_) async => const CountResult(count: 7));
+        ).thenAnswer(
+          (_) async => const CountResult(isComplete: true, count: 7),
+        );
 
         final repository = RepostsRepository(nostrClient: mockNostrClient);
 
@@ -1513,7 +1553,9 @@ void main() {
         () async {
           when(
             () => mockNostrClient.countEvents(any()),
-          ).thenAnswer((_) async => const CountResult(count: 10));
+          ).thenAnswer(
+            (_) async => const CountResult(isComplete: true, count: 10),
+          );
 
           final repository = RepostsRepository(nostrClient: mockNostrClient);
 
@@ -1539,7 +1581,9 @@ void main() {
       test('is cleared by clearCache', () async {
         when(
           () => mockNostrClient.countEvents(any()),
-        ).thenAnswer((_) async => const CountResult(count: 10));
+        ).thenAnswer(
+          (_) async => const CountResult(isComplete: true, count: 10),
+        );
 
         final repository = RepostsRepository(nostrClient: mockNostrClient);
 
@@ -1564,7 +1608,9 @@ void main() {
       test('queries relays for repost count using event ID', () async {
         when(
           () => mockNostrClient.countEvents(any()),
-        ).thenAnswer((_) async => const CountResult(count: 15));
+        ).thenAnswer(
+          (_) async => const CountResult(isComplete: true, count: 15),
+        );
 
         final repository = RepostsRepository(nostrClient: mockNostrClient);
 
@@ -1577,7 +1623,9 @@ void main() {
       test('returns zero when no reposts exist', () async {
         when(
           () => mockNostrClient.countEvents(any()),
-        ).thenAnswer((_) async => const CountResult(count: 0));
+        ).thenAnswer(
+          (_) async => const CountResult(isComplete: true, count: 0),
+        );
 
         final repository = RepostsRepository(nostrClient: mockNostrClient);
 
@@ -3435,7 +3483,9 @@ void main() {
           stubDeletion();
           when(
             () => mockNostrClient.countEvents(any()),
-          ).thenAnswer((_) async => const CountResult(count: 3));
+          ).thenAnswer(
+            (_) async => const CountResult(isComplete: true, count: 3),
+          );
           when(
             () => mockLocalStorage.isReposted(legacyCoordinate),
           ).thenAnswer((_) async => true);
@@ -3471,7 +3521,9 @@ void main() {
       test('getRepostCount also counts reposts tagged with the legacy key', () {
         when(
           () => mockNostrClient.countEvents(any()),
-        ).thenAnswer((_) async => const CountResult(count: 3));
+        ).thenAnswer(
+          (_) async => const CountResult(isComplete: true, count: 3),
+        );
         final repository = RepostsRepository(nostrClient: mockNostrClient);
 
         return repository.getRepostCount(normalVideoCoordinate).then((_) {

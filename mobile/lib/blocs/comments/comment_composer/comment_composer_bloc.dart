@@ -187,6 +187,7 @@ class CommentComposerBloc
             ? state.clearActiveReply()
             : state.copyWith(
                 mainInputText: '',
+                replaceDraft: true,
                 activeMentions: const {},
                 activeMentionBindings: const [],
               ),
@@ -214,6 +215,7 @@ class CommentComposerBloc
         ? state.clearActiveReply()
         : state.copyWith(
             mainInputText: '',
+            replaceDraft: true,
             activeMentions: const {},
             activeMentionBindings: const [],
           );
@@ -282,6 +284,7 @@ class CommentComposerBloc
       state.copyWith(
         mainInputText: isReply ? state.mainInputText : previousMain,
         replyInputText: isReply ? previousReply : state.replyInputText,
+        replaceDraft: true,
         activeMentions: previousMentions,
         activeMentionBindings: previousMentionBindings,
         error: isReply
@@ -362,6 +365,7 @@ class CommentComposerBloc
       state.clearActiveReply().copyWith(
         activeEditCommentId: event.commentId,
         editInputText: event.originalContent,
+        replaceDraft: true,
         activeEditOriginalReplyToEventId: event.originalReplyToEventId,
         activeEditOriginalReplyToAuthorPubkey:
             event.originalReplyToAuthorPubkey,
