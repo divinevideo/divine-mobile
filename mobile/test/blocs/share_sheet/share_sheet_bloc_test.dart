@@ -2081,7 +2081,7 @@ void main() {
       );
 
       blocTest<ShareSheetBloc, ShareSheetState>(
-        'a row Send is ignored while a selection exists',
+        'a direct send is ignored while a selection exists',
         seed: () => const ShareSheetState(
           status: ShareSheetStatus.ready,
           contacts: [testRecipient, otherRecipient],
@@ -2101,7 +2101,7 @@ void main() {
       );
 
       blocTest<ShareSheetBloc, ShareSheetState>(
-        'a row Send is ignored while a message is typed',
+        'a direct send is ignored if it includes a message',
         seed: () => const ShareSheetState(
           status: ShareSheetStatus.ready,
           contacts: [testRecipient],

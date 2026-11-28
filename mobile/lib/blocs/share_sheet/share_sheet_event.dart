@@ -18,7 +18,7 @@ class ShareSheetContactsLoadRequested extends ShareSheetEvent {
   const ShareSheetContactsLoadRequested();
 }
 
-/// A recipient was toggled (contact-row tap or Find People pick).
+/// A recipient was toggled in the composer selection.
 ///
 /// Adds the user to the selection, or removes them when already
 /// selected. Selection never sends — it reveals the message composer;
@@ -32,12 +32,13 @@ class ShareSheetRecipientToggled extends ShareSheetEvent {
   List<Object?> get props => [recipient.pubkey];
 }
 
-/// Send video with an optional message to all selected recipients.
+/// Send a video to one contact or to all selected recipients with an optional
+/// message.
 class ShareSheetSendRequested extends ShareSheetEvent {
   const ShareSheetSendRequested({this.message, this.only});
 
-  /// A single contact's row Send: sends to just them, and only while nothing
-  /// is selected and no message is typed.
+  /// The direct-send contact. A direct send requires an empty selection and
+  /// no message.
   final ShareableUser? only;
 
   /// The optional note sent with the video; blank is sent as none.

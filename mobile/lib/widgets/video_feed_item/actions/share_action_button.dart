@@ -1,6 +1,6 @@
 // ABOUTME: Share action button for video feed overlay.
-// ABOUTME: Opens unified share sheet: tap a contact to select it (never an
-// ABOUTME: instant send), compose an optional message, send explicitly.
+// ABOUTME: Opens the unified share sheet for direct sends, optional messages,
+// ABOUTME: and other ways to share a video.
 
 import 'dart:async';
 
@@ -76,9 +76,9 @@ void _runShareDetached(Future<void> operation, String description) {
 /// Shows a share icon that opens a unified share bottom sheet with:
 /// - Video context/preview header
 /// - "Share with" horizontal contact row with "Find people" search.
-///   Tapping contacts toggles their selection (tick on the avatar) —
-///   nothing is sent until the explicit send button, which fans the
-///   video out to every selected person as separate DMs.
+///   Tap a contact for a direct send, or long-press to start a selection.
+///   While a selection is open, taps toggle recipients and the composer
+///   sends the video to each selected person in a separate DM.
 /// - Message composer shown while any recipient is selected (replaces
 ///   the actions row)
 /// - "More actions" horizontal row (Save, download, Add to List, Copy,

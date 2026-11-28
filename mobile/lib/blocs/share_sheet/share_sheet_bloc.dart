@@ -34,8 +34,8 @@ part 'share_sheet_state.dart';
 /// Manages:
 /// - Contact loading (recent recipients, then followed and previously
 ///   messaged users in closeness order)
-/// - Recipient selection (select-then-send: tapping a contact only selects;
-///   the DM goes out on an explicit [ShareSheetSendRequested])
+/// - Recipient selection and sends through [ShareSheetSendRequested] for a
+///   single contact or the current selection
 /// - One-shot actions (copy link, share via)
 ///
 /// Emits [ShareSheetActionResult] as one-shot side effects for the UI
@@ -311,7 +311,7 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
           ...updates.values,
         ];
         // Removing an unresolved slot ahead of a visible person would move
-        // that person's Send button. Only trailing empty slots can disappear.
+        // that person's avatar. Only trailing empty slots can disappear.
         if (finished) {
           while (merged.isNotEmpty && !merged.last.hasVisibleIdentity) {
             merged.removeLast();
