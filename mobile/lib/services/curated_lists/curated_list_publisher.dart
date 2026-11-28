@@ -61,14 +61,11 @@ class CuratedListPublisher {
   bool _owns(String owner) =>
       _isCurrentSession() && _gateway.currentAuthenticatedPubkey() == owner;
 
-  /// [onRelayAccepted] runs once a relay accepts a confirmed send, even when
-  /// this device then fails to record the publication and this returns false.
   Future<bool> publish(
     CuratedList source, {
     Event? signedRetry,
     bool confirmed = false,
     void Function()? onPublicationUnconfirmed,
-    void Function()? onRelayAccepted,
   }) async {
     var attemptedConfirmedSend = false;
     var relayAccepted = false;
@@ -195,7 +192,6 @@ class CuratedListPublisher {
           // recovery. A failed new request was never persisted as an intent.
           return false;
         }
-        onRelayAccepted?.call();
       } else {
         final result = await _client.publishEvent(event);
         if (result.failureReason != null) {

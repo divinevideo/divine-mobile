@@ -23,30 +23,27 @@ final class SeriesCreationUnauthenticated extends SeriesCreationResult {
   const SeriesCreationUnauthenticated();
 }
 
-/// The series could not be signed, or no relay accepted it. It was removed
-/// from this device again.
+/// The series could not be signed, or no relay confirmed it. No local row
+/// was created for the send.
 final class SeriesCreationRejected extends SeriesCreationResult {
   const SeriesCreationRejected();
 }
 
-/// This device could not finish creating the series: its lists were not ready
-/// for changes or could not be saved, the account changed, or a relay accepted
-/// the series but this device could not record that. A series it had already
-/// saved stays, and is published again like any other list.
+/// The cache was unavailable, the account changed, or a relay accepted the
+/// series but this device could not save it. Relay sync can recover an
+/// accepted series.
 final class SeriesCreationFailed extends SeriesCreationResult {
   const SeriesCreationFailed();
 }
 
 extension _CuratedListCreation on CuratedListService {
   /// A series is an empty, public, manually ordered list carrying the series
-  /// marker. It is created and published in one operation on its own
-  /// coordinate: no relay can hold that coordinate yet, so nothing is read
-  /// first, and the background backfill cannot publish the series before
-  /// this does.
+  /// marker. Its random coordinate can be published without reading relays
+  /// first or replacing a list created on another device at the same time.
   Future<SeriesCreationResult> _createSeries(String name) async {
     final owner = _relayGateway.currentAuthenticatedPubkey();
     if (owner == null) return const SeriesCreationFailed();
-    final listId = _cacheIndex.nextLocalId(clock.now());
+    final listId = const Uuid().v4();
     return _serializeListOperation(
       // The new series' authorScopedId, which its later operations queue on.
       '$owner:$listId',
@@ -60,40 +57,73 @@ extension _CuratedListCreation on CuratedListService {
     required String owner,
     required String listId,
   }) async {
-    final created = await _createList(
-      id: listId,
-      name: name,
-      playOrder: PlayOrder.manual,
-      preservedTags: const [_seriesMarker],
-      publish: false,
-    );
-    if (created == null) return const SeriesCreationFailed();
-    var relayAccepted = false;
-    if (await _publishListToNostr(
-      created,
-      confirmed: true,
-      onRelayAccepted: () => relayAccepted = true,
-    )) {
-      return SeriesCreated(getListById(created.authorScopedId) ?? created);
-    }
-    // A relay holds an accepted series, so it stays for the backfill to
-    // record. After an account change its row is no longer this session's.
-    if (relayAccepted || !_isCurrent(owner)) {
+    if (!isReadyForMutations || !_isCurrent(owner)) {
       return const SeriesCreationFailed();
     }
-    final current = getListById(created.authorScopedId) ?? created;
-    _lists.removeWhere((list) => list.authorScopedId == current.authorScopedId);
-    if (await _saveLists()) return const SeriesCreationRejected();
-    if (_isCurrent(owner) &&
-        _prefs.getString(CuratedListService.listsStorageKey) != null &&
-        getListById(current.authorScopedId) == null) {
-      _restoreList(current);
+    final now = clock.now();
+    final series = CuratedList(
+      id: listId,
+      name: name,
+      videoEventIds: const [],
+      pubkey: owner,
+      createdAt: now,
+      updatedAt: now,
+      playOrder: PlayOrder.manual,
+      preservedTags: const [_seriesMarker],
+    );
+    if (!_relayEvidence.allows(series)) return const SeriesCreationFailed();
+
+    final Event? event;
+    try {
+      event = await _relayGateway.signList(
+        series,
+        ownerPubkey: owner,
+        createdAt: () => _publishClock.next(ownerPubkey: owner, listId: listId),
+      );
+      if (!isReadyForMutations ||
+          !_isCurrent(owner) ||
+          !_relayEvidence.allows(series)) {
+        return const SeriesCreationFailed();
+      }
+      if (event == null) return const SeriesCreationRejected();
+      final outcome = await _nostrService.publishEventAwaitOk(event);
+      if (!_isCurrent(owner)) return const SeriesCreationFailed();
+      if (!outcome.acceptedByAny) return const SeriesCreationRejected();
+    } on Object catch (error) {
+      Log.warning(
+        'Series publication failed (${error.runtimeType})',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
+      return _isCurrent(owner)
+          ? const SeriesCreationRejected()
+          : const SeriesCreationFailed();
     }
-    return const SeriesCreationFailed();
+
+    if (!isReadyForMutations || !_isCurrent(owner)) {
+      return const SeriesCreationFailed();
+    }
+    // Only confirmed rows enter the cache. Relay sync may already have
+    // observed this event, so preserve any version it has merged.
+    if (getListById(series.authorScopedId) == null) {
+      final signedAt = event.createdAtDateTime;
+      _lists.add(
+        series.copyWith(
+          nostrEventId: event.id,
+          updatedAt: signedAt.isAfter(now) ? signedAt : now,
+        ),
+      );
+    }
+    if (!await _saveLists() || !_isCurrent(owner)) {
+      return const SeriesCreationFailed();
+    }
+    final saved = getListById(series.authorScopedId);
+    if (saved == null || !saved.isSeries || saved.nostrEventId == null) {
+      return const SeriesCreationFailed();
+    }
+    return SeriesCreated(saved);
   }
 
-  /// With [publish] false the list is only saved on this device, and the
-  /// caller publishes it.
   Future<CuratedList?> _createList({
     required String name,
     bool duringInitialization = false,
@@ -106,8 +136,6 @@ extension _CuratedListCreation on CuratedListService {
     List<String> allowedCollaborators = const [],
     String? thumbnailEventId,
     PlayOrder playOrder = PlayOrder.chronological,
-    List<List<String>> preservedTags = const [],
-    bool publish = true,
   }) async {
     try {
       if (!hasValidCuratedListVisibility(isPublic, isCollaborative)) {
@@ -140,7 +168,6 @@ extension _CuratedListCreation on CuratedListService {
         allowedCollaborators: allowedCollaborators,
         thumbnailEventId: thumbnailEventId,
         playOrder: playOrder,
-        preservedTags: preservedTags,
       );
 
       if (!_defaultAuthority.authorizeCreation(newList)) return null;
@@ -164,7 +191,7 @@ extension _CuratedListCreation on CuratedListService {
         return null;
       }
 
-      if (publish && _authService.isAuthenticated) {
+      if (_authService.isAuthenticated) {
         if (duringInitialization) {
           await _publishListToNostr(
             newList,

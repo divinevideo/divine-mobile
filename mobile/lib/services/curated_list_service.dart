@@ -28,6 +28,7 @@ import 'package:openvine/services/curated_lists/prefs_curated_list_store.dart';
 import 'package:openvine/utils/curated_list_privacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
+import 'package:uuid/uuid.dart';
 
 export 'package:openvine/models/curated_list_callbacks.dart';
 export 'package:openvine/services/curated_lists/curated_list_account_authority.dart'
@@ -459,9 +460,8 @@ class CuratedListService extends ChangeNotifier {
 
   /// Creates an empty public series named [name] (#8105).
   ///
-  /// Unlike [createList], which keeps a list on this device when no relay
-  /// takes it, a series no relay accepted is removed again, so a video is only
-  /// ever published into a series that relays already hold.
+  /// A successful result requires relay acceptance and a saved local copy.
+  /// A rejected send leaves no series for the picker or background backfill.
   Future<SeriesCreationResult> createSeries(String name) async {
     if (!_authService.isAuthenticated ||
         _authService.currentPublicKeyHex?.isNotEmpty != true) {

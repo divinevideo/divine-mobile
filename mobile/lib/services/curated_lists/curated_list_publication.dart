@@ -95,7 +95,6 @@ extension CuratedListPublication on CuratedListService {
     bool duringInitialization = false,
     bool explicitDefaultIntent = false,
     void Function()? onPublicationUnconfirmed,
-    void Function()? onRelayAccepted,
   }) async {
     if (!isCurrentSession ||
         sourceList.hasRelayConflict ||
@@ -120,7 +119,6 @@ extension CuratedListPublication on CuratedListService {
         signedRetry: signedRetry,
         confirmed: confirmed,
         onPublicationUnconfirmed: onPublicationUnconfirmed,
-        onRelayAccepted: onRelayAccepted,
       );
       if (!published && isCurrentSession) {
         _cacheStore.refreshUnchangedLists(_lists);
