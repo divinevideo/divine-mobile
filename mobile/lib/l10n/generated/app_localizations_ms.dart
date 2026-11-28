@@ -1876,6 +1876,10 @@ class AppLocalizationsMs extends AppLocalizations {
   }
 
   @override
+  String get shareRecipientGestureHint =>
+      'Ketik untuk menghantar. Tekan lama untuk menambah mesej.';
+
+  @override
   String get shareMessageHint => 'Tambah mesej pilihan...';
 
   @override

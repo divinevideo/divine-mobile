@@ -1940,6 +1940,10 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
+  String get shareRecipientGestureHint =>
+      'పంపడానికి తట్టండి. సందేశాన్ని జోడించడానికి నొక్కి పట్టుకోండి.';
+
+  @override
   String get shareMessageHint => 'ఐచ్ఛిక సందేశాన్ని జోడించండి...';
 
   @override

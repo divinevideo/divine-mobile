@@ -957,6 +957,7 @@
     }
   },
   "shareRecipientSendTo": "Hantar kepada {name}",
+  "shareRecipientGestureHint": "Ketik untuk menghantar. Tekan lama untuk menambah mesej.",
   "shareMessageHint": "Tambah mesej pilihan...",
   "videoActionUnlike": "Nyahsuka video",
   "videoActionLike": "Suka video",

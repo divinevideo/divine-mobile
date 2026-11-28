@@ -1755,6 +1755,9 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get shareRecipientGestureHint => '탭하면 전송돼요. 길게 누르면 메시지를 추가할 수 있어요.';
+
+  @override
   String get shareMessageHint => '메시지 추가 (선택)...';
 
   @override

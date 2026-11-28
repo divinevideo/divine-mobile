@@ -1891,6 +1891,10 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String get shareRecipientGestureHint =>
+      'النقر للإرسال. الضغط المطوّل لإضافة رسالة.';
+
+  @override
   String get shareMessageHint => 'أضف رسالة اختيارية...';
 
   @override

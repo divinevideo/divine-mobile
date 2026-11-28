@@ -1910,6 +1910,10 @@ class AppLocalizationsNl extends AppLocalizations {
   }
 
   @override
+  String get shareRecipientGestureHint =>
+      'Tik om te versturen. Houd ingedrukt om een bericht toe te voegen.';
+
+  @override
   String get shareMessageHint => 'Voeg optioneel een bericht toe...';
 
   @override

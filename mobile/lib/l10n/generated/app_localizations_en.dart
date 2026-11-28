@@ -1904,6 +1904,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get shareRecipientGestureHint => 'Tap to send. Hold to add a message.';
+
+  @override
   String get shareMessageHint => 'Add optional message...';
 
   @override

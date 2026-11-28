@@ -851,6 +851,7 @@
     }
   },
   "shareRecipientSendTo": "ወደ {name} ላክ",
+  "shareRecipientGestureHint": "ለመላክ ይንኩ። መልእክት ለመጨመር ተጭነው ይያዙ።",
   "shareMessageHint": "አማራጭ መልእክት አክል...",
   "videoActionUnlike": "ከቪዲዮ በተቃራኒ",
   "videoActionLike": "ልክ እንደ ቪዲዮ",

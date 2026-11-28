@@ -740,6 +740,7 @@
     }
   },
   "shareRecipientSendTo": "Wyślij do {name}",
+  "shareRecipientGestureHint": "Dotknij, aby wysłać. Przytrzymaj, aby dodać wiadomość.",
   "shareMessageHint": "Dodaj opcjonalną wiadomość...",
   "videoActionUnlike": "Cofnij polubienie",
   "videoActionLike": "Polub film",

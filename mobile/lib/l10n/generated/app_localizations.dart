@@ -3241,6 +3241,12 @@ abstract class AppLocalizations {
   /// **'Send to {name}'**
   String shareRecipientSendTo(String name);
 
+  /// Instructions above the contact avatars in the share sheet. A tap sends immediately; holding an avatar opens the optional message composer.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to send. Hold to add a message.'**
+  String get shareRecipientGestureHint;
+
   /// No description provided for @shareMessageHint.
   ///
   /// In en, this message translates to:

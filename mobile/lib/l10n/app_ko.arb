@@ -556,6 +556,7 @@
     }
   },
   "shareRecipientSendTo": "{name}에게 보내기",
+  "shareRecipientGestureHint": "탭하면 전송돼요. 길게 누르면 메시지를 추가할 수 있어요.",
   "shareMessageHint": "메시지 추가 (선택)...",
   "videoActionUnlike": "좋아요 취소",
   "videoActionLike": "좋아요",

@@ -1289,6 +1289,10 @@
       }
     }
   },
+  "shareRecipientGestureHint": "Tap to send. Hold to add a message.",
+  "@shareRecipientGestureHint": {
+    "description": "Instructions above the contact avatars in the share sheet. A tap sends immediately; holding an avatar opens the optional message composer."
+  },
   "shareMessageHint": "Add optional message...",
   "videoActionUnlike": "Unlike video",
   "videoActionLike": "Like video",

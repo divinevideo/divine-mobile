@@ -740,6 +740,7 @@
     }
   },
   "shareRecipientSendTo": "{name}に送信",
+  "shareRecipientGestureHint": "タップで送信、長押しでメッセージを追加できます。",
   "shareMessageHint": "メッセージを追加 (任意)...",
   "videoActionUnlike": "いいねを取り消す",
   "videoActionLike": "いいね",

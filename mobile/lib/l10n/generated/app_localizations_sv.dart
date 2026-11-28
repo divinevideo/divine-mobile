@@ -1893,6 +1893,10 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
+  String get shareRecipientGestureHint =>
+      'Tryck för att skicka. Håll ned för att lägga till ett meddelande.';
+
+  @override
   String get shareMessageHint => 'Lägg till valfritt meddelande...';
 
   @override

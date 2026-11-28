@@ -1868,6 +1868,10 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String get shareRecipientGestureHint =>
+      'Chạm để gửi. Nhấn giữ để thêm lời nhắn.';
+
+  @override
   String get shareMessageHint => 'Thêm tin nhắn (không bắt buộc)...';
 
   @override

@@ -1900,6 +1900,10 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
+  String get shareRecipientGestureHint =>
+      'بھیجنے کے لیے تھپتھپائیں۔ پیغام شامل کرنے کے لیے دبا کر رکھیں۔';
+
+  @override
   String get shareMessageHint => 'اختیاری پیغام شامل کریں...';
 
   @override

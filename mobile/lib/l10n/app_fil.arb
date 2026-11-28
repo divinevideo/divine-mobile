@@ -615,6 +615,7 @@
     }
   },
   "shareRecipientSendTo": "Ipadala kay {name}",
+  "shareRecipientGestureHint": "I-tap para ipadala. Pindutin nang matagal para magdagdag ng mensahe.",
   "shareMessageHint": "Magdagdag ng optional na mensahe...",
   "videoActionUnlike": "I-unlike ang video",
   "videoActionLike": "I-like ang video",

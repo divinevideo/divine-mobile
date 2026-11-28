@@ -1855,6 +1855,9 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
+  String get shareRecipientGestureHint => 'ለመላክ ይንኩ። መልእክት ለመጨመር ተጭነው ይያዙ።';
+
+  @override
   String get shareMessageHint => 'አማራጭ መልእክት አክል...';
 
   @override

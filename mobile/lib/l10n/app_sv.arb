@@ -740,6 +740,7 @@
     }
   },
   "shareRecipientSendTo": "Skicka till {name}",
+  "shareRecipientGestureHint": "Tryck för att skicka. Håll ned för att lägga till ett meddelande.",
   "shareMessageHint": "Lägg till valfritt meddelande...",
   "videoActionUnlike": "Sluta gilla videon",
   "videoActionLike": "Gilla videon",

@@ -52,6 +52,12 @@ class _ShareWithSection extends StatelessWidget {
     // While loading, render placeholder rows so the shimmer matches the real
     // avatar + name layout it will dissolve into.
     final displayContacts = contactsLoaded ? contacts : _skeletonContacts;
+    final showGestureHint =
+        tapSends &&
+        contacts.any(
+          (user) =>
+              user.hasVisibleIdentity && !disabledPubkeys.contains(user.pubkey),
+        );
 
     return Semantics(
       identifier: SemanticIds.shareWithSection,
@@ -64,13 +70,26 @@ class _ShareWithSection extends StatelessWidget {
           children: [
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                context.l10n.shareWithTitle,
-                style: TextStyle(
-                  color: context.vineColors.primaryText,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: 4,
+                children: [
+                  Text(
+                    context.l10n.shareWithTitle,
+                    style: TextStyle(
+                      color: context.vineColors.primaryText,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (showGestureHint)
+                    Text(
+                      context.l10n.shareRecipientGestureHint,
+                      style: VineTheme.bodySmallFont(
+                        color: context.vineColors.secondaryText,
+                      ),
+                    ),
+                ],
               ),
             ),
             SizedBox(

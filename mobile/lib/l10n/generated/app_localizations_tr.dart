@@ -1834,6 +1834,10 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String get shareRecipientGestureHint =>
+      'Göndermek için dokun. Mesaj eklemek için basılı tut.';
+
+  @override
   String get shareMessageHint => 'Opsiyonel mesaj ekle...';
 
   @override

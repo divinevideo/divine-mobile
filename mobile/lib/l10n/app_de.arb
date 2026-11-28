@@ -740,6 +740,7 @@
     }
   },
   "shareRecipientSendTo": "An {name} senden",
+  "shareRecipientGestureHint": "Tippe zum Senden. Halte gedrückt, um eine Nachricht hinzuzufügen.",
   "shareMessageHint": "Optionale Nachricht hinzufügen...",
   "videoActionUnlike": "Like entfernen",
   "videoActionLike": "Video liken",

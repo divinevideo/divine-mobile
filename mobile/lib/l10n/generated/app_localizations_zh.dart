@@ -1759,6 +1759,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get shareRecipientGestureHint => '轻点即可发送，长按可添加留言。';
+
+  @override
   String get shareMessageHint => '附上一句话（可选）...';
 
   @override

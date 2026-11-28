@@ -1924,6 +1924,10 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
+  String get shareRecipientGestureHint =>
+      'Докосни, за да изпратиш. Задръж, за да добавиш съобщение.';
+
+  @override
   String get shareMessageHint => 'Добави съобщение (по избор)...';
 
   @override

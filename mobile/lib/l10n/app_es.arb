@@ -740,6 +740,7 @@
     }
   },
   "shareRecipientSendTo": "Enviar a {name}",
+  "shareRecipientGestureHint": "Tocá para enviar. Mantené presionado para agregar un mensaje.",
   "shareMessageHint": "Agregá un mensaje (opcional)...",
   "videoActionUnlike": "Sacar me gusta",
   "videoActionLike": "Dar me gusta",

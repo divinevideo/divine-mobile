@@ -1950,6 +1950,10 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
+  String get shareRecipientGestureHint =>
+      'Atinge pentru a trimite. Ține apăsat pentru a adăuga un mesaj.';
+
+  @override
   String get shareMessageHint => 'Adaugă un mesaj opțional...';
 
   @override

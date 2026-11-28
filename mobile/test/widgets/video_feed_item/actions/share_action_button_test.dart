@@ -1855,6 +1855,7 @@ void main() {
               find.text(l10n.emailConfirmationSendBlocked),
               findsOneWidget,
             );
+            expect(find.text(l10n.shareRecipientGestureHint), findsNothing);
             expect(find.text(l10n.emailConfirmationResendSent), findsNothing);
 
             await tester.tap(find.text('Alice'));
@@ -1931,10 +1932,18 @@ void main() {
           (tester) async {
             await pumpOpenSheet(tester);
             expect(find.text('More actions'), findsOneWidget);
+            expect(
+              find.text(l10n.shareRecipientGestureHint),
+              findsOneWidget,
+            );
 
             await tester.longPress(find.text('Alice').first);
             await tester.pumpAndSettle();
 
+            expect(
+              find.text(l10n.shareRecipientGestureHint),
+              findsNothing,
+            );
             expect(find.byType(TextField), findsOneWidget);
             expect(tester.testTextInput.isVisible, isFalse);
             await tester.tap(find.byType(TextField));

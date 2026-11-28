@@ -1931,6 +1931,10 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
+  String get shareRecipientGestureHint =>
+      'Tocca per inviare. Tieni premuto per aggiungere un messaggio.';
+
+  @override
   String get shareMessageHint => 'Aggiungi un messaggio opzionale...';
 
   @override

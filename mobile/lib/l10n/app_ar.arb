@@ -740,6 +740,7 @@
     }
   },
   "shareRecipientSendTo": "إرسال إلى {name}",
+  "shareRecipientGestureHint": "النقر للإرسال. الضغط المطوّل لإضافة رسالة.",
   "shareMessageHint": "أضف رسالة اختيارية...",
   "videoActionUnlike": "إلغاء الإعجاب بالفيديو",
   "videoActionLike": "الإعجاب بالفيديو",
