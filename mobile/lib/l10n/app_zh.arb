@@ -956,7 +956,6 @@
       }
     }
   },
-  "shareRecipientSend": "发送",
   "shareRecipientSendTo": "发送给{name}",
   "shareMessageHint": "附上一句话（可选）...",
   "videoActionUnlike": "取消点赞视频",

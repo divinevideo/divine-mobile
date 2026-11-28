@@ -739,7 +739,6 @@
       }
     }
   },
-  "shareRecipientSend": "Skicka",
   "shareRecipientSendTo": "Skicka till {name}",
   "shareMessageHint": "Lägg till valfritt meddelande...",
   "videoActionUnlike": "Sluta gilla videon",

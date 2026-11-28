@@ -1890,9 +1890,6 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
-  String get shareRecipientSend => 'Ipadala';
-
-  @override
   String shareRecipientSendTo(String name) {
     return 'Ipadala kay $name';
   }

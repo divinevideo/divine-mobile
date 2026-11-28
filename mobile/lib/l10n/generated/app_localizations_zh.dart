@@ -1754,9 +1754,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get shareRecipientSend => '发送';
-
-  @override
   String shareRecipientSendTo(String name) {
     return '发送给$name';
   }

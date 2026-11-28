@@ -739,7 +739,6 @@
       }
     }
   },
-  "shareRecipientSend": "إرسال",
   "shareRecipientSendTo": "إرسال إلى {name}",
   "shareMessageHint": "أضف رسالة اختيارية...",
   "videoActionUnlike": "إلغاء الإعجاب بالفيديو",

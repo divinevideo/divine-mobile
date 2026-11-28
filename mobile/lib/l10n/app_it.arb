@@ -739,7 +739,6 @@
       }
     }
   },
-  "shareRecipientSend": "Invia",
   "shareRecipientSendTo": "Invia a {name}",
   "shareMessageHint": "Aggiungi un messaggio opzionale...",
   "videoActionUnlike": "Togli il mi piace al video",

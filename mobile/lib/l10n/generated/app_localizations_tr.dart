@@ -1829,9 +1829,6 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String get shareRecipientSend => 'Gönder';
-
-  @override
   String shareRecipientSendTo(String name) {
     return '$name adlı kişiye gönder';
   }

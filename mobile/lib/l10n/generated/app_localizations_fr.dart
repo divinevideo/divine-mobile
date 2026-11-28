@@ -1930,9 +1930,6 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get shareRecipientSend => 'Envoyer';
-
-  @override
   String shareRecipientSendTo(String name) {
     return 'Envoyer à $name';
   }

@@ -1905,9 +1905,6 @@ class AppLocalizationsNl extends AppLocalizations {
   }
 
   @override
-  String get shareRecipientSend => 'Verzenden';
-
-  @override
   String shareRecipientSendTo(String name) {
     return 'Versturen naar $name';
   }

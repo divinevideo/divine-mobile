@@ -1871,9 +1871,6 @@ class AppLocalizationsMs extends AppLocalizations {
   }
 
   @override
-  String get shareRecipientSend => 'Hantar';
-
-  @override
   String shareRecipientSendTo(String name) {
     return 'Hantar kepada $name';
   }

@@ -1935,9 +1935,6 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
-  String get shareRecipientSend => 'పంపండి';
-
-  @override
   String shareRecipientSendTo(String name) {
     return '$nameకు పంపు';
   }

@@ -739,7 +739,6 @@
       }
     }
   },
-  "shareRecipientSend": "Verzenden",
   "shareRecipientSendTo": "Versturen naar {name}",
   "shareMessageHint": "Voeg optioneel een bericht toe...",
   "videoActionUnlike": "Like verwijderen",

@@ -1888,9 +1888,6 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
-  String get shareRecipientSend => 'Skicka';
-
-  @override
   String shareRecipientSendTo(String name) {
     return 'Skicka till $name';
   }

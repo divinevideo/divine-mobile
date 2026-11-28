@@ -784,7 +784,6 @@
       }
     }
   },
-  "shareRecipientSend": "Изпрати",
   "shareRecipientSendTo": "Изпращане до {name}",
   "shareMessageHint": "Добави съобщение (по избор)...",
   "videoActionUnlike": "Премахни харесването",

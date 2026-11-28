@@ -1919,9 +1919,6 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
-  String get shareRecipientSend => 'Изпрати';
-
-  @override
   String shareRecipientSendTo(String name) {
     return 'Изпращане до $name';
   }

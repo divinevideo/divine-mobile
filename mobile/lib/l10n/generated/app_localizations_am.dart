@@ -1850,9 +1850,6 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
-  String get shareRecipientSend => 'ይላኩ';
-
-  @override
   String shareRecipientSendTo(String name) {
     return 'ወደ $name ላክ';
   }

@@ -579,6 +579,16 @@ class _UnifiedShareSheetView extends StatelessWidget {
             child: BlocBuilder<ShareSheetBloc, ShareSheetState>(
               builder: (context, state) {
                 final bloc = context.read<ShareSheetBloc>();
+                final tapSends =
+                    !emailConfirmationRequired &&
+                    state.attemptedRecipients.isEmpty;
+                void toggleRecipient(ShareableUser user) {
+                  final deselectingLast =
+                      state.attemptedRecipients.length == 1 &&
+                      state.isSelected(user);
+                  if (deselectingLast) messageController.clear();
+                  bloc.add(ShareSheetRecipientToggled(user));
+                }
 
                 // Read from lasting fields, not the one-off actionResult that
                 // a background contact refresh clears.
@@ -602,30 +612,21 @@ class _UnifiedShareSheetView extends StatelessWidget {
                           state.contactsLoaded || state.contacts.isNotEmpty,
                       disabledPubkeys: state.disabledPubkeys,
                       isSending: state.isSending,
-                      onSend:
-                          !emailConfirmationRequired &&
-                              state.attemptedRecipients.isEmpty &&
-                              messageController.text.isEmpty
-                          ? (user) => bloc.add(
-                              ShareSheetSendRequested(only: user),
-                            )
-                          : null,
+                      tapSends: tapSends,
                       selectedPubkeys: {
                         for (final r in state.selectedRecipients) r.pubkey,
                       },
                       onFindPeople: onFindPeople,
-                      // Select-then-send, multi-select: each tap toggles a
-                      // recipient's tick. Nothing sends until the explicit
-                      // send button. The draft survives selection changes
-                      // and is dropped only when the last recipient is
+                      // A tap sends to that person straight away. A
+                      // long-press starts a selection for a message or more
+                      // recipients; while one is open, taps toggle ticks and
+                      // nothing sends until the composer's send button. The
+                      // draft is dropped only when the last recipient is
                       // deselected.
-                      onContactTapped: (user) {
-                        final deselectingLast =
-                            state.attemptedRecipients.length == 1 &&
-                            state.isSelected(user);
-                        if (deselectingLast) messageController.clear();
-                        bloc.add(ShareSheetRecipientToggled(user));
-                      },
+                      onContactTapped: (user) => tapSends
+                          ? bloc.add(ShareSheetSendRequested(only: user))
+                          : toggleRecipient(user),
+                      onContactLongPressed: toggleRecipient,
                     ),
                     if (error != null)
                       Padding(

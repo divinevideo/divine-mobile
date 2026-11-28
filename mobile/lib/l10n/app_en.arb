@@ -1280,13 +1280,9 @@
       }
     }
   },
-  "shareRecipientSend": "Send",
-  "@shareRecipientSend": {
-    "description": "Button that sends a video directly to one share-sheet recipient."
-  },
   "shareRecipientSendTo": "Send to {name}",
   "@shareRecipientSendTo": {
-    "description": "Screen reader label for the button that sends a video to this recipient.",
+    "description": "Screen reader label for a share-sheet contact. Tapping the contact sends the video to them.",
     "placeholders": {
       "name": {
         "type": "String"

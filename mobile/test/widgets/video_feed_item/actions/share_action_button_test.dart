@@ -1716,7 +1716,7 @@ void main() {
           ) async {
             await pumpWithContact(tester, vanished, isVanished: true);
 
-            await tester.tap(find.text(l10n.profileDeletedAccountName));
+            await tester.longPress(find.text(l10n.profileDeletedAccountName));
             await tester.pumpAndSettle();
 
             // The selection chip in the composer header names the recipient
@@ -1846,7 +1846,6 @@ void main() {
 
             await pumpOpenSheet(tester, confirmation: confirmation);
 
-            expect(find.text(l10n.shareRecipientSend), findsNothing);
             expect(
               find.text(l10n.emailConfirmationSendBlocked),
               findsOneWidget,
@@ -1885,20 +1884,47 @@ void main() {
           },
         );
 
+        testWidgets('tapping a contact sends the video to that person alone', (
+          tester,
+        ) async {
+          when(
+            () => mockVideoSharingService.shareVideoWithMultipleUsers(
+              video: any(named: 'video'),
+              recipientPubkeys: any(named: 'recipientPubkeys'),
+              personalMessage: any(named: 'personalMessage'),
+            ),
+          ).thenAnswer(
+            (_) async => {
+              alice.pubkey: const ShareResult.queued('rumor-a', 'chat-a'),
+            },
+          );
+          await pumpOpenSheet(tester);
+
+          await tester.tap(find.text('Alice').first);
+          await tester.pumpAndSettle();
+
+          verify(
+            () => mockVideoSharingService.shareVideoWithMultipleUsers(
+              video: any(named: 'video'),
+              recipientPubkeys: [alice.pubkey],
+            ),
+          ).called(1);
+          expect(find.text(l10n.shareWithTitle), findsNothing);
+          expect(find.text(l10n.dmPendingVideoSending), findsOneWidget);
+        });
+
         testWidgets(
-          'tapping a contact selects it and swaps more actions for the '
+          'long-pressing a contact selects it and swaps more actions for the '
           'message composer without sending',
           (tester) async {
             await pumpOpenSheet(tester);
             expect(find.text('More actions'), findsOneWidget);
-            expect(find.text(l10n.shareRecipientSend), findsNWidgets(2));
 
-            await tester.tap(find.text('Alice').first);
+            await tester.longPress(find.text('Alice').first);
             await tester.pumpAndSettle();
 
             expect(find.byType(TextField), findsOneWidget);
             expect(tester.testTextInput.isVisible, isFalse);
-            expect(find.text(l10n.shareRecipientSend), findsNothing);
             await tester.tap(find.byType(TextField));
             await tester.pump();
             expect(tester.testTextInput.isVisible, isTrue);
@@ -1914,7 +1940,7 @@ void main() {
         );
 
         testWidgets(
-          'explicit row Send queues just its recipient once while busy',
+          'a second tap while a send is in flight queues nothing more',
           (tester) async {
             final pending = Completer<Map<String, ShareResult>>();
             when(
@@ -1925,14 +1951,12 @@ void main() {
               ),
             ).thenAnswer((_) => pending.future);
             await pumpOpenSheet(tester);
-            final button = find.text(l10n.shareRecipientSend).first;
-            await tester.tap(button);
-            await tester.tap(button);
+            final contact = find.text('Alice').first;
+            await tester.tap(contact);
             await tester.pump();
-            expect(
-              find.byType(DivineCircularProgressIndicator),
-              findsNWidgets(2),
-            );
+            await tester.tap(contact, warnIfMissed: false);
+            await tester.tap(find.text('Bob').first, warnIfMissed: false);
+            await tester.pump();
             verify(
               () => mockVideoSharingService.shareVideoWithMultipleUsers(
                 video: any(named: 'video'),
@@ -1985,7 +2009,7 @@ void main() {
           (tester) async {
             await pumpOpenSheet(tester);
 
-            await tester.tap(find.text('Alice').first);
+            await tester.longPress(find.text('Alice').first);
             await tester.pumpAndSettle();
             await tester.enterText(find.byType(TextField), 'draft text');
 
@@ -1996,7 +2020,7 @@ void main() {
             expect(find.text('More actions'), findsOneWidget);
 
             // Re-selecting shows an empty composer — the draft was dropped.
-            await tester.tap(find.text('Alice').first);
+            await tester.longPress(find.text('Alice').first);
             await tester.pumpAndSettle();
             final field = tester.widget<TextField>(find.byType(TextField));
             expect(field.controller!.text, isEmpty);
@@ -2009,7 +2033,7 @@ void main() {
           (tester) async {
             await pumpOpenSheet(tester);
 
-            await tester.tap(find.text('Alice').first);
+            await tester.longPress(find.text('Alice').first);
             await tester.pumpAndSettle();
             await tester.enterText(find.byType(TextField), 'draft text');
 
@@ -2033,7 +2057,7 @@ void main() {
           (tester) async {
             await pumpOpenSheet(tester);
 
-            await tester.tap(find.text('Alice').first);
+            await tester.longPress(find.text('Alice').first);
             await tester.pumpAndSettle();
             await tester.tap(find.text('Bob').first);
             await tester.pumpAndSettle();
@@ -2054,21 +2078,22 @@ void main() {
           },
         );
 
-        group('row Send', () {
-          Finder sendButtonFor(String name) => find.byWidgetPredicate(
-            (widget) =>
-                widget is DivineButton &&
-                widget.semanticLabel == l10n.shareRecipientSendTo(name),
-          );
-
-          testWidgets('announces which recipient it sends to', (tester) async {
+        group('tap to send', () {
+          testWidgets('announces which recipient a tap sends to and that a '
+              'long-press adds a message', (tester) async {
             final semantics = tester.ensureSemantics();
             await pumpOpenSheet(tester);
 
-            final node = tester.getSemantics(sendButtonFor('Alice'));
+            final node = tester.getSemantics(
+              find.bySemanticsLabel(l10n.shareRecipientSendTo('Alice')),
+            );
 
             expect(node.label, l10n.shareRecipientSendTo('Alice'));
             expect(node.flagsCollection.isButton, isTrue);
+            expect(
+              node.hintOverrides?.onLongPressHint,
+              l10n.shareMessageHint,
+            );
             semantics.dispose();
           });
 
@@ -2085,20 +2110,25 @@ void main() {
                   ),
                 ],
               );
-              DivineButton button(String name) =>
-                  tester.widget<DivineButton>(sendButtonFor(name));
-              expect(button('Alice').onPressed, isNotNull);
-
               when(
                 () => mockRankingSignalsLoader.isEligible(alice.pubkey),
               ).thenReturn(false);
               unawaited(blocklist.blockUser(alice.pubkey));
               await tester.pumpAndSettle();
 
-              expect(button('Alice').onPressed, isNull);
-              expect(button('Bob').onPressed, isNotNull);
               await tester.tap(find.text('Alice').first, warnIfMissed: false);
+              await tester.longPress(
+                find.text('Alice').first,
+                warnIfMissed: false,
+              );
               await tester.pumpAndSettle();
+              verifyNever(
+                () => mockVideoSharingService.shareVideoWithMultipleUsers(
+                  video: any(named: 'video'),
+                  recipientPubkeys: any(named: 'recipientPubkeys'),
+                  personalMessage: any(named: 'personalMessage'),
+                ),
+              );
               final bloc = tester
                   .element(find.text(l10n.shareWithTitle))
                   .read<ShareSheetBloc>();
@@ -2137,7 +2167,7 @@ void main() {
               );
               await pumpOpenSheet(tester);
 
-              await tester.tap(sendButtonFor('Alice'));
+              await tester.tap(find.text('Alice').first);
               await tester.pumpAndSettle();
               final refusal = find.text(l10n.shareCouldNotSendTo('Alice'));
               expect(refusal, findsOneWidget);
@@ -2200,8 +2230,12 @@ void main() {
             String? note,
           }) async {
             await pumpOpenSheet(tester);
-            for (final name in names) {
-              await tester.tap(find.text(name));
+            for (final (index, name) in names.indexed) {
+              if (index == 0) {
+                await tester.longPress(find.text(name));
+              } else {
+                await tester.tap(find.text(name));
+              }
               await tester.pumpAndSettle();
             }
             if (note != null) {
@@ -2229,7 +2263,7 @@ void main() {
                 ),
               ).thenAnswer((_) => commit.future);
               await pumpOpenSheet(tester);
-              await tester.tap(find.text('Alice').first);
+              await tester.longPress(find.text('Alice').first);
               await tester.pumpAndSettle();
               final haptics = <Object?>[];
               final messenger = tester.binding.defaultBinaryMessenger;
@@ -2297,7 +2331,7 @@ void main() {
                 ),
               ).thenAnswer((_) => commit.future);
               await pumpOpenSheet(tester);
-              await tester.tap(find.text(l10n.shareRecipientSend).first);
+              await tester.tap(find.text('Alice').first);
               await tester.pump();
               final sheetContext = tester.element(
                 find.text(l10n.shareWithTitle),
