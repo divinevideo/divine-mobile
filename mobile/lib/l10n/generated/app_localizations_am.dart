@@ -9591,6 +9591,41 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorFilterCategoryTints => 'ቀለሞች';
 
   @override
+  String get videoEditorFilterSettingsOpen => 'የማጣሪያ ቅንብሮች';
+
+  @override
+  String get videoEditorFilterLightTitle => 'ብርሃን';
+
+  @override
+  String get videoEditorFilterLightReset => 'ብርሃንን ዳግም አስጀምር';
+
+  @override
+  String get videoEditorFilterColorReset => 'ቀለምን ዳግም አስጀምር';
+
+  @override
+  String get videoEditorFilterOverlayTitle => 'ተደራቢ';
+
+  @override
+  String get videoEditorFilterOverlayReset => 'ተደራቢን ዳግም አስጀምር';
+
+  @override
+  String get videoEditorFilterCastTitle => 'የቀለም ቅልም';
+
+  @override
+  String get videoEditorFilterCastReset => 'የቀለም ቅልምን ዳግም አስጀምር';
+
+  @override
+  String get videoEditorFilterBalanceTitle => 'የቀለም ሚዛን';
+
+  @override
+  String get videoEditorFilterBalanceReset => 'የቀለም ሚዛንን ዳግም አስጀምር';
+
+  @override
+  String videoEditorFilterSettingsNumberedTitle(String title, String number) {
+    return '$title $number';
+  }
+
+  @override
   String get videoEditorDropsCountLabel => 'ብዛት';
 
   @override
@@ -9831,6 +9866,9 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoEditorEffectSettingWavelength => 'የሞገድ ርዝመት';
+
+  @override
+  String get videoEditorEffectSettingStrength => 'ጥንካሬ';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

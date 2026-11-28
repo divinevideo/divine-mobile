@@ -9716,6 +9716,41 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorFilterCategoryTints => 'Rona';
 
   @override
+  String get videoEditorFilterSettingsOpen => 'Pengaturan filter';
+
+  @override
+  String get videoEditorFilterLightTitle => 'Cahaya';
+
+  @override
+  String get videoEditorFilterLightReset => 'Atur ulang cahaya';
+
+  @override
+  String get videoEditorFilterColorReset => 'Atur ulang warna';
+
+  @override
+  String get videoEditorFilterOverlayTitle => 'Lapisan';
+
+  @override
+  String get videoEditorFilterOverlayReset => 'Atur ulang lapisan';
+
+  @override
+  String get videoEditorFilterCastTitle => 'Rona warna';
+
+  @override
+  String get videoEditorFilterCastReset => 'Atur ulang rona warna';
+
+  @override
+  String get videoEditorFilterBalanceTitle => 'Keseimbangan warna';
+
+  @override
+  String get videoEditorFilterBalanceReset => 'Atur ulang keseimbangan warna';
+
+  @override
+  String videoEditorFilterSettingsNumberedTitle(String title, String number) {
+    return '$title $number';
+  }
+
+  @override
   String get videoEditorDropsCountLabel => 'Jumlah';
 
   @override
@@ -9958,6 +9993,9 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get videoEditorEffectSettingWavelength => 'Panjang gelombang';
+
+  @override
+  String get videoEditorEffectSettingStrength => 'Kekuatan';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

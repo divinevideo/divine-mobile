@@ -9811,6 +9811,41 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorFilterCategoryTints => 'رنگ';
 
   @override
+  String get videoEditorFilterSettingsOpen => 'فلٹر کی ترتیبات';
+
+  @override
+  String get videoEditorFilterLightTitle => 'روشنی';
+
+  @override
+  String get videoEditorFilterLightReset => 'روشنی ری سیٹ کریں';
+
+  @override
+  String get videoEditorFilterColorReset => 'رنگ ری سیٹ کریں';
+
+  @override
+  String get videoEditorFilterOverlayTitle => 'اوورلے';
+
+  @override
+  String get videoEditorFilterOverlayReset => 'اوورلے ری سیٹ کریں';
+
+  @override
+  String get videoEditorFilterCastTitle => 'رنگ کی جھلک';
+
+  @override
+  String get videoEditorFilterCastReset => 'رنگ کی جھلک ری سیٹ کریں';
+
+  @override
+  String get videoEditorFilterBalanceTitle => 'رنگوں کا توازن';
+
+  @override
+  String get videoEditorFilterBalanceReset => 'رنگوں کا توازن ری سیٹ کریں';
+
+  @override
+  String videoEditorFilterSettingsNumberedTitle(String title, String number) {
+    return '$title $number';
+  }
+
+  @override
   String get videoEditorDropsCountLabel => 'تعداد';
 
   @override
@@ -10054,6 +10089,9 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get videoEditorEffectSettingWavelength => 'لہر کی لمبائی';
+
+  @override
+  String get videoEditorEffectSettingStrength => 'شدت';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

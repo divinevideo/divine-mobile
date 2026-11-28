@@ -9879,6 +9879,41 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorFilterCategoryTints => 'Mga kulay';
 
   @override
+  String get videoEditorFilterSettingsOpen => 'Mga setting ng filter';
+
+  @override
+  String get videoEditorFilterLightTitle => 'Ilaw';
+
+  @override
+  String get videoEditorFilterLightReset => 'I-reset ang ilaw';
+
+  @override
+  String get videoEditorFilterColorReset => 'I-reset ang kulay';
+
+  @override
+  String get videoEditorFilterOverlayTitle => 'Overlay';
+
+  @override
+  String get videoEditorFilterOverlayReset => 'I-reset ang overlay';
+
+  @override
+  String get videoEditorFilterCastTitle => 'Bahid ng kulay';
+
+  @override
+  String get videoEditorFilterCastReset => 'I-reset ang bahid ng kulay';
+
+  @override
+  String get videoEditorFilterBalanceTitle => 'Balanse ng kulay';
+
+  @override
+  String get videoEditorFilterBalanceReset => 'I-reset ang balanse ng kulay';
+
+  @override
+  String videoEditorFilterSettingsNumberedTitle(String title, String number) {
+    return '$title $number';
+  }
+
+  @override
   String get videoEditorDropsCountLabel => 'Bilang';
 
   @override
@@ -10122,6 +10157,9 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get videoEditorEffectSettingWavelength => 'Haba ng alon';
+
+  @override
+  String get videoEditorEffectSettingStrength => 'Lakas';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

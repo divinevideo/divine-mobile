@@ -12,6 +12,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/draw_editor/video_editor_draw_bloc.dart';
+import 'package:openvine/blocs/video_editor/filter_editor/video_editor_filter_bloc.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/blocs/video_editor/tune_editor/video_editor_tune_bloc.dart';
@@ -44,6 +45,12 @@ class _MockVideoEditorTuneBloc
 class _MockVideoEditorDrawBloc
     extends MockBloc<VideoEditorDrawEvent, VideoEditorDrawState>
     implements VideoEditorDrawBloc {}
+
+class _MockProImageEditorState extends Mock implements ProImageEditorState {
+  @override
+  String toString({DiagnosticLevel minLevel = DiagnosticLevel.info}) =>
+      '_MockProImageEditorState';
+}
 
 /// [ClipEditorState.totalDuration] is derived from clips; this fake supplies it
 /// directly so tests don't need to construct clip fixtures.
@@ -733,6 +740,38 @@ void main() {
     );
 
     testWidgets(
+      'tap on Filter in the shown sheet starts a filter session and opens '
+      'the filter editor',
+      (tester) async {
+        final filterBloc = VideoEditorFilterBloc();
+        addTearDown(filterBloc.close);
+        final editor = _MockProImageEditorState();
+        await tester.pumpWidget(
+          _buildShowHost(
+            mainBloc: mainBloc,
+            clipBloc: clipBloc,
+            timelineOverlayBloc: timelineOverlayBloc,
+            tuneBloc: tuneBloc,
+            drawBloc: drawBloc,
+            filterBloc: filterBloc,
+            editor: editor,
+          ),
+        );
+
+        await tester.tap(find.byKey(const Key('open-sheet')));
+        await tester.pumpAndSettle();
+
+        await tester.tap(
+          find.bySemanticsLabel(l10n.videoEditorOpenFilterSemanticLabel),
+        );
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        verify(editor.openFilterEditor).called(1);
+      },
+    );
+
+    testWidgets(
       'tap on Blur in the shown sheet opens the draw editor to hide an area',
       (tester) async {
         await tester.pumpWidget(
@@ -774,6 +813,7 @@ Widget _app({required Widget child, Locale? locale}) => MaterialApp(
 /// callbacks a given test asserts on.
 VideoEditorScope _scope({
   Widget? child,
+  ProImageEditorState? editor,
   VoidCallback? onOpenClipsEditor,
   VoidCallback? onOpenMusicLibrary,
   VoidCallback? onOpenVoiceOver,
@@ -783,6 +823,7 @@ VideoEditorScope _scope({
   VoidCallback? onAddAudioVisualizer,
 }) => VideoEditorScope(
   editorKey: GlobalKey<ProImageEditorState>(),
+  editorOverride: editor,
   removeAreaKey: GlobalKey(),
   onOpenCamera: () {},
   onAddStickers: onAddStickers ?? () {},
@@ -811,6 +852,8 @@ Widget _buildShowHost({
   required _MockTimelineOverlayBloc timelineOverlayBloc,
   required _MockVideoEditorTuneBloc tuneBloc,
   required _MockVideoEditorDrawBloc drawBloc,
+  VideoEditorFilterBloc? filterBloc,
+  ProImageEditorState? editor,
   ValueListenable<bool>? openerVisible,
   Locale? locale,
 }) => _app(
@@ -822,8 +865,15 @@ Widget _buildShowHost({
       BlocProvider<TimelineOverlayBloc>.value(value: timelineOverlayBloc),
       BlocProvider<VideoEditorTuneBloc>.value(value: tuneBloc),
       BlocProvider<VideoEditorDrawBloc>.value(value: drawBloc),
+      if (filterBloc != null)
+        BlocProvider<VideoEditorFilterBloc>.value(value: filterBloc)
+      else
+        BlocProvider<VideoEditorFilterBloc>(
+          create: (_) => VideoEditorFilterBloc(),
+        ),
     ],
     child: _scope(
+      editor: editor,
       child: openerVisible == null
           ? const _SheetOpener()
           : ValueListenableBuilder(

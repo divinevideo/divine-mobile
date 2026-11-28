@@ -429,12 +429,13 @@ class _OverlayControls extends StatelessWidget {
           padding: .only(bottom: VideoEditorConstants.bottomBarHeight),
           child: VideoEditorDrawOverlayControls(),
         ),
-        // Filter-Editor
-        VideoEditorMainState(openSubEditor: .filter) => const Padding(
-          key: ValueKey('Filter-Overlay-Controls'),
-          padding: .only(bottom: VideoEditorConstants.bottomBarHeight),
-          child: VideoEditorFilterOverlayControls(),
-        ),
+        // Filter-Editor: reaches down to the preview's edge, where its
+        // settings button sits above the bottom bar, like the effects
+        // editor's.
+        VideoEditorMainState(openSubEditor: .filter) =>
+          const VideoEditorFilterOverlayControls(
+            key: ValueKey('Filter-Overlay-Controls'),
+          ),
         // Tune-Editor
         VideoEditorMainState(openSubEditor: .tune) => const Padding(
           key: ValueKey('Tune-Overlay-Controls'),

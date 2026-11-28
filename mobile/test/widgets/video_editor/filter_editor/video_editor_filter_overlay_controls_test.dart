@@ -11,6 +11,8 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/video_editor/filter_editor/video_editor_filter_bloc.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/video_editor/editor_filter_category.dart';
+import 'package:openvine/models/video_editor/filter_settings.dart';
 import 'package:openvine/widgets/video_editor/filter_editor/video_editor_filter_overlay_controls.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/video_editor_vertical_slider.dart';
@@ -39,6 +41,8 @@ class _MockFilterEditorState extends Mock implements FilterEditorState {
 class _MockFilterEditorKey extends Mock
     implements GlobalKey<FilterEditorState> {}
 
+class _MockStateManager extends Mock implements StateManager {}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -54,6 +58,8 @@ void main() {
     registerFallbackValue(VideoEditorFilterSelected(presetFiltersList.first));
     registerFallbackValue(const VideoEditorFilterCancelled());
     registerFallbackValue(const VideoEditorFilterConfirmed());
+    registerFallbackValue(<FilterState>[]);
+    registerFallbackValue(PresetFilters.none);
   });
 
   group('VideoEditorFilterOverlayControls', () {
@@ -259,13 +265,27 @@ void main() {
           verifyNever(() => mockBloc.add(const VideoEditorFilterConfirmed()));
           verify(() => filterEditor.close()).called(1);
           verifyNever(() => filterEditor.done());
+          verifyNever(
+            () => editor.addHistory(filters: any(named: 'filters')),
+          );
         }
 
-        testWidgets('commits the picked filter', (tester) async {
-          final picked = presetFiltersList[1];
-          when(
-            () => mockBloc.state,
-          ).thenReturn(VideoEditorFilterState(selectedFilter: picked));
+        testWidgets('commits the picked filter with its settings, after '
+            'the others', (tester) async {
+          final picked = editorFilterNamed('Crema')!;
+          final other = FilterState(id: 'other', name: 'Ludwig');
+          final stateManager = _MockStateManager();
+          final matrices = [ColorFilterAddons.sepia(0.5)];
+          when(() => editor.stateManager).thenReturn(stateManager);
+          when(() => stateManager.activeFilters).thenReturn([other]);
+          when(() => filterEditor.filterMatrix).thenReturn(matrices);
+          when(() => mockBloc.state).thenReturn(
+            VideoEditorFilterState(
+              selectedFilter: picked,
+              opacity: 0.5,
+              settingValues: const {'temperature': -0.1},
+            ),
+          );
           when(() => filterEditor.selectedFilter).thenReturn(picked);
 
           await tapDone(tester);
@@ -273,8 +293,61 @@ void main() {
           verify(
             () => mockBloc.add(const VideoEditorFilterConfirmed()),
           ).called(1);
-          verify(() => filterEditor.done()).called(1);
-          verifyNever(() => filterEditor.close());
+          verify(() => filterEditor.close()).called(1);
+          verifyNever(() => filterEditor.done());
+          final committed =
+              verify(
+                    () => editor.addHistory(
+                      filters: captureAny(named: 'filters'),
+                    ),
+                  ).captured.single
+                  as List<FilterState>;
+          expect(committed.first, other);
+          expect(committed.last.name, 'Crema');
+          expect(committed.last.matrices, matrices);
+          expect(
+            EditedFilter.fromMeta(committed.last.meta),
+            EditedFilter(
+              preset: picked,
+              values: const {'temperature': -0.1},
+              opacity: 0.5,
+            ),
+          );
+        });
+
+        testWidgets('replaces the filter an edit started on, in place', (
+          tester,
+        ) async {
+          final picked = editorFilterNamed('Crema')!;
+          final edited = FilterState(
+            id: 'edited',
+            name: 'Ludwig',
+            startTime: const Duration(seconds: 2),
+          );
+          final stateManager = _MockStateManager();
+          when(() => editor.stateManager).thenReturn(stateManager);
+          when(() => stateManager.activeFilters).thenReturn([edited]);
+          when(() => filterEditor.filterMatrix).thenReturn(picked.filters);
+          when(() => mockBloc.state).thenReturn(
+            VideoEditorFilterState(
+              selectedFilter: picked,
+              editingFilterId: 'edited',
+            ),
+          );
+          when(() => filterEditor.selectedFilter).thenReturn(picked);
+
+          await tapDone(tester);
+
+          final committed =
+              verify(
+                    () => editor.addHistory(
+                      filters: captureAny(named: 'filters'),
+                    ),
+                  ).captured.single
+                  as List<FilterState>;
+          expect(committed.single.id, 'edited');
+          expect(committed.single.name, 'Crema');
+          expect(committed.single.startTime, const Duration(seconds: 2));
         });
 
         testWidgets('with nothing picked closes without committing', (
@@ -304,6 +377,88 @@ void main() {
 
           verifyClosedWithoutCommitting();
         });
+      });
+    });
+
+    group('Settings button', () {
+      final settingsLabel = l10n.videoEditorFilterSettingsOpen;
+
+      testWidgets('is hidden while no filter is picked', (tester) async {
+        await tester.pumpWidget(buildWidget());
+        await tester.pump();
+
+        expect(find.bySemanticsLabel(settingsLabel), findsNothing);
+      });
+
+      testWidgets('opens the settings of the picked filter', (tester) async {
+        when(() => mockBloc.state).thenReturn(
+          VideoEditorFilterState(selectedFilter: editorFilterNamed('Crema')),
+        );
+        await tester.pumpWidget(buildWidget());
+        await tester.pump();
+
+        await tester.tap(find.bySemanticsLabel(settingsLabel));
+        await tester.pump();
+
+        verify(
+          () =>
+              mockBloc.add(const VideoEditorFilterSettingsToggled(open: true)),
+        ).called(1);
+      });
+
+      testWidgets('closes the settings while they are open', (tester) async {
+        when(() => mockBloc.state).thenReturn(
+          VideoEditorFilterState(
+            selectedFilter: editorFilterNamed('Crema'),
+            isSettingsOpen: true,
+          ),
+        );
+        await tester.pumpWidget(buildWidget());
+        await tester.pump();
+
+        expect(
+          tester.getSemantics(find.bySemanticsLabel(settingsLabel)),
+          isSemantics(isToggled: true, hasToggledState: true),
+        );
+        await tester.tap(find.bySemanticsLabel(settingsLabel));
+        await tester.pump();
+
+        verify(
+          () =>
+              mockBloc.add(const VideoEditorFilterSettingsToggled(open: false)),
+        ).called(1);
+      });
+    });
+
+    group('Preview', () {
+      testWidgets('shows the picked filter with its settings at its opacity', (
+        tester,
+      ) async {
+        final editor = _MockProImageEditorState();
+        final filterEditor = _MockFilterEditorState();
+        final filterEditorKey = _MockFilterEditorKey();
+        when(() => editor.filterEditor).thenReturn(filterEditorKey);
+        when(() => filterEditorKey.currentState).thenReturn(filterEditor);
+        final crema = editorFilterNamed('Crema')!;
+        final changed = VideoEditorFilterState(
+          selectedFilter: crema,
+          opacity: 0.4,
+          settingValues: const {'temperature': -0.1},
+        );
+        whenListen(
+          mockBloc,
+          Stream.value(changed),
+          initialState: VideoEditorFilterState(selectedFilter: crema),
+        );
+
+        await tester.pumpWidget(buildWidget(editorOverride: editor));
+        await tester.pump();
+
+        final shown =
+            verify(() => filterEditor.setFilter(captureAny())).captured.single
+                as FilterModel;
+        expect(shown.steps, changed.edited!.filter.steps);
+        verify(() => filterEditor.setFilterOpacity(0.4)).called(1);
       });
     });
   });

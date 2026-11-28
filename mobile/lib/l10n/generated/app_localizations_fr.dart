@@ -9960,6 +9960,43 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoEditorFilterCategoryTints => 'Teintes';
 
   @override
+  String get videoEditorFilterSettingsOpen => 'Réglages du filtre';
+
+  @override
+  String get videoEditorFilterLightTitle => 'Lumière';
+
+  @override
+  String get videoEditorFilterLightReset => 'Réinitialiser la lumière';
+
+  @override
+  String get videoEditorFilterColorReset => 'Réinitialiser la couleur';
+
+  @override
+  String get videoEditorFilterOverlayTitle => 'Superposition';
+
+  @override
+  String get videoEditorFilterOverlayReset => 'Réinitialiser la superposition';
+
+  @override
+  String get videoEditorFilterCastTitle => 'Dominante de couleur';
+
+  @override
+  String get videoEditorFilterCastReset =>
+      'Réinitialiser la dominante de couleur';
+
+  @override
+  String get videoEditorFilterBalanceTitle => 'Balance des couleurs';
+
+  @override
+  String get videoEditorFilterBalanceReset =>
+      'Réinitialiser la balance des couleurs';
+
+  @override
+  String videoEditorFilterSettingsNumberedTitle(String title, String number) {
+    return '$title $number';
+  }
+
+  @override
   String get videoEditorDropsCountLabel => 'Nombre';
 
   @override
@@ -10203,6 +10240,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get videoEditorEffectSettingWavelength => 'Longueur d\'onde';
+
+  @override
+  String get videoEditorEffectSettingStrength => 'Intensité';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

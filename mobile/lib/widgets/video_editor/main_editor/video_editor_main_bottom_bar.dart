@@ -4,9 +4,11 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/blocs/video_editor/filter_editor/video_editor_filter_bloc.dart';
 import 'package:openvine/blocs/video_editor/tune_editor/video_editor_tune_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/widgets/video_editor/filter_editor/open_filter_editor.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/tune_editor/open_tune_editor.dart';
 
@@ -60,7 +62,10 @@ class VideoEditorMainBottomBar extends StatelessWidget {
                     _ActionButton(
                       label: context.l10n.videoEditorFilterLabel,
                       icon: .fadersHorizontal,
-                      onTap: () => scope.editor?.openFilterEditor(),
+                      onTap: () => openFilterEditor(
+                        context.read<VideoEditorFilterBloc>(),
+                        scope,
+                      ),
                     ),
                     _ActionButton(
                       label: context.l10n.videoEditorTuneLabel,

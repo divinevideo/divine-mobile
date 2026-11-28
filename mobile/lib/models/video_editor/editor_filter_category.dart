@@ -130,303 +130,323 @@ enum EditorFilterCategory {
   };
 }
 
-final _cinematic = FilterModel(
+/// The filter of the picker called [name], or `null` for a name it does not
+/// offer.
+FilterModel? editorFilterNamed(String name) => _filterEntryNamed(name)?.filter;
+
+/// The category the picker lists the filter called [name] under, or `null`
+/// for a name it does not offer.
+EditorFilterCategory? editorFilterCategoryOf(String name) =>
+    _filterEntryNamed(name)?.category;
+
+({EditorFilterCategory category, FilterModel filter})? _filterEntryNamed(
+  String name,
+) {
+  for (final category in EditorFilterCategory.values) {
+    for (final filter in category.filters) {
+      if (filter.name == name) return (category: category, filter: filter);
+    }
+  }
+  return null;
+}
+
+final _cinematic = FilterModel.fromSteps(
   name: 'Cinematic',
-  filters: [
-    ColorFilterAddons.colorOverlay(0, 140, 140, 0.08),
-    ColorFilterAddons.colorOverlay(255, 140, 50, 0.05),
-    ColorFilterAddons.contrast(0.1),
-    ColorFilterAddons.saturation(-0.1),
+  steps: [
+    ColorFilterStep.colorOverlay(0, 140, 140, 0.08),
+    ColorFilterStep.colorOverlay(255, 140, 50, 0.05),
+    ColorFilterStep.contrast(0.1),
+    ColorFilterStep.saturation(-0.1),
   ],
 );
 
-final _faded = FilterModel(
+final _faded = FilterModel.fromSteps(
   name: 'Faded',
-  filters: [
-    ColorFilterAddons.contrast(-0.1),
-    ColorFilterAddons.brightness(0.08),
-    ColorFilterAddons.saturation(-0.15),
+  steps: [
+    ColorFilterStep.contrast(-0.1),
+    ColorFilterStep.brightness(0.08),
+    ColorFilterStep.saturation(-0.15),
   ],
 );
 
-final _dramatic = FilterModel(
+final _dramatic = FilterModel.fromSteps(
   name: 'Dramatic',
-  filters: [
-    ColorFilterAddons.contrast(0.25),
-    ColorFilterAddons.brightness(-0.05),
-    ColorFilterAddons.saturation(0.1),
+  steps: [
+    ColorFilterStep.contrast(0.25),
+    ColorFilterStep.brightness(-0.05),
+    ColorFilterStep.saturation(0.1),
   ],
 );
 
-final _dreamy = FilterModel(
+final _dreamy = FilterModel.fromSteps(
   name: 'Dreamy',
-  filters: [
-    ColorFilterAddons.brightness(0.1),
-    ColorFilterAddons.saturation(-0.1),
-    ColorFilterAddons.contrast(-0.08),
-    ColorFilterAddons.colorOverlay(255, 220, 255, 0.05),
+  steps: [
+    ColorFilterStep.brightness(0.1),
+    ColorFilterStep.saturation(-0.1),
+    ColorFilterStep.contrast(-0.08),
+    ColorFilterStep.colorOverlay(255, 220, 255, 0.05),
   ],
 );
 
-final _glow = FilterModel(
+final _glow = FilterModel.fromSteps(
   name: 'Glow',
-  filters: [
-    ColorFilterAddons.brightness(0.12),
-    ColorFilterAddons.contrast(-0.05),
-    ColorFilterAddons.saturation(-0.05),
+  steps: [
+    ColorFilterStep.brightness(0.12),
+    ColorFilterStep.contrast(-0.05),
+    ColorFilterStep.saturation(-0.05),
   ],
 );
 
-final _noir = FilterModel(
+final _noir = FilterModel.fromSteps(
   name: 'Noir',
-  filters: [
-    ColorFilterAddons.grayscale(),
-    ColorFilterAddons.contrast(0.2),
-    ColorFilterAddons.brightness(-0.05),
+  steps: [
+    ColorFilterStep.grayscale(),
+    ColorFilterStep.contrast(0.2),
+    ColorFilterStep.brightness(-0.05),
   ],
 );
 
-final _vivid = FilterModel(
+final _vivid = FilterModel.fromSteps(
   name: 'Vivid',
-  filters: [ColorFilterAddons.saturation(0.4), ColorFilterAddons.contrast(0.1)],
+  steps: [ColorFilterStep.saturation(0.4), ColorFilterStep.contrast(0.1)],
 );
 
-final _muted = FilterModel(
+final _muted = FilterModel.fromSteps(
   name: 'Muted',
-  filters: [
-    ColorFilterAddons.saturation(-0.3),
-    ColorFilterAddons.brightness(0.05),
+  steps: [
+    ColorFilterStep.saturation(-0.3),
+    ColorFilterStep.brightness(0.05),
   ],
 );
 
-final _ruby = FilterModel(
+final _ruby = FilterModel.fromSteps(
   name: 'Ruby',
-  filters: [ColorFilterAddons.addictiveColor(50, 0, 0)],
+  steps: [ColorFilterStep.addictiveColor(50, 0, 0)],
 );
 
-final _ocean = FilterModel(
+final _ocean = FilterModel.fromSteps(
   name: 'Ocean',
-  filters: [ColorFilterAddons.addictiveColor(0, 0, 50)],
+  steps: [ColorFilterStep.addictiveColor(0, 0, 50)],
 );
 
-final _forest = FilterModel(
+final _forest = FilterModel.fromSteps(
   name: 'Forest',
-  filters: [ColorFilterAddons.addictiveColor(0, 40, 0)],
+  steps: [ColorFilterStep.addictiveColor(0, 40, 0)],
 );
 
-final _sunset = FilterModel(
+final _sunset = FilterModel.fromSteps(
   name: 'Sunset',
-  filters: [ColorFilterAddons.addictiveColor(60, 30, 0)],
+  steps: [ColorFilterStep.addictiveColor(60, 30, 0)],
 );
 
-final _violet = FilterModel(
+final _violet = FilterModel.fromSteps(
   name: 'Violet',
-  filters: [ColorFilterAddons.addictiveColor(40, 0, 50)],
+  steps: [ColorFilterStep.addictiveColor(40, 0, 50)],
 );
 
-final _mint = FilterModel(
+final _mint = FilterModel.fromSteps(
   name: 'Mint',
-  filters: [ColorFilterAddons.addictiveColor(0, 50, 40)],
+  steps: [ColorFilterStep.addictiveColor(0, 50, 40)],
 );
 
-final _coral = FilterModel(
+final _coral = FilterModel.fromSteps(
   name: 'Coral',
-  filters: [ColorFilterAddons.addictiveColor(50, 20, 10)],
+  steps: [ColorFilterStep.addictiveColor(50, 20, 10)],
 );
 
-final _arctic = FilterModel(
+final _arctic = FilterModel.fromSteps(
   name: 'Arctic',
-  filters: [ColorFilterAddons.addictiveColor(0, 30, 60)],
+  steps: [ColorFilterStep.addictiveColor(0, 30, 60)],
 );
 
-final _soft = FilterModel(
+final _soft = FilterModel.fromSteps(
   name: 'Soft',
-  filters: [
-    ColorFilterAddons.contrast(-0.08),
-    ColorFilterAddons.brightness(0.04),
+  steps: [
+    ColorFilterStep.contrast(-0.08),
+    ColorFilterStep.brightness(0.04),
   ],
 );
 
-final _crisp = FilterModel(
+final _crisp = FilterModel.fromSteps(
   name: 'Crisp',
-  filters: [
-    ColorFilterAddons.contrast(0.1),
-    ColorFilterAddons.saturation(0.05),
+  steps: [
+    ColorFilterStep.contrast(0.1),
+    ColorFilterStep.saturation(0.05),
   ],
 );
 
-final _fresh = FilterModel(
+final _fresh = FilterModel.fromSteps(
   name: 'Fresh',
-  filters: [
-    ColorFilterAddons.brightness(0.06),
-    ColorFilterAddons.saturation(0.08),
+  steps: [
+    ColorFilterStep.brightness(0.06),
+    ColorFilterStep.saturation(0.08),
   ],
 );
 
-final _daylight = FilterModel(
+final _daylight = FilterModel.fromSteps(
   name: 'Daylight',
-  filters: [
-    ColorFilterAddons.exposure(0.15),
-    ColorFilterAddons.temperature(0.03),
+  steps: [
+    ColorFilterStep.exposure(0.15),
+    ColorFilterStep.temperature(0.03),
   ],
 );
 
-final _pop = FilterModel(
+final _pop = FilterModel.fromSteps(
   name: 'Pop',
-  filters: [
-    ColorFilterAddons.saturation(0.15),
-    ColorFilterAddons.brightness(0.06),
-    ColorFilterAddons.contrast(0.08),
+  steps: [
+    ColorFilterStep.saturation(0.15),
+    ColorFilterStep.brightness(0.06),
+    ColorFilterStep.contrast(0.08),
   ],
 );
 
-final _punch = FilterModel(
+final _punch = FilterModel.fromSteps(
   name: 'Punch',
-  filters: [
-    ColorFilterAddons.contrast(0.25),
-    ColorFilterAddons.saturation(0.1),
-    ColorFilterAddons.brightness(-0.04),
+  steps: [
+    ColorFilterStep.contrast(0.25),
+    ColorFilterStep.saturation(0.1),
+    ColorFilterStep.brightness(-0.04),
   ],
 );
 
-final _tropic = FilterModel(
+final _tropic = FilterModel.fromSteps(
   name: 'Tropic',
-  filters: [
-    ColorFilterAddons.saturation(0.25),
-    ColorFilterAddons.temperature(0.05),
-    ColorFilterAddons.contrast(0.06),
+  steps: [
+    ColorFilterStep.saturation(0.25),
+    ColorFilterStep.temperature(0.05),
+    ColorFilterStep.contrast(0.06),
   ],
 );
 
-final _electric = FilterModel(
+final _electric = FilterModel.fromSteps(
   name: 'Electric',
-  filters: [
-    ColorFilterAddons.saturation(0.3),
-    ColorFilterAddons.temperature(-0.06),
-    ColorFilterAddons.contrast(0.1),
+  steps: [
+    ColorFilterStep.saturation(0.3),
+    ColorFilterStep.temperature(-0.06),
+    ColorFilterStep.contrast(0.1),
   ],
 );
 
-final _frost = FilterModel(
+final _frost = FilterModel.fromSteps(
   name: 'Frost',
-  filters: [
-    ColorFilterAddons.temperature(-0.1),
-    ColorFilterAddons.brightness(0.06),
-    ColorFilterAddons.saturation(-0.1),
+  steps: [
+    ColorFilterStep.temperature(-0.1),
+    ColorFilterStep.brightness(0.06),
+    ColorFilterStep.saturation(-0.1),
   ],
 );
 
-final _glacier = FilterModel(
+final _glacier = FilterModel.fromSteps(
   name: 'Glacier',
-  filters: [
-    ColorFilterAddons.temperature(-0.2),
-    ColorFilterAddons.contrast(0.08),
+  steps: [
+    ColorFilterStep.temperature(-0.2),
+    ColorFilterStep.contrast(0.08),
   ],
 );
 
-final _lagoon = FilterModel(
+final _lagoon = FilterModel.fromSteps(
   name: 'Lagoon',
-  filters: [
-    ColorFilterAddons.colorOverlay(0, 150, 160, 0.1),
-    ColorFilterAddons.saturation(0.1),
+  steps: [
+    ColorFilterStep.colorOverlay(0, 150, 160, 0.1),
+    ColorFilterStep.saturation(0.1),
   ],
 );
 
-final _nordic = FilterModel(
+final _nordic = FilterModel.fromSteps(
   name: 'Nordic',
-  filters: [
-    ColorFilterAddons.temperature(-0.08),
-    ColorFilterAddons.saturation(-0.25),
-    ColorFilterAddons.contrast(0.06),
+  steps: [
+    ColorFilterStep.temperature(-0.08),
+    ColorFilterStep.saturation(-0.25),
+    ColorFilterStep.contrast(0.06),
   ],
 );
 
-final _midnight = FilterModel(
+final _midnight = FilterModel.fromSteps(
   name: 'Midnight',
-  filters: [
-    ColorFilterAddons.temperature(-0.15),
-    ColorFilterAddons.saturation(-0.15),
-    ColorFilterAddons.brightness(-0.06),
-    ColorFilterAddons.contrast(0.06),
+  steps: [
+    ColorFilterStep.temperature(-0.15),
+    ColorFilterStep.saturation(-0.15),
+    ColorFilterStep.brightness(-0.06),
+    ColorFilterStep.contrast(0.06),
   ],
 );
 
-final _breeze = FilterModel(
+final _breeze = FilterModel.fromSteps(
   name: 'Breeze',
-  filters: [
-    ColorFilterAddons.temperature(-0.06),
-    ColorFilterAddons.brightness(0.08),
-    ColorFilterAddons.contrast(-0.06),
+  steps: [
+    ColorFilterStep.temperature(-0.06),
+    ColorFilterStep.brightness(0.08),
+    ColorFilterStep.contrast(-0.06),
   ],
 );
 
-final _pine = FilterModel(
+final _pine = FilterModel.fromSteps(
   name: 'Pine',
-  filters: [
-    ColorFilterAddons.colorOverlay(30, 140, 100, 0.08),
-    ColorFilterAddons.contrast(0.05),
+  steps: [
+    ColorFilterStep.colorOverlay(30, 140, 100, 0.08),
+    ColorFilterStep.contrast(0.05),
   ],
 );
 
-final _twilight = FilterModel(
+final _twilight = FilterModel.fromSteps(
   name: 'Twilight',
-  filters: [ColorFilterAddons.temperature(-0.12), ColorFilterAddons.tint(0.04)],
+  steps: [ColorFilterStep.temperature(-0.12), ColorFilterStep.tint(0.04)],
 );
 
-final _graphite = FilterModel(
+final _graphite = FilterModel.fromSteps(
   name: 'Graphite',
-  filters: [ColorFilterAddons.grayscale(), ColorFilterAddons.contrast(0.3)],
+  steps: [ColorFilterStep.grayscale(), ColorFilterStep.contrast(0.3)],
 );
 
-final _ash = FilterModel(
+final _ash = FilterModel.fromSteps(
   name: 'Ash',
-  filters: [ColorFilterAddons.grayscale(), ColorFilterAddons.fade(0.6)],
+  steps: [ColorFilterStep.grayscale(), ColorFilterStep.fade(0.6)],
 );
 
-final _charcoal = FilterModel(
+final _charcoal = FilterModel.fromSteps(
   name: 'Charcoal',
-  filters: [
-    ColorFilterAddons.grayscale(),
-    ColorFilterAddons.brightness(-0.12),
-    ColorFilterAddons.contrast(0.08),
+  steps: [
+    ColorFilterStep.grayscale(),
+    ColorFilterStep.brightness(-0.12),
+    ColorFilterStep.contrast(0.08),
   ],
 );
 
 // Weights red up and blue down before the grayscale, like a red lens filter:
 // skies go dark and skin goes light.
-final _stark = FilterModel(
+final _stark = FilterModel.fromSteps(
   name: 'Stark',
-  filters: [
-    ColorFilterAddons.rgbScale(1.35, 1, 0.55),
-    ColorFilterAddons.grayscale(),
-    ColorFilterAddons.contrast(0.12),
+  steps: [
+    ColorFilterStep.rgbScale(1.35, 1, 0.55),
+    ColorFilterStep.grayscale(),
+    ColorFilterStep.contrast(0.12),
   ],
 );
 
-final _steel = FilterModel(
+final _steel = FilterModel.fromSteps(
   name: 'Steel',
-  filters: [
-    ColorFilterAddons.grayscale(),
-    ColorFilterAddons.colorOverlay(60, 90, 130, 0.06),
+  steps: [
+    ColorFilterStep.grayscale(),
+    ColorFilterStep.colorOverlay(60, 90, 130, 0.06),
   ],
 );
 
-final _gold = FilterModel(
+final _gold = FilterModel.fromSteps(
   name: 'Gold',
-  filters: [ColorFilterAddons.addictiveColor(50, 45, 0)],
+  steps: [ColorFilterStep.addictiveColor(50, 45, 0)],
 );
 
-final _lime = FilterModel(
+final _lime = FilterModel.fromSteps(
   name: 'Lime',
-  filters: [ColorFilterAddons.addictiveColor(30, 50, 0)],
+  steps: [ColorFilterStep.addictiveColor(30, 50, 0)],
 );
 
-final _rose = FilterModel(
+final _rose = FilterModel.fromSteps(
   name: 'Rose',
-  filters: [ColorFilterAddons.addictiveColor(50, 0, 25)],
+  steps: [ColorFilterStep.addictiveColor(50, 0, 25)],
 );
 
-final _indigo = FilterModel(
+final _indigo = FilterModel.fromSteps(
   name: 'Indigo',
-  filters: [ColorFilterAddons.addictiveColor(20, 0, 60)],
+  steps: [ColorFilterStep.addictiveColor(20, 0, 60)],
 );

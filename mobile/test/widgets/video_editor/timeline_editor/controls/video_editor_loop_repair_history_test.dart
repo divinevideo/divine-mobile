@@ -10,6 +10,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as model;
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/draw_editor/video_editor_draw_bloc.dart';
+import 'package:openvine/blocs/video_editor/filter_editor/video_editor_filter_bloc.dart';
 import 'package:openvine/blocs/video_editor/loop_suggestion/loop_suggestion_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
@@ -210,6 +211,10 @@ void main() {
                       BlocProvider.value(value: cubit),
                       BlocProvider<VideoEditorDrawBloc>.value(value: draw),
                       BlocProvider<VideoEditorTuneBloc>.value(value: tune),
+                      // The actions sheet hands the filter bloc on to its route.
+                      BlocProvider<VideoEditorFilterBloc>(
+                        create: (_) => VideoEditorFilterBloc(),
+                      ),
                     ],
                     child: LoopRepairResultListener(
                       child: Builder(
@@ -494,6 +499,10 @@ void main() {
             BlocProvider.value(value: cubit),
             BlocProvider<VideoEditorDrawBloc>.value(value: draw),
             BlocProvider<VideoEditorTuneBloc>.value(value: tune),
+            // The actions sheet hands the filter bloc on to its route.
+            BlocProvider<VideoEditorFilterBloc>(
+              create: (_) => VideoEditorFilterBloc(),
+            ),
           ],
           child: LoopRepairResultListener(
             child: Builder(

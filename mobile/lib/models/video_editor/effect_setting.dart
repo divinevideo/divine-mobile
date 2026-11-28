@@ -74,6 +74,16 @@ enum EffectSettingLabel {
   tempo,
   wavelength,
 
+  /// The adjustments of a colour filter.
+  brightness,
+  contrast,
+  saturation,
+  exposure,
+  fade,
+  temperature,
+  tint,
+  strength,
+
   /// The options of a [direction].
   horizontalOption,
   verticalOption,
@@ -123,7 +133,7 @@ sealed class EffectSetting {
   const EffectSetting({
     required this.key,
     required this.label,
-    required this.group,
+    this.group,
     this.shownWhen,
   });
 
@@ -133,8 +143,9 @@ sealed class EffectSetting {
   /// What the setting is called.
   final EffectSettingLabel label;
 
-  /// The card it shows in.
-  final EffectSettingGroup group;
+  /// The card an effect's setting shows in; `null` for a setting whose card
+  /// is chosen by its owner, as a colour filter's are.
+  final EffectSettingGroup? group;
 
   /// When it shows; `null` for always.
   final EffectSettingShownWhen? shownWhen;
@@ -157,12 +168,12 @@ final class EffectSliderSetting extends EffectSetting {
   const EffectSliderSetting({
     required super.key,
     required super.label,
-    required super.group,
     required this.defaultValue,
     this.min = 0,
     this.max = 1,
     this.divisions,
     this.unit = EffectSliderUnit.share,
+    super.group,
     super.shownWhen,
   });
 
@@ -211,8 +222,8 @@ final class EffectColorSetting extends EffectSetting {
   const EffectColorSetting({
     required super.key,
     required super.label,
-    required super.group,
     required this.defaultColor,
+    super.group,
     super.shownWhen,
   });
 
@@ -232,9 +243,9 @@ final class EffectToggleSetting extends EffectSetting {
   const EffectToggleSetting({
     required super.key,
     required super.label,
-    required super.group,
     required this.defaultValue,
     this.offHint,
+    super.group,
     super.shownWhen,
   });
 
@@ -268,9 +279,9 @@ final class EffectChoiceSetting extends EffectSetting {
   const EffectChoiceSetting({
     required super.key,
     required super.label,
-    required super.group,
     required this.choices,
     required this.defaultValue,
+    super.group,
     super.shownWhen,
   });
 
@@ -298,7 +309,7 @@ final class EffectShuffleSetting extends EffectSetting {
   const EffectShuffleSetting({
     required super.key,
     required super.label,
-    required super.group,
+    super.group,
     super.shownWhen,
   });
 

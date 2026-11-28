@@ -9822,6 +9822,41 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorFilterCategoryTints => 'ألوان';
 
   @override
+  String get videoEditorFilterSettingsOpen => 'إعدادات الفلتر';
+
+  @override
+  String get videoEditorFilterLightTitle => 'الإضاءة';
+
+  @override
+  String get videoEditorFilterLightReset => 'إعادة ضبط الإضاءة';
+
+  @override
+  String get videoEditorFilterColorReset => 'إعادة ضبط اللون';
+
+  @override
+  String get videoEditorFilterOverlayTitle => 'التراكب';
+
+  @override
+  String get videoEditorFilterOverlayReset => 'إعادة ضبط التراكب';
+
+  @override
+  String get videoEditorFilterCastTitle => 'مسحة لونية';
+
+  @override
+  String get videoEditorFilterCastReset => 'إعادة ضبط المسحة اللونية';
+
+  @override
+  String get videoEditorFilterBalanceTitle => 'توازن الألوان';
+
+  @override
+  String get videoEditorFilterBalanceReset => 'إعادة ضبط توازن الألوان';
+
+  @override
+  String videoEditorFilterSettingsNumberedTitle(String title, String number) {
+    return '$title $number';
+  }
+
+  @override
   String get videoEditorDropsCountLabel => 'العدد';
 
   @override
@@ -10065,6 +10100,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get videoEditorEffectSettingWavelength => 'طول الموجة';
+
+  @override
+  String get videoEditorEffectSettingStrength => 'القوة';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {
