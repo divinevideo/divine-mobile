@@ -491,9 +491,12 @@ class _VideoFeedViewState extends ConsumerState<VideoFeedView>
                       content: Text(context.l10n.feedFailedToLoadVideos),
                       action: SnackBarAction(
                         label: context.l10n.commonRetry,
-                        onPressed: () => context.read<VideoFeedBloc>().add(
-                          const VideoFeedRefreshRequested(),
-                        ),
+                        onPressed: () {
+                          if (!context.mounted) return;
+                          final bloc = context.read<VideoFeedBloc>();
+                          if (bloc.isClosed) return;
+                          bloc.add(const VideoFeedRefreshRequested());
+                        },
                       ),
                     ),
                   );

@@ -129,6 +129,7 @@ void main() {
 
   setUp(() {
     videoFeedBloc = _MockVideoFeedBloc();
+    when(() => videoFeedBloc.isClosed).thenReturn(false);
     videoVolumeCubit = _MockVideoVolumeCubit();
     when(() => videoVolumeCubit.state).thenReturn(const VideoVolumeState());
     whenListen(videoVolumeCubit, const Stream<VideoVolumeState>.empty());
@@ -1659,6 +1660,159 @@ void main() {
           expect(feedVideos(tester).releaseNeighboursWhenInactive, isTrue);
 
           await drainAndDispose(tester);
+        },
+      );
+    });
+
+    group('subscribed hashtag failure snackbar', () {
+      Future<void> pumpHashtagFeed(
+        WidgetTester tester, {
+        required ValueNotifier<bool> showFeed,
+        required StreamController<VideoFeedBlocState> feedStates,
+      }) async {
+        final initialState = VideoFeedBlocState(
+          status: VideoFeedStatus.success,
+          source: _sourceFor(VideoFeedSourceType.subscribedHashtag),
+          videos: [createTestVideoEvent()],
+        );
+        when(() => videoFeedBloc.state).thenReturn(initialState);
+        whenListen(
+          videoFeedBloc,
+          feedStates.stream,
+          initialState: initialState,
+        );
+
+        await tester.pumpWidget(
+          testMaterialApp(
+            home: ValueListenableBuilder<bool>(
+              valueListenable: showFeed,
+              builder: (context, visible, _) {
+                if (!visible) {
+                  return const Scaffold(body: SizedBox.shrink());
+                }
+                return Scaffold(
+                  body: MultiBlocProvider(
+                    providers: [
+                      BlocProvider<VideoFeedBloc>.value(value: videoFeedBloc),
+                      BlocProvider<VideoPlaybackStatusCubit>(
+                        create: (_) => VideoPlaybackStatusCubit(),
+                      ),
+                      BlocProvider<VideoVolumeCubit>.value(
+                        value: videoVolumeCubit,
+                      ),
+                    ],
+                    child: const VideoFeedView(),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+        await tester.pump();
+
+        feedStates.add(initialState.copyWith(status: VideoFeedStatus.failure));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+      }
+
+      testWidgets(
+        'tapping Retry while mounted refreshes the feed',
+        (tester) async {
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          final showFeed = ValueNotifier<bool>(true);
+          addTearDown(showFeed.dispose);
+          final feedStates = StreamController<VideoFeedBlocState>();
+          addTearDown(feedStates.close);
+
+          await pumpHashtagFeed(
+            tester,
+            showFeed: showFeed,
+            feedStates: feedStates,
+          );
+
+          expect(find.text(l10n.feedFailedToLoadVideos), findsOneWidget);
+          expect(find.text(l10n.commonRetry), findsOneWidget);
+
+          await tester.tap(find.text(l10n.commonRetry));
+          await tester.pump();
+
+          expect(tester.takeException(), isNull);
+          verify(
+            () => videoFeedBloc.add(const VideoFeedRefreshRequested()),
+          ).called(1);
+
+          await tester.pump(const Duration(seconds: 3));
+          await tester.pumpWidget(const SizedBox());
+          await tester.pump();
+        },
+      );
+
+      testWidgets(
+        'tapping Retry after VideoFeedView unmounts does not throw or refresh',
+        (tester) async {
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          final showFeed = ValueNotifier<bool>(true);
+          addTearDown(showFeed.dispose);
+          final feedStates = StreamController<VideoFeedBlocState>();
+          addTearDown(feedStates.close);
+
+          await pumpHashtagFeed(
+            tester,
+            showFeed: showFeed,
+            feedStates: feedStates,
+          );
+
+          expect(find.text(l10n.commonRetry), findsOneWidget);
+
+          // Unmount VideoFeedView while the app-level ScaffoldMessenger keeps
+          // the snackbar visible.
+          showFeed.value = false;
+          await tester.pump();
+          expect(find.byType(VideoFeedView), findsNothing);
+          expect(find.text(l10n.commonRetry), findsOneWidget);
+
+          await tester.tap(find.text(l10n.commonRetry));
+          await tester.pump();
+
+          expect(tester.takeException(), isNull);
+          verifyNever(
+            () => videoFeedBloc.add(const VideoFeedRefreshRequested()),
+          );
+
+          await tester.pump(const Duration(seconds: 3));
+          await tester.pumpWidget(const SizedBox());
+          await tester.pump();
+        },
+      );
+
+      testWidgets(
+        'tapping Retry after VideoFeedBloc closes does not add an event',
+        (tester) async {
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          final showFeed = ValueNotifier<bool>(true);
+          addTearDown(showFeed.dispose);
+          final feedStates = StreamController<VideoFeedBlocState>();
+          addTearDown(feedStates.close);
+
+          await pumpHashtagFeed(
+            tester,
+            showFeed: showFeed,
+            feedStates: feedStates,
+          );
+
+          when(() => videoFeedBloc.isClosed).thenReturn(true);
+
+          await tester.tap(find.text(l10n.commonRetry));
+          await tester.pump();
+
+          expect(tester.takeException(), isNull);
+          verifyNever(
+            () => videoFeedBloc.add(const VideoFeedRefreshRequested()),
+          );
+
+          await tester.pump(const Duration(seconds: 3));
+          await tester.pumpWidget(const SizedBox());
+          await tester.pump();
         },
       );
     });
