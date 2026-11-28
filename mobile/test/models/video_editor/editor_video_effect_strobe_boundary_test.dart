@@ -39,12 +39,13 @@ int _mostLuminanceRises(
   List<VideoEffect> effects,
   Duration loopPoint, {
   required int fps,
+  double phase = 0.5,
 }) {
   Duration sample(int frame) =>
-      Duration(microseconds: (frame + 0.5) * 1000000 ~/ fps);
+      Duration(microseconds: (frame + phase) * 1000000 ~/ fps);
   final rises = <Duration>[];
   var previous = _luminance(
-    VideoEffect.resolve(effects, loopPoint - sample(0)),
+    VideoEffect.resolve(effects, loopPoint - const Duration(microseconds: 1)),
   );
   for (var pass = 0; pass < 3; pass++) {
     for (var frame = 0; sample(frame) < loopPoint; frame++) {
@@ -180,7 +181,6 @@ void main() {
           id: 'strobe',
           effect: VideoEffect.strobe(
             endTime: _ms(900),
-            params: const {VideoEffectParams.tempo: 0.9},
           ),
         ),
       ], map);
@@ -200,9 +200,187 @@ void main() {
         flashingEffects: strobe,
       )[lightning];
 
-      // Pulses at 0 and ~550 ms, recovery at 900 ms: a strike at 1400 ms
+      // Pulses at 0 and 500 ms, recovery at 900 ms: a strike at 1400 ms
       // would make four in the second starting at the second pulse.
       expect(strikes, [_ms(1000)]);
+    });
+    test('counts a negative echo clipped between sampling ticks', () {
+      final map = _timeline(_ms(3120));
+      final effects = videoEffectsOnOutput([
+        EditorVideoEffect(
+          id: 'negative',
+          effect: VideoEffect.negativeFlash(
+            intensity: 0.7,
+            endTime: _ms(253),
+            params: const {VideoEffectParams.length: 2.3},
+          ),
+        ),
+        EditorVideoEffect(
+          id: 'strobe',
+          effect: VideoEffect.strobe(
+            intensity: 0.7,
+            startTime: _ms(253),
+            params: const {VideoEffectParams.tempo: 0.6},
+          ),
+        ),
+      ], map);
+
+      for (final fps in [24, 30, 60, 120]) {
+        for (final phase in [0.0, 0.5]) {
+          expect(
+            _mostLuminanceRises(effects, map.loopPoint, fps: fps, phase: phase),
+            lessThanOrEqualTo(3),
+            reason: '$fps fps, phase $phase: echo from 250 to 253 ms',
+          );
+        }
+      }
+    });
+    test('budgets negative returns on bright footage across the loop', () {
+      for (final negativeFirst in [true, false]) {
+        final map = _timeline(_ms(negativeFirst ? 4004 : 3016));
+        final split = _ms(negativeFirst ? 2679 : 189);
+        final effects = videoEffectsOnOutput([
+          EditorVideoEffect(
+            id: 'negative',
+            effect: VideoEffect.negativeFlash(
+              intensity: negativeFirst ? 0.85 : 0.65,
+              startTime: negativeFirst ? null : split,
+              endTime: negativeFirst ? split : null,
+              params: {VideoEffectParams.length: negativeFirst ? 2.1 : 2.65},
+            ),
+          ),
+          EditorVideoEffect(
+            id: 'strobe',
+            effect: VideoEffect.strobe(
+              intensity: negativeFirst ? 0.85 : 0.65,
+              startTime: negativeFirst ? split : null,
+              endTime: negativeFirst ? null : split,
+              params: {VideoEffectParams.tempo: negativeFirst ? 0.9 : 0.67},
+            ),
+          ),
+        ], map);
+
+        for (final fps in [24, 30, 60, 120]) {
+          for (final phase in [0.0, 0.5]) {
+            expect(
+              _mostLuminanceRises(
+                effects,
+                map.loopPoint,
+                fps: fps,
+                phase: phase,
+              ),
+              lessThanOrEqualTo(3),
+              reason: 'negative first $negativeFirst, $fps fps, phase $phase',
+            );
+          }
+        }
+      }
+    });
+    test('reserves negative returns before scheduling custom flashes', () {
+      final map = _timeline(_ms(2800));
+      final negative = videoEffectsOnOutput([
+        EditorVideoEffect(
+          id: 'negative',
+          effect: VideoEffect.negativeFlash(
+            intensity: 0.65,
+            startTime: _ms(1000),
+            endTime: _ms(2750),
+            params: const {VideoEffectParams.length: 2.65},
+          ),
+        ),
+      ], map);
+      final lightning = EditorVideoEffect.of(
+        id: 'lightning',
+        type: EditorEffectType.lightning,
+        intensity: 1,
+        endTime: _ms(1000),
+        onBeat: true,
+      ).custom!;
+
+      final strikes = flashStrikesOnOutput(
+        [lightning],
+        map,
+        beats: [Duration.zero, _ms(350)],
+        flashingEffects: negative,
+      )[lightning];
+
+      // The negative returns near 2208 and 2292 ms. On the next loop, two
+      // strikes at 2800 and 3150 ms would crowd that second with four rises.
+      expect(strikes, [Duration.zero]);
+    });
+    test(
+      'avoids a tail recovery crowding delayed video frames at the loop',
+      () {
+        for (final (duration, end, intensity) in [
+          (5094, 5054, 0.55),
+          (2193, 2074, 0.32),
+        ]) {
+          final map = _timeline(_ms(duration));
+          final effects = videoEffectsOnOutput([
+            EditorVideoEffect(
+              id: 'strobe',
+              effect: VideoEffect.strobe(
+                intensity: intensity,
+                endTime: _ms(end),
+                params: const {VideoEffectParams.tempo: 0.85},
+              ),
+            ),
+          ], map);
+
+          for (final fps in [24, 30, 60, 120]) {
+            for (final phase in [0.0, 0.5]) {
+              expect(
+                _mostLuminanceRises(
+                  effects,
+                  map.loopPoint,
+                  fps: fps,
+                  phase: phase,
+                ),
+                lessThanOrEqualTo(3),
+                reason: 'loop $duration ms, $fps fps, phase $phase',
+              );
+            }
+          }
+        }
+      },
+    );
+    test('trims only the final dark tail and retains every pulse', () {
+      final map = _timeline(_ms(2193));
+      final effects = videoEffectsOnOutput([
+        EditorVideoEffect(
+          id: 'strobe',
+          effect: VideoEffect.strobe(
+            intensity: 0.55,
+            endTime: _ms(2074),
+            params: const {VideoEffectParams.tempo: 0.85},
+          ),
+        ),
+      ], map);
+
+      expect(effects.single.intensity, 0.55);
+      expect(effects.single.params, {VideoEffectParams.tempo: 0.85});
+      expect(effects.single.triggers, isEmpty);
+      for (final at in [0, 600, 1200, 1750]) {
+        expect(VideoEffect.resolve(effects, _ms(at)).flash, 0.8);
+      }
+      expect(VideoEffect.resolve(effects, _ms(300)).brightness, -0.275);
+      expect(VideoEffect.resolve(effects, _ms(1850)).flash, greaterThan(0));
+      expect(VideoEffect.resolve(effects, _ms(1880)), VideoEffectFrame.none);
+    });
+
+    test('retains a window ending inside the last flash fade', () {
+      final map = _timeline(_ms(2193));
+      final strobe = VideoEffect.strobe(
+        endTime: _ms(650),
+        params: const {VideoEffectParams.tempo: 0.9},
+      );
+      final effects = videoEffectsOnOutput([
+        EditorVideoEffect(id: 'strobe', effect: strobe),
+      ], map);
+
+      expect(effects, [strobe]);
+      expect(VideoEffect.resolve(effects, _ms(640)).flash, greaterThan(0));
+      expect(VideoEffect.resolve(effects, _ms(660)), VideoEffectFrame.none);
     });
   });
 }
