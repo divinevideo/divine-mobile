@@ -11,11 +11,16 @@ import 'package:openvine/blocs/video_loops/video_loops_cubit.dart';
 import 'package:openvine/generated/product_analytics.dart';
 import 'package:openvine/models/view_traffic_source.dart'
     show ViewTrafficSource;
+import 'package:openvine/providers/account_preferences_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/services/analytics_service.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/classics_warmup.dart';
 import 'package:openvine/services/seen_videos_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/playback_loops.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:uuid/uuid.dart';
 
@@ -86,6 +91,8 @@ class _DivineVideoMetricsTrackerState
   /// AnalyticsService suppresses double-fires within a session but lets a
   /// remount re-watch report its own start.
   String? _sessionToken;
+  String? _playbackViewer;
+  ClassicsWarmup? _warmup;
 
   /// Whether playback has actually started at least once in this session.
   /// The view is counted at that moment, not at mount: a scroll-past that
@@ -141,6 +148,7 @@ class _DivineVideoMetricsTrackerState
   ProviderSubscription<AnalyticsService>? _analyticsServiceSubscription;
   late AuthService _authService;
   late SeenVideosService _seenVideosService;
+  late SharedPreferences _prefs;
 
   @override
   void initState() {
@@ -154,6 +162,7 @@ class _DivineVideoMetricsTrackerState
     );
     _authService = ref.read(authServiceProvider);
     _seenVideosService = ref.read(seenVideosServiceProvider);
+    _prefs = ref.read(sharedPreferencesProvider);
     if (_isTracking) _startTracking();
   }
 
@@ -272,9 +281,13 @@ class _DivineVideoMetricsTrackerState
         now,
         suspendUpdates: state.status != PlaybackStatus.buffering,
       );
+      final playbackDuration = duration > Duration.zero
+          ? duration
+          : _lastKnownDuration;
+      _recordWarmup(widget.video, _cumulativeLoops(playbackDuration));
       _recordProductPlayback(
         widget.video,
-        duration > Duration.zero ? duration : _lastKnownDuration,
+        playbackDuration,
         switch (state.status) {
           PlaybackStatus.completed => ProductAnalyticsV2PlaybackEndReason.ended,
           PlaybackStatus.error => ProductAnalyticsV2PlaybackEndReason.error,
@@ -332,6 +345,11 @@ class _DivineVideoMetricsTrackerState
     _hasStartedPlayback = true;
     if (!_canReport) return;
     _sessionToken = const Uuid().v4();
+    final viewer = _authService.currentPublicKeyHex;
+    _playbackViewer = viewer;
+    if (viewer != null && ClassicsWarmup.startsInClassics(_prefs, viewer)) {
+      _warmup = ref.read(classicsWarmupWriterProvider(viewer));
+    }
 
     unawaited(
       _analyticsService
@@ -419,6 +437,8 @@ class _DivineVideoMetricsTrackerState
     final fractionalLoops = cumulativeLoops - _loopsFlushed;
     if (deltaSeconds <= 0 && fractionalLoops <= 0) return;
 
+    _recordWarmup(video, cumulativeLoops);
+
     unawaited(
       _analyticsService
           .trackDetailedVideoViewWithUser(
@@ -449,6 +469,24 @@ class _DivineVideoMetricsTrackerState
 
     _watchSecondsReported = cumulativeSeconds;
     _loopsFlushed = cumulativeLoops;
+  }
+
+  /// Records local progress even if the viewer pauses before the next flush.
+  void _recordWarmup(VideoEvent video, double cumulativeLoops) {
+    final viewer = _playbackViewer;
+    final warmup = _warmup;
+    if (warmup == null ||
+        viewer == null ||
+        viewer != _authService.currentPublicKeyHex ||
+        (_watchTotal.inSeconds < 1 && cumulativeLoops < 1)) {
+      return;
+    }
+    runDetached(
+      warmup.recordView(video.feedDedupKey),
+      'record a Classics warmup view',
+      logName: 'ClassicsWarmup',
+      category: LogCategory.storage,
+    );
   }
 
   void _recordProductPlayback(
@@ -603,6 +641,8 @@ class _DivineVideoMetricsTrackerState
   /// belongs to the mount rather than to the session.
   void _resetViewSession() {
     _sessionToken = null;
+    _playbackViewer = null;
+    _warmup = null;
     _hasStartedPlayback = false;
     _mountedAt = _isTracking ? widget._clock() : null;
     _playIntervalStartedAt = null;

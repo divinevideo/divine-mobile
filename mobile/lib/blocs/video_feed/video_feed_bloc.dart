@@ -18,6 +18,7 @@ import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/video_feed/home_feed_cache.dart';
 import 'package:openvine/blocs/video_feed/home_feed_resume_manager.dart';
 import 'package:openvine/observability/reportable_error.dart';
+import 'package:openvine/services/classics_warmup.dart';
 import 'package:openvine/services/feed_mode_persistence.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
@@ -614,11 +615,11 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
   /// so curated list changes refresh the feed. The first replay can finish
   /// resolving a selection whose copy arrived while the initial feed loaded.
   ///
-  /// If a feed mode was previously saved to SharedPreferences, that mode is
-  /// restored. Otherwise [event.mode] is used. A forced start
+  /// A saved feed source takes precedence over [event.mode]. With neither a
+  /// saved choice nor a forced mode, an enrolled account's For You default
+  /// starts in Classics until warmup completes. A forced start
   /// ([VideoFeedStarted.forceMode]) uses [event.mode] and leaves the stored
-  /// preference untouched, so a campaign landing cannot rewrite the account's
-  /// home source.
+  /// preference untouched.
   Future<void> _onStarted(
     VideoFeedStarted event,
     Emitter<VideoFeedBlocState> emit,
@@ -687,6 +688,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
             );
       mayPersist =
           !event.forceMode &&
+          // An automatic source needs to be re-evaluated on the next Home.
+          !(stored == null &&
+              _modePreferences._usesAutomaticDefault(event.mode)) &&
           await _mayPersistRestoredSource(source, followedRead);
       if (_startupWasSuperseded(
         startupSelection,

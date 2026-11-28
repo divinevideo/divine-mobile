@@ -21,6 +21,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/auth/email_verification_screen.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/classics_warmup.dart';
 import 'package:openvine/services/geo_blocking_service.dart';
 import 'package:openvine/services/pending_verification_service.dart';
 import 'package:openvine/services/saved_sounds_service.dart';
@@ -102,6 +103,7 @@ void main() {
     EmailVerificationState initialState = const EmailVerificationState(),
     Stream<EmailVerificationState>? stateStream,
     EmailConfirmationCubit? emailConfirmationCubit,
+    SharedPreferences? prefs,
   }) {
     // Set up cubit state
     when(() => mockCubit.state).thenReturn(initialState);
@@ -113,7 +115,10 @@ void main() {
 
     return ProviderScope(
       overrides: [
-        ...getStandardTestOverrides(mockAuthService: mockAuthService),
+        ...getStandardTestOverrides(
+          mockAuthService: mockAuthService,
+          mockSharedPreferences: prefs,
+        ),
         oauthClientProvider.overrideWithValue(mockOAuth),
         pendingVerificationServiceProvider.overrideWithValue(
           mockPendingVerification,
@@ -153,6 +158,10 @@ void main() {
                     'Login Options ${state.uri.queryParameters['email'] ?? ''}',
                   ),
                 ),
+              ),
+              GoRoute(
+                path: '/home/0',
+                builder: (_, _) => const Scaffold(body: Text('Home feed')),
               ),
               GoRoute(
                 path: '/explore',
@@ -421,6 +430,133 @@ void main() {
         await tester.pump();
 
         expect(_divineIcon(DivineIconName.x), findsNothing);
+      });
+
+      testWidgets('new account verification lands on Home', (tester) async {
+        final viewer = 'a' * 64;
+        final prefs = createMockSharedPreferences();
+        when(() => prefs.containsKey(ClassicsWarmup.storageKey(viewer)))
+            .thenReturn(true);
+        when(() => mockAuthService.currentPublicKeyHex).thenReturn(viewer);
+        await tester.pumpWidget(
+          createTestWidget(
+            deviceCode: 'test-device-code',
+            verifier: 'test-verifier',
+            prefs: prefs,
+            initialState: const EmailVerificationState(
+              status: EmailVerificationStatus.success,
+            ),
+          ),
+        );
+        await tester.pump();
+
+        authStateController.add(AuthState.authenticated);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Home feed'), findsOneWidget);
+      });
+
+      for (final useLink in [false, true]) {
+        final entry = useLink ? 'linked' : 'restored';
+        testWidgets('$entry new signup lands on Home after sign-in', (
+          tester,
+        ) async {
+          final viewer = 'a' * 64;
+          final prefs = createMockSharedPreferences();
+          when(() => prefs.containsKey(ClassicsWarmup.storageKey(viewer)))
+              .thenReturn(true);
+          PendingVerification? pending = PendingVerification(
+            deviceCode: 'signup-device-code',
+            verifier: 'signup-verifier',
+            email: 'user@example.com',
+            createdAt: DateTime.now(),
+          );
+          when(() => mockPendingVerification.load()).thenAnswer(
+            (_) async => pending,
+          );
+          when(() => mockPendingVerification.clear()).thenAnswer((_) async {
+            pending = null;
+          });
+          final states = StreamController<EmailVerificationState>.broadcast();
+          addTearDown(states.close);
+          await tester.pumpWidget(
+            createTestWidget(
+              restored: !useLink,
+              token: useLink ? 'verification-token' : null,
+              prefs: prefs,
+              initialState: const EmailVerificationState(
+                status: EmailVerificationStatus.polling,
+              ),
+              stateStream: states.stream,
+            ),
+          );
+          await tester.pump();
+          verify(
+            () => mockCubit.startPolling(
+              deviceCode: 'signup-device-code',
+              verifier: 'signup-verifier',
+              email: 'user@example.com',
+            ),
+          ).called(1);
+
+          states.add(
+            const EmailVerificationState(
+              status: EmailVerificationStatus.success,
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+          expect(find.byType(EmailVerificationScreen), findsOneWidget);
+
+          when(() => mockAuthService.currentPublicKeyHex).thenReturn(viewer);
+          when(() => mockAuthService.authState)
+              .thenReturn(AuthState.authenticated);
+          authStateController.add(AuthState.authenticated);
+          await tester.pumpAndSettle();
+
+          expect(find.text('Home feed'), findsOneWidget);
+          expect(pending, isNull);
+        });
+      }
+
+      testWidgets('owner-bound verification keeps the Explore destination', (
+        tester,
+      ) async {
+        final viewer = 'a' * 64;
+        final prefs = createMockSharedPreferences();
+        when(() => prefs.containsKey(ClassicsWarmup.storageKey(viewer)))
+            .thenReturn(true);
+        when(() => mockAuthService.currentPublicKeyHex).thenReturn(viewer);
+        when(() => mockAuthService.isAnonymous).thenReturn(true);
+        when(() => mockAuthService.authState)
+            .thenReturn(AuthState.authenticated);
+        when(() => mockPendingVerification.load()).thenAnswer(
+          (_) async => PendingVerification(
+            deviceCode: 'secure-device-code',
+            verifier: 'secure-verifier',
+            email: 'user@example.com',
+            createdAt: DateTime.now(),
+            ownerPublicKeyHex: viewer,
+          ),
+        );
+        await tester.pumpWidget(
+          createTestWidget(restored: true, prefs: prefs),
+        );
+        await tester.pump();
+        verify(
+          () => mockCubit.startPolling(
+            deviceCode: 'secure-device-code',
+            verifier: 'secure-verifier',
+            email: 'user@example.com',
+            newlyRegistered: false,
+          ),
+        ).called(1);
+
+        when(() => mockAuthService.isAnonymous).thenReturn(false);
+        authStateController.add(AuthState.authenticated);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Explore popular'), findsOneWidget);
       });
 
       testWidgets('auth success navigates to the Popular explore tab by URL', (

@@ -69,6 +69,7 @@ extension _AccountSessionSetup on AuthService {
     bool claimLegacyRows = true,
     bool followingKnownEmpty = false,
     _FreshAccountCreationOrigin? freshlyGenerated,
+    bool newlyRegistered = false,
   }) async {
     // Only an explicitly captured entry context permits live deferral.
     // Cold initialization, import and creation callers have no such context;
@@ -322,6 +323,13 @@ extension _AccountSessionSetup on AuthService {
       }
 
       ensureCurrent();
+      if (newlyRegistered || identical(freshlyGenerated?.keys, keyContainer)) {
+        await coordinator.runGuardedStorage(
+          activation,
+          () => ClassicsWarmup.enroll(prefs, pubkeyHex),
+        );
+        ensureCurrent();
+      }
       await coordinator.markIdentityReady(activation);
       ensureCurrent();
       if (!_activation.awaitsHost) {

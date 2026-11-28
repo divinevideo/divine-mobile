@@ -49,6 +49,7 @@ import 'package:openvine/services/auth/signer_factory.dart';
 import 'package:openvine/services/auth/signer_readiness_resolver.dart';
 import 'package:openvine/services/auth/signer_secure_store.dart';
 import 'package:openvine/services/background_activity_manager.dart';
+import 'package:openvine/services/classics_warmup.dart';
 import 'package:openvine/services/nip07_service.dart';
 import 'package:openvine/services/relay_discovery_service.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
@@ -2962,10 +2963,12 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
     KeycastSession session, {
     AuthRpcCapability? rpcCapability,
     bool allowPubkeyOnlyIdentity = false,
+    bool newlyRegistered = false,
   }) => _integrateDivineOAuth(
     session,
     rpcCapability: rpcCapability,
     allowPubkeyOnlyIdentity: allowPubkeyOnlyIdentity,
+    newlyRegistered: newlyRegistered,
     continuingSession: _captureContinuingAccountSession(),
   );
 
@@ -2975,6 +2978,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
     AuthRpcCapability? rpcCapability,
     bool allowPubkeyOnlyIdentity = false,
     _AccountActivationEntry? preparedEntry,
+    bool newlyRegistered = false,
   }) async {
     final ensureAttempt = preparedEntry?.ensureCurrent ?? _beginAuthAttempt();
     ensureAttempt();
@@ -3126,6 +3130,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
         AuthenticationSource.divineOAuth,
         allowPubkeyOnlyIdentity: allowPubkeyOnlyIdentity,
         continuingSession: continuingSession,
+        newlyRegistered: newlyRegistered,
       );
       mutation.entry.ensureCurrent();
       _setRpcCapability(

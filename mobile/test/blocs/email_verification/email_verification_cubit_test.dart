@@ -470,7 +470,10 @@ void main() {
           (_) async => const TokenResponse(bunkerUrl: 'wss://relay.test'),
         );
         when(
-          () => mockAuthService.signInWithDivineOAuth(any()),
+          () => mockAuthService.signInWithDivineOAuth(
+            any(),
+            newlyRegistered: true,
+          ),
         ).thenAnswer((_) async {});
 
         fakeAsync((fake) {
@@ -537,7 +540,10 @@ void main() {
           (_) async => const TokenResponse(bunkerUrl: 'wss://relay.test'),
         );
         when(
-          () => mockAuthService.signInWithDivineOAuth(any()),
+          () => mockAuthService.signInWithDivineOAuth(
+            any(),
+            newlyRegistered: true,
+          ),
         ).thenAnswer((_) async {});
 
         fakeAsync((fake) {
@@ -912,7 +918,10 @@ void main() {
           (_) async => const TokenResponse(bunkerUrl: 'wss://relay.test'),
         );
         when(
-          () => mockAuthService.signInWithDivineOAuth(any()),
+          () => mockAuthService.signInWithDivineOAuth(
+            any(),
+            newlyRegistered: true,
+          ),
         ).thenAnswer((_) async {});
       }
 
@@ -934,7 +943,10 @@ void main() {
           verifyInOrder([
             () => mockOAuth.verifyPin(deviceCode: testDeviceCode, pin: pin),
             () => mockOAuth.exchangeCode(code: pinCode, verifier: testVerifier),
-            () => mockAuthService.signInWithDivineOAuth(any()),
+            () => mockAuthService.signInWithDivineOAuth(
+              any(),
+              newlyRegistered: true,
+            ),
           ]);
 
           unawaited(cubit.close());
@@ -947,7 +959,12 @@ void main() {
         'failure state',
         () {
           stubExchangeSuccess();
-          when(() => mockAuthService.signInWithDivineOAuth(any())).thenThrow(
+          when(
+            () => mockAuthService.signInWithDivineOAuth(
+              any(),
+              newlyRegistered: true,
+            ),
+          ).thenThrow(
             const UserDataCleanupException('Could not clear account data'),
           );
 
@@ -970,8 +987,12 @@ void main() {
                 verifier: testVerifier,
               ),
             ).called(1);
-            verify(() => mockAuthService.signInWithDivineOAuth(any()))
-                .called(1);
+            verify(
+              () => mockAuthService.signInWithDivineOAuth(
+                any(),
+                newlyRegistered: true,
+              ),
+            ).called(1);
 
             unawaited(cubit.close());
             fake.flushMicrotasks();
@@ -1080,7 +1101,10 @@ void main() {
             (_) async => const TokenResponse(bunkerUrl: 'wss://relay.test'),
           );
           when(
-            () => mockAuthService.signInWithDivineOAuth(any()),
+            () => mockAuthService.signInWithDivineOAuth(
+              any(),
+              newlyRegistered: true,
+            ),
           ).thenAnswer((_) async {});
 
           fakeAsync((fake) {
@@ -1113,7 +1137,12 @@ void main() {
                 verifier: any(named: 'verifier'),
               ),
             );
-            verifyNever(() => mockAuthService.signInWithDivineOAuth(any()));
+            verifyNever(
+              () => mockAuthService.signInWithDivineOAuth(
+                any(),
+                newlyRegistered: true,
+              ),
+            );
             expect(cubit.state.status, isNot(EmailVerificationStatus.success));
 
             unawaited(cubit.close());
@@ -1354,7 +1383,10 @@ void main() {
             (_) async => const TokenResponse(bunkerUrl: 'wss://relay.test'),
           );
           when(
-            () => mockAuthService.signInWithDivineOAuth(any()),
+            () => mockAuthService.signInWithDivineOAuth(
+              any(),
+              newlyRegistered: true,
+            ),
           ).thenAnswer((_) async {});
 
           fakeAsync((fake) {
@@ -1392,7 +1424,10 @@ void main() {
               ),
             ).called(1);
             verify(
-              () => mockAuthService.signInWithDivineOAuth(any()),
+              () => mockAuthService.signInWithDivineOAuth(
+                any(),
+                newlyRegistered: true,
+              ),
             ).called(1);
 
             unawaited(cubit.close());
@@ -1424,7 +1459,10 @@ void main() {
           (_) async => const TokenResponse(bunkerUrl: 'wss://relay.test'),
         );
         when(
-          () => mockAuthService.signInWithDivineOAuth(any()),
+          () => mockAuthService.signInWithDivineOAuth(
+            any(),
+            newlyRegistered: true,
+          ),
         ).thenAnswer((_) async {});
 
         fakeAsync((fake) {
@@ -1486,7 +1524,10 @@ void main() {
             (_) async => const TokenResponse(bunkerUrl: 'wss://relay.test'),
           );
           when(
-            () => mockAuthService.signInWithDivineOAuth(any()),
+            () => mockAuthService.signInWithDivineOAuth(
+              any(),
+              newlyRegistered: true,
+            ),
           ).thenAnswer((_) async {});
 
           fakeAsync((fake) {
@@ -1629,7 +1670,10 @@ void main() {
             return const TokenResponse(bunkerUrl: 'wss://first-session.test');
           });
           when(
-            () => mockAuthService.signInWithDivineOAuth(any()),
+            () => mockAuthService.signInWithDivineOAuth(
+              any(),
+              newlyRegistered: true,
+            ),
           ).thenAnswer((_) async {});
 
           fakeAsync((fake) {
@@ -1665,7 +1709,12 @@ void main() {
             expect(cubit.state.status, EmailVerificationStatus.polling);
             expect(cubit.state.pendingEmail, secondEmail);
             expect(cubit.state.errorCode, isNull);
-            verifyNever(() => mockAuthService.signInWithDivineOAuth(any()));
+            verifyNever(
+              () => mockAuthService.signInWithDivineOAuth(
+                any(),
+                newlyRegistered: true,
+              ),
+            );
 
             // B's scheduled poll should still be alive.
             verify(() => mockOAuth.pollForCode(secondDeviceCode)).called(1);
@@ -2006,7 +2055,10 @@ void main() {
           (_) async => const TokenResponse(bunkerUrl: 'wss://relay.test'),
         );
         when(
-          () => mockAuthService.signInWithDivineOAuth(any()),
+          () => mockAuthService.signInWithDivineOAuth(
+            any(),
+            newlyRegistered: true,
+          ),
         ).thenAnswer((_) async {});
 
         fakeAsync((fake) {
@@ -2152,7 +2204,10 @@ void main() {
           (_) async => const TokenResponse(bunkerUrl: 'wss://relay.test'),
         );
         when(
-          () => mockAuthService.signInWithDivineOAuth(any()),
+          () => mockAuthService.signInWithDivineOAuth(
+            any(),
+            newlyRegistered: true,
+          ),
         ).thenAnswer((_) async {});
 
         fakeAsync((fake) {
@@ -2196,7 +2251,10 @@ void main() {
           return const TokenResponse(bunkerUrl: 'wss://relay.test');
         });
         when(
-          () => mockAuthService.signInWithDivineOAuth(any()),
+          () => mockAuthService.signInWithDivineOAuth(
+            any(),
+            newlyRegistered: true,
+          ),
         ).thenAnswer((_) async {});
 
         fakeAsync((fake) {

@@ -27,6 +27,7 @@ import 'package:openvine/services/audio_sharing_preference_service.dart';
 import 'package:openvine/services/auth/account_storage_exception.dart';
 import 'package:openvine/services/auth/following_prefetch_marker.dart';
 import 'package:openvine/services/auth/pending_account_cleanup.dart';
+import 'package:openvine/services/classics_warmup.dart';
 import 'package:openvine/services/content_deletion_service.dart';
 import 'package:openvine/services/content_filter_service.dart';
 import 'package:openvine/services/content_reporting_service.dart';
@@ -326,6 +327,7 @@ class UserDataCleanupService {
   /// families during identity changes because their scope prevents cross-user
   /// leakage. Targeted destructive removal uses each owner's key helper.
   static const List<String> identityChangePrefixes = [
+    ClassicsWarmup.storagePrefix,
     SharedPreferencesAnnouncementStore.storagePrefix,
     FunnelcakeCreatorHighlightsRepository.presentationPrefix,
     FunnelcakeCreatorHighlightsRepository.invitePrefix,
@@ -512,6 +514,7 @@ class UserDataCleanupService {
     if (!await CuratedListRelayEvidence.removeOwner(_prefs, userPubkey)) {
       throw const CuratedListRecoveryException();
     }
+    await remove(ClassicsWarmup.storageKey(userPubkey));
     await remove(SavedSoundsService.accountStorageKey(userPubkey));
     await remove(
       SharedPreferencesHashtagSubscriptionStore.storageKey(userPubkey),
@@ -840,6 +843,9 @@ class UserDataCleanupService {
     // Preserve owner-scoped libraries on an ordinary identity switch. Their
     // sync cursors must be removed with their data on a destructive deletion,
     // so a refused removal cannot later publish false remote tombstones.
+    if ((deleteUserData || forgetAccount) && userPubkey != null) {
+      await remove(ClassicsWarmup.storageKey(userPubkey));
+    }
     if (deleteUserData && userPubkey != null && userPubkey.isNotEmpty) {
       await remove(PrefsCuratedListStore.pendingDefaultDeletionKey(userPubkey));
       await remove(SavedSoundsService.accountStorageKey(userPubkey));

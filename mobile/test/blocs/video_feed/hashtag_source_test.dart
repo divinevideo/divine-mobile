@@ -7,6 +7,7 @@ import 'package:hashtag_subscription_repository/hashtag_subscription_repository.
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/video_feed/video_feed_bloc.dart';
+import 'package:openvine/services/classics_warmup.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:videos_repository/videos_repository.dart';
 
@@ -157,6 +158,9 @@ void main() {
       () async {
         await bloc.close();
         final preferences = DelayedPreferences();
+        when(
+          () => preferences.containsKey(ClassicsWarmup.storageKey(key)),
+        ).thenReturn(false);
         var saved = 'forYou';
         final writing = Completer<void>();
         final release = Completer<void>();
@@ -226,6 +230,9 @@ void main() {
         await bloc.close();
         await tags.follow('other');
         final preferences = DelayedPreferences();
+        when(
+          () => preferences.containsKey(ClassicsWarmup.storageKey(key)),
+        ).thenReturn(false);
         var saved = 'hashtag:lnic';
         final writing = Completer<void>();
         final release = Completer<void>();

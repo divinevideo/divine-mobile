@@ -475,6 +475,7 @@ void main() {
               deviceCode: 'test-device-code',
               verifier: 'test-verifier',
               email: 'test@example.com',
+              newlyRegistered: false,
             ),
           ).called(1);
           expect(
@@ -514,6 +515,7 @@ void main() {
               deviceCode: 'test-device-code',
               verifier: 'test-verifier',
               email: 'test@example.com',
+              newlyRegistered: false,
             ),
           ).called(1);
         },

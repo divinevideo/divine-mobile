@@ -757,6 +757,14 @@ String? appRouterRedirect(Ref ref, GoRouterState state) {
     // On first navigation, redirect to explore if user has no following
     if (!_hasNavigated) {
       _hasNavigated = true;
+      final viewer = authService.currentPublicKeyHex;
+      if (viewer != null &&
+          ClassicsWarmup.isEnrolled(
+            ref.read(sharedPreferencesProvider),
+            viewer,
+          )) {
+        return VideoFeedPage.pathForIndex(0);
+      }
       final emptyFollowingRedirect = ref.read(
         checkEmptyFollowingRedirectProvider(location),
       );
