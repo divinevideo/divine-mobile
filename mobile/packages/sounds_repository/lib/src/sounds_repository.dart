@@ -1024,14 +1024,8 @@ class SoundsRepository {
   /// them by its audio analysis, the relay search by their tags
   /// ([AudioEventKind.soundKind]), which most sounds lack.
   ///
-  /// With [followedBy], only sounds by those accounts are found: the picker's
-  /// For you search. As [fetchFollowedSounds] does, it asks about the
-  /// most recently followed of them, passing over Divine's sound accounts and
-  /// blocked or muted authors, and finds nothing, without asking, when none
-  /// is left.
-  ///
-  /// Either way, sounds by authors the viewer blocked or muted are left out,
-  /// and the sounds found are cached like any other fetch.
+  /// Whoever answers, sounds by authors the viewer blocked or muted are left
+  /// out, and the sounds found are cached like any other fetch.
   ///
   /// Throws a [FunnelcakeNotConfiguredException] for a [cursor] without a
   /// Funnelcake client: only Funnelcake hands out cursors. A page for a
@@ -1041,13 +1035,11 @@ class SoundsRepository {
   Future<SoundSearchResults> searchSounds(
     String query, {
     SoundKind? kind,
-    Iterable<String>? followedBy,
     int limit = maxSearchResults,
     String? cursor,
   }) async {
     final terms = searchTermsOf(query);
-    final authors = followedBy == null ? null : _indexAuthors(followedBy);
-    if (terms.isEmpty || (authors != null && authors.isEmpty)) {
+    if (terms.isEmpty) {
       Log.debug(
         'Nothing to search for sounds',
         name: 'SoundsRepository',
@@ -1064,7 +1056,6 @@ class SoundsRepository {
           client,
           terms,
           kind: kind,
-          authors: authors,
           limit: limit,
           cursor: cursor,
         );
@@ -1078,7 +1069,6 @@ class SoundsRepository {
           client,
           terms,
           kind: kind,
-          authors: authors,
           limit: limit,
         );
       } on Exception catch (e) {
@@ -1090,13 +1080,7 @@ class SoundsRepository {
         );
       }
     }
-    return _searchRelays(
-      query,
-      terms,
-      kind: kind,
-      authors: authors,
-      limit: limit,
-    );
+    return _searchRelays(query, terms, kind: kind, limit: limit);
   }
 
   /// A page of Funnelcake's sound search for [terms]; see [searchSounds].
@@ -1104,7 +1088,6 @@ class SoundsRepository {
     FunnelcakeApiClient client,
     List<String> terms, {
     required SoundKind? kind,
-    required List<String>? authors,
     required int limit,
     String? cursor,
   }) async {
@@ -1112,7 +1095,6 @@ class SoundsRepository {
       await client.searchSounds(
         query: terms.join(' '),
         kind: kind,
-        authors: authors ?? const [],
         limit: limit,
         cursor: cursor,
       ),
@@ -1171,12 +1153,9 @@ class SoundsRepository {
     String query,
     List<String> terms, {
     required SoundKind? kind,
-    required List<String>? authors,
     required int limit,
   }) async {
-    bool wanted(AudioEvent sound) =>
-        sound.matchesSearch(query) &&
-        (authors == null || authors.contains(sound.pubkey));
+    bool wanted(AudioEvent sound) => sound.matchesSearch(query);
     final matches = <String, AudioEvent>{
       for (final sound in _cache.values)
         if (wanted(sound)) sound.id: sound,
@@ -1189,14 +1168,12 @@ class SoundsRepository {
       final read = await _nostrClient.queryEventsDetailed([
         Filter(
           kinds: const [audioEventKind],
-          authors: authors,
           m: audioMimeTypes,
           search: terms.join(' '),
           limit: limit,
         ),
         Filter(
           kinds: const [audioEventKind],
-          authors: authors,
           m: audioMimeTypes,
           t: terms,
           limit: limit,
