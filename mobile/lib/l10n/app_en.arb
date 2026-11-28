@@ -1556,6 +1556,24 @@
       }
     }
   },
+  "videoSeriesEpisodeBadge": "Ep {episode}",
+  "@videoSeriesEpisodeBadge": {
+    "description": "On the thumbnail of a video in a series' grid: which episode it is, such as 'Ep 3'; episode is an already formatted number. Kept short: Ep abbreviates Episode.",
+    "placeholders": {
+      "episode": {
+        "type": "String"
+      }
+    }
+  },
+  "videoSeriesEpisodeBadgeSemanticLabel": "Episode {episode}",
+  "@videoSeriesEpisodeBadgeSemanticLabel": {
+    "description": "Screen reader label of the episode number on a thumbnail in a series' grid; episode is an already formatted number.",
+    "placeholders": {
+      "episode": {
+        "type": "String"
+      }
+    }
+  },
   "videoStickerAddYoursJoined": "{count, plural, =0{Be the first} =1{1 joined} other{{count} joined}}",
   "@videoStickerAddYoursJoined": {
     "description": "On an Add yours sticker in the player: how many people answered its prompt with a video.",

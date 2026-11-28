@@ -2177,6 +2177,16 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
+  String videoSeriesEpisodeBadge(String episode) {
+    return 'Еп. $episode';
+  }
+
+  @override
+  String videoSeriesEpisodeBadgeSemanticLabel(String episode) {
+    return 'Епизод $episode';
+  }
+
+  @override
   String videoStickerAddYoursJoined(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

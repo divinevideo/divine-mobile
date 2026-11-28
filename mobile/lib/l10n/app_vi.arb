@@ -56,6 +56,8 @@
   "videoStickerAddYoursWatchSeriesSemanticLabel": "Xem loạt video: {prompt}",
   "videoSeriesChipEpisode": "Tập {episode}/{total}",
   "videoSeriesChipSemanticLabel": "Loạt video {seriesName}, tập {episode}/{total}",
+  "videoSeriesEpisodeBadge": "Tập {episode}",
+  "videoSeriesEpisodeBadgeSemanticLabel": "Tập {episode}",
   "videoStickerAddYoursJoined": "{count, plural, =0{Hãy là người đầu tiên} =1{{count} người đã tham gia} other{{count} người đã tham gia}}",
   "videoStickerAddYoursJoinedAtLeast": "{count} người đã tham gia",
   "videoStickerAddYoursOpenSemanticLabel": "Xem ai đã tham gia",

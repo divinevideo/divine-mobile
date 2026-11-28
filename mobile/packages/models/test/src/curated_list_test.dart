@@ -484,6 +484,30 @@ void main() {
           isEmpty,
         );
       });
+
+      test('episodeNumberOf counts only episodes, from 1', () {
+        final author = 'a' * 64;
+        final first = '34236:$author:first';
+        final second = '34236:$author:second';
+        final someoneElse = '34236:${'d' * 64}:someone-else';
+
+        final list = createSubject(
+          pubkey: author,
+          videoEventIds: ['b' * 64, first, someoneElse, second],
+        );
+
+        expect(list.episodeNumberOf(first), equals(1));
+        expect(list.episodeNumberOf(second), equals(2));
+        expect(list.episodeNumberOf(someoneElse), isNull);
+        expect(list.episodeNumberOf('b' * 64), isNull);
+        expect(
+          createSubject(
+            pubkey: null,
+            videoEventIds: [first],
+          ).episodeNumberOf(first),
+          isNull,
+        );
+      });
     });
 
     group('UTF-16 well-formedness', () {

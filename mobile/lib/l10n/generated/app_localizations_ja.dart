@@ -1981,6 +1981,16 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String videoSeriesEpisodeBadge(String episode) {
+    return '第$episode話';
+  }
+
+  @override
+  String videoSeriesEpisodeBadgeSemanticLabel(String episode) {
+    return '第$episode話';
+  }
+
+  @override
   String videoStickerAddYoursJoined(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

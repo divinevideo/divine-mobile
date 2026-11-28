@@ -262,6 +262,7 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
           activeVideoIndex: activeVideoIndex,
           manageCubit: _manageCubit,
           listName: widget.listName,
+          series: list != null && list.isSeries ? list : null,
           header: _ListHeroHeader(
             name: list?.name ?? widget.listName,
             videoCount:
@@ -765,6 +766,7 @@ class _ListBody extends ConsumerWidget {
     required this.activeVideoIndex,
     required this.manageCubit,
     required this.listName,
+    required this.series,
     required this.header,
     required this.onExitVideoMode,
     required this.onVideoTap,
@@ -775,6 +777,11 @@ class _ListBody extends ConsumerWidget {
   final int? activeVideoIndex;
   final CuratedListManagePostsCubit? manageCubit;
   final String listName;
+
+  /// The list when it is a series, so its tiles show their episode numbers;
+  /// null for any other list.
+  final CuratedList? series;
+
   final Widget header;
   final VoidCallback onExitVideoMode;
   final void Function(List<VideoEvent> videoList, int index) onVideoTap;
@@ -808,6 +815,7 @@ class _ListBody extends ConsumerWidget {
       );
     }
 
+    final episodeNumberOf = series == null ? null : _episodeNumberOf;
     final cubit = manageCubit;
     if (cubit != null && videos != null) {
       return BlocSelector<
@@ -829,6 +837,7 @@ class _ListBody extends ConsumerWidget {
             topOuterRadius: VineTheme.shellInnerCornerRadius,
             backgroundColor: context.vineColors.surfaceContainerHigh,
             selectedVideoIds: selectedVideoIds,
+            episodeNumberOf: episodeNumberOf,
             onVideoTap: (videoList, index, _) => cubit.togglePost(
               videoList[index].id,
               videoAddress: videoList[index].addressableId,
@@ -850,6 +859,7 @@ class _ListBody extends ConsumerWidget {
         topOuterRadius: VineTheme.shellInnerCornerRadius,
         backgroundColor: context.vineColors.surfaceContainerHigh,
         headerSlivers: [SliverToBoxAdapter(child: header)],
+        episodeNumberOf: episodeNumberOf,
         onVideoTap: (videoList, index, _) => onVideoTap(videoList, index),
         onRefresh: () async => onRefresh(),
         emptyBuilder: () {
@@ -866,6 +876,13 @@ class _ListBody extends ConsumerWidget {
         },
       ),
     );
+  }
+
+  /// Uses the same address as list resolution so a cached episode keeps its
+  /// number even when its d-tag was stored in an older field.
+  int? _episodeNumberOf(VideoEvent video) {
+    final address = ListVideoOrder.addressOf(video)?.toAString();
+    return address == null ? null : series?.episodeNumberOf(address);
   }
 }
 

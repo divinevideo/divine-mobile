@@ -56,6 +56,8 @@
   "videoStickerAddYoursWatchSeriesSemanticLabel": "Se serien: {prompt}",
   "videoSeriesChipEpisode": "Avsn. {episode} av {total}",
   "videoSeriesChipSemanticLabel": "Serie {seriesName}, avsnitt {episode} av {total}",
+  "videoSeriesEpisodeBadge": "Avsn. {episode}",
+  "videoSeriesEpisodeBadgeSemanticLabel": "Avsnitt {episode}",
   "videoStickerAddYoursJoined": "{count, plural, =0{Bli först} =1{{count} är med} other{{count} är med}}",
   "videoStickerAddYoursJoinedAtLeast": "{count} är med",
   "videoStickerAddYoursOpenSemanticLabel": "Se vilka som är med",

@@ -56,6 +56,8 @@
   "videoStickerAddYoursWatchSeriesSemanticLabel": "Tonton serinya: {prompt}",
   "videoSeriesChipEpisode": "Ep {episode} dari {total}",
   "videoSeriesChipSemanticLabel": "Seri {seriesName}, episode {episode} dari {total}",
+  "videoSeriesEpisodeBadge": "Ep {episode}",
+  "videoSeriesEpisodeBadgeSemanticLabel": "Episode {episode}",
   "videoStickerAddYoursJoined": "{count, plural, =0{Jadilah yang pertama} =1{{count} orang ikut} other{{count} orang ikut}}",
   "videoStickerAddYoursJoinedAtLeast": "{count} orang ikut",
   "videoStickerAddYoursOpenSemanticLabel": "Lihat siapa saja yang ikut",

@@ -299,6 +299,13 @@ class CuratedList extends Equatable {
     ];
   }
 
+  /// The place of the video at [address] among [seriesEpisodes], counting
+  /// from 1, or null when it is not one of them.
+  int? episodeNumberOf(String address) {
+    final index = seriesEpisodes.indexOf(address);
+    return index < 0 ? null : index + 1;
+  }
+
   /// Creates a copy of this list with the given fields replaced.
   ///
   /// Passing `null` leaves a nullable field unchanged. To null one out, set

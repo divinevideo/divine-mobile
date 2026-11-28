@@ -3635,6 +3635,18 @@ abstract class AppLocalizations {
     String total,
   );
 
+  /// On the thumbnail of a video in a series' grid: which episode it is, such as 'Ep 3'; episode is an already formatted number. Kept short: Ep abbreviates Episode.
+  ///
+  /// In en, this message translates to:
+  /// **'Ep {episode}'**
+  String videoSeriesEpisodeBadge(String episode);
+
+  /// Screen reader label of the episode number on a thumbnail in a series' grid; episode is an already formatted number.
+  ///
+  /// In en, this message translates to:
+  /// **'Episode {episode}'**
+  String videoSeriesEpisodeBadgeSemanticLabel(String episode);
+
   /// On an Add yours sticker in the player: how many people answered its prompt with a video.
   ///
   /// In en, this message translates to:

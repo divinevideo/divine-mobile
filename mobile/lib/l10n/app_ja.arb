@@ -56,6 +56,8 @@
   "videoStickerAddYoursWatchSeriesSemanticLabel": "シリーズを見る：{prompt}",
   "videoSeriesChipEpisode": "第{episode}話 / 全{total}話",
   "videoSeriesChipSemanticLabel": "シリーズ「{seriesName}」第{episode}話 / 全{total}話",
+  "videoSeriesEpisodeBadge": "第{episode}話",
+  "videoSeriesEpisodeBadgeSemanticLabel": "第{episode}話",
   "videoStickerAddYoursJoined": "{count, plural, =0{最初に参加しましょう} =1{{count}人が参加} other{{count}人が参加}}",
   "videoStickerAddYoursJoinedAtLeast": "{count}人が参加",
   "videoStickerAddYoursOpenSemanticLabel": "参加した人を見る",

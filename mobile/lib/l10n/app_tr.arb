@@ -56,6 +56,8 @@
   "videoStickerAddYoursWatchSeriesSemanticLabel": "Seriyi izle: {prompt}",
   "videoSeriesChipEpisode": "{episode}. bölüm / {total}",
   "videoSeriesChipSemanticLabel": "{seriesName} serisi, {episode}. bölüm / {total}",
+  "videoSeriesEpisodeBadge": "{episode}. bölüm",
+  "videoSeriesEpisodeBadgeSemanticLabel": "{episode}. bölüm",
   "videoStickerAddYoursJoined": "{count, plural, =0{İlk sen ol} =1{{count} kişi katıldı} other{{count} kişi katıldı}}",
   "videoStickerAddYoursJoinedAtLeast": "{count} kişi katıldı",
   "videoStickerAddYoursOpenSemanticLabel": "Kimlerin katıldığını gör",

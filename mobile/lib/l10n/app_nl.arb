@@ -56,6 +56,8 @@
   "videoStickerAddYoursWatchSeriesSemanticLabel": "Bekijk de serie: {prompt}",
   "videoSeriesChipEpisode": "Afl. {episode} van {total}",
   "videoSeriesChipSemanticLabel": "Serie {seriesName}, aflevering {episode} van {total}",
+  "videoSeriesEpisodeBadge": "Afl. {episode}",
+  "videoSeriesEpisodeBadgeSemanticLabel": "Aflevering {episode}",
   "videoStickerAddYoursJoined": "{count, plural, =0{Wees de eerste} =1{{count} doet mee} other{{count} doen mee}}",
   "videoStickerAddYoursJoinedAtLeast": "{count} doen mee",
   "videoStickerAddYoursOpenSemanticLabel": "Bekijk wie meedoet",

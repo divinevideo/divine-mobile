@@ -1992,6 +1992,16 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String videoSeriesEpisodeBadge(String episode) {
+    return '$episode화';
+  }
+
+  @override
+  String videoSeriesEpisodeBadgeSemanticLabel(String episode) {
+    return '$episode화';
+  }
+
+  @override
   String videoStickerAddYoursJoined(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
