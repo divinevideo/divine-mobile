@@ -116,18 +116,16 @@ class _ShareWithSection extends StatelessWidget {
                       );
                     }
 
-                    return Semantics(
-                      identifier: SemanticIds.shareContact(index - 1),
-                      child: _ContactItem(
-                        user: contact,
-                        isSelected: selectedPubkeys.contains(contact.pubkey),
-                        enabled:
-                            !disabledPubkeys.contains(contact.pubkey) &&
-                            !isSending,
-                        tapSends: tapSends,
-                        onTap: onContactTapped,
-                        onLongPress: onContactLongPressed,
-                      ),
+                    return _ContactItem(
+                      user: contact,
+                      isSelected: selectedPubkeys.contains(contact.pubkey),
+                      enabled:
+                          !disabledPubkeys.contains(contact.pubkey) &&
+                          !isSending,
+                      tapSends: tapSends,
+                      semanticIdentifier: SemanticIds.shareContact(index - 1),
+                      onTap: onContactTapped,
+                      onLongPress: onContactLongPressed,
                     );
                   },
                 ),
@@ -209,12 +207,14 @@ class _ContactItem extends ConsumerWidget {
     this.onLongPress,
     this.enabled = true,
     this.tapSends = false,
+    this.semanticIdentifier,
   });
 
   final ShareableUser user;
   final bool isSelected;
   final bool enabled;
   final bool tapSends;
+  final String? semanticIdentifier;
   final ValueChanged<ShareableUser> onTap;
   final ValueChanged<ShareableUser>? onLongPress;
 
@@ -255,7 +255,12 @@ class _ContactItem extends ConsumerWidget {
         ? () => longPress(resolved)
         : null;
     final opensComposer = tapSends && select != null;
+    final isIOS = defaultTargetPlatform == TargetPlatform.iOS;
     return Semantics(
+      // The iOS bridge retains old custom actions on reused nodes when the
+      // new action list is empty. Recreate the node when the action changes.
+      key: isIOS ? ValueKey(opensComposer) : null,
+      identifier: semanticIdentifier,
       button: true,
       selected: isSelected,
       enabled: enabled,
@@ -264,8 +269,7 @@ class _ContactItem extends ConsumerWidget {
           : displayName,
       onLongPressHint: opensComposer ? context.l10n.shareMessageHint : null,
       // VoiceOver ignores long-press hint overrides.
-      customSemanticsActions:
-          opensComposer && defaultTargetPlatform == TargetPlatform.iOS
+      customSemanticsActions: opensComposer && isIOS
           ? {
               CustomSemanticsAction(label: context.l10n.shareMessageHint):
                   select,

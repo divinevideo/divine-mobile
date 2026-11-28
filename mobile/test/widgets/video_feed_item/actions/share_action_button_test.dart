@@ -28,6 +28,7 @@ import 'package:openvine/blocs/video_content_actions/video_content_actions_bloc.
 import 'package:openvine/blocs/video_crosspost/video_crosspost_cubit.dart';
 import 'package:openvine/blocs/video_crosspost/video_crosspost_state.dart';
 import 'package:openvine/config/official_accounts.dart';
+import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/features/consumption_analytics/consumption_analytics_tracker.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
@@ -2271,9 +2272,12 @@ void main() {
               final semantics = tester.ensureSemantics();
               await pumpOpenSheet(tester);
 
-              final node = tester.getSemantics(
-                find.bySemanticsLabel(l10n.shareRecipientSendTo('Alice')),
+              final contact = find.bySemanticsIdentifier(
+                SemanticIds.shareContact(0),
               );
+              final node = tester.getSemantics(contact);
+              final initialNodeId = node.id;
+              expect(node.label, l10n.shareRecipientSendTo('Alice'));
               final id = CustomSemanticsAction.getIdentifier(
                 CustomSemanticsAction(label: l10n.shareMessageHint),
               );
@@ -2290,8 +2294,10 @@ void main() {
               await tester.pumpAndSettle();
 
               expect(find.byType(TextField), findsOneWidget);
+              final selectedNode = tester.getSemantics(contact);
+              expect(selectedNode.id, isNot(initialNodeId));
               expect(
-                node.getSemanticsData().customSemanticsActionIds ??
+                selectedNode.getSemanticsData().customSemanticsActionIds ??
                     const <int>[],
                 isNot(contains(id)),
               );
