@@ -269,6 +269,29 @@ void main() {
         expect(args.trafficSource, ViewTrafficSource.discoveryClassic);
       });
 
+      testWidgets('copies the remaining archive clips into the player route', (
+        tester,
+      ) async {
+        when(
+          () => router.push<void>(any(), extra: any(named: 'extra')),
+        ).thenAnswer((_) async {});
+        await pumpLoadedTab(tester);
+        await tester.tap(find.byType(VideoThumbnailWidget).first);
+        await tester.pump();
+
+        final args =
+            verify(
+                  () => router.push<void>(
+                    '/pooled-video-feed?video=$_firstClassicId',
+                    extra: captureAny(named: 'extra'),
+                  ),
+                ).captured.single
+                as PooledFullscreenVideoFeedArgs;
+        final source = args.source as ClassicVinesViewSource;
+        expect(source.anchor?.id, _firstClassicId);
+        expect(source.archiveSeed.map((video) => video.id), [_secondClassicId]);
+      });
+
       testWidgets('a failed fullscreen push is observed, not left unhandled', (
         tester,
       ) async {

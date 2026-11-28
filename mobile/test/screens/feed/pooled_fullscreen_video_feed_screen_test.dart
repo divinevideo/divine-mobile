@@ -22,6 +22,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:infinite_video_feed/infinite_video_feed.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:media_cache/media_cache.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/fullscreen_feed/fullscreen_feed_bloc.dart';
@@ -41,6 +42,7 @@ import 'package:openvine/observability/screen_frame_trace.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/comments/comments_screen.dart';
 import 'package:openvine/screens/feed/dm_reply_context.dart';
@@ -84,6 +86,29 @@ class _KnownViewerSession extends NostrSession {
   NostrSessionReadiness build() =>
       const NostrSessionReadiness.identityKnown(pubkey: _classicsViewer);
 }
+
+class _PrivacyChangingAnalytics extends RecordingConsumptionAnalytics {
+  final changes = StreamController<void>.broadcast();
+
+  @override
+  Stream<void> get privacyChanges => changes.stream;
+}
+
+/// Stands in for the Keycast eligibility answer behind the account gate.
+class _Eligibility extends Notifier<bool> {
+  _Eligibility({required this.initial});
+
+  final bool initial;
+
+  @override
+  bool build() => initial;
+
+  void setEligible(bool value) => state = value;
+}
+
+final _eligibilityProvider = NotifierProvider<_Eligibility, bool>(
+  () => _Eligibility(initial: true),
+);
 
 class MockFullscreenFeedBloc
     extends MockBloc<FullscreenFeedEvent, FullscreenFeedState>
@@ -787,6 +812,258 @@ void main() {
         await tester.pump();
       },
     );
+
+    group('account gate changes on an open Classics route', () {
+      List<Override> gateOverrides({
+        required bool eligible,
+        required VideosRepository repository,
+      }) {
+        final videoService = createMockVideoEventService();
+        when(() => videoService.shouldHideVideo(any())).thenReturn(false);
+        when(() => videoService.filterVideoList(any())).thenAnswer(
+          (call) => call.positionalArguments.first as List<VideoEvent>,
+        );
+        return [
+          _eligibilityProvider.overrideWith(
+            () => _Eligibility(initial: eligible),
+          ),
+          confirmedNotProtectedMinorProvider.overrideWith(
+            (ref) => ref.watch(_eligibilityProvider),
+          ),
+          pendingActionServiceProvider.overrideWithValue(null),
+          videosRepositoryProvider.overrideWithValue(repository),
+          videoEventServiceProvider.overrideWithValue(videoService),
+        ];
+      }
+
+      _MockDiscoveryVideosRepository classicsRepository() {
+        final repository = _MockDiscoveryVideosRepository();
+        when(
+          () => repository.removedVideoIds,
+        ).thenAnswer((_) => const Stream.empty());
+        when(() => repository.applyContentPreferences(any())).thenAnswer(
+          (call) => call.positionalArguments.first as List<VideoEvent>,
+        );
+        return repository;
+      }
+
+      testWidgets(
+        'revocation keeps the reached video and continues from the archive',
+        (tester) async {
+          final nativePlayer = _NativePlayerHarness(tester)..install();
+          addTearDown(nativePlayer.dispose);
+          final videos = createTestVideos();
+          final tapped = videos[0];
+          final reached = videos[1];
+          final ranked = videos[2];
+          final archived = createTestVideoEvent(
+            id: 'a' * 64,
+            pubkey: testPubkey,
+            videoUrl: 'https://example.com/archived.mp4',
+          );
+          final repository = classicsRepository();
+          when(
+            () => repository.getClassicRecommendations(
+              request: any(named: 'request'),
+              userPubkey: any(named: 'userPubkey'),
+              isCurrent: any(named: 'isCurrent'),
+            ),
+          ).thenAnswer(
+            (_) async => HomeFeedResult(
+              videos: [reached, ranked],
+              paginationCursor: 'adaptive',
+              hasMore: true,
+              recommendationPageCount: 1,
+            ),
+          );
+          when(
+            () => repository.getClassicVideos(
+              limit: any(named: 'limit'),
+              cursor: any(named: 'cursor'),
+              skipCache: any(named: 'skipCache'),
+              archiveOnly: any(named: 'archiveOnly'),
+            ),
+          ).thenAnswer(
+            (_) async => HomeFeedResult(videos: [archived], hasMore: false),
+          );
+          // The queue holds a clip after the playing one, which the disk
+          // prefetcher reaches for; keep it off the shared disk cache.
+          final mediaCache = createMockMediaCacheManager();
+          when(
+            () => mediaCache.cacheFileCancellable(
+              any(),
+              key: any(named: 'key'),
+              authHeaders: any(named: 'authHeaders'),
+            ),
+          ).thenAnswer(
+            (_) => CancellableCacheOperation.fromStream(const Stream.empty()),
+          );
+          await tester.pumpWidget(
+            BlocProvider<VideoVolumeCubit>.value(
+              value: videoVolumeCubit,
+              child: testMaterialApp(
+                mockProfileRepository: mockProfileRepository,
+                mockNip05VerificationService: mockNip05VerificationService,
+                mockMediaCacheManager: mediaCache,
+                additionalOverrides: gateOverrides(
+                  eligible: true,
+                  repository: repository,
+                ),
+                home: PooledFullscreenVideoFeedScreen(
+                  source: ClassicVinesViewSource(anchor: tapped),
+                  feedRepository: StaticFeedRepository(),
+                  initialIndex: 0,
+                  trafficSource: ViewTrafficSource.discoveryClassic,
+                ),
+              ),
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+          expect(nativeFeed(tester).videos, [tapped, reached, ranked]);
+          nativeFeed(tester).onActiveVideoChanged?.call(reached, 1);
+          await tester.pump();
+          await tester.pump();
+          final bloc = tester
+              .element(find.byType(FullscreenFeedContent))
+              .read<FullscreenFeedBloc>();
+          clearInteractions(repository);
+
+          ProviderScope.containerOf(
+            tester.element(find.byType(FullscreenFeedContent)),
+          ).read(_eligibilityProvider.notifier).setEligible(false);
+          await tester.pump();
+          await tester.pump();
+          await tester.pump();
+
+          expect(
+            tester
+                .element(find.byType(FullscreenFeedContent))
+                .read<FullscreenFeedBloc>(),
+            same(bloc),
+          );
+          expect(nativeFeed(tester).videos, [tapped, reached, archived]);
+          expect(bloc.state.currentVideo, reached);
+          verify(
+            () => repository.getClassicVideos(
+              limit: any(named: 'limit'),
+              cursor: any(named: 'cursor'),
+              archiveOnly: true,
+            ),
+          ).called(1);
+          verifyNever(
+            () => repository.getClassicRecommendations(
+              request: any(named: 'request'),
+              userPubkey: any(named: 'userPubkey'),
+              isCurrent: any(named: 'isCurrent'),
+            ),
+          );
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+        },
+      );
+
+      testWidgets('an archive route stays on the archive when eligibility '
+          'arrives', (tester) async {
+        final nativePlayer = _NativePlayerHarness(tester)..install();
+        addTearDown(nativePlayer.dispose);
+        final videos = createTestVideos(count: 2);
+        final repository = classicsRepository();
+        final analytics = _PrivacyChangingAnalytics();
+        addTearDown(analytics.changes.close);
+        final archive = videos[1];
+        final ranked = createTestVideoEvent(
+          id: 'a' * 64,
+          pubkey: testPubkey,
+          videoUrl: 'https://example.com/ranked.mp4',
+        );
+        final gridWindow = StreamController<List<VideoEvent>>.broadcast();
+        addTearDown(gridWindow.close);
+        when(
+          () => repository.getClassicVideos(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+            archiveOnly: true,
+          ),
+        ).thenAnswer(
+          (_) async => const HomeFeedResult(videos: [], hasMore: false),
+        );
+        await tester.pumpWidget(
+          BlocProvider<VideoVolumeCubit>.value(
+            value: videoVolumeCubit,
+            child: testMaterialApp(
+              mockProfileRepository: mockProfileRepository,
+              mockNip05VerificationService: mockNip05VerificationService,
+              additionalOverrides: [
+                ...gateOverrides(eligible: false, repository: repository),
+                analyticsServiceProvider.overrideWithValue(analytics),
+              ],
+              home: PooledFullscreenVideoFeedScreen(
+                source: ClassicVinesViewSource(
+                  anchor: videos.first,
+                  archiveSeed: [archive],
+                ),
+                feedRepository: StreamFeedRepository(
+                  videos: gridWindow.stream,
+                  hasMore: Stream.value(false),
+                  onLoadMore: () async {},
+                ),
+                initialIndex: 0,
+                trafficSource: ViewTrafficSource.discoveryClassic,
+              ),
+            ),
+          ),
+        );
+        gridWindow.add(videos);
+        await tester.pump();
+        await tester.pump();
+        expect(nativeFeed(tester).videos, videos);
+        nativeFeed(tester).onActiveVideoChanged?.call(archive, 1);
+        await tester.pump();
+        final bloc = tester
+            .element(find.byType(FullscreenFeedContent))
+            .read<FullscreenFeedBloc>();
+
+        ProviderScope.containerOf(
+          tester.element(find.byType(FullscreenFeedContent)),
+        ).read(_eligibilityProvider.notifier).setEligible(true);
+        gridWindow.add([ranked]);
+        analytics.changes.add(null);
+        await tester.pump();
+        await tester.pump();
+
+        expect(
+          tester
+              .element(find.byType(FullscreenFeedContent))
+              .read<FullscreenFeedBloc>(),
+          same(bloc),
+        );
+        expect(nativeFeed(tester).videos, [videos.first, archive]);
+        expect(bloc.state.currentVideo, archive);
+        expect(
+          tester
+              .widget<FullscreenFeedContent>(find.byType(FullscreenFeedContent))
+              .loadMoreOnEndSwipe,
+          isTrue,
+        );
+        verify(
+          () => repository.getClassicVideos(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+            archiveOnly: true,
+          ),
+        ).called(1);
+        verifyNever(
+          () => repository.getClassicRecommendations(
+            request: any(named: 'request'),
+            userPubkey: any(named: 'userPubkey'),
+            isCurrent: any(named: 'isCurrent'),
+          ),
+        );
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      });
+    });
 
     testWidgets(
       'a single-video route appends For You without replacing its anchor',

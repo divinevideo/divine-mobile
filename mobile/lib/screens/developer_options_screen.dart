@@ -919,7 +919,7 @@ class _DeveloperOptionsScreenState
     await ref
         .read(protectedMinorOverrideServiceProvider)
         .setOverride(isProtectedMinor);
-    ref.invalidate(protectedMinorStatusProvider);
+    ref.read(protectedMinorRecheckProvider.notifier).requireFreshAnswer();
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       DivineSnackbarContainer.snackBar(
@@ -933,7 +933,7 @@ class _DeveloperOptionsScreenState
 
   Future<void> _clearProtectedMinorOverride() async {
     await ref.read(protectedMinorOverrideServiceProvider).clearOverride();
-    ref.invalidate(protectedMinorStatusProvider);
+    ref.read(protectedMinorRecheckProvider.notifier).requireFreshAnswer();
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       DivineSnackbarContainer.snackBar(

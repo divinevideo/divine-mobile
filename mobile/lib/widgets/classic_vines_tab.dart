@@ -34,7 +34,7 @@ import 'package:unified_logger/unified_logger.dart';
 /// Tab widget displaying Classics archive videos (pre-2017).
 ///
 /// Handles its own:
-/// - Riverpod provider watching (classicVinesFeedProvider)
+/// - The visible Explore window from [visibleClassicVinesFeedProvider]
 /// - Loading/error/data states
 /// - Empty state when REST API unavailable
 class ClassicVinesTab extends ConsumerStatefulWidget {
@@ -61,7 +61,7 @@ class _ClassicVinesTabState extends ConsumerState<ClassicVinesTab> {
 
   @override
   Widget build(BuildContext context) {
-    final classicVinesAsync = ref.watch(classicVinesFeedProvider);
+    final classicVinesAsync = ref.watch(visibleClassicVinesFeedProvider);
     final isAvailableAsync = ref.watch(classicVinesAvailableProvider);
     final isAvailable = isAvailableAsync.value;
 
@@ -86,10 +86,14 @@ class _ClassicVinesTabState extends ConsumerState<ClassicVinesTab> {
     }
 
     // Track feed loading start
-    if (classicVinesAsync.isLoading && _feedLoadStartTime == null) {
+    final isReplacingWindow = classicVinesAsync.value?.isInitialLoad ?? false;
+    if ((classicVinesAsync.isLoading || isReplacingWindow) &&
+        _feedLoadStartTime == null) {
       _feedLoadStartTime = DateTime.now();
       _feedLoad = _feedTracker?.startFeedLoad('classics');
     }
+
+    if (isReplacingWindow) return const _ClassicVinesLoadingState();
 
     // Check hasValue FIRST before isLoading
     if (classicVinesAsync.hasValue && classicVinesAsync.value != null) {
@@ -244,19 +248,34 @@ class _ClassicVinesContentState extends ConsumerState<_ClassicVinesContent>
           _ClassicVideosSliverGrid(
             videos: widget.videos,
             onVideoTap: (videos, index, captureOrigin) {
+              final selected = videos[index];
+              final visible = ref.read(visibleClassicVinesFeedProvider).value;
+              // A pointer can hit the previous grid before Flutter redraws it.
+              if (visible == null) return;
+              final selectedIndex = visible.videos.indexWhere(
+                (video) => video.id == selected.id,
+              );
+              if (selectedIndex < 0) return;
               Log.info(
                 '🎯 ClassicVinesTab TAP: gridIndex=$index, '
-                'videoId=${videos[index].id}',
+                'videoId=${selected.id}',
                 category: LogCategory.video,
               );
               runDetached(
                 PooledFullscreenVideoFeedRouteData(
-                  video: videos[index].id,
+                  video: selected.id,
                   $extra: PooledFullscreenVideoFeedArgs(
-                    source: ClassicVinesViewSource(anchor: videos[index]),
+                    source: ClassicVinesViewSource(
+                      anchor: selected,
+                      archiveSeed: visible.containsRecommendations
+                          ? const []
+                          : List.unmodifiable(
+                              visible.videos.skip(selectedIndex + 1),
+                            ),
+                    ),
                     feedRepository: ref.read(feedRepositoryProvider),
                     initialIndex: 0,
-                    initialVideoId: videos[index].id,
+                    initialVideoId: selected.id,
                     tileOrigin: captureOrigin(),
                     contextTitle: context.l10n.exploreTabClassics,
                     trafficSource: ViewTrafficSource.discoveryClassic,

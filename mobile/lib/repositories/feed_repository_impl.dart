@@ -137,7 +137,7 @@ class RiverpodFeedRepository implements FeedRepository {
           fireImmediately: true,
         ),
         _GlobalFeed.classicVines => _ref.listen(
-          classicVinesFeedProvider,
+          visibleClassicVinesFeedProvider,
           (_, next) => onState(next),
           fireImmediately: true,
         ),

@@ -17,9 +17,10 @@ query parameters remain present. Account identity is not included in the body.
 
 Recent feedback is request-only. Existing playback and explicit Nostr feedback
 publishing are unchanged; the new local stream emits no additional public event.
-Both consent and account changes invalidate in-flight results and clear context.
-Private POST bodies are not automatically retried by transport after their owner
-might have changed. Filtered-page top-ups check ownership before continuing.
+Consent, account and protected-minor gate changes invalidate in-flight results
+and clear context. Private POST bodies are not automatically retried by transport
+after their owner might have changed. Filtered-page top-ups check ownership and
+the account gate before continuing.
 
 Any failure of the first page falls back to the existing archive reader: a
 missing or disabled endpoint, a server error or a timeout. Its cursor then stays on the archive path and per-swipe adaptation is
@@ -30,15 +31,44 @@ may retain the existing unknown-provenance compatibility during archive outages.
 
 ## Rollout controls
 
-The Flutter build define `ADAPTIVE_CLASSICS_ENABLED` defaults to `false`, so
-Home, Explore browsing and selected-classic playback use the existing archive
-path. The Funnelcake `CLASSIC_RECOMMENDATIONS_ENABLED` flag also defaults to
-`false`.
+The Flutter build define `ADAPTIVE_CLASSICS_ENABLED` defaults to `true`. Build
+with `--dart-define=ADAPTIVE_CLASSICS_ENABLED=false` to restore the archive-only
+Classics feed and grid. The Funnelcake `CLASSIC_RECOMMENDATIONS_ENABLED` flag
+defaults to `false` and remains the operational off switch: while it is off, the
+endpoint fails, so new Classics sessions start on the archive. A session already
+reading recommendations keeps its queue and retries its cursor until the viewer
+refreshes.
 
-Keep both flags off for release until the client requires usage-data consent
-and a confirmed non-protected account status before collecting recommendation
-feedback or sending personalized requests. Protected accounts and accounts
-whose status is pending or unavailable stay on the archive path.
+Adaptive Classics activates per account only when an authenticated Keycast check
+explicitly confirms the account is not a protected minor
+(`confirmedNotProtectedMinorProvider`). A Keycast reply without a boolean
+`verified_minor` is not a confirmation. Protected accounts, logged-out sessions,
+non-Keycast signer sessions, and accounts whose first status check is pending or
+unavailable stay on the archive path. A resume re-check later in the same
+session keeps an earlier confirmation until it resolves; a protected, unknown or
+failed result returns the account to the archive. A re-check from the
+minor-account review flow or the developer override
+(`ProtectedMinorRecheck.requireFreshAnswer`) closes the gate until it answers.
+Usage-data consent separately gates the viewer identity and recent feedback each
+request carries.
+
+When the account stops being eligible mid-session, nothing restarts:
+
+- An open fullscreen classic keeps playing. The route picks its mode once, when
+  it opens, so it is never rebuilt at the tapped clip. Its queue keeps the
+  clips already reached (the playing one only if it still passes the content
+  filters), drops the ranked clips not yet reached, stops sending feedback and
+  recommendation requests, and loads the rest from the archive.
+- Home does the same with its Classics slice, and no longer saves the kept
+  clips as its archive resume window.
+- The Explore grid reloads from the archive if it was showing ranked videos.
+
+When eligibility arrives mid-session, an archive route, Home's loaded archive
+slice and the Explore grid stay on the archive until the next refresh.
+
+Whether ranked clips the viewer has not reached may be kept after a protected
+result is a Trust & Safety decision; until they decide otherwise they are
+dropped.
 
 Old clients keep their existing endpoints. This work leaves archive inference
 and production item-to-item indexing disabled.

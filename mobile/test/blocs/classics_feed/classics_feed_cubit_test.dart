@@ -53,6 +53,38 @@ void main() {
     );
 
     test(
+      'revokePersonalization moves the rest of the queue to the archive',
+      () async {
+        final requests = <ClassicRecommendationsRequest>[];
+        final session = ClassicFeedSession(
+          initialVideos: [_video(1)],
+          loadPage: (request) async {
+            requests.add(request);
+            return requests.length == 1
+                ? HomeFeedResult(
+                    videos: [_video(2), _video(3)],
+                    hasMore: true,
+                    recommendationPageCount: 1,
+                    paginationCursor: 'adaptive',
+                  )
+                : HomeFeedResult(videos: [_video(9)], hasMore: false);
+          },
+        );
+        final cubit = ClassicsFeedCubit(session: session);
+        addTearDown(cubit.close);
+        await session.settled;
+
+        cubit.revokePersonalization();
+        await session.settled;
+        await pumpEventQueue();
+
+        expect(cubit.state.videos, [_video(1), _video(9)]);
+        expect(requests.last.cursor, isNull);
+        expect(requests.last.anchorVideoId, isNull);
+      },
+    );
+
+    test(
       'a selected classic plays before its independent recommendations arrive',
       () async {
         final pending = Completer<HomeFeedResult>();

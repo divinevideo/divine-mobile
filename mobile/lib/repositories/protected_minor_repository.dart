@@ -3,6 +3,7 @@
 
 import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:openvine/models/protected_minor_status.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Reads the durable approved-minor flag from Keycast's `GET /api/user/account`
 /// (via [KeycastOAuth.getAccountStatus]) and maps it to [ProtectedMinorStatus].
@@ -39,7 +40,15 @@ class ProtectedMinorRepository {
       }
       final status = await _oauthClient.getAccountStatus(token);
       return ProtectedMinorStatus.fromKeycast(status);
-    } catch (_) {
+    } on Object catch (error) {
+      // The type alone: the failure can carry account details, and unknown
+      // keeps every protection on its fail-safe path either way.
+      Log.warning(
+        'Keycast account status check failed (${error.runtimeType}); '
+        'treating protected-minor status as unknown',
+        name: 'ProtectedMinorRepository',
+        category: LogCategory.auth,
+      );
       return ProtectedMinorStatus.unknown();
     }
   }

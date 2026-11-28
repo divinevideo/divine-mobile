@@ -309,13 +309,13 @@ final class VideoFeedVideoUnavailable extends VideoFeedEvent {
 }
 
 /// Independent Classics queue changed after request-only feedback.
-final class VideoFeedClassicsSessionChanged extends VideoFeedEvent {
-  const VideoFeedClassicsSessionChanged(this.snapshot);
+final class _VideoFeedClassicsSessionChanged extends VideoFeedEvent {
+  const _VideoFeedClassicsSessionChanged(this.session);
 
-  final ClassicFeedSessionState snapshot;
+  final ClassicFeedSession session;
 
   @override
-  List<Object?> get props => [snapshot];
+  List<Object?> get props => [session];
 }
 
 /// Whether Home is visible, independent of transient player overlays.
@@ -326,4 +326,14 @@ final class VideoFeedVisibilityChanged extends VideoFeedEvent {
 
   @override
   List<Object?> get props => [visible];
+}
+
+/// Adaptive Classics account gate opened or closed for this Home feed.
+final class _VideoFeedAdaptiveClassicsChanged extends VideoFeedEvent {
+  const _VideoFeedAdaptiveClassicsChanged(this.enabled);
+
+  final bool enabled;
+
+  @override
+  List<Object?> get props => [enabled];
 }

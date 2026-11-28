@@ -110,6 +110,7 @@ void main() {
             limit: any(named: 'limit'),
             cursor: any(named: 'cursor'),
             skipCache: any(named: 'skipCache'),
+            archiveOnly: true,
           ),
         ).thenAnswer((_) async => HomeFeedResult(videos: [_video('c')]));
         when(
@@ -631,6 +632,7 @@ void main() {
               limit: any(named: 'limit'),
               cursor: any(named: 'cursor'),
               skipCache: captureAny(named: 'skipCache'),
+              archiveOnly: true,
             ),
           ).captured;
           expect(captured, [isFalse]);
@@ -639,6 +641,7 @@ void main() {
               limit: any(named: 'limit'),
               cursor: any(named: 'cursor'),
               skipCache: true,
+              archiveOnly: true,
             ),
           );
         },

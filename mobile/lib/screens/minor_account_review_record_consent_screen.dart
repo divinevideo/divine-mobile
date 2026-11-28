@@ -340,9 +340,10 @@ class MinorConsentSubmitView extends ConsumerWidget {
         submission: ParentConsentSubmission(),
         repository: repository,
         onSubmitted: () {
+          container.invalidate(currentMinorAccountReviewStatusProvider);
           container
-            ..invalidate(currentMinorAccountReviewStatusProvider)
-            ..invalidate(protectedMinorStatusProvider);
+              .read(protectedMinorRecheckProvider.notifier)
+              .requireFreshAnswer();
         },
         onUploadStarted: onUploadStarted,
         onUploadFinished: onUploadFinished,

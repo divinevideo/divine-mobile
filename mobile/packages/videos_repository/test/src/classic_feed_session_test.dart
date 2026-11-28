@@ -720,6 +720,198 @@ void main() {
       });
     });
 
+    group('revokePersonalization', () {
+      HomeFeedResult archivePage(List<int> ids, {String? cursor = 'offset'}) =>
+          HomeFeedResult(
+            videos: ids.map(_video).toList(),
+            paginationCursor: cursor,
+            hasMore: cursor != null,
+          );
+
+      test(
+        'keeps reached videos, drops unplayed ones, and reads the next page '
+        'without personal context',
+        () async {
+          final requests = <ClassicRecommendationsRequest>[];
+          late final ClassicFeedSession session;
+          session = ClassicFeedSession(
+            initialVideos: [_video(1)],
+            loadPage: (request) async {
+              requests.add(request);
+              return session.personalizationRevoked
+                  ? archivePage([7, 8])
+                  : _page([2, 3, 4], cursor: 'adaptive');
+            },
+          );
+          addTearDown(session.dispose);
+          await session.loadInitial();
+          session.activate(1);
+          await session.settled;
+          final adaptiveRequests = requests.length;
+          expect(session.state.videos.map((v) => v.id), [1, 2, 3, 4].map(_id));
+
+          session.revokePersonalization();
+
+          expect(session.personalizationRevoked, isTrue);
+          expect(session.state.videos.map((v) => v.id), [1, 2].map(_id));
+          expect(session.state.currentIndex, 1);
+          expect(session.state.cursor, isNull);
+          expect(session.state.hasMore, isTrue);
+
+          await session.settled;
+          expect(requests, hasLength(adaptiveRequests + 1));
+          final archiveRequest = requests.last;
+          expect(archiveRequest.cursor, isNull);
+          expect(archiveRequest.recentInteractions, isEmpty);
+          expect(archiveRequest.recentVideoIds, isEmpty);
+          expect(archiveRequest.anchorVideoId, isNull);
+          expect(
+            session.state.videos.map((v) => v.id),
+            [1, 2, 7, 8].map(_id),
+          );
+          expect(session.state.currentIndex, 1);
+          expect(session.state.cursor, 'offset');
+        },
+      );
+
+      test('removes the playing video when content rules reject it', () async {
+        final hidden = <String>{};
+        final session = ClassicFeedSession(
+          initialVideos: [_video(1)],
+          filter: (videos) =>
+              videos.where((video) => !hidden.contains(video.id)).toList(),
+          loadPage: (_) async => _page([2, 3], cursor: null),
+        );
+        addTearDown(session.dispose);
+        await session.loadInitial();
+        session.activate(1);
+        await session.settled;
+
+        hidden.add(_id(2));
+        session.revokePersonalization();
+
+        expect(session.state.videos.map((v) => v.id), [_id(1)]);
+      });
+
+      test('discards an adaptive page that was in flight', () async {
+        final pending = Completer<HomeFeedResult>();
+        final requests = <ClassicRecommendationsRequest>[];
+        final session = ClassicFeedSession(
+          initialVideos: [_video(1)],
+          loadPage: (request) {
+            requests.add(request);
+            return requests.length == 1
+                ? pending.future
+                : Future.value(archivePage([7], cursor: null));
+          },
+        );
+        addTearDown(session.dispose);
+        unawaited(session.loadInitial());
+
+        session.revokePersonalization();
+        pending.complete(_page([2, 3]));
+        await session.settled;
+
+        expect(session.state.videos.map((v) => v.id), [1, 7].map(_id));
+        expect(requests.last.anchorVideoId, isNull);
+      });
+
+      test('keeps the archive cursor when privacy context changes', () async {
+        final requests = <ClassicRecommendationsRequest>[];
+        final session = ClassicFeedSession(
+          initialVideos: [_video(1)],
+          loadPage: (request) async {
+            requests.add(request);
+            return requests.length == 1
+                ? _page([2, 3], cursor: 'adaptive')
+                : archivePage([7, 8]);
+          },
+        );
+        addTearDown(session.dispose);
+        await session.loadInitial();
+        session.revokePersonalization();
+        await session.settled;
+        final afterRevocation = requests.length;
+        expect(session.state.cursor, 'offset');
+
+        session
+          ..recordInteraction(
+            ClassicFeedInteraction(
+              videoId: _id(7),
+              signal: ClassicFeedSignal.positive,
+            ),
+          )
+          ..activate(1)
+          ..resetContext();
+        await session.settled;
+
+        expect(requests, hasLength(afterRevocation));
+        expect(session.state.cursor, 'offset');
+      });
+
+      test(
+        'a page reporting recommendations does not resume adaptation',
+        () async {
+          final requests = <ClassicRecommendationsRequest>[];
+          final session = ClassicFeedSession(
+            initialVideos: [_video(1)],
+            loadPage: (request) async {
+              requests.add(request);
+              return _page([requests.length + 10]);
+            },
+          );
+          addTearDown(session.dispose);
+          await session.loadInitial();
+          session.revokePersonalization();
+          await session.settled;
+          session.activate(1);
+          await session.settled;
+
+          expect(requests, hasLength(2));
+          expect(requests.last.anchorVideoId, isNull);
+        },
+      );
+
+      test('is a no-op when repeated, unstarted, or disposed', () async {
+        final requests = <ClassicRecommendationsRequest>[];
+        final unstarted = ClassicFeedSession(
+          initialVideos: [_video(1)],
+          loadPage: (request) async {
+            requests.add(request);
+            return archivePage([2]);
+          },
+        );
+        addTearDown(unstarted.dispose);
+        unstarted
+          ..revokePersonalization()
+          ..revokePersonalization();
+        await unstarted.settled;
+        expect(requests, isEmpty);
+        expect(unstarted.state.videos.map((v) => v.id), [_id(1)]);
+
+        final empty = ClassicFeedSession(
+          loadPage: (request) async {
+            requests.add(request);
+            return archivePage([2]);
+          },
+        )..revokePersonalization();
+        addTearDown(empty.dispose);
+        expect(empty.state.videos, isEmpty);
+        expect(empty.personalizationRevoked, isTrue);
+
+        final disposed = ClassicFeedSession(
+          loadPage: (request) async {
+            requests.add(request);
+            return archivePage([2]);
+          },
+        );
+        await disposed.dispose();
+        disposed.revokePersonalization();
+        expect(disposed.personalizationRevoked, isFalse);
+        expect(requests, isEmpty);
+      });
+    });
+
     group('recordInteraction', () {
       test(
         'ignores an interaction recorded without personalization consent',

@@ -8,6 +8,7 @@ import 'package:openvine/models/protected_minor_status.dart';
 KeycastAccountStatus _status({
   required bool verifiedMinor,
   DateTime? verifiedMinorAt,
+  bool verifiedMinorReported = true,
 }) {
   return KeycastAccountStatus(
     email: 'a@b.com',
@@ -15,6 +16,7 @@ KeycastAccountStatus _status({
     publicKey: 'abc',
     verifiedMinor: verifiedMinor,
     verifiedMinorAt: verifiedMinorAt,
+    verifiedMinorReported: verifiedMinorReported,
   );
 }
 
@@ -55,12 +57,22 @@ void main() {
       expect(s.verifiedMinorAt, at);
     });
 
+    test('a reply without verified_minor maps to unknown', () {
+      final status = ProtectedMinorStatus.fromKeycast(
+        _status(verifiedMinor: false, verifiedMinorReported: false),
+      );
+
+      expect(status.kind, ProtectedMinorStatusKind.unknown);
+      expect(status.isConfirmedNotProtected, isFalse);
+    });
+
     test('verified_minor false -> not protected', () {
       final status = ProtectedMinorStatus.fromKeycast(
         _status(verifiedMinor: false),
       );
 
       expect(status.kind, ProtectedMinorStatusKind.notProtected);
+      expect(status.isConfirmedNotProtected, isTrue);
       expect(status.isKnown, isTrue);
       expect(status.isProtectedMinor, isFalse);
     });

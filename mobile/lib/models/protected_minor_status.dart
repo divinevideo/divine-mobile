@@ -33,12 +33,10 @@ class ProtectedMinorStatus {
         verifiedMinorAt: verifiedMinorAt,
       );
 
-  /// Maps a Keycast account status to protected-minor state. A null status
-  /// (fetch failed / unavailable) is preserved as unknown so enforcement
-  /// layers can choose their own fail-safe behavior; `verified_minor == false`
-  /// is the only confirmed not-protected response.
+  /// Maps an explicit Keycast verdict to protected-minor state. Missing or
+  /// unavailable verdicts stay unknown so enforcement retains its fallback.
   factory ProtectedMinorStatus.fromKeycast(KeycastAccountStatus? status) {
-    if (status == null) {
+    if (status == null || !status.verifiedMinorReported) {
       return ProtectedMinorStatus.unknown();
     }
     if (!status.verifiedMinor) {
@@ -51,6 +49,10 @@ class ProtectedMinorStatus {
 
   final ProtectedMinorStatusKind kind;
   final DateTime? verifiedMinorAt;
+
+  /// An explicit Keycast answer that the account is not a protected minor.
+  bool get isConfirmedNotProtected =>
+      kind == ProtectedMinorStatusKind.notProtected;
 
   bool get isProtectedMinor => kind == ProtectedMinorStatusKind.protected;
   bool get isKnown => kind != ProtectedMinorStatusKind.unknown;

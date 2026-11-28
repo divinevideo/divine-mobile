@@ -54,7 +54,7 @@ final class ClassicVinesFeedProvider
   ClassicVinesFeed create() => ClassicVinesFeed();
 }
 
-String _$classicVinesFeedHash() => r'8b8dc880a986e9fe12cfc1edb8584413aee573c0';
+String _$classicVinesFeedHash() => r'1baecb0b106c2abf8982cdf9d5d806cd00a64779';
 
 /// ClassicVines grid provider, ranked by the repository's recommendation path.
 ///
@@ -81,6 +81,65 @@ abstract class _$ClassicVinesFeed extends $AsyncNotifier<VideoFeedState> {
     return element.handleCreate(ref, build);
   }
 }
+
+/// The same view is used by the grid and its fullscreen feed bridge. Riverpod
+/// can retain the previous window while replacing it after a dependency
+/// change. Publish an empty loading window so the bridge also drops its replay.
+
+@ProviderFor(visibleClassicVinesFeed)
+final visibleClassicVinesFeedProvider = VisibleClassicVinesFeedProvider._();
+
+/// The same view is used by the grid and its fullscreen feed bridge. Riverpod
+/// can retain the previous window while replacing it after a dependency
+/// change. Publish an empty loading window so the bridge also drops its replay.
+
+final class VisibleClassicVinesFeedProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<VideoFeedState>,
+          AsyncValue<VideoFeedState>,
+          AsyncValue<VideoFeedState>
+        >
+    with $Provider<AsyncValue<VideoFeedState>> {
+  /// The same view is used by the grid and its fullscreen feed bridge. Riverpod
+  /// can retain the previous window while replacing it after a dependency
+  /// change. Publish an empty loading window so the bridge also drops its replay.
+  VisibleClassicVinesFeedProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'visibleClassicVinesFeedProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$visibleClassicVinesFeedHash();
+
+  @$internal
+  @override
+  $ProviderElement<AsyncValue<VideoFeedState>> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  AsyncValue<VideoFeedState> create(Ref ref) {
+    return visibleClassicVinesFeed(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(AsyncValue<VideoFeedState> value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<AsyncValue<VideoFeedState>>(value),
+    );
+  }
+}
+
+String _$visibleClassicVinesFeedHash() =>
+    r'4581ff567007ef04860212d39074dfb7fd14f9d3';
 
 /// Provider to check if classic vines feed is loading
 
@@ -127,7 +186,7 @@ final class ClassicVinesFeedLoadingProvider
 }
 
 String _$classicVinesFeedLoadingHash() =>
-    r'8ab3ecc7147fc09d4f39d5d40c0b10a7d44ade81';
+    r'b65d115726dafb684dcc892c338896ed73bd70ae';
 
 /// Provider to get current classic vines feed video count
 
@@ -174,7 +233,7 @@ final class ClassicVinesFeedCountProvider
 }
 
 String _$classicVinesFeedCountHash() =>
-    r'b165c04f3d38d09dfaff91653d82300f248b73dc';
+    r'8f9be3ce5ceb7087286e158f4e4c98825de0fed7';
 
 /// Provider to check if classic vines are available
 ///
@@ -277,4 +336,4 @@ final class TopClassicVinersProvider
   }
 }
 
-String _$topClassicVinersHash() => r'5b33e5a06cbb580a23bebe648c5baceb629611bd';
+String _$topClassicVinersHash() => r'bb99bcc21ff31717d26e0c4b39afb5bb7b4ab0a8';

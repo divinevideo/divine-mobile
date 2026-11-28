@@ -93,7 +93,6 @@ class VideoFeedPage extends ConsumerWidget {
       isFeatureEnabledProvider(FeatureFlag.clientSeenFiltering),
     );
     final videosRepository = ref.watch(videosRepositoryProvider);
-    final useAdaptiveClassics = ref.watch(adaptiveClassicsEnabledProvider);
     final followRepository = ref.watch(followRepositoryProvider);
     final hashtagRepository = ref.watch(hashtagSubscriptionRepositoryProvider);
     final curatedListRepository = ref.watch(curatedListRepositoryProvider);
@@ -149,12 +148,31 @@ class VideoFeedPage extends ConsumerWidget {
                   ),
                   unavailableFilter: unavailabilityGate.isVideoBroken,
                   unavailableVideoIds: unavailabilityGate.markedVideoIds,
-                  classicSession: useAdaptiveClassics
+                  classicSession:
+                      adaptiveClassicsEnabled &&
+                          ref.read(adaptiveClassicsEnabledProvider)
                       ? _homeClassicSession(
                           ref,
                           viewerPubkey,
                           isUnavailable: unavailabilityGate.isVideoBroken,
                         )
+                      : null,
+                  createClassicSession: adaptiveClassicsEnabled
+                      ? () => ref.context.mounted
+                            ? _homeClassicSession(
+                                ref,
+                                viewerPubkey,
+                                isUnavailable: unavailabilityGate.isVideoBroken,
+                              )
+                            : null
+                      : null,
+                  adaptiveClassicsEnabledStream: adaptiveClassicsEnabled
+                      ? ref.read(adaptiveClassicsEnabledStreamProvider)
+                      : null,
+                  isAdaptiveClassicsAllowed: adaptiveClassicsEnabled
+                      ? () =>
+                            ref.context.mounted &&
+                            ref.read(adaptiveClassicsEnabledProvider)
                       : null,
                   followRepository: followRepository,
                   curatedListRepository: curatedListRepository,
@@ -653,7 +671,10 @@ class _VideoFeedViewState extends ConsumerState<VideoFeedView>
                               hasMore: state.hasMore,
                               isLoadingMore: state.isLoadingMore,
                               prefetchOnMount: isForYou,
-                              loadMoreOnEndSwipe: isForYou,
+                              loadMoreOnEndSwipe:
+                                  isForYou ||
+                                  state.source.type ==
+                                      VideoFeedSourceType.classic,
                               trafficSource: ViewTrafficSource.home,
                               // Every feed mode renders through this one page and
                               // reports source=home, so without this detail the
@@ -842,6 +863,8 @@ ClassicFeedSession _homeClassicSession(
   required bool Function(String videoId) isUnavailable,
 }) {
   var analytics = ref.read(analyticsServiceProvider);
+  bool isAdaptiveAllowed() =>
+      ref.context.mounted && ref.read(adaptiveClassicsEnabledProvider);
   return ClassicFeedSession(
     loadPage: (request) {
       final requestAnalytics = analytics;
@@ -853,11 +876,13 @@ ClassicFeedSession _homeClassicSession(
             request: request,
             userPubkey: allowed ? viewerPubkey : null,
             isCurrent: () =>
+                isAdaptiveAllowed() &&
                 contextId == requestAnalytics.privacyGeneration &&
                 allowed == requestAnalytics.initializedAnalyticsConsent,
           );
     },
-    canPersonalize: () => analytics.initializedAnalyticsConsent,
+    canPersonalize: () =>
+        isAdaptiveAllowed() && analytics.initializedAnalyticsConsent,
     // Each listener tracks the current service; transforms of the identity
     // stream are single-subscription, so one chain per listener.
     feedback: ref

@@ -544,6 +544,7 @@ final class VideoFeedCoordination extends Equatable {
     this.paginationGeneration = 0,
     this.loadGeneration = 0,
     this.newVideosUntil,
+    this.classicsSliceFromSession = false,
   });
 
   final int sourceSelectionSequence;
@@ -566,6 +567,11 @@ final class VideoFeedCoordination extends Equatable {
   /// read was empty. Only meaningful while the source is New.
   final int? newVideosUntil;
 
+  /// Whether the Classics videos still on screen came from the adaptive
+  /// session that the account gate has since detached. Such a slice is
+  /// personalized, so it must not be persisted as the archive resume window.
+  final bool classicsSliceFromSession;
+
   VideoFeedCoordination copyWith({
     int? sourceSelectionSequence,
     Object? activeSourceSelection = _unchanged,
@@ -578,6 +584,7 @@ final class VideoFeedCoordination extends Equatable {
     int? paginationGeneration,
     int? loadGeneration,
     Object? newVideosUntil = _unchanged,
+    bool? classicsSliceFromSession,
   }) => VideoFeedCoordination(
     sourceSelectionSequence:
         sourceSelectionSequence ?? this.sourceSelectionSequence,
@@ -605,6 +612,8 @@ final class VideoFeedCoordination extends Equatable {
     newVideosUntil: identical(newVideosUntil, _unchanged)
         ? this.newVideosUntil
         : newVideosUntil as int?,
+    classicsSliceFromSession:
+        classicsSliceFromSession ?? this.classicsSliceFromSession,
   );
 
   static const _unchanged = Object();
@@ -622,5 +631,6 @@ final class VideoFeedCoordination extends Equatable {
     paginationGeneration,
     loadGeneration,
     newVideosUntil,
+    classicsSliceFromSession,
   ];
 }

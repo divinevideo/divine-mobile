@@ -304,6 +304,7 @@ class VideosRepository {
     SeenVideoLookup? seenVideoLookup,
     String? Function()? viewerPubkey,
     bool classicRecommendationsEnabled = false,
+    bool Function()? classicRecommendationsAllowed,
     String? Function()? classicViewerPubkey,
     Object? Function()? classicContextKey,
     Random? random,
@@ -319,6 +320,7 @@ class VideosRepository {
        _seenVideoLookup = seenVideoLookup,
        _viewerPubkey = viewerPubkey,
        _classicRecommendationsEnabled = classicRecommendationsEnabled,
+       _classicRecommendationsAllowed = classicRecommendationsAllowed,
        _classicViewerPubkey = classicViewerPubkey,
        _classicContextKey = classicContextKey,
        _random = random ?? Random();
@@ -361,6 +363,12 @@ class VideosRepository {
   Object? _classicBrowsingContext;
   bool _classicBrowsingViewerInitialized = false;
   final bool _classicRecommendationsEnabled;
+
+  /// Per-read account gate for private Classics recommendations, evaluated on
+  /// every read so a status change never requires rebuilding the repository.
+  /// False when a read starts sends it to the archive path; turning false
+  /// mid-read supersedes the read.
+  final bool Function()? _classicRecommendationsAllowed;
   final String? Function()? _classicViewerPubkey;
   final Object? Function()? _classicContextKey;
 
@@ -1478,7 +1486,8 @@ class VideosRepository {
   /// retried with its cursor instead of mixing unrelated pagination modes.
   ///
   /// Throws:
-  /// - [FunnelcakeException] when [isCurrent] reports the request superseded.
+  /// - [FunnelcakeException] when [isCurrent] reports the request superseded,
+  ///   or `classicRecommendationsAllowed` turns false during the read.
   /// - [FunnelcakeException] when an adaptive continuation fails.
   Future<HomeFeedResult> getClassicRecommendations({
     required ClassicRecommendationsRequest request,
@@ -1499,8 +1508,11 @@ class VideosRepository {
     required bool Function()? isCurrent,
     required bool skipArchiveCache,
   }) async {
-    void checkCurrent() {
-      if (isCurrent != null && !isCurrent()) {
+    bool isAllowed() => _classicRecommendationsAllowed?.call() ?? true;
+
+    void checkCurrent({bool checkAllowed = false}) {
+      if ((isCurrent != null && !isCurrent()) ||
+          (checkAllowed && !isAllowed())) {
         throw const FunnelcakeException('Classics request superseded');
       }
     }
@@ -1513,7 +1525,7 @@ class VideosRepository {
       );
     }
     final api = _funnelcakeApiClient;
-    if (api == null || !api.isAvailable) {
+    if (api == null || !api.isAvailable || !isAllowed()) {
       return _getClassicArchiveVideos(
         limit: request.limit,
         skipCache: skipArchiveCache,
@@ -1526,7 +1538,7 @@ class VideosRepository {
         ? _classicsMaxPageFetches
         : maxSeenOnlyFeedPages;
     for (var page = 0; page < maxPages; page++) {
-      checkCurrent();
+      checkCurrent(checkAllowed: true);
       late final RecommendationsResponse response;
       try {
         response = await api.getClassicRecommendations(
@@ -1534,14 +1546,14 @@ class VideosRepository {
           userPubkey: userPubkey,
         );
       } on FunnelcakeException {
-        checkCurrent();
+        checkCurrent(checkAllowed: true);
         if (request.cursor != null) rethrow;
         return _getClassicArchiveVideos(
           limit: request.limit,
           skipCache: skipArchiveCache,
         );
       }
-      checkCurrent();
+      checkCurrent(checkAllowed: true);
       final videos = _withoutSeenVideos(
         _transformVideoStats(response.videos, sortByCreatedAt: false)
             .where(
@@ -1570,19 +1582,27 @@ class VideosRepository {
   /// Fetches a stable Classics browsing selection.
   ///
   /// The application opts into private recommendations with
-  /// `classicRecommendationsEnabled`.
-  /// Its viewer callback must respect consent.
+  /// `classicRecommendationsEnabled`, and `classicRecommendationsAllowed`
+  /// can keep an individual account on the archive path per read.
+  /// `classicViewerPubkey` must respect consent.
   /// A refresh rotates the browsing seed; cursor pages retain server order.
   /// Older/disabled servers use the bounded, shuffled archive reader below.
   ///
-  /// Throws [FunnelcakeException] when the viewer or privacy context changes
-  /// while the page is read, or when an adaptive continuation fails.
+  /// Throws [FunnelcakeException] when the viewer, the privacy context or the
+  /// `classicRecommendationsAllowed` gate changes while the page is read, or
+  /// when an adaptive continuation fails.
+  ///
+  /// [archiveOnly] keeps a caller's archive session on the archive even when
+  /// the account becomes eligible for recommendations.
   Future<HomeFeedResult> getClassicVideos({
     int limit = _defaultLimit,
     String? cursor,
     bool skipCache = false,
+    bool archiveOnly = false,
   }) async {
-    if (!_classicRecommendationsEnabled) {
+    if (archiveOnly ||
+        !_classicRecommendationsEnabled ||
+        !(_classicRecommendationsAllowed?.call() ?? true)) {
       return _getClassicArchiveVideos(
         limit: limit,
         cursor: cursor,
@@ -1592,6 +1612,7 @@ class VideosRepository {
     final viewer = _classicViewerPubkey?.call();
     final contextKey = _classicContextKey?.call();
     bool isCurrent() =>
+        (_classicRecommendationsAllowed?.call() ?? true) &&
         viewer == _classicViewerPubkey?.call() &&
         contextKey == _classicContextKey?.call();
     final contextChanged =

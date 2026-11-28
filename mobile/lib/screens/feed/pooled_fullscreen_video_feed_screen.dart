@@ -276,10 +276,15 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (ref.watch(adaptiveClassicsEnabledProvider)) {
-      if (source case ClassicVinesViewSource(anchor: final anchor?)) {
-        return ClassicsPlaybackPage(anchor: anchor, screen: this);
-      }
+    if (source case ClassicVinesViewSource(
+      anchor: final anchor?,
+      :final archiveSeed,
+    )) {
+      return _SelectedClassicRoute(
+        anchor: anchor,
+        archiveSeed: archiveSeed,
+        screen: this,
+      );
     }
     final mediaCache = kIsWeb ? null : ref.read(mediaCacheProvider);
     final blossomAuthService = ref.read(blossomAuthServiceProvider);
@@ -374,7 +379,9 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
         dmReplyContext: dmReplyContext,
         fromMessage: fromMessage,
         loadMoreOnEndSwipe:
-            source is SingleVideoViewSource || source is HashtagViewSource,
+            source is SingleVideoViewSource ||
+            source is HashtagViewSource ||
+            source is ClassicVinesViewSource,
         initialVideoKey: switch (source) {
           SingleVideoViewSource(:final video) => video.feedDedupKey,
           _ => null,
@@ -385,6 +392,47 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
     // Not around the classics page above, whose own feed lands here.
     return ScreenFrameTraceScope(screen: .fullscreenFeed, child: feed);
   }
+}
+
+/// Chooses a selected classic's playback mode once, when the route opens.
+///
+/// Watching the account gate instead rebuilt the route into the other mode
+/// whenever Keycast's answer changed, which restarted playback at the tapped
+/// classic. An adaptive route that loses eligibility moves its own queue to
+/// the archive ([ClassicsPlaybackPage]); an archive route stays on the archive
+/// until the viewer opens another classic.
+class _SelectedClassicRoute extends ConsumerStatefulWidget {
+  const _SelectedClassicRoute({
+    required this.anchor,
+    required this.archiveSeed,
+    required this.screen,
+  });
+
+  final VideoEvent anchor;
+  final List<VideoEvent> archiveSeed;
+  final PooledFullscreenVideoFeedScreen screen;
+
+  @override
+  ConsumerState<_SelectedClassicRoute> createState() =>
+      _SelectedClassicRouteState();
+}
+
+class _SelectedClassicRouteState extends ConsumerState<_SelectedClassicRoute> {
+  late final bool _adaptive;
+
+  @override
+  void initState() {
+    super.initState();
+    _adaptive = ref.read(adaptiveClassicsEnabledProvider);
+  }
+
+  @override
+  Widget build(BuildContext context) => ClassicsPlaybackPage(
+    anchor: widget.anchor,
+    archiveSeed: widget.archiveSeed,
+    screen: widget.screen,
+    adaptive: _adaptive,
+  );
 }
 
 /// Content widget for the fullscreen video feed.
