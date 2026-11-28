@@ -402,6 +402,68 @@ void main() {
       expect(find.text(_failureText), findsNothing);
     });
 
+    testWidgets(
+      'records unavailable when the signed retry loses its overlay and returns 404',
+      (tester) async {
+        final mediaAuthInterceptor = _MockMediaAuthInterceptor();
+        final playbackStatusCubit = VideoPlaybackStatusCubit();
+        final hostVisible = ValueNotifier(true);
+        final retryOutcome = Completer<PooledRetryOutcome>();
+        var retryStarted = false;
+        addTearDown(playbackStatusCubit.close);
+        addTearDown(hostVisible.dispose);
+
+        when(
+          () => mediaAuthInterceptor.handleUnauthorizedMedia(
+            context: any(named: 'context'),
+            sha256Hash: _sha256,
+            url: _videoUrl,
+            serverUrl: 'https://media.divine.video',
+            category: 'video',
+          ),
+        ).thenAnswer(
+          (_) async =>
+              const ViewerAuthAuthorized({'Authorization': 'Nostr token'}),
+        );
+
+        await tester.pumpWidget(
+          _RetryHarness(
+            mediaAuthInterceptor: mediaAuthInterceptor,
+            playbackStatusCubit: playbackStatusCubit,
+            hostVisible: hostVisible,
+            retryPlayback: (_) {
+              retryStarted = true;
+              hostVisible.value = false;
+              return retryOutcome.future;
+            },
+          ),
+        );
+        playbackStatusCubit.report(_videoId, PlaybackStatus.ageRestricted);
+
+        await tester.tap(find.text('Verify'));
+        await tester.pump();
+        expect(retryStarted, isTrue);
+        expect(find.text('Verify'), findsNothing);
+        expect(playbackStatusCubit.state.isVerifying(_videoId), isTrue);
+
+        retryOutcome.complete((
+          status: VideoRetryResult.failed,
+          errorType: VideoErrorType.notFound,
+        ));
+        await tester.pump();
+
+        expect(
+          playbackStatusCubit.state.statusFor(_videoId),
+          PlaybackStatus.unavailable,
+        );
+        expect(
+          playbackStatusCubit.state.hasAuthRetryExhausted(_videoId),
+          isTrue,
+        );
+        expect(playbackStatusCubit.state.isVerifying(_videoId), isFalse);
+      },
+    );
+
     testWidgets('keeps the age-gated card when the retry fails for an '
         'unrelated reason', (tester) async {
       final mediaAuthInterceptor = _MockMediaAuthInterceptor();

@@ -1203,7 +1203,9 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       resolvePlaybackSources(
         video,
         urlResolver: widget.urlResolver,
-        preferB2Original: widget.preferB2Original,
+        // The B2 canary serves public originals only. Signed retries need
+        // Blossom's canonical authorization path, including for the raw blob.
+        preferB2Original: widget.preferB2Original && !_hasViewerHeaders(index),
         bunnyPlaybackPaths: _hasViewerHeaders(index)
             ? const {}
             : {...widget.bunnyPlaybackPaths, ...?_selectedBunnyPaths[index]},

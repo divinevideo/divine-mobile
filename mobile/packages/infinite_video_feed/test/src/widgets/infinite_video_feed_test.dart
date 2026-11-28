@@ -889,6 +889,53 @@ void main() {
     const raw = 'https://media.divine.video/$hash';
     const b2 = 'https://media-b2.divine.video/$hash';
 
+    testWidgets(
+      'signed retry reaches the canonical original after a rendition 404',
+      (tester) async {
+        const hls = '$raw/hls/master.m3u8';
+        const headers = {'Authorization': 'Nostr test'};
+        DivineVideoPlayerController.resetIdCounterForTesting();
+        final harness = _NativePlayerHarness(tester);
+        await harness.install();
+        final key = GlobalKey<InfiniteVideoFeedState>();
+        try {
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                key: key,
+                videos: [_makeVideo('gated', videoUrl: raw)],
+                cache: cache,
+                preferB2Original: true,
+                urlResolver: (_) => hls,
+                prefetchCount: 0,
+                preloadGracePeriod: Duration.zero,
+              ),
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+          expect(harness.clipsHandedToPlayer.single['uri'], hls);
+
+          harness.setClipsFailures[1] = [PlatformException(code: 'not_found')];
+          final retry = key.currentState!.retryAt(0, httpHeaders: headers);
+          await tester.pump();
+          await tester.pump();
+
+          expect(await retry, VideoRetryResult.played);
+          final retryClips = harness.clipsHandedToPlayer.skip(1);
+          expect(retryClips.map((clip) => clip['uri']), [hls, raw]);
+          expect(retryClips.map((clip) => clip['httpHeaders']), [
+            headers,
+            headers,
+          ]);
+        } finally {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+          await harness.dispose();
+        }
+      },
+    );
+
     testWidgets('B2 opt-in preserves canonical rendition disk playback', (
       tester,
     ) async {

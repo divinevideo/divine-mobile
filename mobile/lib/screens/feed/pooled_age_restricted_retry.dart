@@ -30,8 +30,8 @@ typedef PooledAgeRestrictedSha256Resolver = String? Function({
 ///
 /// [status] distinguishes completed playback from an initialization that was
 /// skipped. [errorType] carries the player's classification after a completed
-/// failure. Only a repeated [VideoErrorType.ageRestricted] proves the age gate
-/// itself is unclearable; every other result must stay retryable. #6253
+/// failure. An authorization denial or a 404 after a signed retry makes the
+/// video unavailable for this feed session. Transient failures stay retryable.
 typedef PooledRetryOutcome = ({
   VideoRetryResult status,
   VideoErrorType? errorType,
@@ -112,7 +112,12 @@ Future<void> retryAgeRestrictedPooledVideo({
         // applies these headers to every resolved playback source
         // (optimized/HLS/raw) for the retried item.
         final outcome = await retryPlayback(headers);
-        if (!context.mounted) return;
+        // Reload replaces the overlay that started the retry. The feed's
+        // cubit still owns the outcome after that overlay unmounts.
+        if (playbackStatusCubit.isClosed ||
+            !playbackStatusCubit.state.isVerifying(video.id)) {
+          return;
+        }
         if (outcome.status != VideoRetryResult.played) {
           Log.warning(
             'Age-gated playback retry ${outcome.status.name} for event '
@@ -120,13 +125,13 @@ Future<void> retryAgeRestrictedPooledVideo({
             name: _logName,
             category: LogCategory.video,
           );
-          if (!_isAuthRejection(outcome)) {
-            _showPlaybackStartFailed(context);
+          if (!_isUnavailableAfterViewerAuth(outcome)) {
+            if (context.mounted) _showPlaybackStartFailed(context);
             return;
           }
           playbackStatusCubit.markAuthRetryExhausted(video.id);
           playbackStatusCubit.report(video.id, PlaybackStatus.unavailable);
-          _showVideoUnavailable(context);
+          if (context.mounted) _showVideoUnavailable(context);
           return;
         }
         playbackStatusCubit.report(video.id, PlaybackStatus.ready);
@@ -187,7 +192,10 @@ Future<void> autoRetryAgeRestrictedPooledVideo({
   if (retryInput == null || retryInput.sha256 == null) return;
 
   final playbackStatusCubit = context.read<VideoPlaybackStatusCubit>();
-  if (playbackStatusCubit.state.isVerifying(video.id)) return;
+  if (playbackStatusCubit.state.isVerifying(video.id) ||
+      playbackStatusCubit.state.hasAuthRetryExhausted(video.id)) {
+    return;
+  }
 
   playbackStatusCubit.markVerifying(video.id);
   try {
@@ -202,9 +210,12 @@ Future<void> autoRetryAgeRestrictedPooledVideo({
     switch (authResult) {
       case ViewerAuthAuthorized(:final headers):
         final outcome = await retryPlayback(headers);
-        if (!context.mounted) return;
+        if (playbackStatusCubit.isClosed ||
+            !playbackStatusCubit.state.isVerifying(video.id)) {
+          return;
+        }
         if (outcome.status != VideoRetryResult.played) {
-          if (!_isAuthRejection(outcome)) return;
+          if (!_isUnavailableAfterViewerAuth(outcome)) return;
           playbackStatusCubit.markAuthRetryExhausted(video.id);
           playbackStatusCubit.report(video.id, PlaybackStatus.unavailable);
           return;
@@ -242,15 +253,12 @@ void _showVideoUnavailable(BuildContext context) {
   );
 }
 
-/// Whether a failed retry was the media server rejecting the signed request
-/// again, rather than an unrelated playback failure on the same reload.
-///
-/// A network drop, decode failure, or timeout also fails the retry, and
-/// treating those as an exhausted age gate would strand a recoverable video
-/// as permanently unavailable for the rest of the session.
-bool _isAuthRejection(PooledRetryOutcome outcome) =>
+/// A 404 that persists after the signed retry cannot be cleared by verifying
+/// again. Keep transport and decoder errors eligible for another attempt.
+bool _isUnavailableAfterViewerAuth(PooledRetryOutcome outcome) =>
     outcome.status == VideoRetryResult.failed &&
-    outcome.errorType == VideoErrorType.ageRestricted;
+    (outcome.errorType == VideoErrorType.ageRestricted ||
+        outcome.errorType == VideoErrorType.notFound);
 
 /// Tells a viewer that the player did not start after successful viewer auth.
 void _showPlaybackStartFailed(BuildContext context) {
