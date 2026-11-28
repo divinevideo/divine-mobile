@@ -62,6 +62,21 @@ class _MockVideosRepository extends Mock implements VideosRepository {
   bool isVideoKnownDeleted(VideoEvent video) => false;
 }
 
+/// A fixed Classics page for the warmup test independent of archive routing.
+class _WarmupVideosRepository extends _MockVideosRepository {
+  _WarmupVideosRepository(this.videos);
+
+  final List<VideoEvent> videos;
+
+  @override
+  Future<HomeFeedResult> getClassicVideos({
+    int? limit,
+    String? cursor,
+    bool skipCache = false,
+    bool archiveOnly = false,
+  }) async => HomeFeedResult(videos: videos);
+}
+
 class _MockBadgeVideoPager extends Mock implements BadgeVideoPager {}
 
 class _MockFollowRepository extends Mock implements FollowRepository {}
@@ -1860,15 +1875,9 @@ void main() {
         }
 
         final videos = createTestVideos(2);
+        final repository = _WarmupVideosRepository(videos);
         when(
-          () => mockVideosRepository.getClassicVideos(
-            limit: any(named: 'limit'),
-            cursor: any(named: 'cursor'),
-            skipCache: any(named: 'skipCache'),
-          ),
-        ).thenAnswer((_) async => HomeFeedResult(videos: videos));
-        when(
-          () => mockVideosRepository.getRecommendedVideos(
+          () => repository.getRecommendedVideos(
             userPubkey: viewer,
             limit: any(named: 'limit'),
             until: any(named: 'until'),
@@ -1879,7 +1888,7 @@ void main() {
 
         Future<VideoFeedBloc> startHome({VideoFeedStarted? event}) async {
           final bloc = VideoFeedBloc(
-            videosRepository: mockVideosRepository,
+            videosRepository: repository,
             followRepository: mockFollowRepository,
             curatedListRepository: mockCuratedListRepository,
             sharedPreferences: prefs,
@@ -1888,10 +1897,10 @@ void main() {
           );
           addTearDown(bloc.close);
           final loaded = bloc.stream.firstWhere(
-            (state) => state.status == VideoFeedStatus.success,
+            (state) => state.status != VideoFeedStatus.loading,
           );
           bloc.add(event ?? const VideoFeedStarted());
-          await loaded;
+          expect((await loaded).status, VideoFeedStatus.success);
           return bloc;
         }
 
