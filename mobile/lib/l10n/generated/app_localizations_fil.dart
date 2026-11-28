@@ -1383,7 +1383,13 @@ class AppLocalizationsFil extends AppLocalizations {
   String get exploreTabClassics => 'Klasiko';
 
   @override
+  String get exploreTabLatest => 'Pinakabago';
+
+  @override
   String get exploreTabNew => 'Bago';
+
+  @override
+  String get exploreTabNewDiviners => 'Bagong Diviners';
 
   @override
   String get exploreTabPopular => 'Sikat';
@@ -5083,9 +5089,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String get navExploreClassics => 'Classics';
 
   @override
-  String get navExploreNewVideos => 'Bagong Video';
-
-  @override
   String get navExploreTrending => 'Trending';
 
   @override
@@ -7693,7 +7696,10 @@ class AppLocalizationsFil extends AppLocalizations {
       'Bumalik ka mamaya para sa bagong content';
 
   @override
-  String get newVideosTabEmptyTitle => 'Walang video sa New Videos';
+  String get newDivinersTabEmptyTitle => 'Walang video sa Bagong Diviners';
+
+  @override
+  String get latestVideosTabEmptyTitle => 'Walang video sa Pinakabago';
 
   @override
   String get popularVideosContextTitle => 'Mga sikat na video';

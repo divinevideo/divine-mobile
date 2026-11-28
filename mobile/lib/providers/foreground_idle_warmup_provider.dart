@@ -90,7 +90,9 @@ final foregroundIdleWarmupCoordinatorProvider =
             id: ForegroundIdleWarmupTaskId.newVideos,
             cooldown: const Duration(minutes: 10),
             run: () async {
-              await ref.read(newVideosFeedProvider.future);
+              await ref.read(
+                newVideosFeedProvider(PublicationFeed.latest).future,
+              );
             },
           ),
           ForegroundIdleWarmupTask(

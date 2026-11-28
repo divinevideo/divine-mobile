@@ -51,7 +51,7 @@ class _TestForYouFeed extends ForYouFeed {
 
 class _TestNewVideosFeed extends NewVideosFeed {
   @override
-  Future<VideoFeedState> build() async {
+  Future<VideoFeedState> build(PublicationFeed feed) async {
     _feedBuilds.add('newVideos');
     return const VideoFeedState(videos: [], hasMoreContent: false);
   }
@@ -61,7 +61,7 @@ Completer<void>? _newVideosBuildGate;
 
 class _GatedNewVideosFeed extends NewVideosFeed {
   @override
-  Future<VideoFeedState> build() async {
+  Future<VideoFeedState> build(PublicationFeed feed) async {
     _feedBuilds.add('newVideos');
     await _newVideosBuildGate!.future;
     return const VideoFeedState(videos: [], hasMoreContent: false);
@@ -112,8 +112,9 @@ void main() {
                 : _AvailableFunnelcake.new,
           ),
           forYouFeedProvider.overrideWith(_TestForYouFeed.new),
-          newVideosFeedProvider.overrideWith(
-            newVideosGated ? _GatedNewVideosFeed.new : _TestNewVideosFeed.new,
+          newVideosFeedProvider.overrideWith2(
+            (_) =>
+                newVideosGated ? _GatedNewVideosFeed() : _TestNewVideosFeed(),
           ),
           popularVideosFeedProvider.overrideWith(_TestPopularVideosFeed.new),
         ],

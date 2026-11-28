@@ -162,8 +162,9 @@ void main() {
 
       await tester.pumpAndSettle();
 
+      // Popular follows Latest and New.
       final tabBar = tester.widget<TabBar>(find.byType(TabBar));
-      expect(tabBar.controller?.index, 1);
+      expect(tabBar.controller?.index, 2);
     });
   });
 

@@ -1281,7 +1281,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get exploreTabClassics => '经典';
 
   @override
+  String get exploreTabLatest => '最近';
+
+  @override
   String get exploreTabNew => '最新';
+
+  @override
+  String get exploreTabNewDiviners => '新 Diviners';
 
   @override
   String get exploreTabPopular => '热门';
@@ -4726,9 +4732,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get navExploreClassics => '经典';
 
   @override
-  String get navExploreNewVideos => '新视频';
-
-  @override
   String get navExploreTrending => '热门';
 
   @override
@@ -7198,7 +7201,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get newVideosTabEmptySubtitle => '过会儿再来看看新内容';
 
   @override
-  String get newVideosTabEmptyTitle => '“新视频”里还没有内容';
+  String get newDivinersTabEmptyTitle => '“新 Diviners”里还没有内容';
+
+  @override
+  String get latestVideosTabEmptyTitle => '“最近”里还没有内容';
 
   @override
   String get popularVideosContextTitle => '热门视频';

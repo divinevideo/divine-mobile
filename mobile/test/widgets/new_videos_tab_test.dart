@@ -9,9 +9,12 @@ import 'package:models/models.dart';
 import 'package:openvine/blocs/explore_tabs/explore_tabs_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/new_videos_feed_provider.dart';
 import 'package:openvine/providers/readiness_gate_providers.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/services/video_event_service.dart';
+import 'package:openvine/widgets/composable_video_grid.dart';
+import 'package:openvine/widgets/feed_refresh_control.dart';
 import 'package:openvine/widgets/new_videos_tab.dart';
 import 'package:openvine/widgets/video_tile_transition/video_tile_origin.dart';
 import 'package:videos_repository/videos_repository.dart';
@@ -82,7 +85,7 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.text('No videos in New Videos'), findsNothing);
+      expect(find.text('No videos in Latest'), findsNothing);
       verify(
         () => videosRepository.getNewVideos(
           limit: any(named: 'limit'),
@@ -250,6 +253,134 @@ void main() {
 
         expect(recorder.results, [SurfaceLoadResult.failure]);
       });
+    });
+
+    group('New feed', () {
+      Widget buildNewTab() => testMaterialApp(
+        additionalOverrides: [
+          appReadyProvider.overrideWithValue(true),
+          videosRepositoryProvider.overrideWithValue(videosRepository),
+          videoEventServiceProvider.overrideWithValue(videoEventService),
+          contentBlocklistRepositoryProvider.overrideWithValue(
+            blocklistRepository,
+          ),
+        ],
+        home: const Scaffold(
+          body: NewVideosTab(feed: PublicationFeed.newCreators),
+        ),
+      );
+
+      testWidgets('loads new-creator videos instead of Latest', (
+        tester,
+      ) async {
+        when(
+          () => videosRepository.getNewCreatorVideos(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer(
+          (_) async => HomeFeedResult(videos: [_video('debut-video')]),
+        );
+
+        await tester.pumpWidget(buildNewTab());
+        await tester.pumpAndSettle();
+
+        final grid = tester.widget<ComposableVideoGrid>(
+          find.byType(ComposableVideoGrid),
+        );
+        expect(grid.videos.map((v) => v.id), ['debut-video']);
+        verifyNever(
+          () => videosRepository.getNewVideos(
+            limit: any(named: 'limit'),
+            until: any(named: 'until'),
+            skipCache: any(named: 'skipCache'),
+          ),
+        );
+      });
+
+      testWidgets('shows the New Diviners empty state, not the Latest one', (
+        tester,
+      ) async {
+        when(
+          () => videosRepository.getNewCreatorVideos(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer((_) async => const HomeFeedResult(videos: []));
+
+        await tester.pumpWidget(buildNewTab());
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.newDivinersTabEmptyTitle), findsOneWidget);
+        expect(find.text(l10n.latestVideosTabEmptyTitle), findsNothing);
+      });
+
+      testWidgets(
+        'shows a failed first page as an error, and a refresh retries it',
+        (tester) async {
+          var attempts = 0;
+          when(
+            () => videosRepository.getNewCreatorVideos(
+              limit: any(named: 'limit'),
+              cursor: any(named: 'cursor'),
+            ),
+          ).thenAnswer((_) async {
+            if (attempts++ == 0) throw Exception('offline');
+            return HomeFeedResult(videos: [_video('debut-video')]);
+          });
+
+          await tester.pumpWidget(buildNewTab());
+          await tester.pumpAndSettle();
+
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          expect(find.text(l10n.feedFailedToLoadVideos), findsOneWidget);
+          expect(find.text(l10n.newDivinersTabEmptyTitle), findsNothing);
+
+          await tester
+              .widget<FeedRefreshControl>(find.byType(FeedRefreshControl))
+              .onRefresh();
+          await tester.pumpAndSettle();
+
+          expect(find.text(l10n.feedFailedToLoadVideos), findsNothing);
+          final grid = tester.widget<ComposableVideoGrid>(
+            find.byType(ComposableVideoGrid),
+          );
+          expect(grid.videos.map((v) => v.id), ['debut-video']);
+        },
+      );
+    });
+
+    testWidgets('shows a failed Latest first page as an error, not as empty', (
+      tester,
+    ) async {
+      when(
+        () => videosRepository.getNewVideos(
+          limit: any(named: 'limit'),
+          until: any(named: 'until'),
+          skipCache: any(named: 'skipCache'),
+        ),
+      ).thenThrow(Exception('offline'));
+
+      await tester.pumpWidget(
+        testMaterialApp(
+          additionalOverrides: [
+            appReadyProvider.overrideWithValue(true),
+            videosRepositoryProvider.overrideWithValue(videosRepository),
+            videoEventServiceProvider.overrideWithValue(videoEventService),
+            contentBlocklistRepositoryProvider.overrideWithValue(
+              blocklistRepository,
+            ),
+          ],
+          home: const Scaffold(body: NewVideosTab()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(find.text(l10n.feedFailedToLoadVideos), findsOneWidget);
+      expect(find.text(l10n.latestVideosTabEmptyTitle), findsNothing);
+      expect(find.byType(ComposableVideoGrid), findsNothing);
     });
   });
 }

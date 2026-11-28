@@ -51,6 +51,12 @@ void main() {
           (ViewTrafficSource.home, 'classic', 'classics', 'feed'),
           (ViewTrafficSource.discoveryForYou, null, 'for_you', 'discovery'),
           (ViewTrafficSource.discoveryNew, null, 'new_vines', 'discovery'),
+          (
+            ViewTrafficSource.discoveryNewCreators,
+            null,
+            'new_vines',
+            'discovery',
+          ),
           (ViewTrafficSource.discoveryClassic, null, 'classics', 'discovery'),
           (ViewTrafficSource.discoveryPopular, null, 'popular', 'discovery'),
           (ViewTrafficSource.discoveryBadges, null, 'unknown', 'discovery'),

@@ -764,6 +764,7 @@ void main() {
         const expectedStrings = {
           ViewTrafficSource.home: 'home',
           ViewTrafficSource.discoveryNew: 'discovery:new',
+          ViewTrafficSource.discoveryNewCreators: 'discovery:newcreators',
           ViewTrafficSource.discoveryClassic: 'discovery:classic',
           ViewTrafficSource.discoveryForYou: 'discovery:foryou',
           ViewTrafficSource.discoveryPopular: 'discovery:popular',

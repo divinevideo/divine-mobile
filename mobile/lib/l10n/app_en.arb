@@ -894,7 +894,15 @@
     "description": "Name of the Explore tab that shows a server-curated collection. The collection's own name is not this string — it rides beside it in a pill."
   },
   "exploreTabClassics": "Classics",
+  "exploreTabLatest": "Latest",
+  "@exploreTabLatest": {
+    "description": "Explore tab listing the most recently published videos from everyone."
+  },
   "exploreTabNew": "New",
+  "exploreTabNewDiviners": "New Diviners",
+  "@exploreTabNewDiviners": {
+    "description": "Explore tab listing videos from creators whose first Divine video is recent. 'Diviners' is the name for people on Divine; keep it untranslated."
+  },
   "exploreTabPopular": "Popular",
   "exploreTabCategories": "Categories",
   "exploreTabForYou": "For You",
@@ -3605,7 +3613,6 @@
   "navNotifications": "Notifications",
   "navOpenCamera": "Open camera",
   "navExploreClassics": "Classics",
-  "navExploreNewVideos": "New Videos",
   "navExploreTrending": "Trending",
   "navExploreForYou": "For You",
   "navExploreLists": "Lists",
@@ -5526,7 +5533,14 @@
   },
   "hashtagInputHint": "Add hashtags... #vine #nostr",
   "newVideosTabEmptySubtitle": "Check back later for new content",
-  "newVideosTabEmptyTitle": "No videos in New Videos",
+  "newDivinersTabEmptyTitle": "No videos in New Diviners",
+  "@newDivinersTabEmptyTitle": {
+    "description": "Empty-state title of the New Diviners tab in Explore. 'Diviners' is the name for people on Divine; keep it untranslated."
+  },
+  "latestVideosTabEmptyTitle": "No videos in Latest",
+  "@latestVideosTabEmptyTitle": {
+    "description": "Empty-state title of the Latest tab in Explore."
+  },
   "popularVideosContextTitle": "Popular Videos",
   "popularVideosEmptySubtitle": "Check back later for new content",
   "popularVideosEmptyTitle": "No videos in Popular Videos",

@@ -1335,7 +1335,13 @@ class AppLocalizationsTr extends AppLocalizations {
   String get exploreTabClassics => 'Klasikler';
 
   @override
+  String get exploreTabLatest => 'Son Eklenenler';
+
+  @override
   String get exploreTabNew => 'Yeni';
+
+  @override
+  String get exploreTabNewDiviners => 'Yeni Diviners';
 
   @override
   String get exploreTabPopular => 'Popüler';
@@ -4993,9 +4999,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get navExploreClassics => 'Klasikler';
 
   @override
-  String get navExploreNewVideos => 'Yeni Videolar';
-
-  @override
   String get navExploreTrending => 'Trend';
 
   @override
@@ -7566,7 +7569,10 @@ class AppLocalizationsTr extends AppLocalizations {
       'Yeni içerik için daha sonra tekrar bak';
 
   @override
-  String get newVideosTabEmptyTitle => 'Yeni Videolar\'da video yok';
+  String get newDivinersTabEmptyTitle => 'Yeni Diviners\'te video yok';
+
+  @override
+  String get latestVideosTabEmptyTitle => 'Son Eklenenler\'de video yok';
 
   @override
   String get popularVideosContextTitle => 'Popüler Videolar';

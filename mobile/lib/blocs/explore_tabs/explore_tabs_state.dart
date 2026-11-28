@@ -9,8 +9,18 @@ const exploreForYouTabName = 'for_you';
 /// Public URL slug for the "For You" tab.
 const exploreForYouTabSlug = 'for-you';
 
+/// Internal tab name for the Latest tab: every public video, newest first.
+const exploreLatestTabName = 'latest';
+
+/// Internal tab name for the New tab: videos from creators who debuted in the
+/// last 30 days.
+///
+/// Keeps the `new` slug the publication-ordered feed used before Latest
+/// existed, so old `/explore/tab/new` links open this tab.
+const exploreNewTabName = 'new';
+
 /// Default tab name selected when no other selection applies.
-const exploreDefaultTabName = 'new';
+const String exploreDefaultTabName = exploreLatestTabName;
 
 /// Internal tab name for the Classics tab.
 const exploreClassicsTabName = 'classics';
@@ -42,6 +52,7 @@ class ExploreTabsState extends Equatable {
   /// Creates a tab state with the given optional-tab availability.
   const ExploreTabsState({
     this.classicsAvailable = false,
+    this.newCreatorsAvailable = false,
     this.forYouAvailable = false,
     this.appsAvailable = false,
     this.challengesAvailable = challengesTestEnabled,
@@ -51,6 +62,10 @@ class ExploreTabsState extends Equatable {
 
   /// Whether the Classics tab is shown.
   final bool classicsAvailable;
+
+  /// Whether the New tab is shown. Only the API knows which creators are
+  /// new, so the tab is hidden while it is unavailable.
+  final bool newCreatorsAvailable;
 
   /// Whether the For You tab is shown.
   final bool forYouAvailable;
@@ -68,14 +83,15 @@ class ExploreTabsState extends Equatable {
 
   /// Ordered tab names based on current availability.
   ///
-  /// Canonical order: `classics?`, `new`, `popular`, `categories`,
-  /// `for_you?`, `lists`, `badges`, `apps?`, `challenges?`, with `featured?`
-  /// between `new` and `popular` when a tab is configured or
-  /// [reserveFeaturedSlot] holds it.
+  /// Canonical order: `classics?`, `latest`, `new?`, `popular`,
+  /// `categories`, `for_you?`, `lists`, `badges`, `apps?`, `challenges?`,
+  /// with `featured?` immediately before `popular` when a tab is configured
+  /// or [reserveFeaturedSlot] holds it.
   List<String> get tabNames {
     final names = [
       if (classicsAvailable) exploreClassicsTabName,
-      exploreDefaultTabName,
+      exploreLatestTabName,
+      if (newCreatorsAvailable) exploreNewTabName,
       explorePopularTabName,
       exploreCategoriesTabName,
       if (forYouAvailable) exploreForYouTabName,
@@ -88,21 +104,22 @@ class ExploreTabsState extends Equatable {
     return names..insert(_featuredInsertIndex(names), exploreFeaturedTabName);
   }
 
-  /// Slot the featured tab occupies, immediately after New.
+  /// Slot the featured tab occupies, immediately before Popular: after New
+  /// when it is shown, otherwise after Latest.
   ///
   /// The server's `position` object is deliberately ignored: placement is
   /// fixed on mobile so it cannot drift from web, and the payload carries
   /// per-platform anchors that need not name a tab this client has. Resolved
-  /// by name rather than a literal index because Classics is optional and
-  /// shifts everything below it.
+  /// by name rather than a literal index because Classics and New are
+  /// optional and shift everything below them.
   static int _featuredInsertIndex(List<String> names) =>
-      names.indexOf(exploreDefaultTabName) + 1;
+      names.indexOf(explorePopularTabName);
 
   /// Number of visible tabs.
   int get tabCount => tabNames.length;
 
-  /// Index of the New Videos tab.
-  int get newVideosIndex => indexForName(exploreDefaultTabName);
+  /// Index of the Latest tab.
+  int get latestIndex => indexForName(exploreLatestTabName);
 
   /// Index of the Trending (popular) tab.
   int get trendingIndex => indexForName(explorePopularTabName);
@@ -128,6 +145,7 @@ class ExploreTabsState extends Equatable {
   /// otherwise preserves the current tab like the rest of the fields.
   ExploreTabsState copyWith({
     bool? classicsAvailable,
+    bool? newCreatorsAvailable,
     bool? forYouAvailable,
     bool? appsAvailable,
     bool? challengesAvailable,
@@ -136,6 +154,7 @@ class ExploreTabsState extends Equatable {
   }) {
     return ExploreTabsState(
       classicsAvailable: classicsAvailable ?? this.classicsAvailable,
+      newCreatorsAvailable: newCreatorsAvailable ?? this.newCreatorsAvailable,
       forYouAvailable: forYouAvailable ?? this.forYouAvailable,
       appsAvailable: appsAvailable ?? this.appsAvailable,
       challengesAvailable: challengesAvailable ?? this.challengesAvailable,
@@ -147,6 +166,7 @@ class ExploreTabsState extends Equatable {
   @override
   List<Object?> get props => [
     classicsAvailable,
+    newCreatorsAvailable,
     forYouAvailable,
     appsAvailable,
     challengesAvailable,

@@ -1441,7 +1441,13 @@ class AppLocalizationsRo extends AppLocalizations {
   String get exploreTabClassics => 'Clasice';
 
   @override
+  String get exploreTabLatest => 'Recente';
+
+  @override
   String get exploreTabNew => 'Noi';
+
+  @override
+  String get exploreTabNewDiviners => 'Diviners noi';
 
   @override
   String get exploreTabPopular => 'Populare';
@@ -5197,9 +5203,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get navExploreClassics => 'Clasice';
 
   @override
-  String get navExploreNewVideos => 'Videoclipuri noi';
-
-  @override
   String get navExploreTrending => 'În trend';
 
   @override
@@ -7831,7 +7834,10 @@ class AppLocalizationsRo extends AppLocalizations {
       'Revino mai târziu pentru conținut nou';
 
   @override
-  String get newVideosTabEmptyTitle => 'Niciun videoclip în Videoclipuri noi';
+  String get newDivinersTabEmptyTitle => 'Niciun videoclip în Diviners noi';
+
+  @override
+  String get latestVideosTabEmptyTitle => 'Niciun videoclip în Recente';
 
   @override
   String get popularVideosContextTitle => 'Videoclipuri populare';

@@ -44,6 +44,16 @@ void main() {
       );
     });
 
+    test('the Latest and New feeds are distinct sources', () {
+      final sources = {
+        const NewVideosViewSource(),
+        const NewCreatorsViewSource(),
+      };
+
+      expect(sources, hasLength(2));
+      expect(sources, contains(const NewCreatorsViewSource()));
+    });
+
     test('author-keyed feeds compare by user id', () {
       expect(
         const ProfileViewSource('npub-a'),
@@ -118,6 +128,7 @@ void main() {
         PopularViewSource() => 'popular',
         ClassicVinesViewSource() => 'classics',
         NewVideosViewSource() => 'new',
+        NewCreatorsViewSource() => 'new-creators',
         ProfileViewSource() => 'profile',
         LikedViewSource() => 'liked',
         RepostsViewSource() => 'reposts',

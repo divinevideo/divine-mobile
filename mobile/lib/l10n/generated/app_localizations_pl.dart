@@ -1434,7 +1434,13 @@ class AppLocalizationsPl extends AppLocalizations {
   String get exploreTabClassics => 'Klasyki';
 
   @override
+  String get exploreTabLatest => 'Najnowsze';
+
+  @override
   String get exploreTabNew => 'Nowe';
+
+  @override
+  String get exploreTabNewDiviners => 'Nowi Diviners';
 
   @override
   String get exploreTabPopular => 'Popularne';
@@ -5190,9 +5196,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String get navExploreClassics => 'Klasyki';
 
   @override
-  String get navExploreNewVideos => 'Nowe filmy';
-
-  @override
   String get navExploreTrending => 'Na topie';
 
   @override
@@ -7832,7 +7835,10 @@ class AppLocalizationsPl extends AppLocalizations {
   String get newVideosTabEmptySubtitle => 'Zajrzyj później po nowe treści';
 
   @override
-  String get newVideosTabEmptyTitle => 'Brak filmów w Nowych filmach';
+  String get newDivinersTabEmptyTitle => 'Brak filmów w Nowych Diviners';
+
+  @override
+  String get latestVideosTabEmptyTitle => 'Brak filmów w Najnowszych';
 
   @override
   String get popularVideosContextTitle => 'Popularne filmy';

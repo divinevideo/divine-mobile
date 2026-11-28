@@ -1413,7 +1413,13 @@ class AppLocalizationsBg extends AppLocalizations {
   String get exploreTabClassics => 'Класики';
 
   @override
+  String get exploreTabLatest => 'Последни';
+
+  @override
   String get exploreTabNew => 'Нови';
+
+  @override
+  String get exploreTabNewDiviners => 'Нови Diviners';
 
   @override
   String get exploreTabPopular => 'Популярни';
@@ -5106,9 +5112,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String get navExploreClassics => 'Класика';
 
   @override
-  String get navExploreNewVideos => 'Нови видеа';
-
-  @override
   String get navExploreTrending => 'Тенденция';
 
   @override
@@ -7723,7 +7726,10 @@ class AppLocalizationsBg extends AppLocalizations {
       'Върни се по-късно за ново съдържание';
 
   @override
-  String get newVideosTabEmptyTitle => 'Няма видеа в Нови видеа';
+  String get newDivinersTabEmptyTitle => 'Няма видеа в Нови Diviners';
+
+  @override
+  String get latestVideosTabEmptyTitle => 'Няма видеа в Последни';
 
   @override
   String get popularVideosContextTitle => 'Популярни видеа';
