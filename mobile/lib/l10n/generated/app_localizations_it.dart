@@ -3663,6 +3663,28 @@ class AppLocalizationsIt extends AppLocalizations {
   String get authSignInErrorGeneric => 'Qualcosa è andato storto. Riprova.';
 
   @override
+  String get authContinueWithApple => 'Continua con Apple';
+
+  @override
+  String get authContinueWithGoogle => 'Continua con Google';
+
+  @override
+  String get authSocialSignInUnavailable =>
+      'Questo metodo di accesso non è disponibile su questo dispositivo.';
+
+  @override
+  String get authSocialSignInAccountLinkRequired =>
+      'Esiste già un account Divine con questa email. Accedi con email e password.';
+
+  @override
+  String get authSocialSignInEmailMissing =>
+      'Ci serve la tua email per creare l\'account. Condividila quando accedi, oppure usa email e password.';
+
+  @override
+  String get authSocialSignInEmailNotVerified =>
+      'Questa email non è ancora verificata. Verificala prima con Google o Apple, poi riprova.';
+
+  @override
   String get authSignInOptionsHintPrefix =>
       'Non sai come hai effettuato l\'accesso l\'ultima volta? ';
 
@@ -15727,6 +15749,17 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get accountCredentialsNeedsSignIn =>
       'La sessione è scaduta. Accedi di nuovo per fare questa modifica.';
+
+  @override
+  String get accountCredentialsPasswordNotSet =>
+      'Hai effettuato l\'accesso con Google o Apple, quindi non hai ancora una password. Possiamo mandarti via email un link per impostarne una.';
+
+  @override
+  String get accountCredentialsPasswordSetupSend => 'Mandami un link via email';
+
+  @override
+  String get accountCredentialsPasswordSetupSent =>
+      'Controlla la tua email: troverai un link per impostare la password.';
 
   @override
   String get accountCredentialsRateLimited =>

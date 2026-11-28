@@ -444,6 +444,9 @@ dependencies:
   flutter_timezone: ^5.1.1
   # Peer-to-peer audio and video between the people in a Together room.
   flutter_webrtc: ^1.6.3
+  # Native Google and Apple sign-in; their ID tokens unlock a Keycast account.
+  google_sign_in: ^7.2.0
+  sign_in_with_apple: ^8.2.0
 
 dependency_overrides:
   # TODO(#3638): Keep device_info_plus on 10.x until the app is ready for the

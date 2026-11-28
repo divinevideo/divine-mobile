@@ -9,6 +9,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/utils/clipboard_utils.dart';
+import 'package:openvine/widgets/account/password_setup_prompt.dart';
 
 /// Shown in place of the local "Copy My Private Key (nsec)" action for an
 /// account whose key Keycast holds.
@@ -94,6 +95,7 @@ class KeycastKeyExportCard extends ConsumerWidget {
       // A definitive "there is no key" is not a failure to reach the service,
       // and unlike the generic arm no retry will change it.
       ExportKeyFailure.noKey => l10n.keyManagementKeycastNoKey,
+      // passwordNotSet never pops: the sheet offers the setup link instead.
       _ => l10n.keyManagementKeycastGenericFailure,
     };
   }
@@ -143,6 +145,11 @@ class _KeycastKeyExportFlowState extends ConsumerState<_KeycastKeyExportFlow> {
   /// True once [_maxAttempts] is spent: the field and the submit action stay
   /// disabled until the sheet is dismissed.
   bool _lockedOut = false;
+
+  /// True once Keycast says the account has no password, which happens for an
+  /// account created with Google or Apple. There is nothing to type, so the
+  /// sheet offers the link that sets one instead of the field.
+  bool _passwordNotSet = false;
 
   @override
   void dispose() {
@@ -222,6 +229,14 @@ class _KeycastKeyExportFlowState extends ConsumerState<_KeycastKeyExportFlow> {
       return;
     }
 
+    if (result.failure == ExportKeyFailure.passwordNotSet) {
+      setState(() {
+        _submitting = false;
+        _passwordNotSet = true;
+      });
+      return;
+    }
+
     // The sheet is a Navigator route, so pop it through the Navigator that
     // owns it rather than GoRouter — the modal is not part of the route tree.
     Navigator.of(context).pop(result);
@@ -239,23 +254,54 @@ class _KeycastKeyExportFlowState extends ConsumerState<_KeycastKeyExportFlow> {
       ),
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
-        child: _PasswordStep(
-          controller: _passwordController,
-          errorText: _errorText,
-          submitting: _submitting,
-          lockedOut: _lockedOut,
-          onSubmit: _submit,
-          onCancel: () => Navigator.of(context).pop(),
-          // Clear a stale "wrong password" as soon as the user edits, so the
-          // error refers to the attempt rather than the previous one. A spent
-          // attempt budget is not stale, so it stays put.
-          onEdited: () {
-            if (_errorText != null && !_lockedOut) {
-              setState(() => _errorText = null);
-            }
-          },
-        ),
+        child: _passwordNotSet
+            ? _PasswordSetupStep(onClose: () => Navigator.of(context).pop())
+            : _PasswordStep(
+                controller: _passwordController,
+                errorText: _errorText,
+                submitting: _submitting,
+                lockedOut: _lockedOut,
+                onSubmit: _submit,
+                onCancel: () => Navigator.of(context).pop(),
+                // Clear a stale "wrong password" as soon as the user edits, so the
+                // error refers to the attempt rather than the previous one. A spent
+                // attempt budget is not stale, so it stays put.
+                onEdited: () {
+                  if (_errorText != null && !_lockedOut) {
+                    setState(() => _errorText = null);
+                  }
+                },
+              ),
       ),
+    );
+  }
+}
+
+/// For an account with no password: the way to set one, since exporting the
+/// key needs it.
+class _PasswordSetupStep extends StatelessWidget {
+  const _PasswordSetupStep({required this.onClose});
+
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: 16,
+      children: [
+        const PasswordSetupPrompt(),
+        Align(
+          alignment: AlignmentDirectional.centerEnd,
+          child: DivineButton(
+            label: context.l10n.commonClose,
+            type: DivineButtonType.tertiary,
+            size: DivineButtonSize.small,
+            onPressed: onClose,
+          ),
+        ),
+      ],
     );
   }
 }

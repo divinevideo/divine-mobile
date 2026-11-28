@@ -3749,6 +3749,28 @@ class AppLocalizationsTe extends AppLocalizations {
       'ఏదో తప్పు జరిగింది. దయచేసి మళ్లీ ప్రయత్నించండి.';
 
   @override
+  String get authContinueWithApple => 'Appleతో కొనసాగండి';
+
+  @override
+  String get authContinueWithGoogle => 'Googleతో కొనసాగండి';
+
+  @override
+  String get authSocialSignInUnavailable =>
+      'ఈ సైన్ ఇన్ ఎంపిక ఈ పరికరంలో అందుబాటులో లేదు.';
+
+  @override
+  String get authSocialSignInAccountLinkRequired =>
+      'ఈ ఇమెయిల్‌తో ఇప్పటికే Divine ఖాతా ఉంది. మీ ఇమెయిల్ మరియు పాస్‌వర్డ్‌తో సైన్ ఇన్ చేయండి.';
+
+  @override
+  String get authSocialSignInEmailMissing =>
+      'మీ ఖాతాను సెటప్ చేయడానికి మాకు మీ ఇమెయిల్ అవసరం. సైన్ ఇన్ చేసేటప్పుడు దాన్ని షేర్ చేయండి, లేదా ఇమెయిల్ మరియు పాస్‌వర్డ్ ఉపయోగించండి.';
+
+  @override
+  String get authSocialSignInEmailNotVerified =>
+      'ఈ ఇమెయిల్ ఇంకా ధృవీకరించబడలేదు. ముందుగా Google లేదా Appleలో దాన్ని ధృవీకరించి, మళ్లీ ప్రయత్నించండి.';
+
+  @override
   String get authSignInOptionsHintPrefix =>
       'మీరు చివరిసారి ఎలా పొందారో ఖచ్చితంగా తెలియదా? ';
 
@@ -15893,6 +15915,18 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get accountCredentialsNeedsSignIn =>
       'మీ సెషన్ అయిపోయింది. ఈ మార్పు చేయడానికి మళ్లీ సైన్ ఇన్ చేయండి.';
+
+  @override
+  String get accountCredentialsPasswordNotSet =>
+      'మీరు Google లేదా Appleతో సైన్ ఇన్ చేశారు, కాబట్టి ఇంకా పాస్‌వర్డ్ లేదు. ఒకటి సెట్ చేయడానికి మేము మీకు ఈమెయిల్‌లో లింక్ పంపగలం.';
+
+  @override
+  String get accountCredentialsPasswordSetupSend =>
+      'నాకు ఈమెయిల్‌లో లింక్ పంపండి';
+
+  @override
+  String get accountCredentialsPasswordSetupSent =>
+      'మీ పాస్‌వర్డ్ సెట్ చేసే లింక్ కోసం మీ ఈమెయిల్ చూడండి.';
 
   @override
   String get accountCredentialsRateLimited =>

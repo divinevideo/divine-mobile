@@ -3663,6 +3663,28 @@ class AppLocalizationsBg extends AppLocalizations {
   String get authSignInErrorGeneric => 'Нещо се обърка. Опитай отново.';
 
   @override
+  String get authContinueWithApple => 'Продължи с Apple';
+
+  @override
+  String get authContinueWithGoogle => 'Продължи с Google';
+
+  @override
+  String get authSocialSignInUnavailable =>
+      'Този начин за вход не е наличен на това устройство.';
+
+  @override
+  String get authSocialSignInAccountLinkRequired =>
+      'Вече има акаунт в Divine с този имейл. Влез с имейла и паролата си.';
+
+  @override
+  String get authSocialSignInEmailMissing =>
+      'Трябва ни имейлът ти, за да създадем акаунта. Сподели го при входа или използвай имейл и парола.';
+
+  @override
+  String get authSocialSignInEmailNotVerified =>
+      'Този имейл още не е потвърден. Потвърди го първо в Google или Apple и опитай отново.';
+
+  @override
   String get authSignInOptionsHintPrefix =>
       'Не си сигурен как влезе последния път? ';
 
@@ -15674,6 +15696,17 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get accountCredentialsNeedsSignIn =>
       'Сесията ти изтече. Влез отново, за да направиш промяната.';
+
+  @override
+  String get accountCredentialsPasswordNotSet =>
+      'Влезе с Google или Apple, затова още нямаш парола. Можем да ти изпратим линк по имейл, за да си зададеш такава.';
+
+  @override
+  String get accountCredentialsPasswordSetupSend => 'Изпрати ми линк по имейл';
+
+  @override
+  String get accountCredentialsPasswordSetupSent =>
+      'Провери имейла си за линк, с който да зададеш паролата си.';
 
   @override
   String get accountCredentialsRateLimited =>

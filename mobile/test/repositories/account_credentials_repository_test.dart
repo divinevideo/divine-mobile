@@ -149,5 +149,109 @@ void main() {
         expect(result.success, isTrue);
       });
     });
+
+    group('requestPasswordSetup', () {
+      const status = KeycastAccountStatus(
+        email: 'social@example.com',
+        emailVerified: true,
+        publicKey: 'abc',
+        verifiedMinor: false,
+      );
+
+      test('asks to sign in again without a token', () async {
+        final repository = buildSubject(readAccessToken: () async => null);
+
+        expect(
+          await repository.requestPasswordSetup(),
+          PasswordSetupRequestResult.needsSignIn,
+        );
+        verifyNever(() => oauthClient.getAccountStatus(any()));
+      });
+
+      test(
+        'sends the link request for the email on file with the session',
+        () async {
+          when(
+            () => oauthClient.getAccountStatus('tok'),
+          ).thenAnswer((_) async => status);
+          when(
+            () => oauthClient.sendPasswordResetEmail(
+              'social@example.com',
+              bearerToken: 'tok',
+            ),
+          ).thenAnswer((_) async => ForgotPasswordResult(success: true));
+
+          final repository = buildSubject(readAccessToken: () async => 'tok');
+
+          expect(
+            await repository.requestPasswordSetup(),
+            PasswordSetupRequestResult.requested,
+          );
+          verify(
+            () => oauthClient.sendPasswordResetEmail(
+              'social@example.com',
+              bearerToken: 'tok',
+            ),
+          ).called(1);
+        },
+      );
+
+      test('fails without an email on file', () async {
+        when(
+          () => oauthClient.getAccountStatus('tok'),
+        ).thenAnswer((_) async => null);
+
+        final repository = buildSubject(readAccessToken: () async => 'tok');
+
+        expect(
+          await repository.requestPasswordSetup(),
+          PasswordSetupRequestResult.failed,
+        );
+        verifyNever(
+          () => oauthClient.sendPasswordResetEmail(
+            any(),
+            bearerToken: any(named: 'bearerToken'),
+          ),
+        );
+      });
+
+      test('fails when Keycast refuses the request', () async {
+        when(
+          () => oauthClient.getAccountStatus('tok'),
+        ).thenAnswer((_) async => status);
+        when(
+          () => oauthClient.sendPasswordResetEmail(
+            any(),
+            bearerToken: any(named: 'bearerToken'),
+          ),
+        ).thenAnswer((_) async => ForgotPasswordResult.error('reset_failed'));
+
+        final repository = buildSubject(readAccessToken: () async => 'tok');
+
+        expect(
+          await repository.requestPasswordSetup(),
+          PasswordSetupRequestResult.failed,
+        );
+      });
+
+      test('fails when Keycast cannot be reached', () async {
+        when(
+          () => oauthClient.getAccountStatus('tok'),
+        ).thenAnswer((_) async => status);
+        when(
+          () => oauthClient.sendPasswordResetEmail(
+            any(),
+            bearerToken: any(named: 'bearerToken'),
+          ),
+        ).thenThrow(Exception('offline'));
+
+        final repository = buildSubject(readAccessToken: () async => 'tok');
+
+        expect(
+          await repository.requestPasswordSetup(),
+          PasswordSetupRequestResult.failed,
+        );
+      });
+    });
   });
 }

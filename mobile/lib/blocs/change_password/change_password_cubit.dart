@@ -126,6 +126,8 @@ class ChangePasswordCubit extends Cubit<ChangePasswordState> {
         ChangePasswordFailureReason.weakPassword,
       ChangePasswordFailure.needsSignIn =>
         ChangePasswordFailureReason.needsSignIn,
+      ChangePasswordFailure.passwordNotSet =>
+        ChangePasswordFailureReason.passwordNotSet,
       ChangePasswordFailure.rateLimited =>
         ChangePasswordFailureReason.rateLimited,
       ChangePasswordFailure.network => ChangePasswordFailureReason.network,

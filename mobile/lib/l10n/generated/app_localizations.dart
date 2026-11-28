@@ -6071,6 +6071,42 @@ abstract class AppLocalizations {
   /// **'Something went wrong. Please try again.'**
   String get authSignInErrorGeneric;
 
+  /// Sign in with Apple button label. Keep Apple's own wording for the locale where one exists.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with Apple'**
+  String get authContinueWithApple;
+
+  /// Sign in with Google button label.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with Google'**
+  String get authContinueWithGoogle;
+
+  /// Shown when Google or Apple sign-in cannot run on this device or build.
+  ///
+  /// In en, this message translates to:
+  /// **'This sign-in option isn\'t available on this device.'**
+  String get authSocialSignInUnavailable;
+
+  /// Shown when the Google or Apple email belongs to an existing Divine account that cannot be linked automatically.
+  ///
+  /// In en, this message translates to:
+  /// **'This email already has a Divine account. Sign in with your email and password.'**
+  String get authSocialSignInAccountLinkRequired;
+
+  /// Shown when Google or Apple did not share an email address, so no account can be created.
+  ///
+  /// In en, this message translates to:
+  /// **'We need your email to set up your account. Share it when you sign in, or use email and password.'**
+  String get authSocialSignInEmailMissing;
+
+  /// Shown when Google or Apple reports the email address as unverified.
+  ///
+  /// In en, this message translates to:
+  /// **'That email isn\'t verified yet. Verify it with Google or Apple first, then try again.'**
+  String get authSocialSignInEmailNotVerified;
+
   /// Leading prose of the tappable hint under a failed sign-in, before the call-to-action span. Trailing space is intentional.
   ///
   /// In en, this message translates to:
@@ -26100,6 +26136,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your session ran out. Sign in again to make this change.'**
   String get accountCredentialsNeedsSignIn;
+
+  /// Shown when an account created with Google or Apple tries something that needs its password.
+  ///
+  /// In en, this message translates to:
+  /// **'You signed in with Google or Apple, so there\'s no password yet. We can email you a link to set one.'**
+  String get accountCredentialsPasswordNotSet;
+
+  /// Button under accountCredentialsPasswordNotSet that emails a link for setting a first password.
+  ///
+  /// In en, this message translates to:
+  /// **'Email me a link'**
+  String get accountCredentialsPasswordSetupSend;
+
+  /// Shown after the password-setup link was requested. Keycast does not say whether a link went out, so this asks to check the inbox rather than confirming delivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Check your email for a link to set your password.'**
+  String get accountCredentialsPasswordSetupSent;
 
   /// No description provided for @accountCredentialsRateLimited.
   ///

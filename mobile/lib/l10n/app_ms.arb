@@ -1784,6 +1784,12 @@
     "description": "Shown when a network/transport problem prevents a sign-in verdict."
   },
   "authSignInErrorGeneric": "Sesuatu telah berlaku. Sila cuba lagi.",
+  "authContinueWithApple": "Teruskan dengan Apple",
+  "authContinueWithGoogle": "Teruskan dengan Google",
+  "authSocialSignInUnavailable": "Pilihan log masuk ini tidak tersedia pada peranti ini.",
+  "authSocialSignInAccountLinkRequired": "E-mel ini sudah mempunyai akaun Divine. Log masuk dengan e-mel dan kata laluan anda.",
+  "authSocialSignInEmailMissing": "Kami memerlukan e-mel anda untuk menyediakan akaun anda. Kongsikannya semasa log masuk, atau gunakan e-mel dan kata laluan.",
+  "authSocialSignInEmailNotVerified": "E-mel ini belum disahkan. Sahkan dahulu dengan Google atau Apple, kemudian cuba lagi.",
   "@authSignInErrorGeneric": {
     "description": "Fallback shown for any other sign-in failure."
   },
@@ -7315,6 +7321,9 @@
   "accountSettingsChangePassword": "Tukar kata laluan",
   "accountSettingsChangePasswordSubtitle": "Pilih kata laluan baharu untuk log masuk",
   "accountCredentialsNeedsSignIn": "Sesi anda tamat. Log masuk semula untuk buat perubahan ini.",
+  "accountCredentialsPasswordNotSet": "Anda log masuk dengan Google atau Apple, jadi belum ada kata laluan. Kami boleh e-melkan pautan kepada anda untuk menetapkannya.",
+  "accountCredentialsPasswordSetupSend": "E-melkan pautan kepada saya",
+  "accountCredentialsPasswordSetupSent": "Semak e-mel anda untuk pautan bagi menetapkan kata laluan.",
   "accountCredentialsRateLimited": "Terlalu banyak percubaan. Tunggu beberapa minit.",
   "accountCredentialsNetwork": "Tak dapat hubungi Divine. Semak sambungan anda dan cuba lagi.",
   "accountCredentialsUnknown": "Tak menjadi. Sila cuba lagi.",

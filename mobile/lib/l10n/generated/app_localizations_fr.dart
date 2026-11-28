@@ -3671,6 +3671,28 @@ class AppLocalizationsFr extends AppLocalizations {
   String get authSignInErrorGeneric => 'Une erreur s\'est produite. Réessaie.';
 
   @override
+  String get authContinueWithApple => 'Continuer avec Apple';
+
+  @override
+  String get authContinueWithGoogle => 'Continuer avec Google';
+
+  @override
+  String get authSocialSignInUnavailable =>
+      'Ce mode de connexion n\'est pas disponible sur cet appareil.';
+
+  @override
+  String get authSocialSignInAccountLinkRequired =>
+      'Un compte Divine existe déjà avec cet e-mail. Connecte-toi avec ton e-mail et ton mot de passe.';
+
+  @override
+  String get authSocialSignInEmailMissing =>
+      'On a besoin de ton e-mail pour créer ton compte. Partage-le à la connexion, ou utilise un e-mail et un mot de passe.';
+
+  @override
+  String get authSocialSignInEmailNotVerified =>
+      'Cet e-mail n\'est pas encore vérifié. Vérifie-le d\'abord chez Google ou Apple, puis réessaie.';
+
+  @override
   String get authSignInOptionsHintPrefix =>
       'Tu ne sais plus comment tu t\'es connecté la dernière fois ? ';
 
@@ -15771,6 +15793,18 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get accountCredentialsNeedsSignIn =>
       'Ta session a expiré. Reconnecte-toi pour faire ce changement.';
+
+  @override
+  String get accountCredentialsPasswordNotSet =>
+      'Ta connexion passe par Google ou Apple, donc tu n\'as pas encore de mot de passe. On peut t\'envoyer un lien par e-mail pour en créer un.';
+
+  @override
+  String get accountCredentialsPasswordSetupSend =>
+      'M\'envoyer un lien par e-mail';
+
+  @override
+  String get accountCredentialsPasswordSetupSent =>
+      'Regarde tes e-mails : tu y trouveras un lien pour créer ton mot de passe.';
 
   @override
   String get accountCredentialsRateLimited =>

@@ -3602,6 +3602,28 @@ class AppLocalizationsAr extends AppLocalizations {
   String get authSignInErrorGeneric => 'حدث خطأ ما. حاول مرة أخرى.';
 
   @override
+  String get authContinueWithApple => 'المتابعة باستخدام Apple';
+
+  @override
+  String get authContinueWithGoogle => 'المتابعة باستخدام Google';
+
+  @override
+  String get authSocialSignInUnavailable =>
+      'خيار تسجيل الدخول هذا غير متاح على هذا الجهاز.';
+
+  @override
+  String get authSocialSignInAccountLinkRequired =>
+      'يوجد حساب Divine بهذا البريد الإلكتروني بالفعل. يُرجى تسجيل الدخول بالبريد الإلكتروني وكلمة المرور.';
+
+  @override
+  String get authSocialSignInEmailMissing =>
+      'يلزم البريد الإلكتروني لإعداد الحساب. يُرجى مشاركته عند تسجيل الدخول، أو استخدام البريد الإلكتروني وكلمة المرور.';
+
+  @override
+  String get authSocialSignInEmailNotVerified =>
+      'هذا البريد الإلكتروني غير مُتحقَّق منه بعد. يُرجى التحقق منه لدى Google أو Apple أولًا، ثم المحاولة مرة أخرى.';
+
+  @override
   String get authSignInOptionsHintPrefix =>
       'لست متأكدًا كيف سجّلت الدخول آخر مرة؟ ';
 
@@ -15538,6 +15560,18 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get accountCredentialsNeedsSignIn =>
       'انتهت جلستك. سجّل الدخول من جديد لإجراء هذا التغيير.';
+
+  @override
+  String get accountCredentialsPasswordNotSet =>
+      'تم تسجيل الدخول باستخدام Google أو Apple، لذلك لا توجد كلمة مرور بعد. يمكننا إرسال رابط إلى بريدك الإلكتروني لتعيينها.';
+
+  @override
+  String get accountCredentialsPasswordSetupSend =>
+      'أرسل لي رابطًا بالبريد الإلكتروني';
+
+  @override
+  String get accountCredentialsPasswordSetupSent =>
+      'تحقّق من بريدك الإلكتروني للعثور على رابط تعيين كلمة المرور.';
 
   @override
   String get accountCredentialsRateLimited => 'محاولات كثيرة. انتظر بضع دقائق.';

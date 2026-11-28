@@ -14,6 +14,7 @@ import 'package:keycast_flutter/src/oauth/callback_result.dart';
 import 'package:keycast_flutter/src/oauth/headless_models.dart';
 import 'package:keycast_flutter/src/oauth/oauth_client.dart';
 import 'package:keycast_flutter/src/oauth/oauth_config.dart';
+import 'package:keycast_flutter/src/oauth/pkce.dart';
 import 'package:keycast_flutter/src/storage/keycast_storage.dart';
 
 void main() {
@@ -1104,6 +1105,161 @@ void main() {
       });
     });
 
+    group('headlessSocialLogin', () {
+      Future<SocialLoginResult> socialLoginAgainst(
+        FutureOr<http.Response> Function(http.Request request) respond,
+      ) async {
+        final oauth = KeycastOAuth(
+          config: config,
+          httpClient: MockClient((request) async => respond(request)),
+        );
+        final (result, _) = await oauth.headlessSocialLogin(
+          provider: SocialProvider.google,
+          idToken: 'id.token.value',
+          rawNonce: 'raw-nonce',
+        );
+        return result;
+      }
+
+      test('posts the token, nonce and a PKCE challenge for the verifier '
+          'it returns', () async {
+        late Map<String, dynamic> sent;
+        late Uri sentTo;
+        final oauth = KeycastOAuth(
+          config: config,
+          httpClient: MockClient((request) async {
+            sentTo = request.url;
+            sent = jsonDecode(request.body) as Map<String, dynamic>;
+            return http.Response(
+              jsonEncode({'success': true, 'code': 'auth_code'}),
+              200,
+            );
+          }),
+        );
+
+        final (_, verifier) = await oauth.headlessSocialLogin(
+          provider: SocialProvider.apple,
+          idToken: 'apple.id.token',
+          rawNonce: 'raw-nonce',
+          authorizationCode: 'apple-auth-code',
+          state: 'login_state',
+        );
+
+        expect(sentTo.path, '/api/headless/social-login');
+        expect(sent, {
+          'provider': 'apple',
+          'id_token': 'apple.id.token',
+          'raw_nonce': 'raw-nonce',
+          'authorization_code': 'apple-auth-code',
+          'client_id': 'test-client',
+          'redirect_uri': 'divine://oauth/callback',
+          'scope': 'policy:full',
+          'code_challenge': Pkce.generateChallenge(verifier),
+          'code_challenge_method': 'S256',
+          'state': 'login_state',
+        });
+      });
+
+      test('omits the authorization code and state when absent', () async {
+        late Map<String, dynamic> sent;
+        await socialLoginAgainst((request) {
+          sent = jsonDecode(request.body) as Map<String, dynamic>;
+          return http.Response(jsonEncode({'success': true}), 200);
+        });
+
+        expect(sent, isNot(contains('authorization_code')));
+        expect(sent, isNot(contains('state')));
+        expect(sent['provider'], 'google');
+      });
+
+      test(
+        'returns the authorization code and whether the account is new',
+        () async {
+          final result = await socialLoginAgainst(
+            (_) => http.Response(
+              jsonEncode({
+                'success': true,
+                'code': 'auth_code',
+                'pubkey': 'a' * 64,
+                'created': true,
+              }),
+              200,
+            ),
+          );
+
+          expect(result.success, isTrue);
+          expect(result.code, 'auth_code');
+          expect(result.pubkey, 'a' * 64);
+          expect(result.created, isTrue);
+          expect(result.errorCode, isNull);
+        },
+      );
+
+      for (final (status, code, failure) in [
+        (409, 'ACCOUNT_LINK_REQUIRED', SocialLoginFailure.accountLinkRequired),
+        (400, 'EMAIL_MISSING', SocialLoginFailure.emailMissing),
+        (403, 'EMAIL_NOT_VERIFIED', SocialLoginFailure.emailNotVerified),
+        (401, 'INVALID_TOKEN', SocialLoginFailure.invalidToken),
+        (503, 'PROVIDER_UNAVAILABLE', SocialLoginFailure.providerUnavailable),
+        (400, 'INVALID_REQUEST', SocialLoginFailure.unknown),
+      ]) {
+        test('maps HTTP $status $code to $failure', () async {
+          final result = await socialLoginAgainst(
+            (_) => http.Response(
+              jsonEncode({'error': 'server prose', 'code': code}),
+              status,
+            ),
+          );
+
+          expect(result.success, isFalse);
+          expect(result.code, isNull);
+          expect(result.failure, failure);
+          expect(result.errorDescription, 'server prose');
+        });
+      }
+
+      test('treats a missing route as provider unavailable', () async {
+        final result = await socialLoginAgainst(
+          (_) => http.Response('', 404),
+        );
+
+        expect(result.failure, SocialLoginFailure.providerUnavailable);
+      });
+
+      test('treats any 429 as rate limited, whatever the body says', () async {
+        final result = await socialLoginAgainst(
+          (_) => http.Response(jsonEncode({'code': 'slow_down'}), 429),
+        );
+
+        expect(result.failure, SocialLoginFailure.rateLimited);
+      });
+
+      test('treats a non-JSON server error as unknown', () async {
+        final result = await socialLoginAgainst(
+          (_) => http.Response('<html>Bad Gateway</html>', 502),
+        );
+
+        expect(result.errorCode, 'server_error');
+        expect(result.failure, SocialLoginFailure.unknown);
+      });
+
+      test('treats a timeout as a network failure', () async {
+        final result = await socialLoginAgainst(
+          (_) => throw TimeoutException('slow'),
+        );
+
+        expect(result.failure, SocialLoginFailure.network);
+      });
+
+      test('treats a dropped connection as a network failure', () async {
+        final result = await socialLoginAgainst(
+          (_) => throw const SocketException('Connection refused'),
+        );
+
+        expect(result.failure, SocialLoginFailure.network);
+      });
+    });
+
     group('pollForCode', () {
       test('returns complete with code on 200 with code', () async {
         final mockClient = MockClient((request) async {
@@ -1722,6 +1878,39 @@ void main() {
         expect(result.success, isTrue);
         expect(result.message, 'Email sent');
       });
+
+      test('sends no authorization from the public form', () async {
+        final mockClient = MockClient((request) async {
+          expect(request.headers.containsKey('Authorization'), isFalse);
+          return http.Response(jsonEncode({'success': true}), 200);
+        });
+
+        final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+        final result = await oauth.sendPasswordResetEmail('test@example.com');
+
+        expect(result.success, isTrue);
+      });
+
+      test(
+        'carries the signed-in session for a first password setup',
+        () async {
+          final mockClient = MockClient((request) async {
+            expect(request.url.path, '/api/auth/forgot-password');
+            expect(request.headers['Authorization'], 'Bearer session-token');
+            final body = jsonDecode(request.body) as Map<String, dynamic>;
+            expect(body['email'], 'social@example.com');
+            return http.Response(jsonEncode({'success': true}), 200);
+          });
+
+          final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+          final result = await oauth.sendPasswordResetEmail(
+            'social@example.com',
+            bearerToken: 'session-token',
+          );
+
+          expect(result.success, isTrue);
+        },
+      );
 
       test('returns success on 201 response', () async {
         final mockClient = MockClient((request) async {

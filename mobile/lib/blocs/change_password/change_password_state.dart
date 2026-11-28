@@ -24,6 +24,9 @@ enum ChangePasswordFailureReason {
   /// clears it.
   needsSignIn,
 
+  /// The account was created with Google or Apple and has no password yet.
+  passwordNotSet,
+
   /// Too many attempts. Waiting is the remedy, not a retry.
   rateLimited,
 

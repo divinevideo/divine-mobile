@@ -3400,6 +3400,27 @@ class AppLocalizationsKo extends AppLocalizations {
   String get authSignInErrorGeneric => '문제가 발생했습니다. 다시 시도해 주세요.';
 
   @override
+  String get authContinueWithApple => 'Apple로 계속하기';
+
+  @override
+  String get authContinueWithGoogle => 'Google로 계속하기';
+
+  @override
+  String get authSocialSignInUnavailable => '이 기기에서는 이 로그인 방법을 쓸 수 없어요.';
+
+  @override
+  String get authSocialSignInAccountLinkRequired =>
+      '이 이메일로 된 Divine 계정이 이미 있어요. 이메일과 비밀번호로 로그인하세요.';
+
+  @override
+  String get authSocialSignInEmailMissing =>
+      '계정을 만들려면 이메일이 필요해요. 로그인할 때 공유하거나 이메일과 비밀번호를 사용하세요.';
+
+  @override
+  String get authSocialSignInEmailNotVerified =>
+      '이 이메일은 아직 인증되지 않았어요. Google이나 Apple에서 먼저 인증한 뒤 다시 시도하세요.';
+
+  @override
   String get authSignInOptionsHintPrefix => '지난번에 어떻게 로그인했는지 기억나지 않나요? ';
 
   @override
@@ -14826,6 +14847,16 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get accountCredentialsNeedsSignIn => '세션이 만료됐어요. 다시 로그인한 뒤 변경해 주세요.';
+
+  @override
+  String get accountCredentialsPasswordNotSet =>
+      'Google이나 Apple로 로그인해서 아직 비밀번호가 없어요. 비밀번호를 설정할 수 있는 링크를 이메일로 보내 드릴 수 있어요.';
+
+  @override
+  String get accountCredentialsPasswordSetupSend => '이메일로 링크 받기';
+
+  @override
+  String get accountCredentialsPasswordSetupSent => '이메일에서 비밀번호 설정 링크를 확인하세요.';
 
   @override
   String get accountCredentialsRateLimited => '시도가 너무 많아요. 몇 분 뒤에 다시 해 주세요.';

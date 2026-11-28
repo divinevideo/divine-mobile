@@ -13,6 +13,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/account_credentials_providers.dart';
 import 'package:openvine/screens/settings/general_settings_screen.dart';
 import 'package:openvine/utils/validators.dart';
+import 'package:openvine/widgets/account/password_setup_prompt.dart';
 
 /// Page layer: reads the repository from Riverpod and hands it to the cubit.
 ///
@@ -267,12 +268,17 @@ String changePasswordFailureMessage(
       l10n.accountCredentialsNeedsSignIn,
     ChangePasswordFailureReason.rateLimited =>
       l10n.accountCredentialsRateLimited,
+    ChangePasswordFailureReason.passwordNotSet =>
+      l10n.accountCredentialsPasswordNotSet,
     ChangePasswordFailureReason.network => l10n.accountCredentialsNetwork,
     ChangePasswordFailureReason.unknown => l10n.accountCredentialsUnknown,
   };
 }
 
 /// Why the change was refused, in copy the user can act on.
+///
+/// An account without a password gets the way to set one instead: "Forgot
+/// password" cannot start that for an account created with Google or Apple.
 class _FailureMessage extends StatelessWidget {
   const _FailureMessage({required this.reason});
 
@@ -280,6 +286,9 @@ class _FailureMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (reason == ChangePasswordFailureReason.passwordNotSet) {
+      return const PasswordSetupPrompt();
+    }
     return Text(
       changePasswordFailureMessage(context, reason),
       style: VineTheme.bodyMediumFont(color: VineTheme.error),

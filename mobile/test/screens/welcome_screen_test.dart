@@ -9,6 +9,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
@@ -27,6 +28,8 @@ import 'package:openvine/models/known_account.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/providers/social_sign_in_providers.dart';
+import 'package:openvine/repositories/social_sign_in_repository.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/auth/welcome_screen.dart';
 import 'package:openvine/screens/minor_account_review_screen.dart';
@@ -46,6 +49,9 @@ class _MockAuthService extends Mock implements AuthService {}
 class _MockAppDatabase extends Mock implements AppDatabase {}
 
 class _MockUserProfilesDao extends Mock implements UserProfilesDao {}
+
+class _MockSocialSignInRepository extends Mock
+    implements SocialSignInRepository {}
 
 const String _testPubkeyHex = syntheticTestPubkey;
 
@@ -84,6 +90,7 @@ void main() {
 
   setUpAll(() async {
     registerFallbackValue(AuthenticationSource.none);
+    registerFallbackValue(SocialProvider.google);
   });
 
   setUp(() async {
@@ -117,11 +124,23 @@ void main() {
   Widget createTestWidget({
     AuthState authState = AuthState.unauthenticated,
     String? initialSelectedPubkeyHex,
+    Locale? locale,
+    bool offerSocialSignIn = false,
     bool guestEntry = false,
     Future<GuestClassicsManifest?> Function(http.Client, {required bool muted})?
     guestLoader,
   }) {
+    final socialSignInRepository = _MockSocialSignInRepository();
+    when(
+      () => socialSignInRepository.isAvailable(any()),
+    ).thenReturn(offerSocialSignIn);
+    // A provider sign-in stays running, so a test can look at the screen
+    // while it does.
+    when(
+      () => socialSignInRepository.signIn(any()),
+    ).thenAnswer((_) => Completer<KeycastSession>().future);
     final app = MaterialApp.router(
+      locale: locale,
       localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       theme: VineTheme.theme,
@@ -179,6 +198,9 @@ void main() {
         currentAuthStateProvider.overrideWithValue(authState),
         databaseProvider.overrideWithValue(mockDb),
         sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+        socialSignInRepositoryProvider.overrideWithValue(
+          socialSignInRepository,
+        ),
       ],
       child: app,
     );
@@ -386,7 +408,6 @@ void main() {
       );
 
       testWidgets('displays $AuthHeroSection', (tester) async {
-        await useTallSurface(tester);
         await tester.pumpWidget(createTestWidget());
         await tester.pumpAndSettle();
 
@@ -394,7 +415,6 @@ void main() {
       });
 
       testWidgets('displays create account button', (tester) async {
-        await useTallSurface(tester);
         await tester.pumpWidget(createTestWidget());
         await tester.pumpAndSettle();
 
@@ -402,7 +422,6 @@ void main() {
       });
 
       testWidgets('displays login button', (tester) async {
-        await useTallSurface(tester);
         await tester.pumpWidget(createTestWidget());
         await tester.pumpAndSettle();
 
@@ -429,8 +448,41 @@ void main() {
         );
       });
 
+      testWidgets('shrinks the hero to fit when Google and Apple buttons '
+          'crowd a small phone', (tester) async {
+        // iPhone SE (375 x 667 pt, 20 pt status bar) with the German copy,
+        // whose headline wraps onto four lines.
+        tester.view
+          ..physicalSize = const Size(750, 1334)
+          ..devicePixelRatio = 2
+          ..padding = const FakeViewPadding(top: 40);
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        addTearDown(tester.view.resetPadding);
+
+        await tester.pumpWidget(
+          createTestWidget(locale: const Locale('de'), offerSocialSignIn: true),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('de'));
+        expect(find.text(l10n.authContinueWithApple), findsOneWidget);
+        expect(tester.takeException(), isNull);
+        final logo = tester.getRect(
+          find.descendant(
+            of: find.byType(AuthHeroSection),
+            matching: find.byType(SvgPicture),
+          ),
+        );
+        expect(
+          logo.bottom,
+          lessThanOrEqualTo(
+            tester.getTopLeft(find.text(l10n.authMinAgeNotice)).dy,
+          ),
+        );
+      });
+
       testWidgets('displays terms notice with legal links', (tester) async {
-        await useTallSurface(tester);
         await tester.pumpWidget(createTestWidget());
         await tester.pumpAndSettle();
 
@@ -450,7 +502,6 @@ void main() {
         'renders Greenlight label, under-16 link, and terms above the auth buttons',
         (tester) async {
           final l10n = lookupAppLocalizations(const Locale('en'));
-          await useTallSurface(tester);
           await tester.pumpWidget(createTestWidget());
           await tester.pumpAndSettle();
 
@@ -506,7 +557,6 @@ void main() {
       testWidgets(
         'tapping create account opens account creation',
         (tester) async {
-          await useTallSurface(tester);
           await tester.pumpWidget(createTestWidget());
           await tester.pumpAndSettle();
 
@@ -521,7 +571,6 @@ void main() {
       testWidgets('tapping login button calls acceptTerms and navigates', (
         tester,
       ) async {
-        await useTallSurface(tester);
         await tester.pumpWidget(createTestWidget());
         await tester.pumpAndSettle();
 
@@ -535,7 +584,6 @@ void main() {
       testWidgets(
         'tapping "Divine age authorization" navigates to the public family guide',
         (tester) async {
-          await useTallSurface(tester);
           await tester.pumpWidget(createTestWidget());
           await tester.pumpAndSettle();
 
@@ -576,7 +624,6 @@ void main() {
       testWidgets(
         'tapping "Here are your choices." navigates to the public family guide',
         (tester) async {
-          await useTallSurface(tester);
           await tester.pumpWidget(createTestWidget());
           await tester.pumpAndSettle();
 
@@ -602,7 +649,6 @@ void main() {
       testWidgets(
         'localizes startup cleanup failure and retains login actions',
         (tester) async {
-          await useTallSurface(tester);
           when(() => mockAuthService.lastError)
               .thenReturn('Could not clear account data safely');
           when(() => mockAuthService.lastFailureReason)
@@ -634,7 +680,6 @@ void main() {
       );
 
       testWidgets('shows error when lastError is set', (tester) async {
-        await useTallSurface(tester);
         when(() => mockAuthService.lastError).thenReturn('Auth failed');
 
         await tester.pumpWidget(createTestWidget());
@@ -645,7 +690,6 @@ void main() {
       });
 
       testWidgets('does not show error when lastError is null', (tester) async {
-        await useTallSurface(tester);
         await tester.pumpWidget(createTestWidget());
         await tester.pumpAndSettle();
 
@@ -779,6 +823,54 @@ void main() {
           find.bySemanticsIdentifier(SemanticIds.authCreateAccountButton),
           findsOneWidget,
         );
+      });
+
+      testWidgets('offers Apple and Google right under "Continue as"', (
+        tester,
+      ) async {
+        await tester.binding.setSurfaceSize(const Size(393, 852));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        await tester.pumpWidget(createTestWidget(offerSocialSignIn: true));
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        double top(String label) =>
+            tester.getTopLeft(find.widgetWithText(DivineButton, label)).dy;
+
+        expect(tester.takeException(), isNull);
+        expect(
+          top('Continue as Test User'),
+          lessThan(top(l10n.authContinueWithApple)),
+        );
+        expect(
+          top(l10n.authContinueWithApple),
+          lessThan(top(l10n.authContinueWithGoogle)),
+        );
+        expect(
+          top(l10n.authContinueWithGoogle),
+          lessThan(top(l10n.authUseAnotherAccount)),
+        );
+      });
+
+      testWidgets('locks the other options while a provider sign-in runs', (
+        tester,
+      ) async {
+        await tester.binding.setSurfaceSize(const Size(800, 1200));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        await tester.pumpWidget(createTestWidget(offerSocialSignIn: true));
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.text(l10n.authContinueWithApple));
+        await tester.pump();
+
+        DivineButton button(String label) => tester.widget<DivineButton>(
+          find.widgetWithText(DivineButton, label),
+        );
+        expect(button(l10n.authContinueWithApple).isLoading, isTrue);
+        expect(button('Continue as Test User').onPressed, isNull);
+        expect(button(l10n.authUseAnotherAccount).onPressed, isNull);
+        expect(button(l10n.authCreateNewAccountShort).onPressed, isNull);
       });
 
       testWidgets('shows terms notice above returning-user action buttons', (

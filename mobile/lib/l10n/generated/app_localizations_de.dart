@@ -3655,6 +3655,28 @@ class AppLocalizationsDe extends AppLocalizations {
       'Etwas ist schiefgelaufen. Bitte versuch es noch mal.';
 
   @override
+  String get authContinueWithApple => 'Mit Apple fortfahren';
+
+  @override
+  String get authContinueWithGoogle => 'Mit Google fortfahren';
+
+  @override
+  String get authSocialSignInUnavailable =>
+      'Diese Anmeldung ist auf diesem Gerät nicht verfügbar.';
+
+  @override
+  String get authSocialSignInAccountLinkRequired =>
+      'Zu dieser E-Mail gibt es schon ein Divine-Konto. Melde dich mit E-Mail und Passwort an.';
+
+  @override
+  String get authSocialSignInEmailMissing =>
+      'Wir brauchen deine E-Mail, um dein Konto einzurichten. Gib sie bei der Anmeldung frei oder nutz E-Mail und Passwort.';
+
+  @override
+  String get authSocialSignInEmailNotVerified =>
+      'Diese E-Mail ist noch nicht bestätigt. Bestätige sie zuerst bei Google oder Apple und versuch es dann noch mal.';
+
+  @override
   String get authSignInOptionsHintPrefix =>
       'Nicht sicher, wie du letztes Mal reingekommen bist? ';
 
@@ -15708,6 +15730,17 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get accountCredentialsNeedsSignIn =>
       'Deine Sitzung ist abgelaufen. Melde dich neu an, um das zu ändern.';
+
+  @override
+  String get accountCredentialsPasswordNotSet =>
+      'Du hast dich mit Google oder Apple angemeldet, deshalb gibt es noch kein Passwort. Wir können dir einen Link schicken, mit dem du eins festlegst.';
+
+  @override
+  String get accountCredentialsPasswordSetupSend => 'Link per E-Mail schicken';
+
+  @override
+  String get accountCredentialsPasswordSetupSent =>
+      'Schau in deine E-Mails: Mit dem Link darin legst du dein Passwort fest.';
 
   @override
   String get accountCredentialsRateLimited =>

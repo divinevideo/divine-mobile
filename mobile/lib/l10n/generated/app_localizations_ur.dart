@@ -3614,6 +3614,28 @@ class AppLocalizationsUr extends AppLocalizations {
       'کچھ غلط ہو گیا۔ براہ کرم دوبارہ کوشش کریں۔';
 
   @override
+  String get authContinueWithApple => 'Apple کے ساتھ جاری رکھیں';
+
+  @override
+  String get authContinueWithGoogle => 'Google کے ساتھ جاری رکھیں';
+
+  @override
+  String get authSocialSignInUnavailable =>
+      'سائن ان کا یہ طریقہ اس ڈیوائس پر دستیاب نہیں ہے۔';
+
+  @override
+  String get authSocialSignInAccountLinkRequired =>
+      'اس ای میل سے پہلے ہی ایک Divine اکاؤنٹ موجود ہے۔ اپنی ای میل اور پاس ورڈ سے سائن ان کریں۔';
+
+  @override
+  String get authSocialSignInEmailMissing =>
+      'آپ کا اکاؤنٹ بنانے کے لیے ہمیں آپ کی ای میل درکار ہے۔ سائن ان کرتے وقت اسے شیئر کریں، یا ای میل اور پاس ورڈ استعمال کریں۔';
+
+  @override
+  String get authSocialSignInEmailNotVerified =>
+      'یہ ای میل ابھی تصدیق شدہ نہیں ہے۔ پہلے Google یا Apple پر اس کی تصدیق کریں، پھر دوبارہ کوشش کریں۔';
+
+  @override
   String get authSignInOptionsHintPrefix =>
       'پچھلی بار کیسے داخل ہوئے تھے، یاد نہیں؟ ';
 
@@ -15524,6 +15546,17 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get accountCredentialsNeedsSignIn =>
       'آپ کا سیشن ختم ہو گیا۔ یہ تبدیلی کرنے کے لیے دوبارہ سائن اِن کریں۔';
+
+  @override
+  String get accountCredentialsPasswordNotSet =>
+      'آپ نے Google یا Apple سے سائن ان کیا ہے، اس لیے ابھی کوئی پاس ورڈ نہیں ہے۔ ہم آپ کو پاس ورڈ سیٹ کرنے کا لنک ای میل کر سکتے ہیں۔';
+
+  @override
+  String get accountCredentialsPasswordSetupSend => 'مجھے لنک ای میل کریں';
+
+  @override
+  String get accountCredentialsPasswordSetupSent =>
+      'پاس ورڈ سیٹ کرنے کے لنک کے لیے اپنی ای میل دیکھیں۔';
 
   @override
   String get accountCredentialsRateLimited =>

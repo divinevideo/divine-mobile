@@ -1784,6 +1784,12 @@
     "description": "Shown when a network/transport problem prevents a sign-in verdict."
   },
   "authSignInErrorGeneric": "کچھ غلط ہو گیا۔ براہ کرم دوبارہ کوشش کریں۔",
+  "authContinueWithApple": "Apple کے ساتھ جاری رکھیں",
+  "authContinueWithGoogle": "Google کے ساتھ جاری رکھیں",
+  "authSocialSignInUnavailable": "سائن ان کا یہ طریقہ اس ڈیوائس پر دستیاب نہیں ہے۔",
+  "authSocialSignInAccountLinkRequired": "اس ای میل سے پہلے ہی ایک Divine اکاؤنٹ موجود ہے۔ اپنی ای میل اور پاس ورڈ سے سائن ان کریں۔",
+  "authSocialSignInEmailMissing": "آپ کا اکاؤنٹ بنانے کے لیے ہمیں آپ کی ای میل درکار ہے۔ سائن ان کرتے وقت اسے شیئر کریں، یا ای میل اور پاس ورڈ استعمال کریں۔",
+  "authSocialSignInEmailNotVerified": "یہ ای میل ابھی تصدیق شدہ نہیں ہے۔ پہلے Google یا Apple پر اس کی تصدیق کریں، پھر دوبارہ کوشش کریں۔",
   "@authSignInErrorGeneric": {
     "description": "Fallback shown for any other sign-in failure."
   },
@@ -7315,6 +7321,9 @@
   "accountSettingsChangePassword": "پاس ورڈ تبدیل کریں",
   "accountSettingsChangePasswordSubtitle": "سائن اِن کے لیے نیا پاس ورڈ چنیں",
   "accountCredentialsNeedsSignIn": "آپ کا سیشن ختم ہو گیا۔ یہ تبدیلی کرنے کے لیے دوبارہ سائن اِن کریں۔",
+  "accountCredentialsPasswordNotSet": "آپ نے Google یا Apple سے سائن ان کیا ہے، اس لیے ابھی کوئی پاس ورڈ نہیں ہے۔ ہم آپ کو پاس ورڈ سیٹ کرنے کا لنک ای میل کر سکتے ہیں۔",
+  "accountCredentialsPasswordSetupSend": "مجھے لنک ای میل کریں",
+  "accountCredentialsPasswordSetupSent": "پاس ورڈ سیٹ کرنے کے لنک کے لیے اپنی ای میل دیکھیں۔",
   "accountCredentialsRateLimited": "بہت زیادہ کوششیں۔ چند منٹ انتظار کریں۔",
   "accountCredentialsNetwork": "Divine تک نہیں پہنچ سکے۔ اپنا کنکشن دیکھ کر دوبارہ کوشش کریں۔",
   "accountCredentialsUnknown": "یہ نہیں ہو سکا۔ دوبارہ کوشش کریں۔",

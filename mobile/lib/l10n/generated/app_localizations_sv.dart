@@ -3608,6 +3608,28 @@ class AppLocalizationsSv extends AppLocalizations {
   String get authSignInErrorGeneric => 'Något gick fel. Försök igen.';
 
   @override
+  String get authContinueWithApple => 'Fortsätt med Apple';
+
+  @override
+  String get authContinueWithGoogle => 'Fortsätt med Google';
+
+  @override
+  String get authSocialSignInUnavailable =>
+      'Det här inloggningsalternativet finns inte på den här enheten.';
+
+  @override
+  String get authSocialSignInAccountLinkRequired =>
+      'Det finns redan ett Divine-konto med den här e-postadressen. Logga in med e-post och lösenord.';
+
+  @override
+  String get authSocialSignInEmailMissing =>
+      'Vi behöver din e-post för att skapa ditt konto. Dela den när du loggar in, eller använd e-post och lösenord.';
+
+  @override
+  String get authSocialSignInEmailNotVerified =>
+      'Den här e-postadressen är inte verifierad än. Verifiera den hos Google eller Apple först och försök sedan igen.';
+
+  @override
   String get authSignInOptionsHintPrefix =>
       'Osäker på hur du loggade in förra gången? ';
 
@@ -15541,6 +15563,17 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get accountCredentialsNeedsSignIn =>
       'Din session tog slut. Logga in igen för att göra ändringen.';
+
+  @override
+  String get accountCredentialsPasswordNotSet =>
+      'Du loggade in med Google eller Apple, så du har inget lösenord än. Vi kan mejla dig en länk så att du kan skapa ett.';
+
+  @override
+  String get accountCredentialsPasswordSetupSend => 'Mejla mig en länk';
+
+  @override
+  String get accountCredentialsPasswordSetupSent =>
+      'Kolla din mejl efter en länk för att skapa ditt lösenord.';
 
   @override
   String get accountCredentialsRateLimited =>

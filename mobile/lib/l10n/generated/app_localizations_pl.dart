@@ -3723,6 +3723,28 @@ class AppLocalizationsPl extends AppLocalizations {
   String get authSignInErrorGeneric => 'Coś poszło nie tak. Spróbuj ponownie.';
 
   @override
+  String get authContinueWithApple => 'Kontynuuj z Apple';
+
+  @override
+  String get authContinueWithGoogle => 'Kontynuuj z Google';
+
+  @override
+  String get authSocialSignInUnavailable =>
+      'Ta metoda logowania nie jest dostępna na tym urządzeniu.';
+
+  @override
+  String get authSocialSignInAccountLinkRequired =>
+      'Konto Divine z tym e-mailem już istnieje. Zaloguj się e-mailem i hasłem.';
+
+  @override
+  String get authSocialSignInEmailMissing =>
+      'Potrzebujemy e-maila, żeby założyć konto. Udostępnij go przy logowaniu albo użyj e-maila i hasła.';
+
+  @override
+  String get authSocialSignInEmailNotVerified =>
+      'Ten e-mail nie jest jeszcze zweryfikowany. Najpierw zweryfikuj go w Google lub Apple, a potem spróbuj ponownie.';
+
+  @override
   String get authSignInOptionsHintPrefix =>
       'Nie wiesz, jak zalogowałeś się ostatnim razem? ';
 
@@ -15836,6 +15858,17 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get accountCredentialsNeedsSignIn =>
       'Sesja wygasła. Zaloguj się ponownie, żeby to zmienić.';
+
+  @override
+  String get accountCredentialsPasswordNotSet =>
+      'Logujesz się przez Google lub Apple, więc nie masz jeszcze hasła. Możemy wysłać ci e-mailem link do jego ustawienia.';
+
+  @override
+  String get accountCredentialsPasswordSetupSend => 'Wyślij mi link e-mailem';
+
+  @override
+  String get accountCredentialsPasswordSetupSent =>
+      'Sprawdź skrzynkę: znajdziesz tam link do ustawienia hasła.';
 
   @override
   String get accountCredentialsRateLimited =>

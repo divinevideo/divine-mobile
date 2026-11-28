@@ -195,6 +195,130 @@ class HeadlessLoginResult {
   }
 }
 
+/// Identity provider whose ID token `POST /api/headless/social-login`
+/// accepts.
+enum SocialProvider {
+  google('google'),
+  apple('apple');
+
+  const SocialProvider(this.wireName);
+
+  /// Value of the request's `provider` field.
+  final String wireName;
+}
+
+/// Typed classification of a failed `POST /api/headless/social-login`.
+///
+/// Kept apart from [KeycastLoginFailure] so the password sign-in taxonomy, and
+/// every exhaustive switch over it, stays unchanged.
+enum SocialLoginFailure {
+  /// The provider's email belongs to a Divine account that cannot be linked
+  /// automatically (HTTP 409). Signing in with email and password works.
+  accountLinkRequired,
+
+  /// The provider sent no email address, so no account can be created
+  /// (HTTP 400).
+  emailMissing,
+
+  /// The provider has not verified the email address (HTTP 403).
+  emailNotVerified,
+
+  /// Keycast rejected the ID token: bad signature, audience, nonce, expiry,
+  /// or a replay (HTTP 401).
+  invalidToken,
+
+  /// This provider is not configured on the server, or the server is too old
+  /// to offer social sign-in at all.
+  providerUnavailable,
+
+  /// Too many attempts for now (HTTP 429).
+  rateLimited,
+
+  /// Transport failure (timeout / no connection) before a server verdict.
+  network,
+
+  /// Any other server or client error.
+  unknown,
+}
+
+/// Result from `POST /api/headless/social-login`.
+class SocialLoginResult {
+  SocialLoginResult({
+    required this.success,
+    this.code,
+    this.pubkey,
+    this.state,
+    this.created = false,
+    this.errorCode,
+    this.errorDescription,
+  });
+
+  factory SocialLoginResult.fromJson(Map<String, dynamic> json) {
+    final success = json['success'] as bool? ?? false;
+    // Same disambiguation as [HeadlessLoginResult]: `code` is the
+    // authorization code on success and the failure code otherwise.
+    final rawCode = json['code'] as String?;
+    return SocialLoginResult(
+      success: success,
+      code: success ? rawCode : null,
+      pubkey: json['pubkey'] as String?,
+      state: json['state'] as String?,
+      created: json['created'] as bool? ?? false,
+      errorCode: success ? null : rawCode,
+      errorDescription:
+          json['error'] as String? ?? json['error_description'] as String?,
+    );
+  }
+
+  factory SocialLoginResult.error(String message, {required String code}) {
+    return SocialLoginResult(
+      success: false,
+      errorCode: code,
+      errorDescription: message,
+    );
+  }
+
+  final bool success;
+
+  /// OAuth authorization code, present only on success.
+  final String? code;
+  final String? pubkey;
+  final String? state;
+
+  /// Whether Keycast created a new account for this sign-in.
+  final bool created;
+
+  /// Machine-readable failure code, failure only.
+  final String? errorCode;
+
+  /// Human-readable server message, for logs only.
+  final String? errorDescription;
+
+  /// Typed classification of the failure, for localization in the UI layer.
+  SocialLoginFailure get failure {
+    switch (errorCode) {
+      case 'ACCOUNT_LINK_REQUIRED':
+        return SocialLoginFailure.accountLinkRequired;
+      case 'EMAIL_MISSING':
+        return SocialLoginFailure.emailMissing;
+      case 'EMAIL_NOT_VERIFIED':
+        return SocialLoginFailure.emailNotVerified;
+      case 'INVALID_TOKEN':
+        return SocialLoginFailure.invalidToken;
+      case 'PROVIDER_UNAVAILABLE':
+      case 'endpoint_not_found':
+        return SocialLoginFailure.providerUnavailable;
+      case 'TOO_MANY_ATTEMPTS':
+        return SocialLoginFailure.rateLimited;
+      case 'timeout':
+      case 'network_error':
+        return SocialLoginFailure.network;
+      default:
+        return SocialLoginFailure.unknown;
+    }
+  }
+}
+
 /// Result from GET /api/oauth/poll
 enum KeycastAuthFailure {
   emailAlreadyRegistered,
@@ -555,6 +679,11 @@ enum ExportKeyFailure {
   /// No exportable key is on record for this account.
   noKey,
 
+  /// The account has no password: it was created with Google or Apple. The
+  /// signed-in account can ask for a link to set one with
+  /// `KeycastOAuth.sendPasswordResetEmail` and its bearer token.
+  passwordNotSet,
+
   /// Too many export attempts have been made for now. Unlike every other
   /// refusal here, waiting is the remedy — an immediate retry will not clear
   /// it.
@@ -611,6 +740,11 @@ enum ChangePasswordFailure {
   /// The server rejected the new password (it enforces its own minimum length).
   weakPassword,
 
+  /// The account has no password: it was created with Google or Apple. The
+  /// signed-in account can ask for a link to set one with
+  /// `KeycastOAuth.sendPasswordResetEmail` and its bearer token.
+  passwordNotSet,
+
   /// Too many attempts for now — waiting is the remedy, not a retry.
   rateLimited,
 
@@ -660,6 +794,11 @@ enum ChangeEmailFailure {
 
   /// The server rejected the address as malformed.
   invalidEmail,
+
+  /// The account has no password: it was created with Google or Apple. The
+  /// signed-in account can ask for a link to set one with
+  /// `KeycastOAuth.sendPasswordResetEmail` and its bearer token.
+  passwordNotSet,
 
   /// Too many attempts for now — waiting is the remedy, not a retry.
   rateLimited,

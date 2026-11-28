@@ -19,6 +19,16 @@ enum DivineButtonType {
   /// Use for high-contrast actions on dark backgrounds.
   tertiary,
 
+  /// Shaped like [outline], with pure white content on dark appearances and
+  /// pure black on light ones. Use for third-party sign-in buttons whose
+  /// brand rules allow only black or white content, such as Apple's.
+  contrast,
+
+  /// A quiet neutral fill with a thin outline: near-black on dark appearances
+  /// and white on light ones. Use for third-party sign-in buttons that should
+  /// sit beside the primary action without outshining it, such as Google's.
+  outline,
+
   /// Ghost button with semi-transparent dark background (65% black)
   /// and white text. Use for actions overlaying content like video
   /// controls.
@@ -115,6 +125,7 @@ class DivineButton extends StatelessWidget {
     this.size = DivineButtonSize.base,
     this.leadingIcon,
     this.trailingIcon,
+    this.tintLeadingIcon = true,
     this.expanded = false,
     this.isLoading = false,
     this.maxLines = 1,
@@ -166,6 +177,12 @@ class DivineButton extends StatelessWidget {
   /// and [size].
   final DivineIconName? trailingIcon;
 
+  /// Whether [leadingIcon] takes the button's content color.
+  ///
+  /// Pass false for a multi-colour brand mark, such as Google's G, whose
+  /// colours must not change.
+  final bool tintLeadingIcon;
+
   /// Whether the button should expand to fill available width.
   ///
   /// You don't need to set this when the button is already forced wider
@@ -197,6 +214,7 @@ class DivineButton extends StatelessWidget {
       size: size,
       leadingIcon: leadingIcon,
       trailingIcon: trailingIcon,
+      tintLeadingIcon: tintLeadingIcon,
       expanded: expanded,
       isLoading: isLoading,
       maxLines: maxLines,
@@ -215,6 +233,7 @@ class _DivineButtonContent extends StatelessWidget {
     required this.expanded,
     required this.isLoading,
     required this.maxLines,
+    required this.tintLeadingIcon,
     this.leadingIcon,
     this.trailingIcon,
     this.semanticLabel,
@@ -227,6 +246,7 @@ class _DivineButtonContent extends StatelessWidget {
   final DivineButtonSize size;
   final DivineIconName? leadingIcon;
   final DivineIconName? trailingIcon;
+  final bool tintLeadingIcon;
   final bool expanded;
   final bool isLoading;
   final int maxLines;
@@ -270,9 +290,16 @@ class _DivineButtonContent extends StatelessWidget {
   /// larger on every edge than a primary one.
   /// Whether this [type] paints a visible border. Kept independent of the
   /// resolved palette so padding geometry does not need a [BuildContext].
-  bool get _hasBorder => type == DivineButtonType.secondary;
+  bool get _hasBorder => type == DivineButtonType.secondary || _isSignInOutline;
 
-  double get _borderInset => _hasBorder ? _kBorderWidth : 0;
+  /// The outline and contrast types share the 1px stroke of the sign-in
+  /// styles they serve.
+  bool get _isSignInOutline =>
+      type == DivineButtonType.outline || type == DivineButtonType.contrast;
+
+  double get _borderWidth => _isSignInOutline ? 1 : _kBorderWidth;
+
+  double get _borderInset => _hasBorder ? _borderWidth : 0;
 
   /// Vertical inner padding, chosen per size so the button is 32 / 40 /
   /// 48px tall whatever its stretch state. The border thickness is
@@ -330,6 +357,8 @@ class _DivineButtonContent extends StatelessWidget {
     DivineButtonType.primary => VineTheme.primary,
     DivineButtonType.secondary => colors.surfaceContainer,
     DivineButtonType.tertiary => colors.inverseSurface,
+    DivineButtonType.contrast ||
+    DivineButtonType.outline => colors.outlineButtonSurface,
     DivineButtonType.ghost => colors.ghostFill,
     DivineButtonType.ghostSecondary => VineTheme.scrim15,
     DivineButtonType.link => VineTheme.transparent,
@@ -341,6 +370,8 @@ class _DivineButtonContent extends StatelessWidget {
     DivineButtonType.primary => VineTheme.onPrimary,
     DivineButtonType.secondary => colors.accentBrand,
     DivineButtonType.tertiary => colors.inverseOnSurface,
+    DivineButtonType.contrast => colors.onContrastButton,
+    DivineButtonType.outline => colors.onOutlineButtonSurface,
     DivineButtonType.ghost => colors.onSurface,
     DivineButtonType.ghostSecondary =>
       colors.isLight ? colors.onSurface : VineTheme.onSurface,
@@ -349,9 +380,11 @@ class _DivineButtonContent extends StatelessWidget {
     DivineButtonType.error => VineTheme.onErrorContainer,
   };
 
-  Color? _borderColor(VineThemeColors colors) => _hasBorder
-      ? (colors.isLight ? colors.outline : colors.outlineMuted)
-      : null;
+  Color? _borderColor(VineThemeColors colors) {
+    if (!_hasBorder) return null;
+    if (_isSignInOutline) return colors.outlineButtonBorder;
+    return colors.isLight ? colors.outline : colors.outlineMuted;
+  }
 
   TextStyle _textStyle(VineThemeColors colors) {
     final foreground = _foregroundColor(colors);
@@ -412,7 +445,7 @@ class _DivineButtonContent extends StatelessWidget {
         else if (leadingIcon != null)
           DivineIcon(
             icon: leadingIcon!,
-            color: foregroundColor,
+            color: tintLeadingIcon ? foregroundColor : null,
             size: _iconSize,
           ),
         if (!_noLabel)
@@ -438,7 +471,7 @@ class _DivineButtonContent extends StatelessWidget {
       color: _backgroundColor(colors),
       borderRadius: BorderRadius.circular(_borderRadius),
       border: borderColor != null
-          ? Border.all(color: borderColor, width: _kBorderWidth)
+          ? Border.all(color: borderColor, width: _borderWidth)
           : null,
       boxShadow: _isEnabled ? _boxShadow(colors) : null,
     );

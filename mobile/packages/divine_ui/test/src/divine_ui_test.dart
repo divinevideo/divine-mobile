@@ -115,6 +115,10 @@ void main() {
         'inverseOnSurface': (c) => c.inverseOnSurface,
         'mediaChrome': (c) => c.mediaChrome,
         'mediaChromeForeground': (c) => c.mediaChromeForeground,
+        'onContrastButton': (c) => c.onContrastButton,
+        'outlineButtonSurface': (c) => c.outlineButtonSurface,
+        'onOutlineButtonSurface': (c) => c.onOutlineButtonSurface,
+        'outlineButtonBorder': (c) => c.outlineButtonBorder,
       };
 
       // Accent chips are pairs, not flat colors, so they cannot live in
@@ -176,6 +180,10 @@ void main() {
         inverseOnSurface: color,
         mediaChrome: color,
         mediaChromeForeground: color,
+        onContrastButton: color,
+        outlineButtonSurface: color,
+        onOutlineButtonSurface: color,
+        outlineButtonBorder: color,
       );
 
       test('copyWith replaces each semantic color', () {
@@ -218,6 +226,10 @@ void main() {
           inverseOnSurface: const Color(0xFF000019),
           mediaChrome: const Color(0xFF00000F),
           mediaChromeForeground: const Color(0xFF000010),
+          onContrastButton: const Color(0xFF000025),
+          outlineButtonSurface: const Color(0xFF000027),
+          onOutlineButtonSurface: const Color(0xFF000028),
+          outlineButtonBorder: const Color(0xFF000029),
         );
 
         expect(copied.background, const Color(0xFF000001));
@@ -261,6 +273,10 @@ void main() {
         expect(copied.inverseOnSurface, const Color(0xFF000019));
         expect(copied.mediaChrome, const Color(0xFF00000F));
         expect(copied.mediaChromeForeground, const Color(0xFF000010));
+        expect(copied.onContrastButton, const Color(0xFF000025));
+        expect(copied.outlineButtonSurface, const Color(0xFF000027));
+        expect(copied.onOutlineButtonSurface, const Color(0xFF000028));
+        expect(copied.outlineButtonBorder, const Color(0xFF000029));
       });
 
       test(
@@ -371,6 +387,16 @@ void main() {
             inverseOnSurface: token == 'inverseOnSurface' ? Colors.white : null,
             mediaChrome: token == 'mediaChrome' ? Colors.white : null,
             mediaChromeForeground: token == 'mediaChromeForeground'
+                ? Colors.white
+                : null,
+            onContrastButton: token == 'onContrastButton' ? Colors.white : null,
+            outlineButtonSurface: token == 'outlineButtonSurface'
+                ? Colors.white
+                : null,
+            onOutlineButtonSurface: token == 'onOutlineButtonSurface'
+                ? Colors.white
+                : null,
+            outlineButtonBorder: token == 'outlineButtonBorder'
                 ? Colors.white
                 : null,
           );

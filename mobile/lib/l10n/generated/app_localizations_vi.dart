@@ -3578,6 +3578,28 @@ class AppLocalizationsVi extends AppLocalizations {
   String get authSignInErrorGeneric => 'Có gì đó không ổn. Vui lòng thử lại.';
 
   @override
+  String get authContinueWithApple => 'Tiếp tục với Apple';
+
+  @override
+  String get authContinueWithGoogle => 'Tiếp tục với Google';
+
+  @override
+  String get authSocialSignInUnavailable =>
+      'Cách đăng nhập này không khả dụng trên thiết bị này.';
+
+  @override
+  String get authSocialSignInAccountLinkRequired =>
+      'Email này đã có tài khoản Divine. Hãy đăng nhập bằng email và mật khẩu của bạn.';
+
+  @override
+  String get authSocialSignInEmailMissing =>
+      'Chúng tôi cần email của bạn để tạo tài khoản. Hãy chia sẻ email khi đăng nhập, hoặc dùng email và mật khẩu.';
+
+  @override
+  String get authSocialSignInEmailNotVerified =>
+      'Email này chưa được xác minh. Hãy xác minh với Google hoặc Apple trước, rồi thử lại.';
+
+  @override
   String get authSignInOptionsHintPrefix =>
       'Không nhớ lần trước bạn vào bằng cách nào? ';
 
@@ -15465,6 +15487,18 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get accountCredentialsNeedsSignIn =>
       'Phiên đăng nhập đã hết hạn. Đăng nhập lại để thực hiện thay đổi này.';
+
+  @override
+  String get accountCredentialsPasswordNotSet =>
+      'Bạn đã đăng nhập bằng Google hoặc Apple nên chưa có mật khẩu. Chúng tôi có thể gửi email cho bạn một liên kết để tạo mật khẩu.';
+
+  @override
+  String get accountCredentialsPasswordSetupSend =>
+      'Gửi liên kết qua email cho tôi';
+
+  @override
+  String get accountCredentialsPasswordSetupSent =>
+      'Hãy kiểm tra email để tìm liên kết tạo mật khẩu.';
 
   @override
   String get accountCredentialsRateLimited =>

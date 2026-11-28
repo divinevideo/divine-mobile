@@ -3532,6 +3532,27 @@ class AppLocalizationsAm extends AppLocalizations {
   String get authSignInErrorGeneric => 'የሆነ ችግር ተፈጥሯል። እባክዎ እንደገና ይሞክሩ።';
 
   @override
+  String get authContinueWithApple => 'በApple ይቀጥሉ';
+
+  @override
+  String get authContinueWithGoogle => 'በGoogle ይቀጥሉ';
+
+  @override
+  String get authSocialSignInUnavailable => 'ይህ የመግቢያ አማራጭ በዚህ መሣሪያ ላይ አይገኝም።';
+
+  @override
+  String get authSocialSignInAccountLinkRequired =>
+      'ይህ ኢሜይል አስቀድሞ የDivine መለያ አለው። በኢሜይልዎ እና በይለፍ ቃልዎ ይግቡ።';
+
+  @override
+  String get authSocialSignInEmailMissing =>
+      'መለያዎን ለማዘጋጀት ኢሜይልዎ ያስፈልገናል። ሲገቡ ያጋሩት፣ ወይም ኢሜይል እና የይለፍ ቃል ይጠቀሙ።';
+
+  @override
+  String get authSocialSignInEmailNotVerified =>
+      'ይህ ኢሜይል ገና አልተረጋገጠም። መጀመሪያ በGoogle ወይም በApple ያረጋግጡት፣ ከዚያ እንደገና ይሞክሩ።';
+
+  @override
   String get authSignInOptionsHintPrefix => 'ባለፈው ጊዜ እንዴት እንደገቡ እርግጠኛ አይደሉም? ';
 
   @override
@@ -15158,6 +15179,17 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get accountCredentialsNeedsSignIn =>
       'ክፍለ ጊዜህ አልቋል። ይህን ለመቀየር እንደገና ግባ።';
+
+  @override
+  String get accountCredentialsPasswordNotSet =>
+      'በGoogle ወይም በApple ስለገቡ እስካሁን የይለፍ ቃል የለም። የይለፍ ቃል ለማዘጋጀት የሚያስችል ሊንክ በኢሜይል ልንልክልዎ እንችላለን።';
+
+  @override
+  String get accountCredentialsPasswordSetupSend => 'ሊንክ በኢሜይል ላኩልኝ';
+
+  @override
+  String get accountCredentialsPasswordSetupSent =>
+      'የይለፍ ቃልዎን ለማዘጋጀት የሚያስችለውን ሊንክ በኢሜይልዎ ውስጥ ይፈልጉ።';
 
   @override
   String get accountCredentialsRateLimited => 'በጣም ብዙ ሙከራ። ጥቂት ደቂቃ ቆይ።';

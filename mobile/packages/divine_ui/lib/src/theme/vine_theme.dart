@@ -93,6 +93,10 @@ class VineThemeColors extends ThemeExtension<VineThemeColors> {
     required this.inverseOnSurface,
     required this.mediaChrome,
     required this.mediaChromeForeground,
+    required this.onContrastButton,
+    required this.outlineButtonSurface,
+    required this.onOutlineButtonSurface,
+    required this.outlineButtonBorder,
   });
 
   /// How often [VineThemeColorsContext.vineColors] resolved the dark fallback
@@ -324,6 +328,21 @@ class VineThemeColors extends ThemeExtension<VineThemeColors> {
   /// Media controls foreground.
   final Color mediaChromeForeground;
 
+  /// Logo and title of the contrast button: pure white on dark, pure black
+  /// on light, for third-party sign-in buttons whose brand rules allow only
+  /// black or white content.
+  final Color onContrastButton;
+
+  /// Fill of the outline and contrast buttons: near-black on dark, white on
+  /// light, the colours of Google's own sign-in button.
+  final Color outlineButtonSurface;
+
+  /// Content color on [outlineButtonSurface].
+  final Color onOutlineButtonSurface;
+
+  /// Thin border around [outlineButtonSurface].
+  final Color outlineButtonBorder;
+
   /// Whether this palette describes a light appearance.
   ///
   /// Derived from [background] rather than stored, so it stays correct for
@@ -377,6 +396,10 @@ class VineThemeColors extends ThemeExtension<VineThemeColors> {
     Color? inverseOnSurface,
     Color? mediaChrome,
     Color? mediaChromeForeground,
+    Color? onContrastButton,
+    Color? outlineButtonSurface,
+    Color? onOutlineButtonSurface,
+    Color? outlineButtonBorder,
   }) => VineThemeColors(
     background: background ?? this.background,
     card: card ?? this.card,
@@ -423,6 +446,11 @@ class VineThemeColors extends ThemeExtension<VineThemeColors> {
     inverseOnSurface: inverseOnSurface ?? this.inverseOnSurface,
     mediaChrome: mediaChrome ?? this.mediaChrome,
     mediaChromeForeground: mediaChromeForeground ?? this.mediaChromeForeground,
+    onContrastButton: onContrastButton ?? this.onContrastButton,
+    outlineButtonSurface: outlineButtonSurface ?? this.outlineButtonSurface,
+    onOutlineButtonSurface:
+        onOutlineButtonSurface ?? this.onOutlineButtonSurface,
+    outlineButtonBorder: outlineButtonBorder ?? this.outlineButtonBorder,
   );
 
   @override
@@ -490,6 +518,22 @@ class VineThemeColors extends ThemeExtension<VineThemeColors> {
         other.mediaChromeForeground,
         t,
       ),
+      onContrastButton: Color.lerp(onContrastButton, other.onContrastButton, t),
+      outlineButtonSurface: Color.lerp(
+        outlineButtonSurface,
+        other.outlineButtonSurface,
+        t,
+      ),
+      onOutlineButtonSurface: Color.lerp(
+        onOutlineButtonSurface,
+        other.onOutlineButtonSurface,
+        t,
+      ),
+      outlineButtonBorder: Color.lerp(
+        outlineButtonBorder,
+        other.outlineButtonBorder,
+        t,
+      ),
     );
   }
 
@@ -541,7 +585,11 @@ class VineThemeColors extends ThemeExtension<VineThemeColors> {
           inverseSurface == other.inverseSurface &&
           inverseOnSurface == other.inverseOnSurface &&
           mediaChrome == other.mediaChrome &&
-          mediaChromeForeground == other.mediaChromeForeground;
+          mediaChromeForeground == other.mediaChromeForeground &&
+          onContrastButton == other.onContrastButton &&
+          outlineButtonSurface == other.outlineButtonSurface &&
+          onOutlineButtonSurface == other.onOutlineButtonSurface &&
+          outlineButtonBorder == other.outlineButtonBorder;
 
   @override
   int get hashCode => Object.hashAll([
@@ -590,6 +638,10 @@ class VineThemeColors extends ThemeExtension<VineThemeColors> {
     inverseOnSurface,
     mediaChrome,
     mediaChromeForeground,
+    onContrastButton,
+    outlineButtonSurface,
+    onOutlineButtonSurface,
+    outlineButtonBorder,
   ]);
 }
 
@@ -1453,6 +1505,10 @@ class VineTheme {
     inverseOnSurface: inverseOnSurface,
     mediaChrome: scrim80,
     mediaChromeForeground: whiteText,
+    onContrastButton: Color(0xFFFFFFFF),
+    outlineButtonSurface: Color(0xFF131314),
+    onOutlineButtonSurface: Color(0xFFE3E3E3),
+    outlineButtonBorder: Color(0xFF8E918F),
   );
 
   /// Warm off-white content surfaces with dark-green anchors, inspired by
@@ -1527,6 +1583,10 @@ class VineTheme {
     inverseOnSurface: Color(0xFFFFFFFF),
     mediaChrome: Color(0xF2F9F7F6),
     mediaChromeForeground: Color(0xFF07241B),
+    onContrastButton: Color(0xFF000000),
+    outlineButtonSurface: Color(0xFFFFFFFF),
+    onOutlineButtonSurface: Color(0xFF1F1F1F),
+    outlineButtonBorder: Color(0xFF747775),
   );
 
   /// Scrim at 80% opacity (black 80%).

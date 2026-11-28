@@ -3626,6 +3626,28 @@ class AppLocalizationsNl extends AppLocalizations {
   String get authSignInErrorGeneric => 'Er ging iets mis. Probeer het opnieuw.';
 
   @override
+  String get authContinueWithApple => 'Doorgaan met Apple';
+
+  @override
+  String get authContinueWithGoogle => 'Doorgaan met Google';
+
+  @override
+  String get authSocialSignInUnavailable =>
+      'Deze inlogoptie is niet beschikbaar op dit apparaat.';
+
+  @override
+  String get authSocialSignInAccountLinkRequired =>
+      'Er bestaat al een Divine-account met dit e-mailadres. Log in met je e-mail en wachtwoord.';
+
+  @override
+  String get authSocialSignInEmailMissing =>
+      'We hebben je e-mail nodig om je account aan te maken. Deel hem bij het inloggen, of gebruik e-mail en wachtwoord.';
+
+  @override
+  String get authSocialSignInEmailNotVerified =>
+      'Dit e-mailadres is nog niet geverifieerd. Verifieer het eerst bij Google of Apple en probeer het daarna opnieuw.';
+
+  @override
   String get authSignInOptionsHintPrefix =>
       'Weet je niet meer hoe je de vorige keer inlogde? ';
 
@@ -15608,6 +15630,17 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get accountCredentialsNeedsSignIn =>
       'Je sessie is verlopen. Log opnieuw in om dit te wijzigen.';
+
+  @override
+  String get accountCredentialsPasswordNotSet =>
+      'Je bent ingelogd met Google of Apple, dus je hebt nog geen wachtwoord. We kunnen je een link mailen om er een in te stellen.';
+
+  @override
+  String get accountCredentialsPasswordSetupSend => 'Mail me een link';
+
+  @override
+  String get accountCredentialsPasswordSetupSent =>
+      'Check je mail voor een link om je wachtwoord in te stellen.';
 
   @override
   String get accountCredentialsRateLimited =>

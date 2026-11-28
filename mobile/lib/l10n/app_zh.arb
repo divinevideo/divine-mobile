@@ -1784,6 +1784,12 @@
     "description": "Shown when a network/transport problem prevents a sign-in verdict."
   },
   "authSignInErrorGeneric": "出了点问题，请重试。",
+  "authContinueWithApple": "通过 Apple 继续",
+  "authContinueWithGoogle": "通过 Google 继续",
+  "authSocialSignInUnavailable": "此设备不支持这种登录方式。",
+  "authSocialSignInAccountLinkRequired": "这个邮箱已经有 Divine 账号了。请用邮箱和密码登录。",
+  "authSocialSignInEmailMissing": "创建账号需要你的邮箱。登录时请共享邮箱，或改用邮箱和密码。",
+  "authSocialSignInEmailNotVerified": "这个邮箱还没有验证。请先在 Google 或 Apple 完成验证，再试一次。",
   "@authSignInErrorGeneric": {
     "description": "Fallback shown for any other sign-in failure."
   },
@@ -7315,6 +7321,9 @@
   "accountSettingsChangePassword": "更改密码",
   "accountSettingsChangePasswordSubtitle": "设置一个新的登录密码",
   "accountCredentialsNeedsSignIn": "登录状态已过期。请重新登录后再更改。",
+  "accountCredentialsPasswordNotSet": "你是通过 Google 或 Apple 登录的，所以还没有密码。我们可以给你发一封邮件，里面有设置密码的链接。",
+  "accountCredentialsPasswordSetupSend": "通过邮件发送链接",
+  "accountCredentialsPasswordSetupSent": "请查看邮箱，用里面的链接设置密码。",
   "accountCredentialsRateLimited": "尝试次数太多，过几分钟再试。",
   "accountCredentialsNetwork": "连不上 Divine。检查网络后再试一次。",
   "accountCredentialsUnknown": "没成功，请再试一次。",

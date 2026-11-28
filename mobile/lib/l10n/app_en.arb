@@ -2592,6 +2592,30 @@
   "@authSignInErrorGeneric": {
     "description": "Fallback shown for any other sign-in failure."
   },
+  "authContinueWithApple": "Continue with Apple",
+  "@authContinueWithApple": {
+    "description": "Sign in with Apple button label. Keep Apple's own wording for the locale where one exists."
+  },
+  "authContinueWithGoogle": "Continue with Google",
+  "@authContinueWithGoogle": {
+    "description": "Sign in with Google button label."
+  },
+  "authSocialSignInUnavailable": "This sign-in option isn't available on this device.",
+  "@authSocialSignInUnavailable": {
+    "description": "Shown when Google or Apple sign-in cannot run on this device or build."
+  },
+  "authSocialSignInAccountLinkRequired": "This email already has a Divine account. Sign in with your email and password.",
+  "@authSocialSignInAccountLinkRequired": {
+    "description": "Shown when the Google or Apple email belongs to an existing Divine account that cannot be linked automatically."
+  },
+  "authSocialSignInEmailMissing": "We need your email to set up your account. Share it when you sign in, or use email and password.",
+  "@authSocialSignInEmailMissing": {
+    "description": "Shown when Google or Apple did not share an email address, so no account can be created."
+  },
+  "authSocialSignInEmailNotVerified": "That email isn't verified yet. Verify it with Google or Apple first, then try again.",
+  "@authSocialSignInEmailNotVerified": {
+    "description": "Shown when Google or Apple reports the email address as unverified."
+  },
   "authSignInOptionsHintPrefix": "Not sure how you got in last time? ",
   "@authSignInOptionsHintPrefix": {
     "description": "Leading prose of the tappable hint under a failed sign-in, before the call-to-action span. Trailing space is intentional."
@@ -12792,6 +12816,18 @@
   "accountCredentialsNeedsSignIn": "Your session ran out. Sign in again to make this change.",
   "@accountCredentialsNeedsSignIn": {
     "description": "Shown when the session can no longer authorize an email or password change."
+  },
+  "accountCredentialsPasswordNotSet": "You signed in with Google or Apple, so there's no password yet. We can email you a link to set one.",
+  "@accountCredentialsPasswordNotSet": {
+    "description": "Shown when an account created with Google or Apple tries something that needs its password."
+  },
+  "accountCredentialsPasswordSetupSend": "Email me a link",
+  "@accountCredentialsPasswordSetupSend": {
+    "description": "Button under accountCredentialsPasswordNotSet that emails a link for setting a first password."
+  },
+  "accountCredentialsPasswordSetupSent": "Check your email for a link to set your password.",
+  "@accountCredentialsPasswordSetupSent": {
+    "description": "Shown after the password-setup link was requested. Keycast does not say whether a link went out, so this asks to check the inbox rather than confirming delivery."
   },
   "accountCredentialsRateLimited": "Too many tries. Give it a few minutes.",
   "accountCredentialsNetwork": "Couldn't reach Divine. Check your connection and try again.",

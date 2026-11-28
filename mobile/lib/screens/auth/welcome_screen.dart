@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/social_sign_in/social_sign_in_cubit.dart';
 import 'package:openvine/blocs/welcome/welcome_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/features/guest_classics/guest_classics_entry.dart';
@@ -28,6 +29,7 @@ import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/auth/auth_hero_section.dart';
+import 'package:openvine/widgets/auth/social_sign_in_buttons.dart';
 import 'package:openvine/widgets/error_message.dart';
 import 'package:openvine/widgets/recovery_support_button.dart';
 import 'package:openvine/widgets/user_avatar.dart';
@@ -102,35 +104,39 @@ class WelcomeScreen extends ConsumerWidget {
         authState == AuthState.checking ||
         authState == AuthState.authenticating;
 
-    return BlocProvider(
-      create: (_) =>
-          WelcomeBloc(
-            userProfilesDao: db.userProfilesDao,
-            authService: authService,
-            activationGate: AccountActivationCoordinator.forPreferences(
-              preferences,
+    return SocialSignInScope(
+      child: BlocProvider(
+        create: (_) =>
+            WelcomeBloc(
+              userProfilesDao: db.userProfilesDao,
+              authService: authService,
+              activationGate: AccountActivationCoordinator.forPreferences(
+                preferences,
+              ),
+              deletionPendingPubkeyHex: deletionPendingPubkeyHex,
+            )..add(
+              WelcomeStarted(
+                initialSelectedPubkeyHex: initialSelectedPubkeyHex,
+              ),
             ),
-            deletionPendingPubkeyHex: deletionPendingPubkeyHex,
-          )..add(
-            WelcomeStarted(initialSelectedPubkeyHex: initialSelectedPubkeyHex),
-          ),
-      child: _WelcomeView(
-        isAuthLoading: isAuthLoading,
-        guestEntry:
-            guestEntry &&
-            initialSelectedPubkeyHex == null &&
-            authState == AuthState.unauthenticated &&
-            deletionPendingPubkeyHex == null &&
-            authService.lastError == null &&
-            ref.watch(guestClassicsBaseProvider) != null,
-        cleanupRequired:
-            authService.lastFailureReason ==
-            AuthFailureReason.accountCleanupFailed,
-        lastError:
-            authService.lastFailureReason ==
-                AuthFailureReason.accountCleanupFailed
-            ? context.l10n.authAccountCleanupFailed
-            : authService.lastError,
+        child: _WelcomeView(
+          isAuthLoading: isAuthLoading,
+          guestEntry:
+              guestEntry &&
+              initialSelectedPubkeyHex == null &&
+              authState == AuthState.unauthenticated &&
+              deletionPendingPubkeyHex == null &&
+              authService.lastError == null &&
+              ref.watch(guestClassicsBaseProvider) != null,
+          cleanupRequired:
+              authService.lastFailureReason ==
+              AuthFailureReason.accountCleanupFailed,
+          lastError:
+              authService.lastFailureReason ==
+                  AuthFailureReason.accountCleanupFailed
+              ? context.l10n.authAccountCleanupFailed
+              : authService.lastError,
+        ),
       ),
     );
   }
@@ -311,9 +317,20 @@ class _NewUserLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final socialSignInBusy = context.select(
+      (SocialSignInCubit cubit) => cubit.state.isBusy,
+    );
     final content = Column(
       children: [
-        const Expanded(child: Center(child: AuthHeroSection())),
+        // The guest layout scrolls instead, and its SliverFillRemaining asks
+        // the column for an intrinsic height, which _FittedHero's
+        // LayoutBuilder cannot report.
+        Expanded(
+          child: openClassics == null
+              ? const _FittedHero()
+              : const Center(child: AuthHeroSection()),
+        ),
+        const SizedBox(height: 16),
 
         if (lastError != null) ...[
           ErrorMessage(message: lastError),
@@ -347,13 +364,16 @@ class _NewUserLayout extends StatelessWidget {
             ),
             const SizedBox(height: 12),
           ],
+          const SocialSignInButtons(),
           DivineButton(
             label: context.l10n.authCreateNewAccount,
             expanded: true,
             semanticIdentifier: SemanticIds.authCreateAccountButton,
-            onPressed: () => context.read<WelcomeBloc>().add(
-              const WelcomeCreateAccountRequested(),
-            ),
+            onPressed: socialSignInBusy
+                ? null
+                : () => context.read<WelcomeBloc>().add(
+                    const WelcomeCreateAccountRequested(),
+                  ),
           ),
           const SizedBox(height: 12),
           DivineButton(
@@ -361,9 +381,11 @@ class _NewUserLayout extends StatelessWidget {
             expanded: true,
             type: .secondary,
             semanticIdentifier: SemanticIds.authSignInButton,
-            onPressed: () => context.read<WelcomeBloc>().add(
-              const WelcomeLoginOptionsRequested(),
-            ),
+            onPressed: socialSignInBusy
+                ? null
+                : () => context.read<WelcomeBloc>().add(
+                    const WelcomeLoginOptionsRequested(),
+                  ),
           ),
         ],
 
@@ -375,6 +397,28 @@ class _NewUserLayout extends StatelessWidget {
       slivers: [
         SliverFillRemaining(hasScrollBody: false, child: content),
       ],
+    );
+  }
+}
+
+/// The hero at full width, scaled down only when the buttons below leave it
+/// less height than it needs: a small phone, a long headline, or the Google
+/// and Apple buttons. Where it fits it renders unscaled.
+class _FittedHero extends StatelessWidget {
+  const _FittedHero();
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) => Center(
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: SizedBox(
+            width: constraints.maxWidth,
+            child: const AuthHeroSection(),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -397,6 +441,9 @@ class _ReturningUserLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     final account = state.selectedAccount;
     if (account == null) return const SizedBox.shrink();
+    final socialSignInBusy = context.select(
+      (SocialSignInCubit cubit) => cubit.state.isBusy,
+    );
     final displayName =
         account.profile?.bestDisplayName ??
         UserProfile.defaultDisplayNameFor(account.pubkeyHex);
@@ -444,12 +491,17 @@ class _ReturningUserLayout extends StatelessWidget {
                 isLoading: isLoading,
                 expanded: true,
                 semanticIdentifier: SemanticIds.authContinueAsButton,
-                onPressed: () => context.read<WelcomeBloc>().add(
-                  const WelcomeLogBackInRequested(),
-                ),
+                onPressed: socialSignInBusy
+                    ? null
+                    : () => context.read<WelcomeBloc>().add(
+                        const WelcomeLogBackInRequested(),
+                      ),
               ),
 
               const SizedBox(height: 12),
+
+              // Sign in to another account with Apple or Google.
+              SocialSignInButtons(enabled: !isLoading),
 
               // Login with another account.
               DivineButton(
@@ -457,7 +509,7 @@ class _ReturningUserLayout extends StatelessWidget {
                 expanded: true,
                 type: .secondary,
                 semanticIdentifier: SemanticIds.authUseAnotherAccountButton,
-                onPressed: isLoading
+                onPressed: isLoading || socialSignInBusy
                     ? null
                     : () => context.read<WelcomeBloc>().add(
                         const WelcomeLoginOptionsRequested(),
@@ -472,7 +524,7 @@ class _ReturningUserLayout extends StatelessWidget {
                 expanded: true,
                 type: .secondary,
                 semanticIdentifier: SemanticIds.authCreateAccountButton,
-                onPressed: isLoading
+                onPressed: isLoading || socialSignInBusy
                     ? null
                     : () => context.read<WelcomeBloc>().add(
                         const WelcomeCreateAccountRequested(),

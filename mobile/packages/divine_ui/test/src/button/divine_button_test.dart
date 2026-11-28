@@ -20,6 +20,7 @@ void main() {
       DivineButtonSize size = DivineButtonSize.base,
       DivineIconName? leadingIcon,
       DivineIconName? trailingIcon,
+      bool tintLeadingIcon = true,
       bool expanded = false,
       bool isLoading = false,
       String? semanticLabel,
@@ -37,6 +38,7 @@ void main() {
               size: size,
               leadingIcon: leadingIcon,
               trailingIcon: trailingIcon,
+              tintLeadingIcon: tintLeadingIcon,
               expanded: expanded,
               isLoading: isLoading,
               semanticLabel: semanticLabel,
@@ -287,6 +289,105 @@ void main() {
 
         final divineIcon = tester.widget<DivineIcon>(find.byType(DivineIcon));
         expect(divineIcon.color, VineTheme.onErrorContainer);
+      });
+
+      for (final (name, theme, colors) in [
+        ('dark', VineTheme.theme, VineTheme.darkColors),
+        ('light', VineTheme.lightTheme, VineTheme.lightColors),
+      ]) {
+        testWidgets('contrast type is outlined with pure black or white '
+            'content in $name mode', (tester) async {
+          await tester.pumpWidget(
+            buildTestWidget(
+              theme: theme,
+              label: 'Continue with Apple',
+              type: DivineButtonType.contrast,
+              leadingIcon: DivineIconName.appleSignIn,
+              onPressed: () {},
+            ),
+          );
+
+          final decoration =
+              tester.widget<Ink>(find.byType(Ink)).decoration! as BoxDecoration;
+          final border = decoration.border! as Border;
+          final content = name == 'dark'
+              ? const Color(0xFFFFFFFF)
+              : const Color(0xFF000000);
+          expect(decoration.color, colors.outlineButtonSurface);
+          expect(border.top.width, 1);
+          expect(border.top.color, colors.outlineButtonBorder);
+          expect(
+            tester.widget<DivineIcon>(find.byType(DivineIcon)).color,
+            content,
+          );
+          expect(
+            tester.widget<Text>(find.text('Continue with Apple')).style?.color,
+            content,
+          );
+        });
+      }
+
+      for (final (name, theme, colors) in [
+        ('dark', VineTheme.theme, VineTheme.darkColors),
+        ('light', VineTheme.lightTheme, VineTheme.lightColors),
+      ]) {
+        testWidgets('outline type has a 1px border in $name mode', (
+          tester,
+        ) async {
+          await tester.pumpWidget(
+            buildTestWidget(
+              theme: theme,
+              type: DivineButtonType.outline,
+              leadingIcon: DivineIconName.googleSignIn,
+              onPressed: () {},
+            ),
+          );
+
+          final decoration =
+              tester.widget<Ink>(find.byType(Ink)).decoration! as BoxDecoration;
+          final border = decoration.border! as Border;
+          expect(decoration.color, colors.outlineButtonSurface);
+          expect(border.top.width, 1);
+          expect(border.top.color, colors.outlineButtonBorder);
+          expect(
+            tester.widget<DivineIcon>(find.byType(DivineIcon)).color,
+            colors.onOutlineButtonSurface,
+          );
+        });
+      }
+
+      testWidgets('outline and primary buttons share the same height', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildTestWidget(type: DivineButtonType.outline, onPressed: () {}),
+        );
+        final outlineHeight = tester.getSize(find.byType(DivineButton)).height;
+        expect(outlineHeight, 48);
+        await tester.pumpWidget(buildTestWidget(onPressed: () {}));
+
+        expect(tester.getSize(find.byType(DivineButton)).height, outlineHeight);
+      });
+
+      testWidgets('keeps a brand mark in its own colours when asked', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildTestWidget(
+            type: DivineButtonType.contrast,
+            leadingIcon: DivineIconName.googleSignIn,
+            tintLeadingIcon: false,
+            trailingIcon: DivineIconName.caretRight,
+            onPressed: () {},
+          ),
+        );
+
+        final icons = tester
+            .widgetList<DivineIcon>(find.byType(DivineIcon))
+            .toList();
+        expect(icons.first.icon, DivineIconName.googleSignIn);
+        expect(icons.first.color, isNull);
+        expect(icons.last.color, VineTheme.darkColors.onContrastButton);
       });
     });
 
@@ -638,9 +739,7 @@ void main() {
         for (final size in [DivineButtonSize.base, DivineButtonSize.small]) {
           testWidgets(
             'quiet ${size.name} is accessible on ${theme.brightness}',
-            (
-              tester,
-            ) async {
+            (tester) async {
               var pressed = false;
               await tester.pumpWidget(
                 buildTestWidget(
