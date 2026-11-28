@@ -35,6 +35,9 @@ double _luminance(VideoEffectFrame frame) {
       : math.pow((channel + 0.055) / 1.055, 2.4).toDouble();
 }
 
+// A conservative bound for the fixtures below, rather than a general flash
+// oracle: consecutive increases can belong to one monotone transition. Use
+// the alternating-transition oracle when that distinction matters.
 int _mostLuminanceRises(
   List<VideoEffect> effects,
   Duration loopPoint, {
@@ -61,6 +64,57 @@ int _mostLuminanceRises(
         .where((at) => at >= start && at - start < const Duration(seconds: 1))
         .length;
     most = math.max(most, count);
+  }
+  return most;
+}
+
+// W3C G19 counts seven alternating qualified transitions as 3.5 flashes.
+// Repeated increases with no intervening fall remain one transition.
+int _mostAlternatingTransitions(
+  List<VideoEffect> effects,
+  Duration loopPoint, {
+  required int fpsNumerator,
+  required int fpsDenominator,
+}) {
+  final samples = <({Duration at, double level})>[];
+  for (var pass = 0; pass < 3; pass++) {
+    for (var frame = 0; ; frame++) {
+      final at = Duration(
+        microseconds: frame * fpsDenominator * 1000000 ~/ fpsNumerator,
+      );
+      if (at >= loopPoint) break;
+      samples.add((
+        at: loopPoint * pass + at,
+        level: _luminance(VideoEffect.resolve(effects, at)),
+      ));
+    }
+  }
+  var most = 0;
+  for (var start = 1; start < samples.length; start++) {
+    var direction = 0;
+    var extreme = samples[start - 1].level;
+    var changes = 0;
+    for (
+      var i = start;
+      i < samples.length &&
+          samples[i].at - samples[start].at < const Duration(seconds: 1);
+      i++
+    ) {
+      final now = samples[i].level;
+      if (direction >= 0 && extreme - now >= 0.1 && now < 0.8) {
+        direction = -1;
+        extreme = now;
+        changes++;
+      } else if (direction <= 0 && now - extreme >= 0.1 && extreme < 0.8) {
+        direction = 1;
+        extreme = now;
+        changes++;
+      } else if ((direction > 0 && now > extreme) ||
+          (direction < 0 && now < extreme)) {
+        extreme = now;
+      }
+    }
+    most = math.max(most, changes);
   }
   return most;
 }
@@ -381,6 +435,100 @@ void main() {
       expect(effects, [strobe]);
       expect(VideoEffect.resolve(effects, _ms(640)).flash, greaterThan(0));
       expect(VideoEffect.resolve(effects, _ms(660)), VideoEffectFrame.none);
+    });
+    test('keeps beat-triggered negative duration safe on fractional fps', () {
+      final map = _timeline(const Duration(seconds: 6));
+      const authored = VideoEffect.negativeFlash(
+        intensity: 0.47003811240815796,
+        startTime: Duration(milliseconds: 1978),
+        endTime: Duration(seconds: 4),
+        params: {VideoEffectParams.length: 1.5531477359951327},
+      );
+      const beats = [
+        Duration(microseconds: 2378000),
+        Duration(microseconds: 2711334),
+        Duration(microseconds: 3044667),
+        Duration(microseconds: 3378000),
+      ];
+      final effects = videoEffectsOnOutput(
+        [
+          const EditorVideoEffect(
+            id: 'negative',
+            effect: authored,
+            onBeat: true,
+          ),
+        ],
+        map,
+        beats: beats,
+      );
+
+      expect(
+        _mostAlternatingTransitions(
+          effects,
+          map.loopPoint,
+          fpsNumerator: 30000,
+          fpsDenominator: 1001,
+        ),
+        lessThanOrEqualTo(6),
+      );
+      expect(effects.single.triggers, hasLength(4));
+      expect(effects.single.params, isNot(contains(VideoEffectParams.length)));
+      expect(authored.params, {VideoEffectParams.length: 1.5531477359951327});
+      const legacyHit = VideoEffect.negativeFlash(
+        intensity: 0.47003811240815796,
+        startTime: Duration(milliseconds: 1978),
+        endTime: Duration(seconds: 4),
+        triggers: beats,
+      );
+      for (var frame = 0; frame < 180; frame++) {
+        final at = Duration(microseconds: frame * 1001000000 ~/ 30000);
+        expect(VideoEffect.resolve(effects, at), legacyHit.frameAt(at));
+      }
+
+      final continuous = videoEffectsOnOutput([
+        const EditorVideoEffect(id: 'negative', effect: authored),
+      ], map);
+      expect(continuous.single.params, authored.params);
+      expect(VideoEffect.resolve(continuous, _ms(2070)).invert, 1);
+    });
+    test('recognizes seven opposing transitions in the original failure', () {
+      final raw = [
+        VideoEffect.strobe(
+          endTime: _ms(900),
+          params: const {VideoEffectParams.tempo: 0.9},
+        ),
+        VideoEffect.negativeFlash(startTime: _ms(1000)),
+      ];
+      expect(
+        _mostAlternatingTransitions(
+          raw,
+          _ms(2000),
+          fpsNumerator: 120,
+          fpsDenominator: 1,
+        ),
+        greaterThanOrEqualTo(7),
+      );
+    });
+
+    test('counts a monotone brightening across the loop as one transition', () {
+      final raw = [
+        VideoEffect.strobe(endTime: _ms(1984), intensity: 0.47003811240815796),
+        VideoEffect.negativeFlash(
+          startTime: _ms(1984),
+          intensity: 0.47003811240815796,
+          params: const {VideoEffectParams.length: 1.5531477359951327},
+          triggers: [_ms(2381), _ms(2811), _ms(3241)],
+        ),
+      ];
+      expect(
+        _mostAlternatingTransitions(
+          raw,
+          _ms(3527),
+          fpsNumerator: 24,
+          fpsDenominator: 1,
+        ),
+        6,
+      );
     });
   });
 }

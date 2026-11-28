@@ -10,7 +10,8 @@ import 'package:openvine/models/video_editor/effect_settings_catalog.dart';
 import 'package:openvine/models/video_editor/hit_timing_settings.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/video_editor_effect_settings_panel.dart';
 import 'package:openvine/widgets/video_editor/video_editor_color_row.dart';
-import 'package:pro_video_editor/pro_video_editor.dart' show VideoEffectType;
+import 'package:pro_video_editor/pro_video_editor.dart'
+    show VideoEffectParams, VideoEffectType;
 
 import '../../../helpers/scroll.dart';
 import '../../../helpers/text_lines.dart';
@@ -104,6 +105,35 @@ void main() {
         );
 
         expect(find.text(l10n.videoEditorEffectsOnBeatNoSound), findsOneWidget);
+      });
+
+      testWidgets('uses fixed negative hits on the beat and restores length '
+          'when it is turned off', (tester) async {
+        await pumpPanel(
+          tester,
+          const EditorEffectType.builtIn(VideoEffectType.negativeFlash),
+        );
+        cubit.setSetting(VideoEffectParams.length, 1.55);
+        await tester.pump();
+        final length = find.text(l10n.videoEditorEffectSettingLength);
+        expect(length, findsOneWidget);
+
+        await tester.tap(find.text(l10n.videoEditorEffectsOnBeat));
+        await tester.pumpAndSettle();
+
+        expect(length, findsNothing);
+        expect(
+          cubit.state.selection!.effect!.params[VideoEffectParams.length],
+          1.55,
+        );
+        await tester.tap(find.text(l10n.videoEditorEffectsOnBeat));
+        await tester.pumpAndSettle();
+
+        expect(length, findsOneWidget);
+        expect(
+          cubit.state.selection!.effect!.params[VideoEffectParams.length],
+          1.55,
+        );
       });
 
       for (final type in [
