@@ -11,8 +11,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  # The native wire contract is verified against this SDK version.
-  pro_video_editor: 2.54.0
+  # The native wire contract is verified against the 2.54.x SDK series.
+  pro_video_editor: ^2.54.0
 
 dev_dependencies:
   flutter_test:
