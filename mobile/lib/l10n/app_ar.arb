@@ -1288,6 +1288,7 @@
   "authContinueAs": "المتابعة باسم {displayName}",
   "authRecoveryDraftsOwner": "مسوداتك ومقاطعك محفوظة لهذا الحساب",
   "authRecoveryOtherAccountWarning": "تسجيل الدخول هنا سيُخفي تلك المسودات والمقاطع",
+  "authWatchClassicsAsGuest": "شاهد الكلاسيكيات كضيف",
   "authTermsPrefix": "باختيارك أحد الخيارات أدناه، فإنك تؤكد أن عمرك 16 عامًا على الأقل (أو أنك أكملت ",
   "authTermsAgeAuthorizationCta": "تفويض العمر من Divine",
   "@authTermsAgeAuthorizationCta": {

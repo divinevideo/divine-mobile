@@ -3513,6 +3513,9 @@ class AppLocalizationsDe extends AppLocalizations {
       'Hier anmelden verbirgt diese Entwürfe und Clips';
 
   @override
+  String get authWatchClassicsAsGuest => 'Klassiker als Gast ansehen';
+
+  @override
   String get authTermsPrefix =>
       'Mit einer Auswahl unten bestätigst du, dass du mindestens 16 Jahre alt bist (oder die ';
 

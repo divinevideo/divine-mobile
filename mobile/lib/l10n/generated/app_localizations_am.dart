@@ -3396,6 +3396,9 @@ class AppLocalizationsAm extends AppLocalizations {
       'እዚህ መግባት እነዚያ ረቂቆች እና ክሊፖች ይደብቃቸዋል';
 
   @override
+  String get authWatchClassicsAsGuest => 'ክላሲኮችን እንደ እንግዳ ይመልከቱ';
+
+  @override
   String get authTermsPrefix => 'ከታች አማራጭ በመምረጥህ ቢያንስ 16 ዓመት እንደሆንህ (ወይም ';
 
   @override

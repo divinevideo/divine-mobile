@@ -1291,6 +1291,7 @@
   "authContinueAs": "Continuar como {displayName}",
   "authRecoveryDraftsOwner": "Seus rascunhos e clipes estão salvos nesta conta",
   "authRecoveryOtherAccountWarning": "Entrar aqui vai esconder esses rascunhos e clipes",
+  "authWatchClassicsAsGuest": "Assistir aos clássicos como visitante",
   "authTermsPrefix": "Ao escolher uma opção abaixo, você confirma que tem pelo menos 16 anos (ou concluiu a ",
   "authTermsAgeAuthorizationCta": "autorização de idade da Divine",
   "@authTermsAgeAuthorizationCta": {

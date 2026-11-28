@@ -1375,6 +1375,7 @@
   "authContinueAs": "Продължи като {displayName}",
   "authRecoveryDraftsOwner": "Черновите и клиповете ти са запазени за този акаунт",
   "authRecoveryOtherAccountWarning": "Влизането тук ще скрие тези чернови и клипове",
+  "authWatchClassicsAsGuest": "Гледай класики като гост",
   "authTermsPrefix": "Като избереш опция по-долу, потвърждаваш, че си на поне 16 години (или си преминал(а) ",
   "authTermsAgeAuthorizationCta": "възрастовото одобрение на Divine",
   "@authTermsAgeAuthorizationCta": {

@@ -1295,6 +1295,7 @@
   "authContinueAs": "Continuar como {displayName}",
   "authRecoveryDraftsOwner": "Tus borradores y clips están guardados en esta cuenta",
   "authRecoveryOtherAccountWarning": "Iniciar sesión aquí ocultará esos borradores y clips",
+  "authWatchClassicsAsGuest": "Ver clásicos como invitado",
   "authTermsPrefix": "Al elegir una opción abajo, confirmas que tienes al menos 16 años (o que completaste la ",
   "authTermsAgeAuthorizationCta": "autorización de edad de Divine",
   "@authTermsAgeAuthorizationCta": {

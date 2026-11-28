@@ -934,6 +934,7 @@
   "authContinueAs": "Magpatuloy bilang {displayName}",
   "authRecoveryDraftsOwner": "Ang iyong mga draft at clip ay naka-save para sa account na ito",
   "authRecoveryOtherAccountWarning": "Ang pag-sign in dito ay magtatago ng mga draft at clip na iyon",
+  "authWatchClassicsAsGuest": "Manood ng mga klasiko bilang bisita",
   "authTermsPrefix": "Sa pagpili ng opsyon sa ibaba, kinukumpirma mong hindi ka bababa sa 16 taong gulang (o natapos mo na ang ",
   "authTermsAgeAuthorizationCta": "pag-authorize ng edad ng Divine",
   "@authTermsAgeAuthorizationCta": {

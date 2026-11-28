@@ -58,7 +58,10 @@ class WelcomeRouteData extends GoRouteData with $WelcomeRouteData {
   @override
   Widget build(BuildContext context, GoRouterState state) {
     _captureProductAnalyticsUtm(context, state);
-    return WelcomeScreen(initialSelectedPubkeyHex: selectedPubkey);
+    return WelcomeScreen(
+      initialSelectedPubkeyHex: selectedPubkey,
+      guestEntry: state.uri.toString() == WelcomeScreen.guestEntryPath,
+    );
   }
 }
 

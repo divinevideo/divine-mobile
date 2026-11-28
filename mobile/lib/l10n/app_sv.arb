@@ -1291,6 +1291,7 @@
   "authContinueAs": "Fortsätt som {displayName}",
   "authRecoveryDraftsOwner": "Dina utkast och klipp är sparade för det här kontot",
   "authRecoveryOtherAccountWarning": "Loggar du in här döljs de utkasten och klippen",
+  "authWatchClassicsAsGuest": "Titta på klassiker som gäst",
   "authTermsPrefix": "Genom att välja ett alternativ nedan bekräftar du att du är minst 16 år (eller har genomfört ",
   "authTermsAgeAuthorizationCta": "Divines åldersgodkännande",
   "@authTermsAgeAuthorizationCta": {

@@ -3473,6 +3473,9 @@ class AppLocalizationsUr extends AppLocalizations {
       'یہاں سائن ان کرنے سے وہ مسودے اور کلپس چھپ جائیں گے';
 
   @override
+  String get authWatchClassicsAsGuest => 'بطور مہمان کلاسکس دیکھیں';
+
+  @override
   String get authTermsPrefix =>
       'نیچے کوئی آپشن منتخب کر کے، آپ تصدیق کرتے ہیں کہ آپ کی عمر کم از کم 16 سال ہے (یا آپ نے ';
 

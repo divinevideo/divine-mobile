@@ -3408,6 +3408,9 @@ class AppLocalizationsTr extends AppLocalizations {
       'Buradan giriş yaparsan o taslaklar ve klipler gizlenir';
 
   @override
+  String get authWatchClassicsAsGuest => 'Klasikleri misafir olarak izle';
+
+  @override
   String get authTermsPrefix =>
       'Aşağıdaki seçeneklerden birini seçerek en az 16 yaşında olduğunu (ya da ';
 

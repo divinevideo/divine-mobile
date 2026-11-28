@@ -1648,6 +1648,7 @@
   "authContinueAs": "እንደ {displayName} ቀጥል",
   "authRecoveryDraftsOwner": "ረቂቆችዎ እና ክሊፖችዎ ለዚህ መለያ ተቀምጠዋል",
   "authRecoveryOtherAccountWarning": "እዚህ መግባት እነዚያ ረቂቆች እና ክሊፖች ይደብቃቸዋል",
+  "authWatchClassicsAsGuest": "ክላሲኮችን እንደ እንግዳ ይመልከቱ",
   "authTermsPrefix": "ከታች አማራጭ በመምረጥህ ቢያንስ 16 ዓመት እንደሆንህ (ወይም ",
   "authTermsAgeAuthorizationCta": "የDivine የዕድሜ ፈቃድ",
   "@authTermsAgeAuthorizationCta": {

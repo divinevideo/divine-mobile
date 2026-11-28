@@ -3535,6 +3535,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Signing in here will hide those drafts and clips';
 
   @override
+  String get authWatchClassicsAsGuest => 'Watch Classics as a guest';
+
+  @override
   String get authTermsPrefix =>
       'By selecting an option below, you confirm you are at least 16 years old (or have completed ';
 

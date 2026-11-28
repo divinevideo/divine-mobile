@@ -3584,6 +3584,10 @@ class AppLocalizationsRo extends AppLocalizations {
       'Autentificarea aici le va ascunde';
 
   @override
+  String get authWatchClassicsAsGuest =>
+      'Urmărește clipuri clasice ca vizitator';
+
+  @override
   String get authTermsPrefix =>
       'Alegând o opțiune de mai jos, confirmi că ai cel puțin 16 ani (sau ai finalizat ';
 

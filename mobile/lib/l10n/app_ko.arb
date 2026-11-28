@@ -871,6 +871,7 @@
   "authContinueAs": "{displayName}(으)로 계속",
   "authRecoveryDraftsOwner": "임시저장 및 클립이 이 계정에 저장되어 있어요",
   "authRecoveryOtherAccountWarning": "여기서 로그인하면 해당 임시저장과 클립이 숨겨져요",
+  "authWatchClassicsAsGuest": "게스트로 클래식 보기",
   "authTermsPrefix": "아래 옵션을 선택하면 만 16세 이상임(또는 ",
   "authTermsAgeAuthorizationCta": "Divine 연령 인증",
   "@authTermsAgeAuthorizationCta": {

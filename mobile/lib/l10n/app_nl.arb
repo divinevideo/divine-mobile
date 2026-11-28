@@ -1291,6 +1291,7 @@
   "authContinueAs": "Doorgaan als {displayName}",
   "authRecoveryDraftsOwner": "Je concepten en clips zijn opgeslagen voor dit account",
   "authRecoveryOtherAccountWarning": "Hier inloggen verbergt die concepten en clips",
+  "authWatchClassicsAsGuest": "Bekijk klassiekers als gast",
   "authTermsPrefix": "Door hieronder een optie te kiezen bevestig je dat je minstens 16 jaar bent (of de ",
   "authTermsAgeAuthorizationCta": "Divine-leeftijdsverificatie",
   "@authTermsAgeAuthorizationCta": {

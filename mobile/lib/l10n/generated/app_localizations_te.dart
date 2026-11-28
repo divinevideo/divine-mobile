@@ -3606,6 +3606,9 @@ class AppLocalizationsTe extends AppLocalizations {
       'ఇక్కడ సైన్ ఇన్ చేయడం వల్ల ఆ చిత్తుప్రతులు మరియు క్లిప్‌లు దాచబడతాయి';
 
   @override
+  String get authWatchClassicsAsGuest => 'అతిథిగా క్లాసిక్స్ చూడండి';
+
+  @override
   String get authTermsPrefix =>
       'దిగువన ఉన్న ఎంపికను ఎంచుకోవడం ద్వారా, మీకు కనీసం 16 సంవత్సరాలు (లేదా పూర్తి చేసినట్లు) నిర్ధారిస్తారు ';
 

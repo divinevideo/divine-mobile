@@ -1291,6 +1291,7 @@
   "authContinueAs": "Continuă ca {displayName}",
   "authRecoveryDraftsOwner": "Ciornele și clipurile tale sunt salvate pentru acest cont",
   "authRecoveryOtherAccountWarning": "Autentificarea aici le va ascunde",
+  "authWatchClassicsAsGuest": "Urmărește clipuri clasice ca vizitator",
   "authTermsPrefix": "Alegând o opțiune de mai jos, confirmi că ai cel puțin 16 ani (sau ai finalizat ",
   "authTermsAgeAuthorizationCta": "autorizarea de vârstă Divine",
   "@authTermsAgeAuthorizationCta": {

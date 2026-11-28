@@ -78,3 +78,38 @@ and trusted discovery facets. The starting 60/20/20 mix and immediate signal
 weights are experimental. Online changes in satisfaction, discovery, skip rate,
 latency and resources require a controlled rollout; local tests are not evidence
 of that product effect.
+
+## Fresh-install guest playback
+
+For an iOS or Android QA build, set `GUEST_CLASSICS_MANIFEST_BASE_URL` to the
+HTTPS directory containing the reviewed starter manifests. An empty value
+keeps the normal welcome screen. On a fresh ordinary launch, a configured
+build shows **Watch Classics as a guest** below the existing age and terms
+notice. Choosing it records the age and terms attestation on the device before
+requesting a catalog. The first eligible classic starts muted. Closing the
+player returns to the account and Greenlight choices. Deep links, account
+recovery, pending terms, account switching and returning accounts retain
+their existing entry.
+
+The client requests `v1/<language>/muted.json` in viewing preference order,
+then `v1/und/muted.json`. A valid empty list or HTTP 404 advances to the
+next language. The player checks a fresh `audible.json` before enabling
+sound. The first rendered frame triggers preparation of the next clip.
+Transport errors, expired manifests and withdrawals preserve the existing
+welcome flow. Closing or backgrounding releases the player. Watching again
+starts with another tap and a fresh manifest. The welcome screen keeps its
+recently seen set in memory only while it stays on top. Opening another
+screen from it, such as age authorization, starts a fresh set on return.
+
+When the approved manifest includes discovery tags, swipes update the unseen
+order from early skips, completions and time spent in a second loop. Two
+distinct completed clips with the same tag are required before boosting that
+tag. The reached and prepared clips keep their positions. Buffering and
+unpresented frames do not count. Outcomes stay in memory for the current
+manifest and are discarded on close, replacement or backgrounding. Omitted
+tags retain the original catalog ordering.
+
+For local QA, override `guestClassicsObserverProvider` to observe a native
+first rendered frame and a page change. This build has no guest behavioral
+upload or experiment enrollment. Validate first-frame latency, audio behavior
+and physical-device playback with reviewed media before enrollment.

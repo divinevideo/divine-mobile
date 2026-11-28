@@ -1724,6 +1724,7 @@
   },
   "authRecoveryDraftsOwner": "你的草稿和片段都保存在此账号下",
   "authRecoveryOtherAccountWarning": "在这里登录会隐藏那些草稿和片段",
+  "authWatchClassicsAsGuest": "以访客身份观看经典视频",
   "authTermsPrefix": "选择下方任一选项，即表示你确认自己已满 16 周岁（或已完成 ",
   "authTermsAgeAuthorizationCta": "Divine 年龄授权",
   "@authTermsAgeAuthorizationCta": {

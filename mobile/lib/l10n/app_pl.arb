@@ -1291,6 +1291,7 @@
   "authContinueAs": "Kontynuuj jako {displayName}",
   "authRecoveryDraftsOwner": "Twoje szkice i klipy są zapisane dla tego konta",
   "authRecoveryOtherAccountWarning": "Zalogowanie się tutaj ukryje te szkice i klipy",
+  "authWatchClassicsAsGuest": "Oglądaj klasyki jako gość",
   "authTermsPrefix": "Wybierając opcję poniżej, potwierdzasz, że masz co najmniej 16 lat (lub przeszedłeś(-aś) ",
   "authTermsAgeAuthorizationCta": "weryfikację wieku Divine",
   "@authTermsAgeAuthorizationCta": {

@@ -113,6 +113,25 @@ void main() {
     Widget build(String name, String location) =>
         routeNamed(name).builder!(context, _FakeGoRouterState(location));
 
+    testWidgets(
+      'only the exact ordinary guest entry opts welcome into Classics',
+      (tester) async {
+        await captureContext(tester);
+        for (final path in [
+          WelcomeScreen.guestEntryPath,
+          WelcomeScreen.path,
+          '/welcome?selectedPubkey=account',
+          '/welcome?guestClassics=1&from=link',
+        ]) {
+          final screen = routeNamed('welcome').builder!(
+            context,
+            _FakeGoRouterState(path),
+          ) as WelcomeScreen;
+          expect(screen.guestEntry, path == WelcomeScreen.guestEntryPath);
+        }
+      },
+    );
+
     group('registration', () {
       // The redirect gate compares these strings, so a typed route that
       // drifts from them changes who may reach the sign-in screens.

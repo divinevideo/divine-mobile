@@ -3528,6 +3528,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Se connecter ici masquera ces brouillons et clips';
 
   @override
+  String get authWatchClassicsAsGuest =>
+      'Regarder les classiques en tant qu’invité';
+
+  @override
   String get authTermsPrefix =>
       'En choisissant une option ci-dessous, tu confirmes avoir au moins 16 ans (ou avoir effectué l\'';
 

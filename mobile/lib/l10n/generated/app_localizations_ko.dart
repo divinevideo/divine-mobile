@@ -3266,6 +3266,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get authRecoveryOtherAccountWarning => '여기서 로그인하면 해당 임시저장과 클립이 숨겨져요';
 
   @override
+  String get authWatchClassicsAsGuest => '게스트로 클래식 보기';
+
+  @override
   String get authTermsPrefix => '아래 옵션을 선택하면 만 16세 이상임(또는 ';
 
   @override
