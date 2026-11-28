@@ -46,7 +46,8 @@ class SoundSearchResponse {
   bool get hasMore => nextCursor != null;
 }
 
-/// How a sound list without a search query is ordered.
+/// How a sound list without a search query is ordered, or a search's equally
+/// good matches.
 enum SoundListSort {
   /// Newest first.
   recent,

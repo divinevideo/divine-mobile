@@ -866,39 +866,6 @@ void main() {
         });
       });
 
-      test('narrows the relay results to the followed accounts', () async {
-        answerTagQuery([
-          createAudioEvent(
-            id: testEventId1,
-            pubkey: testPubkey1,
-            title: 'Rain followed',
-          ),
-          createAudioEvent(
-            id: testEventId2,
-            pubkey: testPubkey2,
-            title: 'Rain stranger',
-          ),
-        ]);
-
-        final results = await repository.searchSounds(
-          'rain',
-          followedBy: const [testPubkey1],
-        );
-
-        expect(results.sounds.map((sound) => sound.id), [testEventId1]);
-        final filters =
-            verify(
-                  () => mockNostrClient.queryEventsDetailed(
-                    captureAny(that: isTagQuery),
-                  ),
-                ).captured.single
-                as List<Filter>;
-        expect(
-          filters.map((filter) => filter.authors),
-          everyElement([testPubkey1]),
-        );
-      });
-
       test('narrows the relay results to a kind by their tags', () async {
         answerTagQuery([
           createAudioEvent(
@@ -974,6 +941,7 @@ void main() {
               query: any(named: 'query'),
               kind: any(named: 'kind'),
               authors: any(named: 'authors'),
+              sort: any(named: 'sort'),
               limit: any(named: 'limit'),
               cursor: any(named: 'cursor'),
             ),
@@ -989,6 +957,7 @@ void main() {
               query: any(named: 'query'),
               kind: any(named: 'kind'),
               authors: any(named: 'authors'),
+              sort: any(named: 'sort'),
               limit: any(named: 'limit'),
               cursor: any(named: 'cursor'),
             ),
@@ -1085,41 +1054,29 @@ void main() {
           ).called(1);
         });
 
-        test('searches only the followed accounts it can ask about', () async {
+        test('asks Funnelcake to order equal matches as picked', () async {
           answerSearch(const []);
 
+          await searching.searchSounds('rain', sort: SoundListSort.trending);
           await searching.searchSounds(
             'rain',
-            followedBy: const [testPubkey1, 'not-a-key'],
+            sort: SoundListSort.recent,
+            cursor: '50',
           );
 
           verify(
             () => funnelcake.searchSounds(
               query: 'rain',
-              authors: [testPubkey1],
+              sort: SoundListSort.trending,
             ),
           ).called(1);
-        });
-
-        test('finds nothing, without asking, when no followed account is '
-            'left', () async {
-          final results = await searching.searchSounds(
-            'rain',
-            followedBy: const ['not-a-key'],
-          );
-
-          expect(results.sounds, isEmpty);
-          expect(results.relays, SoundSearchRelays.notAsked);
-          verifyNever(
+          verify(
             () => funnelcake.searchSounds(
-              query: any(named: 'query'),
-              kind: any(named: 'kind'),
-              authors: any(named: 'authors'),
-              limit: any(named: 'limit'),
-              cursor: any(named: 'cursor'),
+              query: 'rain',
+              sort: SoundListSort.recent,
+              cursor: '50',
             ),
-          );
-          verifyNever(() => mockNostrClient.queryEventsDetailed(any()));
+          ).called(1);
         });
 
         test('asks Funnelcake for the page after cursor', () async {
@@ -1254,6 +1211,7 @@ void main() {
                 query: any(named: 'query'),
                 kind: any(named: 'kind'),
                 authors: any(named: 'authors'),
+                sort: any(named: 'sort'),
                 limit: any(named: 'limit'),
                 cursor: any(named: 'cursor'),
               ),
@@ -1271,6 +1229,7 @@ void main() {
               query: any(named: 'query'),
               kind: any(named: 'kind'),
               authors: any(named: 'authors'),
+              sort: any(named: 'sort'),
               limit: any(named: 'limit'),
               cursor: any(named: 'cursor'),
             ),
@@ -2466,6 +2425,7 @@ void main() {
             query: any(named: 'query'),
             kind: any(named: 'kind'),
             authors: any(named: 'authors'),
+            sort: any(named: 'sort'),
             limit: any(named: 'limit'),
             cursor: any(named: 'cursor'),
           ),

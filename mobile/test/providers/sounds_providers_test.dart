@@ -953,7 +953,7 @@ void main() {
           () => mockRepository.searchSounds(
             any(),
             kind: any(named: 'kind'),
-            followedBy: any(named: 'followedBy'),
+            sort: any(named: 'sort'),
             limit: any(named: 'limit'),
           ),
         ).thenAnswer(
@@ -1002,28 +1002,20 @@ void main() {
         ).called(1);
       });
 
-      test('searches within the followed accounts for For you', () async {
-        final followRepository = _MockFollowRepository();
-        when(
-          () => followRepository.followingPubkeys,
-        ).thenReturn(const ['alice', 'bob']);
+      test('orders equal matches as it is told', () async {
         final container = ProviderContainer(
           overrides: [
             soundsRepositoryProvider.overrideWithValue(mockRepository),
-            followRepositoryProvider.overrideWithValue(followRepository),
           ],
         );
         addTearDown(container.dispose);
 
         await container.read(
-          soundSearchResultsProvider('rain', followed: true).future,
+          soundSearchResultsProvider('rain', sort: SoundListSort.recent).future,
         );
 
         verify(
-          () => mockRepository.searchSounds(
-            'rain',
-            followedBy: const ['alice', 'bob'],
-          ),
+          () => mockRepository.searchSounds('rain', sort: SoundListSort.recent),
         ).called(1);
       });
 
@@ -1130,6 +1122,7 @@ void main() {
         when(
           () => mockRepository.searchSounds(
             any(),
+            sort: any(named: 'sort'),
             limit: any(named: 'limit'),
             cursor: any(named: 'cursor'),
           ),
@@ -1138,6 +1131,34 @@ void main() {
               pageAt(invocation.namedArguments[#cursor] as String?),
         );
       }
+
+      test('asks for the next page in the same order', () async {
+        answerSearch(
+          (cursor) => cursor == null
+              ? searchPage([
+                  createTestAudioEvent(id: 'first'),
+                ], nextCursor: '50')
+              : searchPage([createTestAudioEvent(id: 'next')]),
+        );
+        final container = buildContainer();
+        final search = soundSearchPagesProvider(
+          'cool',
+          sort: SoundListSort.trending,
+        );
+        final subscription = container.listen(search, (_, _) {});
+        addTearDown(subscription.close);
+        await container.read(search.future);
+
+        await container.read(search.notifier).loadMore();
+
+        verify(
+          () => mockRepository.searchSounds(
+            'cool',
+            sort: SoundListSort.trending,
+            cursor: '50',
+          ),
+        ).called(1);
+      });
 
       test('follows the cursor as the list is scrolled', () async {
         final best = createTestAudioEvent(id: 'best');
