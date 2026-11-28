@@ -91,6 +91,10 @@ void main() {
         effects.any((effect) => effect.type == VideoEffectType.negativeFlash),
         isTrue,
       );
+      expect(effects.first.intensity, 1);
+      expect(VideoEffect.resolve(effects, _ms(10)).flash, 1);
+      expect(VideoEffect.resolve(effects, _ms(570)).flash, 1);
+      expect(VideoEffect.resolve(effects, _ms(1010)).invert, 1);
       for (final fps in [24, 30, 60, 120]) {
         expect(
           _mostLuminanceRises(effects, map.loopPoint, fps: fps),
