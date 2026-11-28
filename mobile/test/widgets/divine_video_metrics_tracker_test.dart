@@ -336,6 +336,37 @@ void main() {
       expect(_prefs.getStringList(key), [_video.id]);
     });
 
+    testWidgets('completes Classics warmup when a qualifying clip pauses', (
+      tester,
+    ) async {
+      final viewer = authService.currentPublicKeyHex!;
+      await _prefs.setStringList(
+        ClassicsWarmup.storageKey(viewer),
+        List.generate(99, (index) => 'watched-$index'),
+      );
+      final controller = _stubController(isPlaying: true);
+      addTearDown(controller.close);
+      await tester.pumpWidget(
+        _buildTracker(
+          authService: authService,
+          analyticsService: analyticsService,
+          seenVideosService: seenVideosService,
+          controller: controller.controller,
+          isActive: true,
+          clock: () => now,
+        ),
+      );
+      expect(ClassicsWarmup.startsInClassics(_prefs, viewer), isTrue);
+
+      now = now.add(const Duration(seconds: 1));
+      controller.setState(
+        const DivineVideoPlayerState(status: PlaybackStatus.paused),
+      );
+      await tester.pump();
+
+      expect(ClassicsWarmup.startsInClassics(_prefs, viewer), isFalse);
+    });
+
     testWidgets('counts a republished video once toward Classics warmup', (
       tester,
     ) async {

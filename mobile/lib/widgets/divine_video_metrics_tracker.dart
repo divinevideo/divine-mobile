@@ -281,9 +281,13 @@ class _DivineVideoMetricsTrackerState
         now,
         suspendUpdates: state.status != PlaybackStatus.buffering,
       );
+      final playbackDuration = duration > Duration.zero
+          ? duration
+          : _lastKnownDuration;
+      _recordWarmup(widget.video, _cumulativeLoops(playbackDuration));
       _recordProductPlayback(
         widget.video,
-        duration > Duration.zero ? duration : _lastKnownDuration,
+        playbackDuration,
         switch (state.status) {
           PlaybackStatus.completed => ProductAnalyticsV2PlaybackEndReason.ended,
           PlaybackStatus.error => ProductAnalyticsV2PlaybackEndReason.error,
@@ -433,19 +437,7 @@ class _DivineVideoMetricsTrackerState
     final fractionalLoops = cumulativeLoops - _loopsFlushed;
     if (deltaSeconds <= 0 && fractionalLoops <= 0) return;
 
-    final viewer = _playbackViewer;
-    final warmup = _warmup;
-    if (warmup != null &&
-        viewer != null &&
-        viewer == _authService.currentPublicKeyHex &&
-        (cumulativeSeconds >= 1 || cumulativeLoops >= 1)) {
-      runDetached(
-        warmup.recordView(video.feedDedupKey),
-        'record a Classics warmup view',
-        logName: 'ClassicsWarmup',
-        category: LogCategory.storage,
-      );
-    }
+    _recordWarmup(video, cumulativeLoops);
 
     unawaited(
       _analyticsService
@@ -477,6 +469,24 @@ class _DivineVideoMetricsTrackerState
 
     _watchSecondsReported = cumulativeSeconds;
     _loopsFlushed = cumulativeLoops;
+  }
+
+  /// Records local progress even if the viewer pauses before the next flush.
+  void _recordWarmup(VideoEvent video, double cumulativeLoops) {
+    final viewer = _playbackViewer;
+    final warmup = _warmup;
+    if (warmup == null ||
+        viewer == null ||
+        viewer != _authService.currentPublicKeyHex ||
+        (_watchTotal.inSeconds < 1 && cumulativeLoops < 1)) {
+      return;
+    }
+    runDetached(
+      warmup.recordView(video.feedDedupKey),
+      'record a Classics warmup view',
+      logName: 'ClassicsWarmup',
+      category: LogCategory.storage,
+    );
   }
 
   void _recordProductPlayback(
